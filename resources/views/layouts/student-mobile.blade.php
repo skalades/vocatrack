@@ -13,9 +13,9 @@
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
     </style>
 </head>
-<body class="flex justify-center min-h-screen bg-slate-200 antialiased selection:bg-indigo-600 selection:text-white">
-    <!-- Mobile App Container (360px - 430px max width for authentic mobile feel on desktop as well) -->
-    <div class="w-full max-w-md min-h-screen flex flex-col bg-slate-50 shadow-2xl relative pb-20 border-x border-slate-200">
+<body class="min-h-screen bg-slate-200 antialiased selection:bg-indigo-600 selection:text-white">
+    <!-- Mobile App Container (360px - 430px max width centered on all screens) -->
+    <div class="mx-auto w-full max-w-md min-h-screen flex flex-col bg-slate-50 shadow-2xl relative pb-20 border-x border-slate-200">
 
         <!-- Sticky Header -->
         <header class="sticky top-0 z-40 flex items-center justify-between px-4 py-3 bg-white/95 backdrop-blur-md border-b border-slate-200">
@@ -58,7 +58,7 @@
                 <span>{{ session('error') }}</span>
             </div>
         @endif
-        @if($errors->any())
+        @if(isset($errors) && $errors->any())
             <div class="mx-4 mt-3 p-3 text-xs rounded-xl bg-rose-50 border border-rose-200 text-rose-800 space-y-1">
                 @foreach($errors->all() as $err)
                     <div class="flex items-center space-x-1.5">

@@ -8,7 +8,7 @@
     <!-- Header Title -->
     <div>
         <h2 class="text-base font-extrabold text-slate-900">Presensi Harian</h2>
-        <p class="text-xs text-slate-500">Rekam kehadiran Anda dengan selfie langsung dan koordinat GPS.</p>
+        <p class="text-xs text-slate-500">Rekam kehadiran Anda dengan foto selfie langsung dan koordinat GPS.</p>
     </div>
 
     <!-- Check-In Module Card -->
@@ -26,7 +26,7 @@
                 </div>
 
                 <!-- GPS Status Card -->
-                <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-1.5">
+                <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-1.5">
                     <div class="flex items-center justify-between">
                         <span class="text-[11px] font-bold text-slate-700 flex items-center space-x-1">
                             <span>📍</span> <span>Lokasi Anda</span>
@@ -43,21 +43,42 @@
                     @endif
                 </div>
 
-                <!-- Live Camera Section -->
+                <!-- Outside Radius Warning & Reason Form (PRD F-05 requirement) -->
+                <div id="outside-radius-box" class="hidden p-3 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 space-y-2">
+                    <div class="flex items-center space-x-2">
+                        <span class="text-base">⚠️</span>
+                        <div>
+                            <span class="text-xs font-bold block">Peringatan di Luar Radius Kantor</span>
+                            <span class="text-[10px] text-amber-800">Jarak Anda melebihi radius lokasi DU/DI. Wajib mengisi alasan lokasi.</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-amber-900 mb-1">Alasan Lokasi di Luar Radius</label>
+                        <input type="text" name="location_reason" id="input-location-reason" oninput="validateForm()" placeholder="Misal: Penugasan proyek di klien / izin dinas lapangan..." class="w-full text-xs p-2 rounded-xl bg-white border border-amber-300 focus:outline-none focus:ring-1 focus:ring-amber-500">
+                    </div>
+                </div>
+
+                <!-- Photo Section -->
                 <div class="space-y-3">
                     <div class="relative w-full aspect-4/3 rounded-2xl overflow-hidden bg-slate-900 border border-slate-800 flex items-center justify-center">
-                        <video id="webcam-video" autoplay playsinline class="w-full h-full object-cover mirror-mode"></video>
+                        <video id="webcam-video" autoplay playsinline class="w-full h-full object-cover hidden"></video>
                         <canvas id="photo-canvas" class="hidden"></canvas>
                         <img id="photo-preview" class="hidden w-full h-full object-cover" alt="Preview Foto">
 
-                        <!-- Overlay Placeholder if camera not started -->
+                        <!-- Overlay Placeholder -->
                         <div id="camera-overlay" class="absolute inset-0 bg-slate-900/80 backdrop-blur-xs flex flex-col items-center justify-center p-4 text-center">
                             <span class="text-3xl mb-2">📷</span>
-                            <p class="text-xs font-bold text-white mb-1">Kamera Selfie Belum Aktif</p>
-                            <p class="text-[10px] text-slate-300 mb-3 max-w-[200px]">Izinkan akses browser untuk mengambil foto kehadiran secara langsung.</p>
-                            <button type="button" onclick="startCamera()" class="px-4 py-2 rounded-xl bg-indigo-600 text-white font-bold text-xs shadow-md shadow-indigo-500/50 hover:bg-indigo-500">
-                                Buka Kamera Selfie
-                            </button>
+                            <p class="text-xs font-bold text-white mb-1">Ambil Foto Selfie Kehadiran</p>
+                            <p class="text-[10px] text-slate-300 mb-3 max-w-[220px]">Gunakan kamera browser langsung atau ambil dari kamera perangkat Anda.</p>
+                            <div class="flex flex-col sm:flex-row gap-2 w-full max-w-xs">
+                                <button type="button" onclick="startCamera()" class="flex-1 px-3 py-2 rounded-xl bg-indigo-600 text-white font-bold text-xs shadow-md shadow-indigo-500/50 hover:bg-indigo-500">
+                                    Buka Kamera Langsung
+                                </button>
+                                <label class="flex-1 px-3 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-white font-bold text-xs text-center cursor-pointer">
+                                    <span>Pilih / Foto File</span>
+                                    <input type="file" accept="image/*" capture="user" onchange="handleFileInput(event)" class="hidden">
+                                </label>
+                            </div>
                         </div>
                     </div>
 
@@ -78,9 +99,10 @@
                     <input type="hidden" name="latitude" id="input-lat">
                     <input type="hidden" name="longitude" id="input-lng">
                     <input type="hidden" name="photo" id="input-photo">
+                    <input type="hidden" name="reason" id="input-form-reason">
 
                     <button type="submit" id="btn-submit-checkin" disabled class="w-full min-h-[48px] py-3 px-4 rounded-2xl bg-slate-300 text-slate-500 font-bold text-xs tracking-wide cursor-not-allowed transition-all flex items-center justify-center space-x-2">
-                        <span>Lengkapi Foto & Lokasi untuk Check-In</span>
+                        <span>Ambil Selfie Dulu untuk Check-In</span>
                     </button>
                 </form>
             </div>
@@ -175,6 +197,7 @@
     </div>
 
 </div>
+@endsection
 
 @push('scripts')
 <script>
@@ -182,25 +205,47 @@
     let userLat = null;
     let userLng = null;
     let photoData = null;
+    let isOutside = false;
 
-    // Company target coordinates for client-side distance preview
     const targetLat = {{ $spkl->company->latitude ?? -6.2235 }};
     const targetLng = {{ $spkl->company->longitude ?? 106.8310 }};
     const maxRadius = {{ $spkl->company->radius_meters ?? 150 }};
     const gpsEnabled = {{ $spkl->company->gps_enabled ? 'true' : 'false' }};
 
     function startCamera() {
+        const video = document.getElementById('webcam-video');
+        video.classList.remove('hidden');
         navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false })
             .then(stream => {
                 streamObj = stream;
-                const video = document.getElementById('webcam-video');
                 video.srcObject = stream;
                 document.getElementById('camera-overlay').classList.add('hidden');
                 document.getElementById('camera-controls').classList.remove('hidden');
             })
             .catch(err => {
-                alert('Akses kamera tidak diizinkan atau tidak didukung pada perangkat ini: ' + err.message);
+                alert('Akses kamera tidak diizinkan atau tidak didukung pada browser ini. Anda dapat menggunakan opsi "Pilih / Foto File".');
+                video.classList.add('hidden');
             });
+    }
+
+    function handleFileInput(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+            photoData = evt.target.result;
+            const preview = document.getElementById('photo-preview');
+            preview.src = photoData;
+            preview.classList.remove('hidden');
+            document.getElementById('camera-overlay').classList.add('hidden');
+            document.getElementById('input-photo').value = photoData;
+            document.getElementById('camera-controls').classList.remove('hidden');
+            document.getElementById('btn-snap').classList.add('hidden');
+            document.getElementById('btn-retake').classList.remove('hidden');
+            validateForm();
+        };
+        reader.readAsDataURL(file);
     }
 
     function takeSnapshot() {
@@ -230,10 +275,11 @@
         const preview = document.getElementById('photo-preview');
 
         preview.classList.add('hidden');
-        video.classList.remove('hidden');
         photoData = null;
         document.getElementById('input-photo').value = '';
 
+        document.getElementById('camera-overlay').classList.remove('hidden');
+        document.getElementById('camera-controls').classList.add('hidden');
         document.getElementById('btn-snap').classList.remove('hidden');
         document.getElementById('btn-retake').classList.add('hidden');
 
@@ -255,12 +301,18 @@
                 if (gpsEnabled) {
                     const dist = calculateDistance(userLat, userLng, targetLat, targetLng);
                     const badge = document.getElementById('gps-status-badge');
+                    const reasonBox = document.getElementById('outside-radius-box');
+
                     if (dist <= maxRadius) {
+                        isOutside = false;
                         badge.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200';
                         badge.innerText = 'Dalam Radius (' + Math.round(dist) + 'm)';
+                        reasonBox.classList.add('hidden');
                     } else {
+                        isOutside = true;
                         badge.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200';
                         badge.innerText = 'Luar Radius (' + Math.round(dist) + 'm)';
+                        reasonBox.classList.remove('hidden');
                     }
                 } else {
                     const badge = document.getElementById('gps-status-badge');
@@ -273,13 +325,12 @@
             err => {
                 const badge = document.getElementById('gps-status-badge');
                 badge.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700';
-                badge.innerText = 'GPS Dilewati / Default';
-                // Fallback default coordinates if browser blocks location
+                badge.innerText = 'GPS Default / Sesuai Kantor';
                 userLat = targetLat;
                 userLng = targetLng;
                 document.getElementById('input-lat').value = userLat;
                 document.getElementById('input-lng').value = userLng;
-                document.getElementById('gps-coords-text').innerText = userLat.toFixed(6) + ', ' + userLng.toFixed(6) + ' (Otomatis)';
+                document.getElementById('gps-coords-text').innerText = userLat.toFixed(6) + ', ' + userLng.toFixed(6) + ' (Default DU/DI)';
                 validateForm();
             },
             { enableHighAccuracy: true, timeout: 10000 }
@@ -306,15 +357,28 @@
         const submitBtn = document.getElementById('btn-submit-checkin');
         if (!submitBtn) return;
 
-        if (photoData && userLat !== null && userLng !== null) {
-            submitBtn.disabled = false;
-            submitBtn.className = 'w-full min-h-[48px] py-3 px-4 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs tracking-wide shadow-md shadow-indigo-200 cursor-pointer flex items-center justify-center space-x-2 transition-transform active:scale-[0.98]';
-            submitBtn.innerHTML = '<span>Kirim Check-In Sekarang</span>';
-        } else {
+        const reasonInput = document.getElementById('input-location-reason');
+        if (reasonInput) {
+            document.getElementById('input-form-reason').value = reasonInput.value;
+        }
+
+        if (!photoData) {
             submitBtn.disabled = true;
             submitBtn.className = 'w-full min-h-[48px] py-3 px-4 rounded-2xl bg-slate-300 text-slate-500 font-bold text-xs tracking-wide cursor-not-allowed flex items-center justify-center space-x-2';
             submitBtn.innerHTML = '<span>Ambil Selfie Dulu untuk Check-In</span>';
+            return;
         }
+
+        if (isOutside && (!reasonInput || !reasonInput.value.trim())) {
+            submitBtn.disabled = true;
+            submitBtn.className = 'w-full min-h-[48px] py-3 px-4 rounded-2xl bg-amber-200 text-amber-800 font-bold text-xs tracking-wide cursor-not-allowed flex items-center justify-center space-x-2';
+            submitBtn.innerHTML = '<span>Isi Alasan Luar Radius Terlebih Dahulu</span>';
+            return;
+        }
+
+        submitBtn.disabled = false;
+        submitBtn.className = 'w-full min-h-[48px] py-3 px-4 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs tracking-wide shadow-md shadow-indigo-200 cursor-pointer flex items-center justify-center space-x-2 transition-transform active:scale-[0.98]';
+        submitBtn.innerHTML = '<span>Kirim Check-In Sekarang</span>';
     }
 </script>
 @endpush

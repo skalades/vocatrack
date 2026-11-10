@@ -119,6 +119,7 @@ class StudentController extends Controller
                 'latitude' => $request->latitude,
                 'longitude' => $request->longitude,
                 'photo_path' => $photoPath,
+                'reason' => $request->reason,
             ]);
 
             $statusText = $attendance->status === 'hadir' ? 'Tepat Waktu' : 'Terlambat';

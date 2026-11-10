@@ -51,6 +51,11 @@ class AttendanceService
         $lateLimit = Carbon::createFromTimeString($workHours['checkin_late']);
         $status = $now->lessThanOrEqualTo($lateLimit) ? 'hadir' : 'terlambat';
 
+        $checkoutNotes = null;
+        if (!$isWithinRadius && !empty($data['reason'])) {
+            $checkoutNotes = 'Alasan Luar Radius: ' . $data['reason'];
+        }
+
         return Attendance::create([
             'school_id' => $spkl->school_id,
             'student_pkl_id' => $spkl->id,
@@ -61,6 +66,7 @@ class AttendanceService
             'checkin_lat' => $data['latitude'] ?? null,
             'checkin_lng' => $data['longitude'] ?? null,
             'is_within_radius' => $isWithinRadius,
+            'checkout_notes' => $checkoutNotes,
         ]);
     }
 
