@@ -294,6 +294,7 @@
 <!-- Modal Quick Request (Reusable Component) -->
 <x-attendance-request-modal />
 
+<script>
     let currentOpenAnnouncementId = null;
     const latestAnnouncementId = {{ $announcements->first()?->id ?? 'null' }};
     const currentUserId = {{ auth()->id() }};
