@@ -23,10 +23,25 @@ class EvaluateDailyAbsence extends Command
 
         $alfaCount = 0;
 
-        // Scalable chunking to avoid OOM in high-volume production deployments
+        // Scalable chunking to avoid OOM and batch lookups to prevent N+1 queries
         StudentPkl::with(['company', 'school'])
             ->where('status', 'active')
             ->chunkById(100, function ($activeStudentPkls) use (&$alfaCount, $todayString, $dayOfWeek) {
+                $spklIds = $activeStudentPkls->pluck('id');
+
+                // Batch fetch today's attendance and active requests for the whole chunk
+                $existingAttendanceIds = Attendance::whereIn('student_pkl_id', $spklIds)
+                    ->where('date', $todayString)
+                    ->pluck('student_pkl_id')
+                    ->flip();
+
+                $approvedRequests = AttendanceRequest::whereIn('student_pkl_id', $spklIds)
+                    ->where('status', 'approved')
+                    ->whereDate('start_date', '<=', $todayString)
+                    ->whereDate('end_date', '>=', $todayString)
+                    ->get()
+                    ->keyBy('student_pkl_id');
+
                 foreach ($activeStudentPkls as $spkl) {
                     $company = $spkl->company;
                     if (!$company) {
@@ -40,21 +55,13 @@ class EvaluateDailyAbsence extends Command
                         continue;
                     }
 
-                    // Check if attendance already logged today
-                    $hasAttendance = Attendance::where('student_pkl_id', $spkl->id)
-                        ->where('date', $todayString)
-                        ->exists();
-
-                    if ($hasAttendance) {
+                    // Check if attendance already logged today (O(1) memory lookup)
+                    if (isset($existingAttendanceIds[$spkl->id])) {
                         continue;
                     }
 
-                    // Check if there is an approved attendance request for today
-                    $hasApprovedRequest = AttendanceRequest::where('student_pkl_id', $spkl->id)
-                        ->where('status', 'approved')
-                        ->whereDate('start_date', '<=', $todayString)
-                        ->whereDate('end_date', '>=', $todayString)
-                        ->first();
+                    // Check if there is an approved attendance request for today (O(1) memory lookup)
+                    $hasApprovedRequest = $approvedRequests->get($spkl->id);
 
                     if ($hasApprovedRequest) {
                         // Record mapped attendance based on request

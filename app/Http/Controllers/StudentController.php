@@ -24,7 +24,7 @@ class StudentController extends Controller
         }
 
         $spkl = $student->studentPkls()
-            ->with(['company', 'teacher.user', 'supervisor.user', 'pklPeriod'])
+            ->with(['student.class', 'company', 'teacher.user', 'supervisor.user', 'pklPeriod'])
             ->whereIn('status', ['assigned', 'active'])
             ->latest()
             ->first();
@@ -393,7 +393,7 @@ class StudentController extends Controller
     public function profile()
     {
         $spkl = $this->getActiveSpkl();
-        $student = Auth::user()->student;
+        $student = Auth::user()->student->load('class.major');
         $assessment = $spkl->assessment;
 
         return view('student.profile', compact('spkl', 'student', 'assessment'));

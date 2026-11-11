@@ -50,7 +50,7 @@ class KepsekController extends Controller
         $schoolId = $this->getSchoolId();
         $month = $request->get('month', Carbon::today()->format('Y-m'));
 
-        $classes = SchoolClass::where('school_id', $schoolId)->get();
+        $classes = SchoolClass::where('school_id', $schoolId)->with('major')->get();
         $selectedClassId = $request->get('class_id', $classes->first()?->id);
 
         $startOfMonth = Carbon::parse($month)->startOfMonth();

@@ -38,10 +38,10 @@
 
                             <div class="flex flex-wrap items-center gap-2 pt-1 pl-13">
                                 <x-badge variant="success" size="xs">
-                                    {{ $sp->attendances->count() }} Hari Presensi
+                                    {{ $sp->attendances_count }} Hari Presensi
                                 </x-badge>
                                 <x-badge variant="info" size="xs">
-                                    {{ $sp->journals->where('status', 'approved')->count() }} Jurnal Disetujui
+                                    {{ $sp->approved_journals_count }} Jurnal Disetujui
                                 </x-badge>
                                 @if($sp->assessment)
                                     <x-badge variant="warning" size="xs">

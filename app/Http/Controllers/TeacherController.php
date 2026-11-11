@@ -32,7 +32,7 @@ class TeacherController extends Controller
     public function dashboard(AnnouncementService $announcementService)
     {
         $teacher = $this->getTeacher();
-        $studentPkls = StudentPkl::where('teacher_id', $teacher->id)->with(['student.user', 'company'])->get();
+        $studentPkls = StudentPkl::where('teacher_id', $teacher->id)->with(['student.user', 'student.class', 'company'])->get();
         $totalStudents = $studentPkls->count();
 
         $today = Carbon::today()->toDateString();
@@ -240,6 +240,10 @@ class TeacherController extends Controller
         $teacher = $this->getTeacher();
         $studentPkls = StudentPkl::where('teacher_id', $teacher->id)
             ->with(['student.user', 'student.class.major', 'company', 'assessment'])
+            ->withCount([
+                'attendances',
+                'journals as approved_journals_count' => fn($q) => $q->where('status', 'approved')
+            ])
             ->get();
 
         return view('teacher.reports', compact('studentPkls'));

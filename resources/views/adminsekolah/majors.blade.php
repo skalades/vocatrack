@@ -54,7 +54,7 @@
                                 </div>
                             </div>
                             <x-badge variant="neutral" size="sm">
-                                {{ $m->classes->count() }} Rombel Kelas
+                                {{ $m->classes_count }} Rombel Kelas
                             </x-badge>
                         </div>
                     @endforeach

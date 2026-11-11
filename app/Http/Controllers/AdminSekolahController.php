@@ -196,11 +196,11 @@ class AdminSekolahController extends Controller
     {
         $schoolId = $this->getSchoolId();
         $students = Student::whereHas('user', fn($q) => $q->where('school_id', $schoolId))
-            ->with(['user', 'class.major', 'activePkl.company'])
+            ->with(['user.profile', 'class.major', 'activePkl.company'])
             ->latest()
             ->paginate(15);
 
-        $classes = SchoolClass::where('school_id', $schoolId)->get();
+        $classes = SchoolClass::where('school_id', $schoolId)->with('major')->get();
 
         return view('adminsekolah.students', compact('students', 'classes'));
     }
@@ -359,7 +359,7 @@ class AdminSekolahController extends Controller
     {
         $schoolId = $this->getSchoolId();
         $teachers = Teacher::whereHas('user', fn($q) => $q->where('school_id', $schoolId))
-            ->with(['user', 'studentPkls.student.user'])
+            ->with(['user.profile', 'studentPkls.student.user'])
             ->latest()
             ->paginate(15);
 
