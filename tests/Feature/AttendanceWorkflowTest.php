@@ -113,26 +113,32 @@ class AttendanceWorkflowTest extends TestCase
 
     public function test_checkin_evaluates_radius_and_records_attendance(): void
     {
-        $env = $this->setupEnvironment();
-        $service = new AttendanceService();
+        Carbon::setTestNow(Carbon::today()->setTime(7, 30));
 
-        // 1. Within radius (same exact coordinates)
-        $attendance = $service->recordCheckIn($env['spkl'], [
-            'latitude' => -6.20880000,
-            'longitude' => 106.84560000,
-            'photo_path' => 'schools/test/attendances/photo.jpg',
-        ]);
+        try {
+            $env = $this->setupEnvironment();
+            $service = new AttendanceService();
 
-        $this->assertInstanceOf(Attendance::class, $attendance);
-        $this->assertTrue($attendance->is_within_radius);
-        $this->assertEquals(Carbon::today()->toDateString(), $attendance->date->toDateString());
+            // 1. Within radius (same exact coordinates)
+            $attendance = $service->recordCheckIn($env['spkl'], [
+                'latitude' => -6.20880000,
+                'longitude' => 106.84560000,
+                'photo_path' => 'schools/test/attendances/photo.jpg',
+            ]);
 
-        // 2. Duplicate check-in on the same day must throw ValidationException
-        $this->expectException(ValidationException::class);
-        $service->recordCheckIn($env['spkl'], [
-            'latitude' => -6.20880000,
-            'longitude' => 106.84560000,
-            'photo_path' => 'schools/test/attendances/photo2.jpg',
-        ]);
+            $this->assertInstanceOf(Attendance::class, $attendance);
+            $this->assertTrue($attendance->is_within_radius);
+            $this->assertEquals(Carbon::today()->toDateString(), $attendance->date->toDateString());
+
+            // 2. Duplicate check-in on the same day must throw ValidationException
+            $this->expectException(ValidationException::class);
+            $service->recordCheckIn($env['spkl'], [
+                'latitude' => -6.20880000,
+                'longitude' => 106.84560000,
+                'photo_path' => 'schools/test/attendances/photo2.jpg',
+            ]);
+        } finally {
+            Carbon::setTestNow();
+        }
     }
 }

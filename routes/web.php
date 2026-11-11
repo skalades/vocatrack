@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AdminSekolahController;
+use App\Http\Controllers\AnnouncementController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\KepsekController;
 use App\Http\Controllers\StudentController;
@@ -15,7 +16,7 @@ Route::get('/', function () {
 });
 
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
-Route::post('/login', [AuthController::class, 'login'])->name('login.post');
+Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1')->name('login.post');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 // 1. Super Admin Platform Routes
@@ -55,14 +56,21 @@ Route::middleware(['auth', 'IdentifyTenant', 'role:admin-sekolah'])->prefix('adm
     // Plotting PKL
     Route::get('/plotting', [AdminSekolahController::class, 'plotting'])->name('adminsekolah.plotting');
     Route::post('/plotting', [AdminSekolahController::class, 'storePlotting'])->name('adminsekolah.plotting.store');
+
+    // Announcements / Pengumuman
+    Route::get('/announcements', [AnnouncementController::class, 'adminIndex'])->name('adminsekolah.announcements');
+    Route::post('/announcements', [AnnouncementController::class, 'adminStore'])->name('adminsekolah.announcements.store');
+    Route::put('/announcements/{announcement}', [AnnouncementController::class, 'adminUpdate'])->name('adminsekolah.announcements.update');
+    Route::delete('/announcements/{announcement}', [AnnouncementController::class, 'adminDestroy'])->name('adminsekolah.announcements.destroy');
+    Route::post('/announcements/{announcement}/toggle-pin', [AnnouncementController::class, 'adminTogglePin'])->name('adminsekolah.announcements.toggle-pin');
 });
 
 // 3. Siswa (Mobile-First) Routes
 Route::middleware(['auth', 'IdentifyTenant', 'role:siswa'])->prefix('siswa')->group(function () {
     Route::get('/beranda', [StudentController::class, 'home'])->name('student.home');
     Route::get('/absensi', [StudentController::class, 'attendance'])->name('student.attendance');
-    Route::post('/checkin', [StudentController::class, 'checkin'])->name('student.checkin');
-    Route::post('/checkout', [StudentController::class, 'checkout'])->name('student.checkout');
+    Route::post('/checkin', [StudentController::class, 'checkin'])->middleware('throttle:15,1')->name('student.checkin');
+    Route::post('/checkout', [StudentController::class, 'checkout'])->middleware('throttle:15,1')->name('student.checkout');
     Route::post('/permohonan', [StudentController::class, 'storeRequest'])->name('student.request.store');
 
     Route::get('/jurnal', [StudentController::class, 'journals'])->name('student.journals');
@@ -70,6 +78,11 @@ Route::middleware(['auth', 'IdentifyTenant', 'role:siswa'])->prefix('siswa')->gr
     Route::post('/jurnal/{journal}/submit', [StudentController::class, 'submitJournal'])->name('student.journal.submit');
 
     Route::get('/profil', [StudentController::class, 'profile'])->name('student.profile');
+
+    // Pengumuman Siswa
+    Route::get('/pengumuman', [AnnouncementController::class, 'studentIndex'])->name('student.announcements');
+    Route::get('/pengumuman/latest/check', [AnnouncementController::class, 'latestForStudent'])->name('student.announcements.latest');
+    Route::get('/pengumuman/{announcement}', [AnnouncementController::class, 'show'])->name('student.announcements.show');
 });
 
 // 4. Guru Pembimbing Routes
@@ -87,6 +100,12 @@ Route::middleware(['auth', 'IdentifyTenant', 'role:guru-pembimbing'])->prefix('g
 
     Route::get('/reports', [TeacherController::class, 'reports'])->name('guru.reports');
     Route::get('/reports/{spkl}/download', [TeacherController::class, 'downloadPdf'])->name('guru.reports.download');
+
+    // Announcements / Pengumuman Guru
+    Route::get('/announcements', [AnnouncementController::class, 'guruIndex'])->name('guru.announcements');
+    Route::post('/announcements', [AnnouncementController::class, 'guruStore'])->name('guru.announcements.store');
+    Route::put('/announcements/{announcement}', [AnnouncementController::class, 'guruUpdate'])->name('guru.announcements.update');
+    Route::delete('/announcements/{announcement}', [AnnouncementController::class, 'guruDestroy'])->name('guru.announcements.destroy');
 });
 
 // 5. Pembimbing DU/DI Routes
@@ -105,7 +124,7 @@ Route::middleware(['auth', 'IdentifyTenant', 'role:pembimbing-dudi'])->prefix('d
 
 // 6. Kepala Sekolah Routes
 Route::middleware(['auth', 'IdentifyTenant', 'role:kepala-sekolah'])->prefix('kepala-sekolah')->group(function () {
-    Route::get('/dashboard', [KepsekController::class, 'dashboard'])->name('kepapsekolah.dashboard');
-    Route::get('/rekap', [KepsekController::class, 'rekap'])->name('kepapsekolah.rekap');
-    Route::get('/rekap/export', [KepsekController::class, 'exportRekap'])->name('kepapsekolah.rekap.export');
+    Route::get('/dashboard', [KepsekController::class, 'dashboard'])->name('kepsek.dashboard');
+    Route::get('/rekap', [KepsekController::class, 'rekap'])->name('kepsek.rekap');
+    Route::get('/rekap/export', [KepsekController::class, 'exportRekap'])->name('kepsek.rekap.export');
 });

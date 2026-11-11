@@ -14,6 +14,9 @@ class SchoolScope implements Scope
             $schoolId = auth()->user()->school_id;
             if ($schoolId) {
                 $builder->where($model->getTable() . '.school_id', '=', $schoolId);
+            } else {
+                // Fail-closed security: non-super-admin with no school_id must not see any records
+                $builder->whereRaw('1 = 0');
             }
         }
     }

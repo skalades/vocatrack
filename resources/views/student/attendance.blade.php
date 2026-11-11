@@ -1,94 +1,143 @@
 @extends('layouts.student-mobile')
 
-@section('title', 'Absensi — VokaTrack Siswa')
+@section('title', 'Absensi GPS & Kamera — VokaTrack Siswa')
 
 @section('content')
 <div class="space-y-4">
 
     <!-- Header Title -->
     <div>
-        <h2 class="text-base font-extrabold text-slate-900">Presensi Harian</h2>
-        <p class="text-xs text-slate-500">Rekam kehadiran Anda dengan foto selfie langsung dan koordinat GPS.</p>
+        <h2 class="text-lg font-black text-slate-900 tracking-tight">Presensi Harian</h2>
+        <p class="text-xs text-slate-500 font-medium">Rekam kehadiran dengan swafoto langsung dan validasi lokasi geofencing GPS.</p>
     </div>
 
     <!-- Check-In Module Card -->
-    <div id="checkin-section" class="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-sm">
+    <div id="checkin-section" class="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs">
         @if(!$todayAttendance)
             <div class="space-y-4">
                 <div class="flex items-center justify-between pb-3 border-b border-slate-100">
                     <div>
-                        <span class="text-xs font-bold text-slate-800">Check-In Hari Ini</span>
-                        <p class="text-[11px] text-slate-500">{{ \Carbon\Carbon::today()->isoFormat('dddd, D MMMM Y') }}</p>
+                        <span class="text-xs font-bold text-slate-900 block">Check-In Hari Ini</span>
+                        <p class="text-[11px] text-slate-500 font-medium">{{ \Carbon\Carbon::today()->isoFormat('dddd, D MMMM Y') }}</p>
                     </div>
-                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                    <x-badge variant="warning" size="xs">
                         Belum Presensi
-                    </span>
+                    </x-badge>
                 </div>
 
-                <!-- GPS Status Card -->
-                <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-1.5">
+                <!-- GPS Geofencing Status Card -->
+                <div class="p-4 rounded-2xl bg-slate-50/90 border border-slate-200/80 space-y-3">
                     <div class="flex items-center justify-between">
-                        <span class="text-[11px] font-bold text-slate-700 flex items-center space-x-1">
-                            <span>📍</span> <span>Lokasi Anda</span>
-                        </span>
-                        <span id="gps-status-badge" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-600">
+                        <div class="flex items-center space-x-2">
+                            <div class="w-7 h-7 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100 flex items-center justify-center shrink-0">
+                                <svg class="w-4 h-4 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                            </div>
+                            <div>
+                                <span class="text-xs font-bold text-slate-900 block leading-tight">Geofencing Lokasi</span>
+                                <span class="text-[10px] text-slate-500 font-medium">Validasi radius presensi kantor</span>
+                            </div>
+                        </div>
+                        <span id="gps-status-badge" class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-700 transition-colors">
                             Mencari GPS...
                         </span>
                     </div>
-                    <p id="gps-coords-text" class="text-[11px] font-mono text-slate-500">Mengambil koordinat satelit perangkat...</p>
-                    @if($spkl->company->gps_enabled)
-                        <p class="text-[10px] text-slate-400">
-                            Titik DU/DI: {{ $spkl->company->name }} (Radius Maks: {{ $spkl->company->radius_meters }} meter)
-                        </p>
-                    @endif
-                </div>
 
-                <!-- Outside Radius Warning & Reason Form (PRD F-05 requirement) -->
-                <div id="outside-radius-box" class="hidden p-3 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 space-y-2">
-                    <div class="flex items-center space-x-2">
-                        <span class="text-base">⚠️</span>
-                        <div>
-                            <span class="text-xs font-bold block">Peringatan di Luar Radius Kantor</span>
-                            <span class="text-[10px] text-amber-800">Jarak Anda melebihi radius lokasi DU/DI. Wajib mengisi alasan lokasi.</span>
+                    <div class="bg-white p-3 rounded-xl border border-slate-200/70 space-y-1.5 shadow-2xs">
+                        <div class="flex items-center justify-between text-xs">
+                            <span class="font-bold text-slate-800 truncate">{{ $spkl->company->name ?? 'Mitra DU/DI' }}</span>
+                            @if($spkl->company->gps_enabled)
+                                <span class="text-[10px] font-extrabold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100 shrink-0">
+                                    Maks: {{ $spkl->company->radius_meters }}m
+                                </span>
+                            @endif
+                        </div>
+                        <div class="flex items-center text-[10px] text-slate-500 font-mono gap-1">
+                            <span>📍 Posisi:</span>
+                            <span id="gps-coords-text" class="truncate font-semibold text-slate-700">Mendeteksi sensor satelit...</span>
                         </div>
                     </div>
-                    <div>
-                        <label class="block text-[10px] font-bold text-amber-900 mb-1">Alasan Lokasi di Luar Radius</label>
-                        <input type="text" name="location_reason" id="input-location-reason" oninput="validateForm()" placeholder="Misal: Penugasan proyek di klien / izin dinas lapangan..." class="w-full text-xs p-2 rounded-xl bg-white border border-amber-300 focus:outline-none focus:ring-1 focus:ring-amber-500">
+
+                    <!-- Outside Radius Alert Box (Integrated cleanly) -->
+                    <div id="outside-radius-box" class="hidden p-3.5 rounded-xl bg-amber-50 border border-amber-200/80 text-amber-900 space-y-2">
+                        <div class="flex items-start space-x-2">
+                            <span class="w-5 h-5 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 text-xs font-black mt-0.5">!</span>
+                            <div>
+                                <span class="text-xs font-bold text-amber-950 block">Di Luar Radius Kantor DU/DI</span>
+                                <span class="text-[11px] text-amber-800 font-medium leading-relaxed block mt-0.5">
+                                    Jarak Anda melebihi batas radius mitra. Wajib menuliskan alasan penugasan luar kantor:
+                                </span>
+                            </div>
+                        </div>
+                        <div>
+                            <input type="text" name="location_reason" id="input-location-reason" oninput="validateForm()" 
+                                   placeholder="Contoh: Dinas luar di lokasi klien / instalasi teknis..." 
+                                   class="w-full text-xs p-2.5 rounded-xl bg-white border border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 text-slate-900 font-medium placeholder-slate-400">
+                        </div>
                     </div>
                 </div>
 
-                <!-- Photo Section -->
+                <!-- Camera / Swafoto Viewport -->
                 <div class="space-y-3">
-                    <div class="relative w-full aspect-4/3 rounded-2xl overflow-hidden bg-slate-900 border border-slate-800 flex items-center justify-center">
+                    <div class="relative w-full aspect-4/3 rounded-3xl overflow-hidden bg-gradient-to-b from-slate-900 to-slate-950 border border-slate-800 flex items-center justify-center shadow-lg">
+                        <!-- Video Stream -->
                         <video id="webcam-video" autoplay playsinline class="w-full h-full object-cover hidden"></video>
                         <canvas id="photo-canvas" class="hidden"></canvas>
-                        <img id="photo-preview" class="hidden w-full h-full object-cover" alt="Preview Foto">
+                        
+                        <!-- Photo Preview -->
+                        <div id="photo-preview-wrapper" class="hidden relative w-full h-full">
+                            <img id="photo-preview" class="w-full h-full object-cover" alt="Preview Foto Selfie">
+                            <div class="absolute top-3 left-3 bg-emerald-500/90 backdrop-blur-md text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-md flex items-center gap-1">
+                                <svg class="w-3 h-3 stroke-[3]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                                <span>Foto Siap Dikirim</span>
+                            </div>
+                        </div>
 
-                        <!-- Overlay Placeholder -->
-                        <div id="camera-overlay" class="absolute inset-0 bg-slate-900/80 backdrop-blur-xs flex flex-col items-center justify-center p-4 text-center">
-                            <span class="text-3xl mb-2">📷</span>
-                            <p class="text-xs font-bold text-white mb-1">Ambil Foto Selfie Kehadiran</p>
-                            <p class="text-[10px] text-slate-300 mb-3 max-w-[220px]">Gunakan kamera browser langsung atau ambil dari kamera perangkat Anda.</p>
-                            <div class="flex flex-col sm:flex-row gap-2 w-full max-w-xs">
-                                <button type="button" onclick="startCamera()" class="flex-1 px-3 py-2 rounded-xl bg-indigo-600 text-white font-bold text-xs shadow-md shadow-indigo-500/50 hover:bg-indigo-500">
-                                    Buka Kamera Langsung
+                        <!-- Face Guideline Oval (Visible during live camera stream) -->
+                        <div id="face-guide" class="hidden pointer-events-none absolute inset-x-12 inset-y-6 border-2 border-dashed border-white/60 rounded-[48%] flex flex-col items-center justify-end pb-3 z-10 transition-opacity">
+                            <span class="px-3 py-1 rounded-full bg-slate-900/70 backdrop-blur-md text-[10px] font-bold text-white tracking-wide shadow-sm">
+                                Posisikan Wajah di Sini
+                            </span>
+                        </div>
+
+                        <!-- Viewport Placeholder (Before Camera Started) -->
+                        <div id="camera-overlay" class="absolute inset-0 flex flex-col items-center justify-center p-6 text-center z-10">
+                            <!-- Viewfinder Corner Brackets -->
+                            <div class="pointer-events-none absolute inset-4">
+                                <div class="w-5 h-5 border-t-2 border-l-2 border-indigo-400 rounded-tl-lg absolute top-0 left-0"></div>
+                                <div class="w-5 h-5 border-t-2 border-r-2 border-indigo-400 rounded-tr-lg absolute top-0 right-0"></div>
+                                <div class="w-5 h-5 border-b-2 border-l-2 border-indigo-400 rounded-bl-lg absolute bottom-0 left-0"></div>
+                                <div class="w-5 h-5 border-b-2 border-r-2 border-indigo-400 rounded-br-lg absolute bottom-0 right-0"></div>
+                            </div>
+
+                            <div class="relative mb-3">
+                                <div class="w-14 h-14 rounded-2xl bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 flex items-center justify-center shadow-lg shadow-indigo-500/10">
+                                    <svg class="w-7 h-7 stroke-[1.8]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                                </div>
+                            </div>
+                            
+                            <p class="text-xs font-bold text-white mb-1">Ambil Swafoto Kehadiran</p>
+                            <p class="text-[11px] text-slate-300 mb-4 max-w-[240px] leading-relaxed">
+                                Wajib swafoto langsung menggunakan kamera browser untuk verifikasi kehadiran.
+                            </p>
+                            
+                            <div class="w-full max-w-xs">
+                                <button type="button" onclick="startCamera()" class="w-full py-3 px-5 rounded-2xl bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white font-bold text-xs shadow-lg shadow-indigo-600/30 transition-all cursor-pointer flex items-center justify-center space-x-2 active:scale-95">
+                                    <svg class="w-4 h-4 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                                    <span>Buka Kamera Sekarang</span>
                                 </button>
-                                <label class="flex-1 px-3 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-white font-bold text-xs text-center cursor-pointer">
-                                    <span>Pilih / Foto File</span>
-                                    <input type="file" accept="image/*" capture="user" onchange="handleFileInput(event)" class="hidden">
-                                </label>
                             </div>
                         </div>
                     </div>
 
                     <!-- Snapshot / Retake Controls -->
                     <div id="camera-controls" class="hidden flex space-x-2">
-                        <button type="button" onclick="takeSnapshot()" id="btn-snap" class="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md shadow-indigo-200 flex items-center justify-center space-x-1">
-                            <span>📸 Ambil Jepretan</span>
+                        <button type="button" onclick="takeSnapshot()" id="btn-snap" class="flex-1 py-3.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white font-bold text-xs shadow-lg shadow-indigo-600/25 flex items-center justify-center space-x-2 cursor-pointer transition-all active:scale-95">
+                            <span class="w-3 h-3 rounded-full bg-white animate-pulse"></span>
+                            <span>Ambil Jepretan Wajah</span>
                         </button>
-                        <button type="button" onclick="retakeSnapshot()" id="btn-retake" class="hidden flex-1 py-2.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs flex items-center justify-center space-x-1">
-                            <span>🔄 Foto Ulang</span>
+                        <button type="button" onclick="retakeSnapshot()" id="btn-retake" class="hidden flex-1 py-3.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs flex items-center justify-center space-x-2 cursor-pointer border border-slate-200 transition-all active:scale-95">
+                            <svg class="w-4 h-4 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                            <span>Foto Ulang</span>
                         </button>
                     </div>
                 </div>
@@ -101,53 +150,57 @@
                     <input type="hidden" name="photo" id="input-photo">
                     <input type="hidden" name="reason" id="input-form-reason">
 
-                    <button type="submit" id="btn-submit-checkin" disabled class="w-full min-h-[48px] py-3 px-4 rounded-2xl bg-slate-300 text-slate-500 font-bold text-xs tracking-wide cursor-not-allowed transition-all flex items-center justify-center space-x-2">
+                    <button type="submit" id="btn-submit-checkin" disabled 
+                            class="w-full min-h-[48px] py-3.5 px-4 rounded-2xl bg-slate-100 text-slate-400 border border-slate-200 font-bold text-xs tracking-wide cursor-not-allowed transition-all flex items-center justify-center space-x-2">
+                        <svg class="w-4 h-4 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                         <span>Ambil Selfie Dulu untuk Check-In</span>
                     </button>
                 </form>
             </div>
         @elseif($todayAttendance && !$todayAttendance->checkout_time)
-            <!-- Section Checkout -->
-            <div class="space-y-3">
+            <!-- Section Checkout Form -->
+            <div class="space-y-4">
                 <div class="flex items-center justify-between pb-3 border-b border-slate-100">
                     <div>
-                        <span class="text-xs font-bold text-slate-800">Check-In Tercatat</span>
-                        <p class="text-[11px] text-slate-500">Masuk pada: {{ substr($todayAttendance->checkin_time, 0, 5) }} WIB</p>
+                        <span class="text-xs font-bold text-slate-900 block">Check-In Telah Tercatat</span>
+                        <p class="text-[11px] text-slate-500 font-medium">Jam Masuk: {{ substr($todayAttendance->checkin_time, 0, 5) }} WIB</p>
                     </div>
-                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    <x-badge :variant="$todayAttendance->status" size="sm">
                         {{ strtoupper($todayAttendance->status) }}
-                    </span>
+                    </x-badge>
                 </div>
 
                 <div class="p-4 rounded-2xl bg-amber-50/70 border border-amber-200/80 space-y-3">
-                    <div class="flex items-center space-x-2 text-amber-800">
-                        <svg class="w-5 h-5 text-amber-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <div class="flex items-center space-x-2 text-amber-900">
+                        <svg class="w-4 h-4 text-amber-600 shrink-0 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                         <span class="text-xs font-bold">Waktunya Check-Out Pulang?</span>
                     </div>
-                    <p class="text-xs text-amber-900 leading-relaxed">
-                        Pastikan Anda telah merapikan pekerjaan sebelum check-out. Tuliskan ringkasan singkat capaian Anda.
+                    <p class="text-xs text-amber-900/90 leading-relaxed font-medium">
+                        Pastikan seluruh pekerjaan telah selesai dirapikan. Tuliskan ringkasan singkat capaian Anda sebelum pulang.
                     </p>
-                    <form action="{{ route('student.checkout') }}" method="POST" class="space-y-2.5">
+                    <form action="{{ route('student.checkout') }}" method="POST" class="space-y-3">
                         @csrf
-                        <textarea name="checkout_notes" rows="2" required maxlength="255" placeholder="Contoh: Menyelesaikan tugas modul 4 dan berkoordinasi dengan tim..." class="w-full text-xs p-3 rounded-xl bg-white border border-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-500"></textarea>
-                        <button type="submit" class="w-full min-h-[48px] py-2.5 px-4 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs shadow-md shadow-amber-200">
-                            Check-Out Sekarang
+                        <textarea name="checkout_notes" rows="2" required maxlength="255" 
+                                  placeholder="Contoh: Menyelesaikan perbaikan modul 4 dan berkoordinasi dengan mentor..." 
+                                  class="w-full text-xs p-3 rounded-xl bg-white border border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-500/20 font-medium text-slate-800 leading-relaxed"></textarea>
+                        <button type="submit" class="w-full min-h-[48px] py-3 px-4 rounded-2xl bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white font-bold text-xs tracking-wide shadow-md shadow-amber-500/20 cursor-pointer transition-transform active:scale-[0.98]">
+                            Check-Out Pulang Sekarang
                         </button>
                     </form>
                 </div>
             </div>
         @else
-            <!-- Checked out -->
-            <div class="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-center space-y-2">
-                <div class="w-10 h-10 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-lg mx-auto">
+            <!-- Completely Checked Out -->
+            <div class="p-5 rounded-2xl bg-emerald-50/80 border border-emerald-200/80 text-center space-y-2">
+                <div class="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-lg mx-auto shadow-2xs">
                     ✓
                 </div>
-                <h4 class="text-xs font-bold text-emerald-900">Presensi Hari Ini Sudah Lengkap!</h4>
-                <p class="text-[11px] text-emerald-700">
-                    Check-in: {{ substr($todayAttendance->checkin_time, 0, 5) }} WIB &bull; Check-out: {{ substr($todayAttendance->checkout_time, 0, 5) }} WIB
+                <h4 class="text-xs font-extrabold text-emerald-950">Presensi Hari Ini Sudah Lengkap!</h4>
+                <p class="text-[11px] text-emerald-800 font-medium">
+                    Masuk: {{ substr($todayAttendance->checkin_time, 0, 5) }} WIB &bull; Pulang: {{ substr($todayAttendance->checkout_time, 0, 5) }} WIB
                 </p>
                 @if($todayAttendance->checkout_notes)
-                    <p class="text-[10px] text-slate-500 italic bg-white p-2 rounded-lg border border-emerald-100">
+                    <p class="text-[11px] text-slate-600 italic bg-white p-3 rounded-xl border border-emerald-100 font-medium leading-relaxed">
                         "{{ $todayAttendance->checkout_notes }}"
                     </p>
                 @endif
@@ -156,43 +209,34 @@
     </div>
 
     <!-- Attendance History List -->
-    <div class="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-sm space-y-3">
-        <h3 class="text-xs font-bold text-slate-800">Riwayat Presensi</h3>
+    <div class="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs space-y-3">
+        <h3 class="text-xs font-extrabold text-slate-900 tracking-tight">Riwayat Presensi</h3>
 
         @if($history->isEmpty())
-            <p class="text-xs text-slate-400 py-3 text-center">Belum ada riwayat kehadiran.</p>
+            <x-empty-state 
+                title="Belum Ada Presensi" 
+                description="Belum ada riwayat kehadiran yang tercatat untuk akun Anda."
+                class="py-6"
+            />
         @else
             <div class="divide-y divide-slate-100">
                 @foreach($history as $item)
-                    <div class="py-2.5 flex items-center justify-between">
-                        <div>
-                            <span class="text-xs font-bold text-slate-800 block">
+                    <div class="py-3 flex items-center justify-between gap-3">
+                        <div class="min-w-0">
+                            <span class="text-xs font-bold text-slate-900 block truncate">
                                 {{ \Carbon\Carbon::parse($item->date)->isoFormat('dddd, D MMM Y') }}
                             </span>
-                            <span class="text-[10px] text-slate-400 block">
+                            <span class="text-[10px] text-slate-500 font-mono block mt-0.5">
                                 Masuk: {{ $item->checkin_time ? substr($item->checkin_time, 0, 5) : '-' }} &bull; Pulang: {{ $item->checkout_time ? substr($item->checkout_time, 0, 5) : '-' }}
                             </span>
                         </div>
-                        @php
-                            $badge = match($item->status) {
-                                'hadir' => 'bg-emerald-50 text-emerald-700 border-emerald-200',
-                                'terlambat' => 'bg-amber-50 text-amber-700 border-amber-200',
-                                'izin' => 'bg-blue-50 text-blue-700 border-blue-200',
-                                'sakit' => 'bg-purple-50 text-purple-700 border-purple-200',
-                                'dinas_luar' => 'bg-cyan-50 text-cyan-700 border-cyan-200',
-                                'luar_kantor' => 'bg-indigo-50 text-indigo-700 border-indigo-200',
-                                default => 'bg-rose-50 text-rose-700 border-rose-200'
-                            };
-                        @endphp
-                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border {{ $badge }}">
+                        <x-badge :variant="$item->status" size="xs">
                             {{ strtoupper(str_replace('_', ' ', $item->status)) }}
-                        </span>
+                        </x-badge>
                     </div>
                 @endforeach
             </div>
-            <div class="pt-2">
-                {{ $history->links() }}
-            </div>
+            <x-pagination :paginator="$history" />
         @endif
     </div>
 
@@ -221,31 +265,13 @@
                 video.srcObject = stream;
                 document.getElementById('camera-overlay').classList.add('hidden');
                 document.getElementById('camera-controls').classList.remove('hidden');
+                document.getElementById('face-guide').classList.remove('hidden');
+                document.getElementById('photo-preview-wrapper').classList.add('hidden');
             })
             .catch(err => {
-                alert('Akses kamera tidak diizinkan atau tidak didukung pada browser ini. Anda dapat menggunakan opsi "Pilih / Foto File".');
+                alert('Akses kamera tidak diizinkan atau tidak didukung pada browser ini. Harap izinkan akses kamera untuk melakukan absensi kehadiran.');
                 video.classList.add('hidden');
             });
-    }
-
-    function handleFileInput(e) {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = function(evt) {
-            photoData = evt.target.result;
-            const preview = document.getElementById('photo-preview');
-            preview.src = photoData;
-            preview.classList.remove('hidden');
-            document.getElementById('camera-overlay').classList.add('hidden');
-            document.getElementById('input-photo').value = photoData;
-            document.getElementById('camera-controls').classList.remove('hidden');
-            document.getElementById('btn-snap').classList.add('hidden');
-            document.getElementById('btn-retake').classList.remove('hidden');
-            validateForm();
-        };
-        reader.readAsDataURL(file);
     }
 
     function takeSnapshot() {
@@ -260,7 +286,8 @@
 
         photoData = canvas.toDataURL('image/jpeg', 0.85);
         preview.src = photoData;
-        preview.classList.remove('hidden');
+        document.getElementById('photo-preview-wrapper').classList.remove('hidden');
+        document.getElementById('face-guide').classList.add('hidden');
         video.classList.add('hidden');
 
         document.getElementById('input-photo').value = photoData;
@@ -272,16 +299,23 @@
 
     function retakeSnapshot() {
         const video = document.getElementById('webcam-video');
-        const preview = document.getElementById('photo-preview');
-
-        preview.classList.add('hidden');
+        document.getElementById('photo-preview-wrapper').classList.add('hidden');
         photoData = null;
         document.getElementById('input-photo').value = '';
 
-        document.getElementById('camera-overlay').classList.remove('hidden');
-        document.getElementById('camera-controls').classList.add('hidden');
-        document.getElementById('btn-snap').classList.remove('hidden');
-        document.getElementById('btn-retake').classList.add('hidden');
+        if (streamObj && streamObj.active) {
+            video.classList.remove('hidden');
+            document.getElementById('face-guide').classList.remove('hidden');
+            document.getElementById('camera-overlay').classList.add('hidden');
+            document.getElementById('camera-controls').classList.remove('hidden');
+            document.getElementById('btn-snap').classList.remove('hidden');
+            document.getElementById('btn-retake').classList.add('hidden');
+        } else {
+            document.getElementById('camera-overlay').classList.remove('hidden');
+            document.getElementById('camera-controls').classList.add('hidden');
+            document.getElementById('btn-snap').classList.remove('hidden');
+            document.getElementById('btn-retake').classList.add('hidden');
+        }
 
         validateForm();
     }
@@ -305,18 +339,18 @@
 
                     if (dist <= maxRadius) {
                         isOutside = false;
-                        badge.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200';
+                        badge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200';
                         badge.innerText = 'Dalam Radius (' + Math.round(dist) + 'm)';
                         reasonBox.classList.add('hidden');
                     } else {
                         isOutside = true;
-                        badge.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200';
+                        badge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200';
                         badge.innerText = 'Luar Radius (' + Math.round(dist) + 'm)';
                         reasonBox.classList.remove('hidden');
                     }
                 } else {
                     const badge = document.getElementById('gps-status-badge');
-                    badge.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700';
+                    badge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200';
                     badge.innerText = 'GPS Terdeteksi';
                 }
 
@@ -324,7 +358,7 @@
             },
             err => {
                 const badge = document.getElementById('gps-status-badge');
-                badge.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700';
+                badge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200';
                 badge.innerText = 'GPS Default / Sesuai Kantor';
                 userLat = targetLat;
                 userLng = targetLng;
@@ -364,21 +398,21 @@
 
         if (!photoData) {
             submitBtn.disabled = true;
-            submitBtn.className = 'w-full min-h-[48px] py-3 px-4 rounded-2xl bg-slate-300 text-slate-500 font-bold text-xs tracking-wide cursor-not-allowed flex items-center justify-center space-x-2';
-            submitBtn.innerHTML = '<span>Ambil Selfie Dulu untuk Check-In</span>';
+            submitBtn.className = 'w-full min-h-[48px] py-3.5 px-4 rounded-2xl bg-slate-100 text-slate-400 border border-slate-200 font-bold text-xs tracking-wide cursor-not-allowed transition-all flex items-center justify-center space-x-2';
+            submitBtn.innerHTML = '<svg class="w-4 h-4 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg><span>Ambil Selfie Dulu untuk Check-In</span>';
             return;
         }
 
         if (isOutside && (!reasonInput || !reasonInput.value.trim())) {
             submitBtn.disabled = true;
-            submitBtn.className = 'w-full min-h-[48px] py-3 px-4 rounded-2xl bg-amber-200 text-amber-800 font-bold text-xs tracking-wide cursor-not-allowed flex items-center justify-center space-x-2';
-            submitBtn.innerHTML = '<span>Isi Alasan Luar Radius Terlebih Dahulu</span>';
+            submitBtn.className = 'w-full min-h-[48px] py-3.5 px-4 rounded-2xl bg-amber-100 text-amber-800 border border-amber-200 font-bold text-xs tracking-wide cursor-not-allowed transition-all flex items-center justify-center space-x-2';
+            submitBtn.innerHTML = '<svg class="w-4 h-4 text-amber-600 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg><span>Wajib Isi Alasan Luar Radius</span>';
             return;
         }
 
         submitBtn.disabled = false;
-        submitBtn.className = 'w-full min-h-[48px] py-3 px-4 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs tracking-wide shadow-md shadow-indigo-200 cursor-pointer flex items-center justify-center space-x-2 transition-transform active:scale-[0.98]';
-        submitBtn.innerHTML = '<span>Kirim Check-In Sekarang</span>';
+        submitBtn.className = 'w-full min-h-[48px] py-3.5 px-4 rounded-2xl bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-800 hover:opacity-95 text-white font-bold text-xs tracking-wide shadow-lg shadow-indigo-600/30 cursor-pointer flex items-center justify-center space-x-2 transition-all active:scale-[0.98]';
+        submitBtn.innerHTML = '<svg class="w-4 h-4 stroke-[2.5]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg><span>Kirim Check-In Sekarang</span>';
     }
 </script>
 @endpush

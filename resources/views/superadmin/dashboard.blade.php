@@ -6,102 +6,141 @@
 @section('content')
 <div class="space-y-6">
 
-    <!-- Metric Cards -->
+    <x-page-header 
+        title="Dashboard Platform Multi-Sekolah" 
+        subtitle="Monitoring status infrastruktur multi-tenancy, total sekolah mitra, dan total pengguna ekosistem VokaTrack."
+    >
+        <a href="{{ route('superadmin.schools') }}" 
+           class="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-bold text-xs shadow-xs shadow-indigo-600/20 transition-all cursor-pointer">
+            <svg class="w-4 h-4 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+            <span>Daftarkan Sekolah Baru</span>
+        </a>
+    </x-page-header>
+
+    <!-- Stat Metric Cards -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
-            <div>
-                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">Total Sekolah</span>
-                <span class="text-2xl font-black text-slate-800">{{ $totalSchools }}</span>
-                <span class="text-[11px] text-emerald-600 font-semibold block mt-1">{{ $activeSchools }} Sekolah Aktif</span>
-            </div>
-            <div class="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-xl">
-                🏫
-            </div>
-        </div>
+        
+        <x-stat-card 
+            title="Total Tenant Sekolah" 
+            :value="$totalSchools" 
+            :subtitle="$activeSchools . ' Sekolah Berstatus Aktif'"
+            color="indigo"
+        >
+            <x-slot:icon>
+                <svg class="w-6 h-6 stroke-[1.8]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                </svg>
+            </x-slot:icon>
+        </x-stat-card>
 
-        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
-            <div>
-                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">Total Siswa Terdaftar</span>
-                <span class="text-2xl font-black text-slate-800">{{ $totalStudents }}</span>
-                <span class="text-[11px] text-slate-400 font-medium block mt-1">Lintas seluruh sekolah</span>
-            </div>
-            <div class="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl">
-                👨‍🎓
-            </div>
-        </div>
+        <x-stat-card 
+            title="Total Siswa Terdaftar" 
+            :value="$totalStudents" 
+            subtitle="Peserta PKL aktif platform"
+            color="emerald"
+        >
+            <x-slot:icon>
+                <svg class="w-6 h-6 stroke-[1.8]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+                </svg>
+            </x-slot:icon>
+        </x-stat-card>
 
-        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
-            <div>
-                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">Total Akun Pengguna</span>
-                <span class="text-2xl font-black text-slate-800">{{ $totalUsers }}</span>
-                <span class="text-[11px] text-slate-400 font-medium block mt-1">Admin, Guru, DU/DI, Siswa</span>
-            </div>
-            <div class="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center text-xl">
-                👥
-            </div>
-        </div>
+        <x-stat-card 
+            title="Total Akun Pengguna" 
+            :value="$totalUsers" 
+            subtitle="Admin, Guru, DU/DI, Siswa"
+            color="blue"
+        >
+            <x-slot:icon>
+                <svg class="w-6 h-6 stroke-[1.8]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                </svg>
+            </x-slot:icon>
+        </x-stat-card>
 
-        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
-            <div>
-                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">Estimasi Storage</span>
-                <span class="text-2xl font-black text-slate-800">4.2 MB</span>
-                <span class="text-[11px] text-slate-400 font-medium block mt-1">Foto selfie & lampiran</span>
-            </div>
-            <div class="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center text-xl">
-                💾
-            </div>
-        </div>
+        <x-stat-card 
+            title="Status Infrastruktur" 
+            value="Optimal" 
+            subtitle="Database multi-tenancy terisolasi"
+            color="amber"
+            badge="Healthy"
+            badgeVariant="success"
+        >
+            <x-slot:icon>
+                <svg class="w-6 h-6 stroke-[1.8]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"/>
+                </svg>
+            </x-slot:icon>
+        </x-stat-card>
+
     </div>
 
-    <!-- Quick Action & Recent Schools Table -->
-    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
-        <div class="p-5 border-b border-slate-100 flex items-center justify-between">
-            <div>
-                <h3 class="text-sm font-bold text-slate-800">Daftar Sekolah Terdaftar</h3>
-                <p class="text-xs text-slate-500">Kelola tenant sekolah dan akun administrator</p>
-            </div>
-            <a href="{{ route('superadmin.schools') }}" class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-colors">
+    <!-- Recent Schools Table Card -->
+    <x-card 
+        title="Daftar Sekolah Mitra Terdaftar" 
+        subtitle="Kelola instansi tenant sekolah dan kredensial administrator"
+        noPadding
+    >
+        <x-slot:headerActions>
+            <a href="{{ route('superadmin.schools') }}" class="text-xs font-bold text-indigo-600 hover:text-indigo-800 transition-colors">
                 Kelola Semua Sekolah &rarr;
             </a>
-        </div>
+        </x-slot:headerActions>
 
         <div class="overflow-x-auto">
             <table class="w-full text-left text-xs">
-                <thead class="bg-slate-50 text-slate-600 border-b border-slate-200/80 font-bold uppercase text-[10px]">
+                <thead class="bg-slate-50/80 text-slate-500 border-b border-slate-200/80 font-extrabold uppercase text-[10px] tracking-wider">
                     <tr>
-                        <th class="py-3 px-5">Nama Sekolah</th>
-                        <th class="py-3 px-4">NPSN</th>
-                        <th class="py-3 px-4">Kontak</th>
-                        <th class="py-3 px-4 text-center">Kelas</th>
-                        <th class="py-3 px-4 text-center">Mitra DU/DI</th>
-                        <th class="py-3 px-4 text-center">Status</th>
+                        <th class="py-3.5 px-6">Nama Sekolah & Alamat</th>
+                        <th class="py-3.5 px-4">NPSN</th>
+                        <th class="py-3.5 px-4">Kontak Resmi</th>
+                        <th class="py-3.5 px-4 text-center">Kelas</th>
+                        <th class="py-3.5 px-4 text-center">Mitra DU/DI</th>
+                        <th class="py-3.5 px-6 text-center">Status Tenant</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 text-slate-700 font-medium">
-                    @foreach($recentSchools as $sch)
-                        <tr class="hover:bg-slate-50/60 transition-colors">
-                            <td class="py-3.5 px-5">
-                                <span class="font-bold text-slate-900 block">{{ $sch->name }}</span>
-                                <span class="text-[11px] text-slate-400 block truncate max-w-xs">{{ $sch->address }}</span>
+                    @forelse($recentSchools as $sch)
+                        <tr class="hover:bg-slate-50/70 transition-colors">
+                            <td class="py-3.5 px-6">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-700 font-bold text-xs flex items-center justify-center shrink-0">
+                                        {{ substr($sch->name, 0, 1) }}
+                                    </div>
+                                    <div class="min-w-0">
+                                        <span class="font-bold text-slate-900 block truncate">{{ $sch->name }}</span>
+                                        <span class="text-[11px] text-slate-400 block truncate max-w-xs font-normal mt-0.5">{{ $sch->address }}</span>
+                                    </div>
+                                </div>
                             </td>
-                            <td class="py-3.5 px-4 font-mono font-bold">{{ $sch->npsn }}</td>
+                            <td class="py-3.5 px-4 font-mono font-bold text-slate-800">{{ $sch->npsn }}</td>
                             <td class="py-3.5 px-4">
-                                <span class="block">{{ $sch->email }}</span>
-                                <span class="text-[11px] text-slate-400 block">{{ $sch->phone }}</span>
+                                <span class="block text-slate-900 font-semibold">{{ $sch->email }}</span>
+                                <span class="text-[11px] text-slate-400 block font-mono">{{ $sch->phone }}</span>
                             </td>
-                            <td class="py-3.5 px-4 text-center font-bold">{{ $sch->classes_count }}</td>
-                            <td class="py-3.5 px-4 text-center font-bold">{{ $sch->companies_count }}</td>
-                            <td class="py-3.5 px-4 text-center">
-                                <span class="px-2.5 py-1 rounded-full text-[10px] font-bold {{ $sch->is_active ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200' }}">
+                            <td class="py-3.5 px-4 text-center font-bold text-slate-900">{{ $sch->classes_count }}</td>
+                            <td class="py-3.5 px-4 text-center font-bold text-slate-900">{{ $sch->companies_count }}</td>
+                            <td class="py-3.5 px-6 text-center">
+                                <x-badge :variant="$sch->is_active ? 'success' : 'danger'" size="xs">
                                     {{ $sch->is_active ? 'Aktif' : 'Non-Aktif' }}
-                                </span>
+                                </x-badge>
                             </td>
                         </tr>
-                    @endforeach
+                    @empty
+                        <tr>
+                            <td colspan="6" class="py-12">
+                                <x-empty-state 
+                                    title="Belum Ada Sekolah Terdaftar" 
+                                    description="Daftarkan tenant sekolah baru untuk memulai onboarding."
+                                />
+                            </td>
+                        </tr>
+                    @endforelse
                 </tbody>
             </table>
         </div>
-    </div>
+    </x-card>
 
 </div>
 @endsection

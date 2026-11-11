@@ -3,95 +3,192 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Masuk — VokaTrack PKL SMK</title>
+    <title>Masuk — VokaTrack PKL SMK Enterprise</title>
+    
+    <!-- Google Fonts: Plus Jakarta Sans -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .bg-mesh {
+            background-color: #f8fafc;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.08) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(79, 70, 229, 0.08) 0px, transparent 50%),
+                radial-gradient(at 50% 50%, rgba(241, 245, 249, 0.5) 0px, transparent 50%);
+        }
     </style>
 </head>
-<body class="min-h-full flex items-center justify-center p-4 bg-gradient-to-br from-slate-100 via-indigo-50/30 to-slate-100">
-    <div class="w-full max-w-md">
-        <!-- Brand Header -->
-        <div class="text-center mb-6">
-            <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-indigo-600 text-white font-black text-2xl shadow-xl shadow-indigo-200 mb-3">
+<body class="min-h-full flex items-center justify-center p-4 sm:p-6 bg-mesh selection:bg-indigo-600 selection:text-white">
+
+    <div class="w-full max-w-lg my-8">
+        
+        <!-- Brand Identity -->
+        <div class="text-center mb-8">
+            <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-tr from-indigo-600 to-indigo-500 text-white font-black text-2xl shadow-xl shadow-indigo-500/20 mb-3.5">
                 VT
             </div>
-            <h1 class="text-2xl font-extrabold text-slate-900 tracking-tight">VokaTrack</h1>
-            <p class="text-xs text-slate-500 mt-1 font-medium">Sistem Presensi & Jurnal PKL SMK Multi-Sekolah</p>
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">VokaTrack</h1>
+            <p class="text-xs sm:text-sm text-slate-500 mt-1 font-medium">Sistem Presensi GPS & Jurnal PKL SMK Terintegrasi</p>
         </div>
 
         <!-- Login Card -->
-        <div class="bg-white rounded-3xl shadow-xl shadow-slate-200/60 border border-slate-200/80 p-7">
-            <h2 class="text-base font-bold text-slate-900 mb-1">Selamat Datang Kembali</h2>
-            <p class="text-xs text-slate-500 mb-5">Masukkan kredensial akun Anda untuk mengakses sistem.</p>
+        <div class="bg-white rounded-3xl shadow-xl shadow-slate-200/70 border border-slate-200/90 p-6 sm:p-8">
+            <div class="mb-6">
+                <h2 class="text-lg font-bold text-slate-900 tracking-tight">Selamat Datang</h2>
+                <p class="text-xs text-slate-500 mt-0.5 font-medium">Masukkan email dan kata sandi akun Anda untuk melanjutkan.</p>
+            </div>
 
+            <!-- Flash Alerts -->
             @if(session('success'))
-                <div class="mb-4 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs">
-                    {{ session('success') }}
+                <div class="mb-5 p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200/80 text-emerald-900 text-xs flex items-center gap-2.5 font-medium">
+                    <svg class="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                    <span>{{ session('success') }}</span>
                 </div>
             @endif
 
             @if($errors->any())
-                <div class="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs">
-                    {{ $errors->first() }}
+                <div class="mb-5 p-3.5 rounded-2xl bg-rose-50 border border-rose-200/80 text-rose-900 text-xs flex items-center gap-2.5 font-medium">
+                    <svg class="w-4 h-4 text-rose-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    <span>{{ $errors->first() }}</span>
                 </div>
             @endif
 
+            <!-- Form -->
             <form action="{{ route('login.post') }}" method="POST" class="space-y-4">
                 @csrf
+                
                 <div>
                     <label for="email" class="block text-xs font-bold text-slate-700 mb-1.5">Alamat Email</label>
-                    <input type="email" id="email" name="email" value="{{ old('email') }}" required autofocus
-                           placeholder="nama@sekolah.sch.id"
-                           class="w-full px-4 py-2.5 rounded-xl text-xs bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all font-medium text-slate-900">
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.206" />
+                            </svg>
+                        </div>
+                        <input type="email" id="email" name="email" value="{{ old('email') }}" required autofocus
+                               placeholder="nama@sekolah.sch.id"
+                               class="w-full pl-10 pr-4 py-2.5 rounded-xl text-xs sm:text-sm bg-slate-50/70 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all font-medium text-slate-900 placeholder:text-slate-400">
+                    </div>
                 </div>
 
                 <div>
                     <label for="password" class="block text-xs font-bold text-slate-700 mb-1.5">Kata Sandi</label>
-                    <input type="password" id="password" name="password" required
-                           placeholder="••••••••"
-                           class="w-full px-4 py-2.5 rounded-xl text-xs bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all font-medium text-slate-900">
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                            </svg>
+                        </div>
+                        <input type="password" id="password" name="password" required
+                               placeholder="••••••••"
+                               class="w-full pl-10 pr-10 py-2.5 rounded-xl text-xs sm:text-sm bg-slate-50/70 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all font-medium text-slate-900 placeholder:text-slate-400">
+                        <button type="button" onclick="togglePasswordVisibility()" class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer">
+                            <svg id="pwd-eye-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                        </button>
+                    </div>
                 </div>
 
-                <div class="flex items-center justify-between text-xs pt-1">
-                    <label class="flex items-center space-x-2 cursor-pointer">
-                        <input type="checkbox" name="remember" class="w-4 h-4 rounded text-indigo-600 border-slate-300 focus:ring-indigo-500">
-                        <span class="text-slate-600 font-medium">Ingat saya</span>
+                <div class="flex items-center justify-between text-xs pt-0.5">
+                    <label class="flex items-center space-x-2 cursor-pointer select-none">
+                        <input type="checkbox" name="remember" class="w-4 h-4 rounded text-indigo-600 border-slate-300 focus:ring-indigo-500/20 cursor-pointer">
+                        <span class="text-slate-600 font-medium">Ingat saya di perangkat ini</span>
                     </label>
                 </div>
 
-                <button type="submit" class="w-full py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs tracking-wide shadow-lg shadow-indigo-200 transition-all active:scale-[0.98]">
+                <button type="submit" class="w-full py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-bold text-xs sm:text-sm tracking-wide shadow-md shadow-indigo-600/20 transition-all active:scale-[0.99] cursor-pointer">
                     Masuk ke Sistem
                 </button>
             </form>
 
             <!-- Quick Demo Accounts Switcher -->
-            <div class="mt-6 pt-5 border-t border-slate-100">
-                <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2.5 text-center">Akun Demo (Klik untuk Isi Cepat)</p>
+            <div class="mt-8 pt-6 border-t border-slate-100">
+                <div class="flex items-center justify-between mb-3">
+                    <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Akun Demo Pengujian</p>
+                    <span class="text-[10px] font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100">Klik untuk isi otomatis</span>
+                </div>
+
                 <div class="grid grid-cols-2 gap-2">
-                    <button type="button" onclick="fillDemo('siswa@smkn1tekno.sch.id', 'password')" class="text-left px-2.5 py-2 rounded-lg bg-indigo-50/70 hover:bg-indigo-100 border border-indigo-100 text-indigo-900 text-[11px] font-semibold transition-colors">
-                        📱 Siswa (Mobile)
+                    <button type="button" onclick="fillDemo('siswa@smkn2garut.sch.id', 'password')" class="text-left p-2.5 rounded-xl bg-slate-50/80 hover:bg-indigo-50/80 border border-slate-200/80 hover:border-indigo-200 transition-all group cursor-pointer">
+                        <div class="flex items-center space-x-2">
+                            <span class="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs">
+                                📱
+                            </span>
+                            <div class="min-w-0">
+                                <span class="text-xs font-bold text-slate-800 group-hover:text-indigo-900 block truncate">Siswa (Geologi)</span>
+                                <span class="text-[10px] text-slate-400 block truncate font-mono">siswa@smkn2garut...</span>
+                            </div>
+                        </div>
                     </button>
-                    <button type="button" onclick="fillDemo('guru@smkn1tekno.sch.id', 'password')" class="text-left px-2.5 py-2 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-[11px] font-semibold transition-colors">
-                        👩‍🏫 Guru Pembimbing
+
+                    <button type="button" onclick="fillDemo('guru@smkn2garut.sch.id', 'password')" class="text-left p-2.5 rounded-xl bg-slate-50/80 hover:bg-indigo-50/80 border border-slate-200/80 hover:border-indigo-200 transition-all group cursor-pointer">
+                        <div class="flex items-center space-x-2">
+                            <span class="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs">
+                                👩‍🏫
+                            </span>
+                            <div class="min-w-0">
+                                <span class="text-xs font-bold text-slate-800 group-hover:text-indigo-900 block truncate">Guru Geologi</span>
+                                <span class="text-[10px] text-slate-400 block truncate font-mono">guru@smkn2garut...</span>
+                            </div>
+                        </div>
                     </button>
-                    <button type="button" onclick="fillDemo('supervisor@inovasidigital.com', 'password')" class="text-left px-2.5 py-2 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-[11px] font-semibold transition-colors">
-                        🏢 Pembimbing DU/DI
+
+                    <button type="button" onclick="fillDemo('supervisor@antam.com', 'password')" class="text-left p-2.5 rounded-xl bg-slate-50/80 hover:bg-indigo-50/80 border border-slate-200/80 hover:border-indigo-200 transition-all group cursor-pointer">
+                        <div class="flex items-center space-x-2">
+                            <span class="w-6 h-6 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center text-xs">
+                                ⛏️
+                            </span>
+                            <div class="min-w-0">
+                                <span class="text-xs font-bold text-slate-800 group-hover:text-indigo-900 block truncate">Mentor Antam</span>
+                                <span class="text-[10px] text-slate-400 block truncate font-mono">supervisor@antam...</span>
+                            </div>
+                        </div>
                     </button>
-                    <button type="button" onclick="fillDemo('admin@smkn1tekno.sch.id', 'password')" class="text-left px-2.5 py-2 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-[11px] font-semibold transition-colors">
-                        ⚙️ Admin Sekolah
+
+                    <button type="button" onclick="fillDemo('admin@smkn2garut.sch.id', 'password')" class="text-left p-2.5 rounded-xl bg-slate-50/80 hover:bg-indigo-50/80 border border-slate-200/80 hover:border-indigo-200 transition-all group cursor-pointer">
+                        <div class="flex items-center space-x-2">
+                            <span class="w-6 h-6 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center text-xs">
+                                ⚙️
+                            </span>
+                            <div class="min-w-0">
+                                <span class="text-xs font-bold text-slate-800 group-hover:text-indigo-900 block truncate">Admin SMKN 2</span>
+                                <span class="text-[10px] text-slate-400 block truncate font-mono">admin@smkn2garut...</span>
+                            </div>
+                        </div>
                     </button>
-                    <button type="button" onclick="fillDemo('kepsek@smkn1tekno.sch.id', 'password')" class="text-left px-2.5 py-2 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-[11px] font-semibold transition-colors">
-                        🎓 Kepala Sekolah
+
+                    <button type="button" onclick="fillDemo('kepsek@smkn2garut.sch.id', 'password')" class="text-left p-2.5 rounded-xl bg-slate-50/80 hover:bg-indigo-50/80 border border-slate-200/80 hover:border-indigo-200 transition-all group cursor-pointer">
+                        <div class="flex items-center space-x-2">
+                            <span class="w-6 h-6 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center text-xs">
+                                🎓
+                            </span>
+                            <div class="min-w-0">
+                                <span class="text-xs font-bold text-slate-800 group-hover:text-indigo-900 block truncate">Kepala Sekolah</span>
+                                <span class="text-[10px] text-slate-400 block truncate font-mono">kepsek@smkn2garut...</span>
+                            </div>
+                        </div>
                     </button>
-                    <button type="button" onclick="fillDemo('superadmin@vokatrack.id', 'password')" class="text-left px-2.5 py-2 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-[11px] font-semibold transition-colors">
-                        🌐 Super Admin
+
+                    <button type="button" onclick="fillDemo('superadmin@vokatrack.id', 'password')" class="text-left p-2.5 rounded-xl bg-slate-50/80 hover:bg-indigo-50/80 border border-slate-200/80 hover:border-indigo-200 transition-all group cursor-pointer">
+                        <div class="flex items-center space-x-2">
+                            <span class="w-6 h-6 rounded-lg bg-rose-100 text-rose-700 flex items-center justify-center text-xs">
+                                🌐
+                            </span>
+                            <div class="min-w-0">
+                                <span class="text-xs font-bold text-slate-800 group-hover:text-indigo-900 block truncate">Super Admin</span>
+                                <span class="text-[10px] text-slate-400 block truncate font-mono">superadmin@vokatrack...</span>
+                            </div>
+                        </div>
                     </button>
                 </div>
-                <p class="text-[10px] text-center text-slate-400 mt-2 font-medium">Kata sandi seluruh akun demo: <code class="text-slate-600 font-bold">password</code></p>
+
+                <p class="text-[11px] text-center text-slate-400 mt-3 font-medium">Kata sandi seluruh akun demo: <code class="px-1.5 py-0.5 rounded bg-slate-100 font-bold text-slate-700 font-mono">password</code></p>
             </div>
         </div>
     </div>
@@ -100,6 +197,15 @@
         function fillDemo(email, pass) {
             document.getElementById('email').value = email;
             document.getElementById('password').value = pass;
+        }
+
+        function togglePasswordVisibility() {
+            const pwdInput = document.getElementById('password');
+            if (pwdInput.type === 'password') {
+                pwdInput.type = 'text';
+            } else {
+                pwdInput.type = 'password';
+            }
         }
     </script>
 </body>

@@ -63,7 +63,7 @@ class AuthController extends Controller
         return match ($user->role) {
             'super-admin' => redirect()->route('superadmin.dashboard'),
             'admin-sekolah' => redirect()->route('adminsekolah.dashboard'),
-            'kepala-sekolah' => redirect()->route('kepapsekolah.dashboard'),
+            'kepala-sekolah' => redirect()->route('kepsek.dashboard'),
             'guru-pembimbing' => redirect()->route('guru.dashboard'),
             'pembimbing-dudi' => redirect()->route('dudi.dashboard'),
             'siswa' => redirect()->route('student.home'),

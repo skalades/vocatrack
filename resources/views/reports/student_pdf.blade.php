@@ -123,7 +123,12 @@
     <!-- Dynamic School Kop Surat -->
     <table class="kop-table">
         <tr>
-            <td class="kop-text">
+            @if(!empty($schoolLogoBase64))
+                <td class="kop-logo" style="width: 75px; vertical-align: middle; text-align: center;">
+                    <img src="{{ $schoolLogoBase64 }}" alt="Logo Sekolah" style="max-height: 70px; max-width: 70px;">
+                </td>
+            @endif
+            <td class="kop-text" style="vertical-align: middle;">
                 <div class="kop-line1">{{ $settings['kop_header_line1'] ?? 'PEMERINTAH DAERAH' }}</div>
                 <div class="kop-line2">{{ $settings['kop_header_line2'] ?? 'DINAS PENDIDIKAN' }}</div>
                 <div class="kop-line3">{{ $settings['kop_header_line3'] ?? strtoupper($spkl->school->name) }}</div>
@@ -131,6 +136,9 @@
                     {{ $spkl->school->address }} &bull; Telp: {{ $spkl->school->phone }} &bull; Email: {{ $spkl->school->email }}
                 </div>
             </td>
+            @if(!empty($schoolLogoBase64))
+                <td style="width: 75px;"></td>
+            @endif
         </tr>
     </table>
 

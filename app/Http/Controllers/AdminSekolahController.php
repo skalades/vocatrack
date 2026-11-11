@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Announcement;
 use App\Models\Attendance;
 use App\Models\Company;
 use App\Models\Major;
@@ -20,7 +21,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class AdminSekolahController extends Controller
 {
@@ -50,12 +53,19 @@ class AdminSekolahController extends Controller
             'alfa' => $todayAttendances->where('status', 'alfa')->count(),
         ];
 
+        $recentAnnouncements = Announcement::where('school_id', $schoolId)
+            ->with(['author', 'major'])
+            ->pinnedFirst()
+            ->limit(4)
+            ->get();
+
         return view('adminsekolah.dashboard', compact(
             'totalStudents',
             'totalTeachers',
             'totalCompanies',
             'activePkl',
-            'attendanceStats'
+            'attendanceStats',
+            'recentAnnouncements'
         ));
     }
 
@@ -77,6 +87,7 @@ class AdminSekolahController extends Controller
             'school_name' => ['required', 'string', 'max:150'],
             'school_phone' => ['required', 'string', 'max:20'],
             'school_address' => ['required', 'string'],
+            'school_logo' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp,svg', 'max:2048'],
             'checkin_start' => ['required'],
             'checkin_late' => ['required'],
             'checkin_alfa' => ['required'],
@@ -86,11 +97,28 @@ class AdminSekolahController extends Controller
             'weight_guru' => ['required', 'numeric', 'min:0', 'max:100'],
         ]);
 
-        $school->update([
+        $schoolData = [
             'name' => $request->school_name,
             'phone' => $request->school_phone,
             'address' => $request->school_address,
-        ]);
+        ];
+
+        if ($request->boolean('remove_logo')) {
+            if ($school->logo_path && Storage::disk('public')->exists($school->logo_path)) {
+                Storage::disk('public')->delete($school->logo_path);
+            }
+            $schoolData['logo_path'] = null;
+        } elseif ($request->hasFile('school_logo')) {
+            if ($school->logo_path && Storage::disk('public')->exists($school->logo_path)) {
+                Storage::disk('public')->delete($school->logo_path);
+            }
+            $file = $request->file('school_logo');
+            $filename = 'logo_' . time() . '_' . Str::random(8) . '.' . $file->getClientOriginalExtension();
+            $path = $file->storeAs("schools/{$schoolId}/logo", $filename, 'public');
+            $schoolData['logo_path'] = $path;
+        }
+
+        $school->update($schoolData);
 
         $settingsToUpdate = [
             'checkin_start' => $request->checkin_start,
@@ -120,7 +148,7 @@ class AdminSekolahController extends Controller
     public function majors()
     {
         $schoolId = $this->getSchoolId();
-        $majors = Major::where('school_id', $schoolId)->with('classes.students')->get();
+        $majors = Major::where('school_id', $schoolId)->withCount('classes')->get();
         $classes = SchoolClass::where('school_id', $schoolId)->with('major')->get();
 
         return view('adminsekolah.majors', compact('majors', 'classes'));
@@ -147,7 +175,7 @@ class AdminSekolahController extends Controller
     {
         $schoolId = $this->getSchoolId();
         $request->validate([
-            'major_id' => ['required', 'exists:majors,id'],
+            'major_id' => ['required', Rule::exists('majors', 'id')->where('school_id', $schoolId)],
             'name' => ['required', 'string', 'max:50'],
             'grade_level' => ['required', 'in:X,XI,XII'],
             'academic_year' => ['required', 'string', 'max:15'],
@@ -181,7 +209,7 @@ class AdminSekolahController extends Controller
     {
         $schoolId = $this->getSchoolId();
         $request->validate([
-            'class_id' => ['required', 'exists:classes,id'],
+            'class_id' => ['required', Rule::exists('classes', 'id')->where('school_id', $schoolId)],
             'nis' => ['required', 'string', 'max:30'],
             'nisn' => ['required', 'string', 'max:30', 'unique:students,nisn'],
             'name' => ['required', 'string', 'max:100'],
@@ -218,9 +246,11 @@ class AdminSekolahController extends Controller
 
     public function importStudents(Request $request)
     {
+        $schoolId = $this->getSchoolId();
+
         $request->validate([
-            'class_id' => ['required', 'exists:classes,id'],
-            'file' => ['required', 'file', 'mimes:csv,txt,xlsx'],
+            'class_id' => ['required', Rule::exists('classes', 'id')->where('school_id', $schoolId)],
+            'file' => ['required', 'file', 'mimes:csv,txt,xlsx', 'max:5120'],
         ]);
 
         $schoolId = $this->getSchoolId();
@@ -463,32 +493,63 @@ class AdminSekolahController extends Controller
     {
         $schoolId = $this->getSchoolId();
         $request->validate([
-            'student_id' => ['required', 'exists:students,id'],
-            'company_id' => ['required', 'exists:companies,id'],
-            'pkl_period_id' => ['required', 'exists:pkl_periods,id'],
-            'teacher_id' => ['required', 'exists:teachers,id'],
-            'supervisor_id' => ['nullable', 'exists:supervisors,id'],
+            'student_id' => [
+                'required',
+                Rule::exists('students', 'id')->where(function ($query) use ($schoolId) {
+                    $query->whereIn('user_id', User::where('school_id', $schoolId)->select('id'));
+                })
+            ],
+            'company_id' => [
+                'required',
+                Rule::exists('companies', 'id')->where('school_id', $schoolId)
+            ],
+            'pkl_period_id' => [
+                'required',
+                Rule::exists('pkl_periods', 'id')->where('school_id', $schoolId)
+            ],
+            'teacher_id' => [
+                'required',
+                Rule::exists('teachers', 'id')->where(function ($query) use ($schoolId) {
+                    $query->whereIn('user_id', User::where('school_id', $schoolId)->select('id'));
+                })
+            ],
+            'supervisor_id' => [
+                'nullable',
+                Rule::exists('supervisors', 'id')->where(function ($query) use ($schoolId) {
+                    $query->whereIn('user_id', User::where('school_id', $schoolId)->select('id'));
+                })
+            ],
         ]);
 
-        // Check duplicate period
-        $exists = StudentPkl::where('student_id', $request->student_id)
-            ->where('pkl_period_id', $request->pkl_period_id)
-            ->exists();
+        // Concurrency-safe plotting with lock and duplicate key catch
+        return DB::transaction(function () use ($schoolId, $request) {
+            $exists = StudentPkl::where('student_id', $request->student_id)
+                ->where('pkl_period_id', $request->pkl_period_id)
+                ->lockForUpdate()
+                ->exists();
 
-        if ($exists) {
-            return back()->withErrors(['student_id' => 'Siswa sudah diplot ke DU/DI pada periode PKL yang sama.']);
-        }
+            if ($exists) {
+                return back()->withErrors(['student_id' => 'Siswa sudah diplot ke DU/DI pada periode PKL yang sama.']);
+            }
 
-        StudentPkl::create([
-            'school_id' => $schoolId,
-            'student_id' => $request->student_id,
-            'company_id' => $request->company_id,
-            'pkl_period_id' => $request->pkl_period_id,
-            'teacher_id' => $request->teacher_id,
-            'supervisor_id' => $request->supervisor_id,
-            'status' => 'active',
-        ]);
+            try {
+                StudentPkl::create([
+                    'school_id' => $schoolId,
+                    'student_id' => $request->student_id,
+                    'company_id' => $request->company_id,
+                    'pkl_period_id' => $request->pkl_period_id,
+                    'teacher_id' => $request->teacher_id,
+                    'supervisor_id' => $request->supervisor_id,
+                    'status' => 'active',
+                ]);
+            } catch (\Illuminate\Database\QueryException $e) {
+                if (str_contains($e->getMessage(), 'UNIQUE') || str_contains($e->getMessage(), 'Integrity constraint violation')) {
+                    return back()->withErrors(['student_id' => 'Siswa sudah diplot ke DU/DI pada periode PKL yang sama.']);
+                }
+                throw $e;
+            }
 
-        return back()->with('success', 'Plotting penempatan PKL siswa berhasil disimpan.');
+            return back()->with('success', 'Plotting penempatan PKL siswa berhasil disimpan.');
+        });
     }
 }

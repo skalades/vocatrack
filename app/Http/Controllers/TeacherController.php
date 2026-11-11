@@ -8,12 +8,14 @@ use App\Models\AttendanceRequest;
 use App\Models\Journal;
 use App\Models\SchoolSetting;
 use App\Models\StudentPkl;
+use App\Services\AnnouncementService;
 use App\Services\AssessmentService;
 use App\Services\JournalService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class TeacherController extends Controller
@@ -27,7 +29,7 @@ class TeacherController extends Controller
         return $teacher;
     }
 
-    public function dashboard()
+    public function dashboard(AnnouncementService $announcementService)
     {
         $teacher = $this->getTeacher();
         $studentPkls = StudentPkl::where('teacher_id', $teacher->id)->with(['student.user', 'company'])->get();
@@ -49,12 +51,15 @@ class TeacherController extends Controller
             ->where('status', 'review_guru')
             ->count();
 
+        $recentAnnouncements = $announcementService->getLatestForUser(Auth::user(), 3);
+
         return view('teacher.dashboard', compact(
             'totalStudents',
             'todayAttendances',
             'pendingRequests',
             'pendingJournals',
-            'studentPkls'
+            'studentPkls',
+            'recentAnnouncements'
         ));
     }
 
@@ -95,6 +100,11 @@ class TeacherController extends Controller
 
     public function processRequest(Request $request, AttendanceRequest $attRequest)
     {
+        $teacher = $this->getTeacher();
+        if ($attRequest->studentPkl->teacher_id !== $teacher->id) {
+            abort(403, 'Akses ditolak: Anda bukan guru pembimbing yang ditugaskan untuk siswa ini.');
+        }
+
         $request->validate([
             'action' => ['required', 'in:approve,reject'],
             'reviewer_notes' => ['nullable', 'string', 'max:255'],
@@ -102,34 +112,47 @@ class TeacherController extends Controller
 
         $status = ($request->action === 'approve') ? 'approved' : 'rejected';
 
-        $attRequest->update([
-            'status' => $status,
-            'reviewer_id' => Auth::id(),
-            'reviewer_role' => 'guru-pembimbing',
-            'reviewer_notes' => $request->reviewer_notes,
-            'reviewed_at' => now(),
-        ]);
+        \Illuminate\Support\Facades\DB::transaction(function () use ($attRequest, $request, $status) {
+            // Pessimistic lock row to prevent race conditions or double review
+            $lockedRequest = AttendanceRequest::where('id', $attRequest->id)
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        // If approved, create or update attendance record for the date range
-        if ($status === 'approved') {
-            $currentDate = Carbon::parse($attRequest->start_date);
-            $endDate = Carbon::parse($attRequest->end_date);
-
-            while ($currentDate->lessThanOrEqualTo($endDate)) {
-                Attendance::updateOrCreate(
-                    [
-                        'student_pkl_id' => $attRequest->student_pkl_id,
-                        'date' => $currentDate->toDateString(),
-                    ],
-                    [
-                        'school_id' => $attRequest->school_id,
-                        'status' => $attRequest->type,
-                        'checkout_notes' => 'Pengajuan disetujui Guru: ' . $attRequest->reason,
-                    ]
-                );
-                $currentDate->addDay();
+            if ($lockedRequest->status !== 'pending') {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'status' => 'Permohonan presensi ini sudah diproses sebelumnya (Status: ' . $lockedRequest->status . ').'
+                ]);
             }
-        }
+
+            $lockedRequest->update([
+                'status' => $status,
+                'reviewer_id' => Auth::id(),
+                'reviewer_role' => 'guru-pembimbing',
+                'reviewer_notes' => $request->reviewer_notes,
+                'reviewed_at' => now(),
+            ]);
+
+            // If approved, create or update attendance record for the date range
+            if ($status === 'approved') {
+                $currentDate = Carbon::parse($lockedRequest->start_date);
+                $endDate = Carbon::parse($lockedRequest->end_date);
+
+                while ($currentDate->lessThanOrEqualTo($endDate)) {
+                    Attendance::updateOrCreate(
+                        [
+                            'student_pkl_id' => $lockedRequest->student_pkl_id,
+                            'date' => $currentDate->toDateString(),
+                        ],
+                        [
+                            'school_id' => $lockedRequest->school_id,
+                            'status' => $lockedRequest->type,
+                            'checkout_notes' => 'Pengajuan disetujui Guru: ' . $lockedRequest->reason,
+                        ]
+                    );
+                    $currentDate->addDay();
+                }
+            }
+        });
 
         $actionText = ($status === 'approved') ? 'disetujui' : 'ditolak';
         return back()->with('success', "Permohonan presensi siswa berhasil {$actionText}.");
@@ -151,6 +174,11 @@ class TeacherController extends Controller
 
     public function processJournal(Request $request, Journal $journal, JournalService $journalService)
     {
+        $teacher = $this->getTeacher();
+        if ($journal->studentPkl->teacher_id !== $teacher->id) {
+            abort(403, 'Akses ditolak: Anda bukan guru pembimbing yang ditugaskan untuk siswa ini.');
+        }
+
         $request->validate([
             'action' => ['required', 'in:approve,revision'],
             'notes' => ['nullable', 'string', 'max:500'],
@@ -184,6 +212,8 @@ class TeacherController extends Controller
 
     public function storeAssessment(Request $request, AssessmentService $assessmentService)
     {
+        $teacher = $this->getTeacher();
+
         $request->validate([
             'student_pkl_id' => ['required', 'exists:student_pkl,id'],
             'score_teacher_report' => ['required', 'numeric', 'min:0', 'max:100'],
@@ -192,17 +222,15 @@ class TeacherController extends Controller
 
         $spkl = StudentPkl::findOrFail($request->student_pkl_id);
 
-        $assessment = Assessment::updateOrCreate(
-            ['student_pkl_id' => $spkl->id],
-            [
-                'school_id' => $spkl->school_id,
-                'score_teacher_report' => $request->score_teacher_report,
-                'notes_teacher' => $request->notes_teacher,
-            ]
-        );
+        if ($spkl->teacher_id !== $teacher->id) {
+            abort(403, 'Akses ditolak: Anda bukan guru pembimbing yang ditugaskan untuk siswa ini.');
+        }
 
-        $assessment->final_score = $assessmentService->calculateFinalScore($assessment);
-        $assessment->save();
+        // Thread-safe and atomic assessment scoring
+        $assessmentService->saveTeacherAssessment($spkl, [
+            'score_teacher_report' => $request->score_teacher_report,
+            'notes_teacher' => $request->notes_teacher,
+        ]);
 
         return back()->with('success', 'Nilai pembimbingan dan laporan sekolah berhasil disimpan. Nilai akhir telah dikalkulasi.');
     }
@@ -239,7 +267,14 @@ class TeacherController extends Controller
 
         $settings = SchoolSetting::where('school_id', $spkl->school_id)->pluck('value', 'key');
 
-        $pdf = Pdf::loadView('reports.student_pdf', compact('spkl', 'settings'));
+        $schoolLogoBase64 = null;
+        if ($spkl->school->logo_path && Storage::disk('public')->exists($spkl->school->logo_path)) {
+            $mime = Storage::disk('public')->mimeType($spkl->school->logo_path) ?? 'image/png';
+            $content = base64_encode(Storage::disk('public')->get($spkl->school->logo_path));
+            $schoolLogoBase64 = "data:{$mime};base64,{$content}";
+        }
+
+        $pdf = Pdf::loadView('reports.student_pdf', compact('spkl', 'settings', 'schoolLogoBase64'));
         $pdf->setPaper('a4', 'portrait');
 
         $sanitizedName = Str::slug($spkl->student->user->name);

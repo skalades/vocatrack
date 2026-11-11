@@ -7,6 +7,7 @@ use App\Models\StudentPkl;
 use App\Models\Attendance;
 use App\Models\SchoolSetting;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class AttendanceService
@@ -16,15 +17,10 @@ class AttendanceService
         $today = Carbon::today()->toDateString();
         $now = Carbon::now();
 
-        // 1. Check duplicate check-in today
-        if (Attendance::where('student_pkl_id', $spkl->id)->whereDate('date', $today)->exists()) {
-            throw ValidationException::withMessages(['attendance' => 'Presensi hari ini sudah tercatat.']);
-        }
-
         $company = $spkl->company;
         $isWithinRadius = true;
 
-        // 2. Evaluate GPS if enabled by DU/DI
+        // 1. Evaluate GPS if enabled by DU/DI
         if ($company->gps_enabled) {
             if (!isset($data['latitude']) || !isset($data['longitude'])) {
                 throw ValidationException::withMessages(['location' => 'Data koordinat GPS perangkat diperlukan untuk presensi di DU/DI ini.']);
@@ -40,7 +36,7 @@ class AttendanceService
             $isWithinRadius = ($distance <= (float) $company->radius_meters);
         }
 
-        // 3. Resolve Work Hours & Check Late Status
+        // 2. Resolve Work Hours & Check Late Status
         $workHours = $this->resolveWorkHours($company, $spkl->school_id);
 
         $checkinStart = Carbon::createFromTimeString($workHours['checkin_start']);
@@ -56,18 +52,37 @@ class AttendanceService
             $checkoutNotes = 'Alasan Luar Radius: ' . $data['reason'];
         }
 
-        return Attendance::create([
-            'school_id' => $spkl->school_id,
-            'student_pkl_id' => $spkl->id,
-            'date' => $today,
-            'status' => $status,
-            'checkin_time' => $now->toTimeString(),
-            'checkin_photo_path' => $data['photo_path'] ?? null,
-            'checkin_lat' => $data['latitude'] ?? null,
-            'checkin_lng' => $data['longitude'] ?? null,
-            'is_within_radius' => $isWithinRadius,
-            'checkout_notes' => $checkoutNotes,
-        ]);
+        // 3. Atomic check and insert with transaction & duplicate constraint protection
+        return DB::transaction(function () use ($spkl, $today, $status, $now, $data, $isWithinRadius, $checkoutNotes) {
+            $existing = Attendance::where('student_pkl_id', $spkl->id)
+                ->whereDate('date', $today)
+                ->lockForUpdate()
+                ->first();
+
+            if ($existing) {
+                throw ValidationException::withMessages(['attendance' => 'Presensi hari ini sudah tercatat.']);
+            }
+
+            try {
+                return Attendance::create([
+                    'school_id' => $spkl->school_id,
+                    'student_pkl_id' => $spkl->id,
+                    'date' => $today,
+                    'status' => $status,
+                    'checkin_time' => $now->toTimeString(),
+                    'checkin_photo_path' => $data['photo_path'] ?? null,
+                    'checkin_lat' => $data['latitude'] ?? null,
+                    'checkin_lng' => $data['longitude'] ?? null,
+                    'is_within_radius' => $isWithinRadius,
+                    'checkout_notes' => $checkoutNotes,
+                ]);
+            } catch (\Illuminate\Database\QueryException $e) {
+                if (str_contains($e->getMessage(), 'UNIQUE') || str_contains($e->getMessage(), 'Integrity constraint violation')) {
+                    throw ValidationException::withMessages(['attendance' => 'Presensi hari ini sudah tercatat.']);
+                }
+                throw $e;
+            }
+        });
     }
 
     public function recordCheckOut(StudentPkl $spkl, array $data): Attendance
@@ -75,31 +90,35 @@ class AttendanceService
         $today = Carbon::today()->toDateString();
         $now = Carbon::now();
 
-        $attendance = Attendance::where('student_pkl_id', $spkl->id)
-            ->whereDate('date', $today)
-            ->first();
+        // Atomic check-out with pessimistic lock
+        return DB::transaction(function () use ($spkl, $today, $now, $data) {
+            $attendance = Attendance::where('student_pkl_id', $spkl->id)
+                ->whereDate('date', $today)
+                ->lockForUpdate()
+                ->first();
 
-        if (!$attendance) {
-            throw ValidationException::withMessages(['checkout' => 'Anda belum melakukan check-in hari ini.']);
-        }
+            if (!$attendance) {
+                throw ValidationException::withMessages(['checkout' => 'Anda belum melakukan check-in hari ini.']);
+            }
 
-        if ($attendance->checkout_time) {
-            throw ValidationException::withMessages(['checkout' => 'Check-out untuk hari ini sudah selesai dilakukan.']);
-        }
+            if ($attendance->checkout_time) {
+                throw ValidationException::withMessages(['checkout' => 'Check-out untuk hari ini sudah selesai dilakukan.']);
+            }
 
-        $workHours = $this->resolveWorkHours($spkl->company, $spkl->school_id);
-        $checkoutStart = Carbon::createFromTimeString($workHours['checkout_start']);
+            $workHours = $this->resolveWorkHours($spkl->company, $spkl->school_id);
+            $checkoutStart = Carbon::createFromTimeString($workHours['checkout_start']);
 
-        if ($now->lessThan($checkoutStart)) {
-            throw ValidationException::withMessages(['checkout' => 'Check-out baru dapat dilakukan mulai pukul ' . substr($workHours['checkout_start'], 0, 5) . ' WIB.']);
-        }
+            if ($now->lessThan($checkoutStart)) {
+                throw ValidationException::withMessages(['checkout' => 'Check-out baru dapat dilakukan mulai pukul ' . substr($workHours['checkout_start'], 0, 5) . ' WIB.']);
+            }
 
-        $attendance->update([
-            'checkout_time' => $now->toTimeString(),
-            'checkout_notes' => $data['checkout_notes'] ?? null,
-        ]);
+            $attendance->update([
+                'checkout_time' => $now->toTimeString(),
+                'checkout_notes' => $data['checkout_notes'] ?? null,
+            ]);
 
-        return $attendance;
+            return $attendance;
+        });
     }
 
     public function calculateHaversineDistance(float $lat1, float $lon1, float $lat2, float $lon2): float

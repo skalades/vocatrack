@@ -6,6 +6,7 @@ use App\Models\Attendance;
 use App\Models\AttendanceRequest;
 use App\Models\Journal;
 use App\Models\JournalPhoto;
+use App\Services\AnnouncementService;
 use App\Services\AttendanceService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -35,7 +36,7 @@ class StudentController extends Controller
         return $spkl;
     }
 
-    public function home()
+    public function home(AnnouncementService $announcementService)
     {
         $spkl = $this->getActiveSpkl();
         $today = Carbon::today()->toDateString();
@@ -66,7 +67,10 @@ class StudentController extends Controller
             'alfa' => $monthAttendances->where('status', 'alfa')->count(),
         ];
 
-        return view('student.home', compact('spkl', 'todayAttendance', 'todayJournal', 'stats'));
+        // Pengumuman tersaring berdasarkan peran & jurusan siswa
+        $announcements = $announcementService->getLatestForUser(Auth::user(), 6);
+
+        return view('student.home', compact('spkl', 'todayAttendance', 'todayJournal', 'stats', 'announcements'));
     }
 
     public function attendance()
@@ -103,12 +107,34 @@ class StudentController extends Controller
         $photoPath = null;
         if ($request->filled('photo')) {
             $base64Image = $request->input('photo');
-            if (preg_match('/^data:image\/(\w+);base64,/', $base64Image, $type)) {
-                $base64Image = substr($base64Image, strpos($base64Image, ',') + 1);
-                $type = strtolower($type[1]);
-                $imageData = base64_decode($base64Image);
+            
+            // Limit base64 payload size (approx 5MB base64 string ~ 3.7MB binary)
+            if (strlen($base64Image) > 7 * 1024 * 1024) {
+                return back()->withErrors(['photo' => 'Ukuran file foto swafoto terlalu besar (maksimal 5MB).']);
+            }
 
-                $fileName = 'schools/' . $spkl->school_id . '/attendances/' . date('Y') . '/' . Str::random(20) . '.' . $type;
+            if (preg_match('/^data:image\/(\w+);base64,/', $base64Image, $typeMatch)) {
+                $rawType = strtolower($typeMatch[1]);
+                $allowedMimeMap = [
+                    'jpeg' => 'jpg',
+                    'jpg'  => 'jpg',
+                    'png'  => 'png',
+                    'webp' => 'webp',
+                ];
+
+                if (!isset($allowedMimeMap[$rawType])) {
+                    return back()->withErrors(['photo' => 'Format foto tidak valid. Gunakan format JPG, PNG, atau WEBP.']);
+                }
+
+                $extension = $allowedMimeMap[$rawType];
+                $cleanBase64 = substr($base64Image, strpos($base64Image, ',') + 1);
+                $imageData = base64_decode($cleanBase64, true);
+
+                if ($imageData === false) {
+                    return back()->withErrors(['photo' => 'Data gambar swafoto rusak atau tidak valid.']);
+                }
+
+                $fileName = 'schools/' . $spkl->school_id . '/attendances/' . date('Y') . '/' . Str::random(24) . '.' . $extension;
                 Storage::disk('public')->put($fileName, $imageData);
                 $photoPath = $fileName;
             }
@@ -169,37 +195,90 @@ class StudentController extends Controller
             );
         }
 
-        AttendanceRequest::create([
-            'school_id' => $spkl->school_id,
-            'student_pkl_id' => $spkl->id,
-            'type' => $request->type,
-            'start_date' => $request->start_date,
-            'end_date' => $request->end_date,
-            'reason' => $request->reason,
-            'destination_location' => $request->destination_location,
-            'attachment_path' => $attachmentPath,
-            'status' => 'pending',
-        ]);
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($spkl, $request, $attachmentPath) {
+            // Check for overlapping pending or approved requests to prevent race condition duplicates
+            $overlapping = AttendanceRequest::where('student_pkl_id', $spkl->id)
+                ->whereIn('status', ['pending', 'approved'])
+                ->where(function ($query) use ($request) {
+                    $query->whereBetween('start_date', [$request->start_date, $request->end_date])
+                        ->orWhereBetween('end_date', [$request->start_date, $request->end_date])
+                        ->orWhere(function ($q) use ($request) {
+                            $q->where('start_date', '<=', $request->start_date)
+                                ->where('end_date', '>=', $request->end_date);
+                        });
+                })
+                ->lockForUpdate()
+                ->exists();
 
-        return back()->with('success', 'Permohonan presensi khusus berhasil diajukan dan sedang menunggu verifikasi.');
+            if ($overlapping) {
+                return back()->withErrors(['start_date' => 'Sudah ada permohonan presensi aktif atau pending pada rentang tanggal tersebut.']);
+            }
+
+            AttendanceRequest::create([
+                'school_id' => $spkl->school_id,
+                'student_pkl_id' => $spkl->id,
+                'type' => $request->type,
+                'start_date' => $request->start_date,
+                'end_date' => $request->end_date,
+                'reason' => $request->reason,
+                'destination_location' => $request->destination_location,
+                'attachment_path' => $attachmentPath,
+                'status' => 'pending',
+            ]);
+
+            return back()->with('success', 'Permohonan presensi khusus berhasil diajukan dan sedang menunggu verifikasi.');
+        });
     }
 
-    public function journals()
+    public function journals(Request $request)
     {
         $spkl = $this->getActiveSpkl();
         $today = Carbon::today()->toDateString();
 
-        $journals = Journal::with(['photos', 'approvals.approver'])
-            ->where('student_pkl_id', $spkl->id)
-            ->orderBy('date', 'desc')
-            ->paginate(10);
+        $query = Journal::with(['photos', 'approvals.approver'])
+            ->where('student_pkl_id', $spkl->id);
+
+        // Filter berdasarkan status
+        if ($request->filled('status') && $request->status !== 'all') {
+            if ($request->status === 'review') {
+                $query->whereIn('status', ['submitted', 'review_guru']);
+            } else {
+                $query->where('status', $request->status);
+            }
+        }
+
+        // Filter pencarian teks uraian kegiatan
+        if ($request->filled('search')) {
+            $query->where('activity_description', 'like', '%' . trim($request->search) . '%');
+        }
+
+        // Filter bulan (Format: YYYY-MM)
+        if ($request->filled('month')) {
+            $query->where('date', 'like', $request->month . '%');
+        }
+
+        // Hitung total status untuk filter pills
+        $baseQuery = Journal::where('student_pkl_id', $spkl->id);
+        $statusCounts = [
+            'all' => (clone $baseQuery)->count(),
+            'approved' => (clone $baseQuery)->where('status', 'approved')->count(),
+            'review' => (clone $baseQuery)->whereIn('status', ['submitted', 'review_guru'])->count(),
+            'revision' => (clone $baseQuery)->where('status', 'revision')->count(),
+            'draft' => (clone $baseQuery)->where('status', 'draft')->count(),
+        ];
+
+        // Pagination responsif (default 3 per halaman agar pagination terlihat rapi dan aktif)
+        $perPage = $request->integer('per_page', 3);
+        $journals = $query->orderBy('date', 'desc')
+            ->paginate($perPage)
+            ->withQueryString();
 
         $todayJournal = Journal::with('photos')
             ->where('student_pkl_id', $spkl->id)
             ->where('date', $today)
             ->first();
 
-        return view('student.journals', compact('spkl', 'journals', 'todayJournal'));
+        return view('student.journals', compact('spkl', 'journals', 'todayJournal', 'statusCounts'));
     }
 
     public function storeJournal(Request $request)
@@ -217,17 +296,62 @@ class StudentController extends Controller
 
         $status = ($request->action_type === 'submit') ? 'submitted' : 'draft';
 
-        $journal = Journal::updateOrCreate(
-            [
-                'student_pkl_id' => $spkl->id,
-                'date' => $request->date,
-            ],
-            [
-                'school_id' => $spkl->school_id,
-                'activity_description' => $request->activity_description,
-                'status' => $status,
-            ]
-        );
+        try {
+            $journal = \Illuminate\Support\Facades\DB::transaction(function () use ($spkl, $request, $status) {
+                $existing = Journal::where('student_pkl_id', $spkl->id)
+                    ->whereDate('date', $request->date)
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($existing) {
+                    if (in_array($existing->status, ['review_guru', 'approved'])) {
+                        throw \Illuminate\Validation\ValidationException::withMessages([
+                            'date' => 'Jurnal untuk tanggal ini sudah dalam tahap review atau telah disetujui, sehingga tidak dapat diubah.',
+                        ]);
+                    }
+
+                    $existing->update([
+                        'activity_description' => $request->activity_description,
+                        'status' => $status,
+                    ]);
+
+                    return $existing;
+                }
+
+                try {
+                    return Journal::create([
+                        'school_id' => $spkl->school_id,
+                        'student_pkl_id' => $spkl->id,
+                        'date' => $request->date,
+                        'activity_description' => $request->activity_description,
+                        'status' => $status,
+                    ]);
+                } catch (\Illuminate\Database\QueryException $e) {
+                    if (str_contains($e->getMessage(), 'UNIQUE') || str_contains($e->getMessage(), 'Integrity constraint violation')) {
+                        $existing = Journal::where('student_pkl_id', $spkl->id)
+                            ->whereDate('date', $request->date)
+                            ->lockForUpdate()
+                            ->firstOrFail();
+
+                        if (in_array($existing->status, ['review_guru', 'approved'])) {
+                            throw \Illuminate\Validation\ValidationException::withMessages([
+                                'date' => 'Jurnal untuk tanggal ini sudah dalam tahap review atau telah disetujui.',
+                            ]);
+                        }
+
+                        $existing->update([
+                            'activity_description' => $request->activity_description,
+                            'status' => $status,
+                        ]);
+
+                        return $existing;
+                    }
+                    throw $e;
+                }
+            });
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return back()->withErrors($e->errors())->withInput();
+        }
 
         if ($request->hasFile('photos')) {
             foreach ($request->file('photos') as $photo) {
@@ -253,13 +377,17 @@ class StudentController extends Controller
             abort(403);
         }
 
-        if (!in_array($journal->status, ['draft', 'revision'])) {
-            return back()->with('error', 'Status jurnal saat ini tidak dapat disubmit ulang.');
-        }
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($journal) {
+            $lockedJournal = Journal::where('id', $journal->id)->lockForUpdate()->firstOrFail();
 
-        $journal->update(['status' => 'submitted']);
+            if (!in_array($lockedJournal->status, ['draft', 'revision'])) {
+                return back()->with('error', 'Status jurnal saat ini tidak dapat disubmit ulang.');
+            }
 
-        return back()->with('success', 'Jurnal berhasil disubmit dan menunggu approval DU/DI.');
+            $lockedJournal->update(['status' => 'submitted']);
+
+            return back()->with('success', 'Jurnal berhasil disubmit dan menunggu approval DU/DI.');
+        });
     }
 
     public function profile()

@@ -54,48 +54,52 @@ class SuperAdminController extends Controller
             'admin_email' => ['required', 'email', 'unique:users,email'],
         ]);
 
-        $school = School::create([
-            'npsn' => $request->npsn,
-            'name' => $request->name,
-            'address' => $request->address,
-            'phone' => $request->phone,
-            'email' => $request->email,
-            'is_active' => true,
-        ]);
-
-        // Default School Settings
-        $defaultSettings = [
-            'checkin_start' => '06:00:00',
-            'checkin_late' => '08:00:00',
-            'checkin_alfa' => '11:00:00',
-            'checkout_start' => '16:00:00',
-            'journal_backdate_limit' => '3',
-            'weight_dudi' => '60',
-            'weight_guru' => '40',
-            'kop_header_line1' => 'PEMERINTAH PROVINSI',
-            'kop_header_line2' => 'DINAS PENDIDIKAN',
-            'kop_header_line3' => strtoupper($school->name),
-            'kepsek_name' => 'Kepala Sekolah',
-            'kepsek_nip' => '-',
-        ];
-
-        foreach ($defaultSettings as $k => $v) {
-            SchoolSetting::create([
-                'school_id' => $school->id,
-                'key' => $k,
-                'value' => $v,
+        $school = \Illuminate\Support\Facades\DB::transaction(function () use ($request) {
+            $school = School::create([
+                'npsn' => $request->npsn,
+                'name' => $request->name,
+                'address' => $request->address,
+                'phone' => $request->phone,
+                'email' => $request->email,
+                'is_active' => true,
             ]);
-        }
 
-        // Auto-create initial School Admin
-        User::create([
-            'school_id' => $school->id,
-            'name' => $request->admin_name,
-            'email' => $request->admin_email,
-            'password' => Hash::make('password'),
-            'role' => 'admin-sekolah',
-            'is_active' => true,
-        ]);
+            // Default School Settings
+            $defaultSettings = [
+                'checkin_start' => '06:00:00',
+                'checkin_late' => '08:00:00',
+                'checkin_alfa' => '11:00:00',
+                'checkout_start' => '16:00:00',
+                'journal_backdate_limit' => '3',
+                'weight_dudi' => '60',
+                'weight_guru' => '40',
+                'kop_header_line1' => 'PEMERINTAH PROVINSI',
+                'kop_header_line2' => 'DINAS PENDIDIKAN',
+                'kop_header_line3' => strtoupper($school->name),
+                'kepsek_name' => 'Kepala Sekolah',
+                'kepsek_nip' => '-',
+            ];
+
+            foreach ($defaultSettings as $k => $v) {
+                SchoolSetting::create([
+                    'school_id' => $school->id,
+                    'key' => $k,
+                    'value' => $v,
+                ]);
+            }
+
+            // Auto-create initial School Admin
+            User::create([
+                'school_id' => $school->id,
+                'name' => $request->admin_name,
+                'email' => $request->admin_email,
+                'password' => Hash::make('password'),
+                'role' => 'admin-sekolah',
+                'is_active' => true,
+            ]);
+
+            return $school;
+        });
 
         return back()->with('success', "Sekolah {$school->name} dan akun admin sekolah berhasil dibuat dengan password awal: password");
     }

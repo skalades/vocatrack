@@ -92,6 +92,11 @@ class SupervisorController extends Controller
 
     public function processRequest(Request $request, AttendanceRequest $attRequest)
     {
+        $supervisor = $this->getSupervisor();
+        if ($attRequest->studentPkl->company_id !== $supervisor->company_id) {
+            abort(403, 'Akses ditolak: Siswa ini tidak ditempatkan pada mitra industri Anda.');
+        }
+
         $request->validate([
             'action' => ['required', 'in:approve,reject'],
             'reviewer_notes' => ['nullable', 'string', 'max:255'],
@@ -99,34 +104,47 @@ class SupervisorController extends Controller
 
         $status = ($request->action === 'approve') ? 'approved' : 'rejected';
 
-        $attRequest->update([
-            'status' => $status,
-            'reviewer_id' => Auth::id(),
-            'reviewer_role' => 'pembimbing-dudi',
-            'reviewer_notes' => $request->reviewer_notes,
-            'reviewed_at' => now(),
-        ]);
+        \Illuminate\Support\Facades\DB::transaction(function () use ($attRequest, $request, $status) {
+            // Pessimistic lock row to prevent race conditions or double review
+            $lockedRequest = AttendanceRequest::where('id', $attRequest->id)
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        if ($status === 'approved') {
-            $currentDate = Carbon::parse($attRequest->start_date);
-            $endDate = Carbon::parse($attRequest->end_date);
-
-            while ($currentDate->lessThanOrEqualTo($endDate)) {
-                Attendance::updateOrCreate(
-                    [
-                        'student_pkl_id' => $attRequest->student_pkl_id,
-                        'date' => $currentDate->toDateString(),
-                    ],
-                    [
-                        'school_id' => $attRequest->school_id,
-                        'status' => $attRequest->type,
-                        'is_within_radius' => true,
-                        'checkout_notes' => 'Disetujui Mentor DU/DI: ' . $attRequest->reason,
-                    ]
-                );
-                $currentDate->addDay();
+            if ($lockedRequest->status !== 'pending') {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'status' => 'Permohonan presensi ini sudah diproses sebelumnya (Status: ' . $lockedRequest->status . ').'
+                ]);
             }
-        }
+
+            $lockedRequest->update([
+                'status' => $status,
+                'reviewer_id' => Auth::id(),
+                'reviewer_role' => 'pembimbing-dudi',
+                'reviewer_notes' => $request->reviewer_notes,
+                'reviewed_at' => now(),
+            ]);
+
+            if ($status === 'approved') {
+                $currentDate = Carbon::parse($lockedRequest->start_date);
+                $endDate = Carbon::parse($lockedRequest->end_date);
+
+                while ($currentDate->lessThanOrEqualTo($endDate)) {
+                    Attendance::updateOrCreate(
+                        [
+                            'student_pkl_id' => $lockedRequest->student_pkl_id,
+                            'date' => $currentDate->toDateString(),
+                        ],
+                        [
+                            'school_id' => $lockedRequest->school_id,
+                            'status' => $lockedRequest->type,
+                            'is_within_radius' => true,
+                            'checkout_notes' => 'Disetujui Mentor DU/DI: ' . $lockedRequest->reason,
+                        ]
+                    );
+                    $currentDate->addDay();
+                }
+            }
+        });
 
         $actionText = ($status === 'approved') ? 'disetujui' : 'ditolak';
         return back()->with('success', "Permohonan penugasan dinas/WFH berhasil {$actionText}.");
@@ -148,6 +166,11 @@ class SupervisorController extends Controller
 
     public function processJournal(Request $request, Journal $journal, JournalService $journalService)
     {
+        $supervisor = $this->getSupervisor();
+        if ($journal->studentPkl->company_id !== $supervisor->company_id) {
+            abort(403, 'Akses ditolak: Siswa ini tidak ditempatkan pada mitra industri Anda.');
+        }
+
         $request->validate([
             'action' => ['required', 'in:approve,revision'],
             'notes' => ['nullable', 'string', 'max:500'],
@@ -181,6 +204,8 @@ class SupervisorController extends Controller
 
     public function storeAssessment(Request $request, AssessmentService $assessmentService)
     {
+        $supervisor = $this->getSupervisor();
+
         $request->validate([
             'student_pkl_id' => ['required', 'exists:student_pkl,id'],
             'score_dudi_discipline' => ['required', 'numeric', 'min:0', 'max:100'],
@@ -191,19 +216,17 @@ class SupervisorController extends Controller
 
         $spkl = StudentPkl::findOrFail($request->student_pkl_id);
 
-        $assessment = Assessment::updateOrCreate(
-            ['student_pkl_id' => $spkl->id],
-            [
-                'school_id' => $spkl->school_id,
-                'score_dudi_discipline' => $request->score_dudi_discipline,
-                'score_dudi_technical' => $request->score_dudi_technical,
-                'score_dudi_initiative' => $request->score_dudi_initiative,
-                'notes_dudi' => $request->notes_dudi,
-            ]
-        );
+        if ($spkl->company_id !== $supervisor->company_id) {
+            abort(403, 'Akses ditolak: Siswa ini tidak ditempatkan pada mitra industri Anda.');
+        }
 
-        $assessment->final_score = $assessmentService->calculateFinalScore($assessment);
-        $assessment->save();
+        // Thread-safe and atomic assessment scoring
+        $assessmentService->saveSupervisorAssessment($spkl, [
+            'score_dudi_discipline' => $request->score_dudi_discipline,
+            'score_dudi_technical' => $request->score_dudi_technical,
+            'score_dudi_initiative' => $request->score_dudi_initiative,
+            'notes_dudi' => $request->notes_dudi,
+        ]);
 
         return back()->with('success', 'Nilai kompetensi industri berhasil disimpan.');
     }
