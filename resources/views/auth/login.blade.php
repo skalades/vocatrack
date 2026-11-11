@@ -106,99 +106,10 @@
                     Masuk ke Sistem
                 </button>
             </form>
-
-            <!-- Quick Demo Accounts Switcher -->
-            <div class="mt-8 pt-6 border-t border-slate-100">
-                <div class="flex items-center justify-between mb-3">
-                    <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Akun Demo Pengujian</p>
-                    <span class="text-[10px] font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100">Klik untuk isi otomatis</span>
-                </div>
-
-                <div class="grid grid-cols-2 gap-2">
-                    <button type="button" onclick="fillDemo('siswa@smkn2garut.sch.id', 'password')" class="text-left p-2.5 rounded-xl bg-slate-50/80 hover:bg-indigo-50/80 border border-slate-200/80 hover:border-indigo-200 transition-all group cursor-pointer">
-                        <div class="flex items-center space-x-2">
-                            <span class="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs">
-                                📱
-                            </span>
-                            <div class="min-w-0">
-                                <span class="text-xs font-bold text-slate-800 group-hover:text-indigo-900 block truncate">Siswa (Geologi)</span>
-                                <span class="text-[10px] text-slate-400 block truncate font-mono">siswa@smkn2garut...</span>
-                            </div>
-                        </div>
-                    </button>
-
-                    <button type="button" onclick="fillDemo('guru@smkn2garut.sch.id', 'password')" class="text-left p-2.5 rounded-xl bg-slate-50/80 hover:bg-indigo-50/80 border border-slate-200/80 hover:border-indigo-200 transition-all group cursor-pointer">
-                        <div class="flex items-center space-x-2">
-                            <span class="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs">
-                                👩‍🏫
-                            </span>
-                            <div class="min-w-0">
-                                <span class="text-xs font-bold text-slate-800 group-hover:text-indigo-900 block truncate">Guru Geologi</span>
-                                <span class="text-[10px] text-slate-400 block truncate font-mono">guru@smkn2garut...</span>
-                            </div>
-                        </div>
-                    </button>
-
-                    <button type="button" onclick="fillDemo('supervisor@antam.com', 'password')" class="text-left p-2.5 rounded-xl bg-slate-50/80 hover:bg-indigo-50/80 border border-slate-200/80 hover:border-indigo-200 transition-all group cursor-pointer">
-                        <div class="flex items-center space-x-2">
-                            <span class="w-6 h-6 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center text-xs">
-                                ⛏️
-                            </span>
-                            <div class="min-w-0">
-                                <span class="text-xs font-bold text-slate-800 group-hover:text-indigo-900 block truncate">Mentor Antam</span>
-                                <span class="text-[10px] text-slate-400 block truncate font-mono">supervisor@antam...</span>
-                            </div>
-                        </div>
-                    </button>
-
-                    <button type="button" onclick="fillDemo('admin@smkn2garut.sch.id', 'password')" class="text-left p-2.5 rounded-xl bg-slate-50/80 hover:bg-indigo-50/80 border border-slate-200/80 hover:border-indigo-200 transition-all group cursor-pointer">
-                        <div class="flex items-center space-x-2">
-                            <span class="w-6 h-6 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center text-xs">
-                                ⚙️
-                            </span>
-                            <div class="min-w-0">
-                                <span class="text-xs font-bold text-slate-800 group-hover:text-indigo-900 block truncate">Admin SMKN 2</span>
-                                <span class="text-[10px] text-slate-400 block truncate font-mono">admin@smkn2garut...</span>
-                            </div>
-                        </div>
-                    </button>
-
-                    <button type="button" onclick="fillDemo('kepsek@smkn2garut.sch.id', 'password')" class="text-left p-2.5 rounded-xl bg-slate-50/80 hover:bg-indigo-50/80 border border-slate-200/80 hover:border-indigo-200 transition-all group cursor-pointer">
-                        <div class="flex items-center space-x-2">
-                            <span class="w-6 h-6 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center text-xs">
-                                🎓
-                            </span>
-                            <div class="min-w-0">
-                                <span class="text-xs font-bold text-slate-800 group-hover:text-indigo-900 block truncate">Kepala Sekolah</span>
-                                <span class="text-[10px] text-slate-400 block truncate font-mono">kepsek@smkn2garut...</span>
-                            </div>
-                        </div>
-                    </button>
-
-                    <button type="button" onclick="fillDemo('superadmin@vokatrack.id', 'password')" class="text-left p-2.5 rounded-xl bg-slate-50/80 hover:bg-indigo-50/80 border border-slate-200/80 hover:border-indigo-200 transition-all group cursor-pointer">
-                        <div class="flex items-center space-x-2">
-                            <span class="w-6 h-6 rounded-lg bg-rose-100 text-rose-700 flex items-center justify-center text-xs">
-                                🌐
-                            </span>
-                            <div class="min-w-0">
-                                <span class="text-xs font-bold text-slate-800 group-hover:text-indigo-900 block truncate">Super Admin</span>
-                                <span class="text-[10px] text-slate-400 block truncate font-mono">superadmin@vokatrack...</span>
-                            </div>
-                        </div>
-                    </button>
-                </div>
-
-                <p class="text-[11px] text-center text-slate-400 mt-3 font-medium">Kata sandi seluruh akun demo: <code class="px-1.5 py-0.5 rounded bg-slate-100 font-bold text-slate-700 font-mono">password</code></p>
-            </div>
         </div>
     </div>
 
     <script>
-        function fillDemo(email, pass) {
-            document.getElementById('email').value = email;
-            document.getElementById('password').value = pass;
-        }
-
         function togglePasswordVisibility() {
             const pwdInput = document.getElementById('password');
             if (pwdInput.type === 'password') {
