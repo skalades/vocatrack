@@ -6,8 +6,8 @@
     'actionClick' => null,
 ])
 
-<div {{ $attributes->merge(['class' => 'py-12 px-4 text-center flex flex-col items-center justify-center']) }}>
-    <div class="w-14 h-14 rounded-2xl bg-slate-100/80 border border-slate-200/80 flex items-center justify-center text-slate-400 mb-3.5 shadow-2xs">
+<div {{ $attributes->merge(['class' => 'py-12 px-4 text-center flex flex-col items-center justify-center animate-fade-in']) }}>
+    <div class="w-14 h-14 rounded-2xl bg-slate-100/80 border border-slate-200/80 flex items-center justify-center text-slate-400 mb-3.5 shadow-2xs animate-bounce-subtle">
         @if(isset($icon))
             {{ $icon }}
         @else

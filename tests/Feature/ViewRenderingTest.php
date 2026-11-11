@@ -50,6 +50,9 @@ class ViewRenderingTest extends TestCase
         $this->actingAs($user)->get(route('adminsekolah.companies'))->assertStatus(200)->assertSee('Dunia Usaha & Dunia Industri');
         $this->actingAs($user)->get(route('adminsekolah.plotting'))->assertStatus(200)->assertSee('Plotting Penugasan Siswa PKL');
         $this->actingAs($user)->get(route('adminsekolah.announcements'))->assertStatus(200)->assertSee('Pengumuman & Siaran Sekolah');
+        $this->actingAs($user)->get(route('adminsekolah.holidays'))->assertStatus(200)->assertSee('Kalender Hari Libur');
+        $this->actingAs($user)->get(route('adminsekolah.incidents'))->assertStatus(200)->assertSee('Pusat Monitoring Kendala');
+        $this->actingAs($user)->get(route('adminsekolah.certificates'))->assertStatus(200)->assertSee('E-Sertifikat & Transkrip');
     }
 
     public function test_student_views_render_successfully(): void
@@ -60,8 +63,8 @@ class ViewRenderingTest extends TestCase
         }
 
         $this->actingAs($user)->get(route('student.home'))->assertStatus(200)->assertSee('Portal Siswa PKL');
-        $this->actingAs($user)->get(route('student.attendance'))->assertStatus(200)->assertSee('Presensi Harian');
-        $this->actingAs($user)->get(route('student.journals'))->assertStatus(200)->assertSee('Jurnal Harian PKL');
+        $this->actingAs($user)->get(route('student.attendance'))->assertStatus(200)->assertSee('Check-In Hari Ini');
+        $this->actingAs($user)->get(route('student.journals'))->assertStatus(200)->assertSee('Riwayat Jurnal');
         $this->actingAs($user)->get(route('student.profile'))->assertStatus(200)->assertSee('Informasi Penempatan PKL');
         $this->actingAs($user)->get(route('student.announcements'))->assertStatus(200)->assertSee('Papan Pengumuman PKL');
     }
@@ -80,6 +83,8 @@ class ViewRenderingTest extends TestCase
         $this->actingAs($user)->get(route('guru.assessments'))->assertStatus(200)->assertSee('Penilaian Akademik PKL');
         $this->actingAs($user)->get(route('guru.reports'))->assertStatus(200)->assertSee('Dokumen Laporan PDF Siswa PKL');
         $this->actingAs($user)->get(route('guru.announcements'))->assertStatus(200)->assertSee('Pengumuman Bimbingan PKL');
+        $this->actingAs($user)->get(route('guru.incidents'))->assertStatus(200)->assertSee('Laporan Kendala');
+        $this->actingAs($user)->get(route('guru.supervisions'))->assertStatus(200)->assertSee('Supervisi & Berita Acara');
     }
 
     public function test_dudi_views_render_successfully(): void

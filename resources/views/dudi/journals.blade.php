@@ -340,6 +340,9 @@
                 <table class="w-full text-left text-xs border-collapse table-fixed min-w-[760px]">
                     <thead class="bg-slate-50/80 text-slate-500 border-b border-slate-200/80 font-extrabold uppercase text-[10px] tracking-wider">
                         <tr>
+                            <th class="py-3.5 px-3 w-10 text-center">
+                                <input type="checkbox" id="master-checkbox-dudi-journals" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                            </th>
                             <th class="py-3.5 px-4 w-[240px]">Siswa Magang</th>
                             <th class="py-3.5 px-4 w-[160px]">Tanggal Jurnal</th>
                             <th class="py-3.5 px-4 min-w-[240px]">Ringkasan Aktivitas Lapangan</th>
@@ -350,6 +353,13 @@
                     <tbody class="divide-y divide-slate-100 text-slate-700 font-medium">
                         @forelse($journals as $j)
                             <tr class="hover:bg-slate-50/70 transition-colors">
+                                <td class="py-3 px-3 text-center">
+                                    @if($j->status === 'submitted')
+                                        <input type="checkbox" value="{{ $j->id }}" class="bulk-checkbox-dudi-journals rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                                    @else
+                                        <span class="w-1.5 h-1.5 rounded-full bg-slate-300 inline-block" title="Hanya jurnal dengan status menunggu review DU/DI yang dapat dipilih"></span>
+                                    @endif
+                                </td>
                                 <td class="py-3 px-4">
                                     <div class="flex items-center space-x-2.5">
                                         <div class="w-8 h-8 rounded-lg bg-cyan-50 border border-cyan-100 text-cyan-800 font-extrabold text-xs flex items-center justify-center shrink-0">
@@ -413,6 +423,16 @@
             @endif
         </x-card>
     </div>
+
+    <!-- Bulk Action Bar -->
+    <x-bulk-action-bar 
+        barId="dudi-journals"
+        :formAction="route('dudi.journals.bulk')"
+        idParam="journal_ids[]"
+        itemLabel="jurnal"
+        rejectActionLabel="Minta Revisi"
+        rejectActionValue="revision"
+    />
 
 </div>
 

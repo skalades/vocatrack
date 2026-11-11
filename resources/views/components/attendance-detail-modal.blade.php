@@ -465,7 +465,11 @@
     function copyModalCoords() {
         if (!currentCoordsText) return;
         navigator.clipboard.writeText(currentCoordsText).then(() => {
-            alert('Titik koordinat berhasil disalin ke clipboard:\n' + currentCoordsText);
+            if (typeof window.showToast === 'function') {
+                window.showToast('Titik koordinat disalin: ' + currentCoordsText, 'success');
+            } else {
+                alert('Titik koordinat berhasil disalin ke clipboard:\n' + currentCoordsText);
+            }
         }).catch(() => {
             prompt('Salin koordinat berikut:', currentCoordsText);
         });

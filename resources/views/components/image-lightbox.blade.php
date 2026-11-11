@@ -1,5 +1,5 @@
 <!-- Global High-Resolution Image Lightbox with Zoom & Pan for Mobile & Desktop -->
-<div id="image-lightbox-modal" class="hidden fixed inset-0 z-[100] bg-slate-950/95 backdrop-blur-md flex flex-col justify-between select-none transition-opacity duration-200" style="touch-action: none;">
+<div id="image-lightbox-modal" class="hidden fixed inset-0 z-[100] bg-slate-950/95 backdrop-blur-md flex flex-col justify-between select-none animate-in fade-in duration-200" style="touch-action: none;">
     
     <!-- Top Toolbar -->
     <div class="px-4 py-3 bg-slate-900/90 border-b border-white/10 flex items-center justify-between gap-3 text-white shrink-0 z-10">

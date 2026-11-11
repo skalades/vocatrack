@@ -4,18 +4,24 @@ namespace App\Http\Controllers;
 
 use App\Models\Announcement;
 use App\Models\Attendance;
+use App\Models\Certificate;
 use App\Models\Company;
+use App\Models\IncidentReport;
 use App\Models\Major;
 use App\Models\PklPeriod;
 use App\Models\Profile;
 use App\Models\School;
 use App\Models\SchoolClass;
+use App\Models\SchoolHoliday;
 use App\Models\SchoolSetting;
 use App\Models\Student;
 use App\Models\StudentPkl;
 use App\Models\Supervisor;
 use App\Models\Teacher;
 use App\Models\User;
+use App\Services\CertificateService;
+use App\Services\HolidayService;
+use App\Services\IncidentReportService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -768,5 +774,151 @@ class AdminSekolahController extends Controller
 
         $status = $period->is_active ? 'diaktifkan' : 'dinonaktifkan';
         return back()->with('success', "Periode PKL '{$period->name}' berhasil {$status}.");
+    }
+
+    public function holidays(Request $request, HolidayService $holidayService)
+    {
+        $schoolId = $this->getSchoolId();
+        $selectedYear = (int) $request->input('year', Carbon::now()->year);
+        $selectedMonth = $request->filled('month') ? (int) $request->month : null;
+
+        $holidays = $holidayService->getHolidays($schoolId, $selectedYear, $selectedMonth);
+
+        $stats = [
+            'total' => SchoolHoliday::withoutGlobalScopes()->where('school_id', $schoolId)->whereYear('holiday_date', $selectedYear)->count(),
+            'national' => SchoolHoliday::withoutGlobalScopes()->where('school_id', $schoolId)->whereYear('holiday_date', $selectedYear)->where('is_national', true)->count(),
+            'custom' => SchoolHoliday::withoutGlobalScopes()->where('school_id', $schoolId)->whereYear('holiday_date', $selectedYear)->where('is_national', false)->count(),
+        ];
+
+        return view('adminsekolah.holidays', compact('holidays', 'selectedYear', 'selectedMonth', 'stats'));
+    }
+
+    public function storeHoliday(Request $request, HolidayService $holidayService)
+    {
+        $schoolId = $this->getSchoolId();
+
+        $validated = $request->validate([
+            'title' => ['required', 'string', 'max:150'],
+            'holiday_date' => [
+                'required',
+                'date',
+                Rule::unique('school_holidays')->where(fn($q) => $q->where('school_id', $schoolId)),
+            ],
+            'description' => ['nullable', 'string', 'max:255'],
+            'is_national' => ['nullable', 'boolean'],
+        ], [
+            'holiday_date.unique' => 'Tanggal ini sudah terdaftar sebagai hari libur.',
+        ]);
+
+        $holidayService->createHoliday($schoolId, $validated);
+
+        return back()->with('success', 'Hari libur berhasil ditambahkan.');
+    }
+
+    public function destroyHoliday(SchoolHoliday $holiday, HolidayService $holidayService)
+    {
+        $schoolId = $this->getSchoolId();
+        abort_if($holiday->school_id !== $schoolId, 403);
+
+        $holidayService->deleteHoliday($holiday);
+
+        return back()->with('success', 'Hari libur berhasil dihapus.');
+    }
+
+    public function syncNationalHolidays(Request $request, HolidayService $holidayService)
+    {
+        $schoolId = $this->getSchoolId();
+        $year = (int) $request->input('year', Carbon::now()->year);
+
+        $count = $holidayService->syncNationalHolidays($schoolId, $year);
+
+        return back()->with('success', "Berhasil mensinkronkan {$count} hari libur nasional untuk tahun {$year}.");
+    }
+
+    public function incidents(Request $request, IncidentReportService $incidentService)
+    {
+        $schoolId = $this->getSchoolId();
+        $incidents = $incidentService->getIncidentsForSchool($schoolId, $request->only(['status', 'urgency']));
+
+        $stats = [
+            'total' => IncidentReport::where('school_id', $schoolId)->count(),
+            'open' => IncidentReport::where('school_id', $schoolId)->whereIn('status', ['submitted', 'in_progress'])->count(),
+            'critical' => IncidentReport::where('school_id', $schoolId)->where('urgency', 'critical')->count(),
+            'resolved' => IncidentReport::where('school_id', $schoolId)->where('status', 'resolved')->count(),
+        ];
+
+        return view('adminsekolah.incidents', compact('incidents', 'stats'));
+    }
+
+    public function followupIncident(Request $request, IncidentReport $report, IncidentReportService $incidentService)
+    {
+        $schoolId = $this->getSchoolId();
+        abort_if($report->school_id !== $schoolId, 403);
+
+        $validated = $request->validate([
+            'action_note' => ['required', 'string', 'max:1000'],
+            'status' => ['nullable', 'in:in_progress,resolved,dismissed'],
+        ]);
+
+        $incidentService->addFollowup($report, Auth::user(), $validated['action_note'], $validated['status'] ?? null);
+
+        return back()->with('success', 'Tindak lanjut laporan kendala berhasil dicatat.');
+    }
+
+    public function certificates(Request $request, CertificateService $certificateService)
+    {
+        $schoolId = $this->getSchoolId();
+        $certificates = $certificateService->getCertificatesForSchool($schoolId, $request->only('search'));
+
+        $unissuedStudents = StudentPkl::where('school_id', $schoolId)
+            ->whereHas('assessment')
+            ->doesntHave('certificate')
+            ->with(['student.user', 'company', 'assessment'])
+            ->get();
+
+        $periods = PklPeriod::where('school_id', $schoolId)->get();
+
+        $stats = [
+            'total_issued' => Certificate::where('school_id', $schoolId)->count(),
+            'ready_to_issue' => $unissuedStudents->count(),
+            'sangat_baik' => Certificate::where('school_id', $schoolId)->where('final_predicate', 'Sangat Baik')->count(),
+        ];
+
+        return view('adminsekolah.certificates', compact('certificates', 'unissuedStudents', 'periods', 'stats'));
+    }
+
+    public function generateCertificate(Request $request, CertificateService $certificateService)
+    {
+        $schoolId = $this->getSchoolId();
+        $validated = $request->validate([
+            'student_pkl_id' => ['required', 'exists:student_pkl,id'],
+        ]);
+
+        $spkl = StudentPkl::where('school_id', $schoolId)->findOrFail($validated['student_pkl_id']);
+        $certificate = $certificateService->generateForStudentPkl($spkl);
+
+        return back()->with('success', "E-Sertifikat untuk {$spkl->student->user->name} berhasil diterbitkan (No: {$certificate->certificate_number}).");
+    }
+
+    public function generateBatchCertificates(Request $request, CertificateService $certificateService)
+    {
+        $schoolId = $this->getSchoolId();
+        $periodId = $request->input('pkl_period_id') ? (int) $request->input('pkl_period_id') : null;
+
+        $count = $certificateService->generateBatchForSchool($schoolId, $periodId);
+
+        return back()->with('success', "Berhasil menerbitkan {$count} E-Sertifikat baru secara massal.");
+    }
+
+    public function downloadCertificate(Certificate $certificate, CertificateService $certificateService)
+    {
+        $schoolId = $this->getSchoolId();
+        abort_if($certificate->school_id !== $schoolId, 403, 'Akses ditolak.');
+
+        $pdf = $certificateService->renderPdf($certificate);
+        $nameSlug = Str::slug($certificate->studentPkl->student->user->name ?? 'Siswa');
+        $safeCertNumber = str_replace(['/', '\\'], '-', $certificate->certificate_number);
+
+        return $pdf->download("E-Sertifikat_PKL_{$nameSlug}_{$safeCertNumber}.pdf");
     }
 }

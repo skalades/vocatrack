@@ -351,6 +351,9 @@
                 <table class="w-full text-left text-xs border-collapse table-fixed min-w-[760px]">
                     <thead class="bg-slate-50/80 text-slate-500 border-b border-slate-200/80 font-extrabold uppercase text-[10px] tracking-wider">
                         <tr>
+                            <th class="py-3.5 px-3 w-10 text-center">
+                                <input type="checkbox" id="master-checkbox-teacher-journals" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                            </th>
                             <th class="py-3.5 px-4 w-[240px]">Siswa & Penempatan</th>
                             <th class="py-3.5 px-4 w-[160px]">Tanggal Jurnal</th>
                             <th class="py-3.5 px-4 min-w-[240px]">Ringkasan Aktivitas Lapangan</th>
@@ -361,6 +364,13 @@
                     <tbody class="divide-y divide-slate-100 text-slate-700 font-medium">
                         @forelse($journals as $j)
                             <tr class="hover:bg-slate-50/70 transition-colors">
+                                <td class="py-3 px-3 text-center">
+                                    @if($j->status === 'review_guru')
+                                        <input type="checkbox" value="{{ $j->id }}" class="bulk-checkbox-teacher-journals rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                                    @else
+                                        <span class="w-1.5 h-1.5 rounded-full bg-slate-300 inline-block" title="Hanya jurnal berstatus butuh review yang dapat dipilih"></span>
+                                    @endif
+                                </td>
                                 <!-- Student Column -->
                                 <td class="py-3 px-4">
                                     <div class="flex items-center space-x-2.5">
@@ -430,6 +440,16 @@
             @endif
         </x-card>
     </div>
+
+    <!-- Bulk Action Bar -->
+    <x-bulk-action-bar 
+        barId="teacher-journals"
+        :formAction="route('guru.journals.bulk')"
+        idParam="journal_ids[]"
+        itemLabel="jurnal"
+        rejectActionLabel="Minta Revisi"
+        rejectActionValue="revision"
+    />
 
 </div>
 

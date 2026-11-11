@@ -25,19 +25,19 @@
 </head>
 <body class="min-h-full flex items-center justify-center p-4 sm:p-6 bg-mesh selection:bg-indigo-600 selection:text-white">
 
-    <div class="w-full max-w-lg my-8">
+    <div class="w-full max-w-lg my-8 animate-fade-in-up">
         
         <!-- Brand Identity -->
         <div class="text-center mb-6">
             <div class="inline-flex items-center justify-center mb-3">
-                <img src="{{ asset('images/logo.png') }}" alt="VokaTrack Logo" class="h-24 sm:h-28 w-auto object-contain drop-shadow-md transition-transform hover:scale-105 duration-200">
+                <img src="{{ asset('images/logo.png') }}" alt="VokaTrack Logo" class="h-24 sm:h-28 w-auto object-contain drop-shadow-md transition-transform hover:scale-105 duration-300 animate-float">
             </div>
             <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">VokaTrack</h1>
             <p class="text-xs sm:text-sm text-slate-500 mt-1 font-medium">Sistem Presensi GPS & Jurnal PKL SMK Terintegrasi</p>
         </div>
 
         <!-- Login Card -->
-        <div class="bg-white rounded-3xl shadow-xl shadow-slate-200/70 border border-slate-200/90 p-6 sm:p-8">
+        <div class="bg-white rounded-3xl shadow-xl shadow-slate-200/70 border border-slate-200/90 p-6 sm:p-8 transition-all duration-300 hover:shadow-2xl hover:border-slate-300">
             <div class="mb-6">
                 <h2 class="text-lg font-bold text-slate-900 tracking-tight">Selamat Datang</h2>
                 <p class="text-xs text-slate-500 mt-0.5 font-medium">Masukkan email dan kata sandi akun Anda untuk melanjutkan.</p>

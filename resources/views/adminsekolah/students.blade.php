@@ -112,6 +112,7 @@
                         <th class="py-3.5 px-4">Kelas & Jurusan</th>
                         <th class="py-3.5 px-4">Akun Login</th>
                         <th class="py-3.5 px-6">Status Plotting PKL</th>
+                        <th class="py-3.5 px-4 text-right">Aksi</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 text-slate-700 font-medium" id="students-tbody">
@@ -158,10 +159,18 @@
                                     </x-badge>
                                 @endif
                             </td>
+                            <td class="py-3.5 px-4 text-right whitespace-nowrap">
+                                <form action="{{ route('impersonate.start', $st->user) }}" method="POST" class="inline" onsubmit="return confirm('Masuk sebagai {{ $st->user->name }} (Mode Impersonasi)?')">
+                                    @csrf
+                                    <button type="submit" class="px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 text-[11px] font-bold border border-amber-200 transition-colors cursor-pointer" title="Masuk sebagai siswa ini untuk inspeksi sistem">
+                                        Login As
+                                    </button>
+                                </form>
+                            </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="py-12">
+                            <td colspan="6" class="py-12">
                                 <x-empty-state 
                                     title="Belum Ada Siswa Terdaftar" 
                                     description="Tambahkan data siswa secara manual atau impor sekaligus via file Excel/CSV."

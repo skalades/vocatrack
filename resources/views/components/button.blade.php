@@ -27,10 +27,10 @@
 
 <button
     type="{{ $type }}"
-    {{ $attributes->merge(['class' => "inline-flex items-center justify-center font-sans tracking-tight transition-all duration-150 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 disabled:pointer-events-none cursor-pointer {$variantClasses} {$sizeClasses}"]) }}
+    {{ $attributes->merge(['class' => "group inline-flex items-center justify-center font-sans tracking-tight transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97] focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 disabled:pointer-events-none cursor-pointer {$variantClasses} {$sizeClasses}"]) }}
 >
     @if(isset($icon))
-        <span class="shrink-0">{{ $icon }}</span>
+        <span class="shrink-0 transition-transform duration-200 group-hover:scale-105">{{ $icon }}</span>
     @endif
     {{ $slot }}
 </button>

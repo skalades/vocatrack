@@ -255,24 +255,24 @@
             <span class="text-xs font-bold text-indigo-600">{{ \Carbon\Carbon::today()->isoFormat('MMMM Y') }}</span>
         </div>
         <div class="grid grid-cols-5 gap-2 text-center">
-            <div class="bg-emerald-50/70 border border-emerald-100 rounded-2xl p-2.5">
-                <span class="text-base font-black text-emerald-700 block">{{ $stats['hadir'] }}</span>
+            <div class="bg-emerald-50/70 border border-emerald-100 rounded-2xl p-2.5 hover-lift transition-all">
+                <span class="text-base font-black text-emerald-700 block stat-counter" data-target="{{ $stats['hadir'] }}">{{ $stats['hadir'] }}</span>
                 <span class="text-[9px] font-bold text-emerald-800 uppercase block mt-0.5">Hadir</span>
             </div>
-            <div class="bg-amber-50/70 border border-amber-100 rounded-2xl p-2.5">
-                <span class="text-base font-black text-amber-700 block">{{ $stats['terlambat'] }}</span>
+            <div class="bg-amber-50/70 border border-amber-100 rounded-2xl p-2.5 hover-lift transition-all">
+                <span class="text-base font-black text-amber-700 block stat-counter" data-target="{{ $stats['terlambat'] }}">{{ $stats['terlambat'] }}</span>
                 <span class="text-[9px] font-bold text-amber-800 uppercase block mt-0.5">Late</span>
             </div>
-            <div class="bg-sky-50/70 border border-sky-100 rounded-2xl p-2.5">
-                <span class="text-base font-black text-sky-700 block">{{ $stats['izin'] }}</span>
+            <div class="bg-sky-50/70 border border-sky-100 rounded-2xl p-2.5 hover-lift transition-all">
+                <span class="text-base font-black text-sky-700 block stat-counter" data-target="{{ $stats['izin'] }}">{{ $stats['izin'] }}</span>
                 <span class="text-[9px] font-bold text-sky-800 uppercase block mt-0.5">Izin</span>
             </div>
-            <div class="bg-purple-50/70 border border-purple-100 rounded-2xl p-2.5">
-                <span class="text-base font-black text-purple-700 block">{{ $stats['sakit'] }}</span>
+            <div class="bg-purple-50/70 border border-purple-100 rounded-2xl p-2.5 hover-lift transition-all">
+                <span class="text-base font-black text-purple-700 block stat-counter" data-target="{{ $stats['sakit'] }}">{{ $stats['sakit'] }}</span>
                 <span class="text-[9px] font-bold text-purple-800 uppercase block mt-0.5">Sakit</span>
             </div>
-            <div class="bg-rose-50/70 border border-rose-100 rounded-2xl p-2.5">
-                <span class="text-base font-black text-rose-700 block">{{ $stats['alfa'] }}</span>
+            <div class="bg-rose-50/70 border border-rose-100 rounded-2xl p-2.5 hover-lift transition-all">
+                <span class="text-base font-black text-rose-700 block stat-counter" data-target="{{ $stats['alfa'] }}">{{ $stats['alfa'] }}</span>
                 <span class="text-[9px] font-bold text-rose-800 uppercase block mt-0.5">Alfa</span>
             </div>
         </div>
@@ -449,7 +449,7 @@
 
 <!-- Modal Detail Pengumuman Beranda (Responsive Mobile & Centered Popup) -->
 <div id="home-announcement-modal" onclick="if(event.target === this) closeHomeAnnouncementModal(true)" class="hidden fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-3.5 sm:p-4 animate-in fade-in duration-200">
-    <div class="bg-white w-full max-w-sm sm:max-w-md rounded-3xl shadow-2xl max-h-[86vh] sm:max-h-[90vh] flex flex-col border border-slate-100/90 overflow-hidden my-auto transform transition-all duration-200">
+    <div class="bg-white w-full max-w-sm sm:max-w-md rounded-3xl shadow-2xl max-h-[86vh] sm:max-h-[90vh] flex flex-col border border-slate-100/90 overflow-hidden my-auto transform animate-in zoom-in-95 duration-200">
         
         <!-- Modal Sticky Header -->
         <div class="px-4 py-3 sm:px-5 sm:py-3.5 border-b border-slate-100 flex items-center justify-between gap-2 shrink-0 bg-white">

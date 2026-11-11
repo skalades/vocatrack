@@ -3,7 +3,10 @@
 use App\Http\Controllers\AdminSekolahController;
 use App\Http\Controllers\AnnouncementController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CertificateVerificationController;
+use App\Http\Controllers\ImpersonationController;
 use App\Http\Controllers\KepsekController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\SuperAdminController;
 use App\Http\Controllers\SupervisorController;
@@ -18,6 +21,21 @@ Route::get('/', function () {
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1')->name('login.post');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+
+// Guest Public Verification for E-Sertifikat PKL (QR Code Destination)
+Route::get('/verify/cert/{uuid}', [CertificateVerificationController::class, 'verify'])->middleware('throttle:60,1')->name('public.cert.verify');
+Route::get('/verify/cert/{uuid}/download', [CertificateVerificationController::class, 'download'])->middleware('throttle:30,1')->name('public.cert.download');
+
+// Shared Authenticated Notification Routes
+Route::middleware(['auth'])->group(function () {
+    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
+    Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
+
+    // Impersonation Routes
+    Route::post('/impersonate/leave', [ImpersonationController::class, 'stop'])->name('impersonate.leave');
+    Route::post('/impersonate/{user}', [ImpersonationController::class, 'start'])->name('impersonate.start');
+});
 
 // 1. Super Admin Platform Routes
 Route::middleware(['auth', 'role:super-admin'])->prefix('super-admin')->group(function () {
@@ -69,6 +87,22 @@ Route::middleware(['auth', 'IdentifyTenant', 'role:admin-sekolah'])->prefix('adm
     Route::put('/announcements/{announcement}', [AnnouncementController::class, 'adminUpdate'])->name('adminsekolah.announcements.update');
     Route::delete('/announcements/{announcement}', [AnnouncementController::class, 'adminDestroy'])->name('adminsekolah.announcements.destroy');
     Route::post('/announcements/{announcement}/toggle-pin', [AnnouncementController::class, 'adminTogglePin'])->name('adminsekolah.announcements.toggle-pin');
+
+    // Kalender Hari Libur
+    Route::get('/holidays', [AdminSekolahController::class, 'holidays'])->name('adminsekolah.holidays');
+    Route::post('/holidays', [AdminSekolahController::class, 'storeHoliday'])->name('adminsekolah.holidays.store');
+    Route::delete('/holidays/{holiday}', [AdminSekolahController::class, 'destroyHoliday'])->name('adminsekolah.holidays.destroy');
+    Route::post('/holidays/sync-national', [AdminSekolahController::class, 'syncNationalHolidays'])->name('adminsekolah.holidays.sync-national');
+
+    // Laporan Kendala & SOS Siswa
+    Route::get('/incidents', [AdminSekolahController::class, 'incidents'])->name('adminsekolah.incidents');
+    Route::post('/incidents/{report}/followup', [AdminSekolahController::class, 'followupIncident'])->name('adminsekolah.incidents.followup');
+
+    // E-Sertifikat & Transkrip PKL
+    Route::get('/certificates', [AdminSekolahController::class, 'certificates'])->name('adminsekolah.certificates');
+    Route::post('/certificates/generate', [AdminSekolahController::class, 'generateCertificate'])->name('adminsekolah.certificates.generate');
+    Route::post('/certificates/batch', [AdminSekolahController::class, 'generateBatchCertificates'])->name('adminsekolah.certificates.batch');
+    Route::get('/certificates/{certificate}/download', [AdminSekolahController::class, 'downloadCertificate'])->name('adminsekolah.certificates.download');
 });
 
 // 3. Siswa (Mobile-First) Routes
@@ -78,12 +112,14 @@ Route::middleware(['auth', 'IdentifyTenant', 'role:siswa'])->prefix('siswa')->gr
     Route::post('/checkin', [StudentController::class, 'checkin'])->middleware('throttle:15,1')->name('student.checkin');
     Route::post('/checkout', [StudentController::class, 'checkout'])->middleware('throttle:15,1')->name('student.checkout');
     Route::post('/permohonan', [StudentController::class, 'storeRequest'])->name('student.request.store');
+    Route::post('/lapor-kendala', [StudentController::class, 'storeIncident'])->name('student.incident.store');
 
     Route::get('/jurnal', [StudentController::class, 'journals'])->name('student.journals');
     Route::post('/jurnal', [StudentController::class, 'storeJournal'])->name('student.journal.store');
     Route::post('/jurnal/{journal}/submit', [StudentController::class, 'submitJournal'])->name('student.journal.submit');
 
     Route::get('/profil', [StudentController::class, 'profile'])->name('student.profile');
+    Route::get('/sertifikat/download', [StudentController::class, 'downloadCertificate'])->name('student.certificate.download');
 
     // Pengumuman Siswa
     Route::get('/pengumuman', [AnnouncementController::class, 'studentIndex'])->name('student.announcements');
@@ -96,10 +132,21 @@ Route::middleware(['auth', 'IdentifyTenant', 'role:guru-pembimbing'])->prefix('g
     Route::get('/dashboard', [TeacherController::class, 'dashboard'])->name('guru.dashboard');
     Route::get('/monitoring', [TeacherController::class, 'monitoring'])->name('guru.monitoring');
     Route::get('/requests', [TeacherController::class, 'requests'])->name('guru.requests');
+    Route::post('/requests/bulk', [TeacherController::class, 'bulkProcessRequests'])->name('guru.requests.bulk');
     Route::post('/requests/{attRequest}/process', [TeacherController::class, 'processRequest'])->name('guru.requests.process');
 
     Route::get('/journals', [TeacherController::class, 'journals'])->name('guru.journals');
+    Route::post('/journals/bulk', [TeacherController::class, 'bulkProcessJournals'])->name('guru.journals.bulk');
     Route::post('/journals/{journal}/process', [TeacherController::class, 'processJournal'])->name('guru.journals.process');
+
+    // Laporan Kendala & SOS Siswa Bimbingan
+    Route::get('/incidents', [TeacherController::class, 'incidents'])->name('guru.incidents');
+    Route::post('/incidents/{report}/followup', [TeacherController::class, 'followupIncident'])->name('guru.incidents.followup');
+
+    // Supervisi Lapangan & Berita Acara Kunjungan Guru
+    Route::get('/supervisions', [TeacherController::class, 'supervisions'])->name('guru.supervisions');
+    Route::post('/supervisions', [TeacherController::class, 'storeSupervision'])->name('guru.supervisions.store');
+    Route::get('/supervisions/{supervisionVisit}/pdf', [TeacherController::class, 'downloadBeritaAcaraPdf'])->name('guru.supervisions.pdf');
 
     Route::get('/assessments', [TeacherController::class, 'assessments'])->name('guru.assessments');
     Route::post('/assessments', [TeacherController::class, 'storeAssessment'])->name('guru.assessments.store');
@@ -119,9 +166,11 @@ Route::middleware(['auth', 'IdentifyTenant', 'role:pembimbing-dudi'])->prefix('d
     Route::get('/dashboard', [SupervisorController::class, 'dashboard'])->name('dudi.dashboard');
     Route::get('/attendances', [SupervisorController::class, 'attendances'])->name('dudi.attendances');
     Route::get('/requests', [SupervisorController::class, 'requests'])->name('dudi.requests');
+    Route::post('/requests/bulk', [SupervisorController::class, 'bulkProcessRequests'])->name('dudi.requests.bulk');
     Route::post('/requests/{attRequest}/process', [SupervisorController::class, 'processRequest'])->name('dudi.requests.process');
 
     Route::get('/journals', [SupervisorController::class, 'journals'])->name('dudi.journals');
+    Route::post('/journals/bulk', [SupervisorController::class, 'bulkProcessJournals'])->name('dudi.journals.bulk');
     Route::post('/journals/{journal}/process', [SupervisorController::class, 'processJournal'])->name('dudi.journals.process');
 
     Route::get('/assessments', [SupervisorController::class, 'assessments'])->name('dudi.assessments');

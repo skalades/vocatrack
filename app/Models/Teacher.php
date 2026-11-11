@@ -25,4 +25,9 @@ class Teacher extends Model
     {
         return $this->hasMany(StudentPkl::class);
     }
+
+    public function supervisionVisits(): HasMany
+    {
+        return $this->hasMany(SupervisionVisit::class);
+    }
 }

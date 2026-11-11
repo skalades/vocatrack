@@ -5,12 +5,6 @@
 @section('content')
 <div class="space-y-4">
 
-    <!-- Header Title -->
-    <div>
-        <h2 class="text-lg font-black text-slate-900 tracking-tight">Presensi Harian</h2>
-        <p class="text-xs text-slate-500 font-medium">Rekam kehadiran dengan swafoto langsung dan validasi lokasi geofencing GPS.</p>
-    </div>
-
     <!-- Check-In Module Card -->
     <div id="checkin-section" class="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs">
         @if(!$todayAttendance)
@@ -29,15 +23,17 @@
                 <div class="p-4 rounded-2xl bg-slate-50/90 border border-slate-200/80 space-y-3">
                     <div class="flex items-center justify-between">
                         <div class="flex items-center space-x-2">
-                            <div class="w-7 h-7 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100 flex items-center justify-center shrink-0">
-                                <svg class="w-4 h-4 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                            <div class="relative w-7 h-7 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100 flex items-center justify-center shrink-0">
+                                <span id="gps-radar-wave" class="absolute inset-0 rounded-xl bg-indigo-400 opacity-30 animate-radar pointer-events-none"></span>
+                                <svg class="w-4 h-4 stroke-[2] relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                             </div>
                             <div>
                                 <span class="text-xs font-bold text-slate-900 block leading-tight">Geofencing Lokasi</span>
                                 <span class="text-[10px] text-slate-500 font-medium">Validasi radius presensi kantor</span>
                             </div>
                         </div>
-                        <span id="gps-status-badge" class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-700 transition-colors">
+                        <span id="gps-status-badge" class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-700 transition-all inline-flex items-center gap-1.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-slate-500 animate-pulse"></span>
                             Mencari GPS...
                         </span>
                     </div>
@@ -57,6 +53,11 @@
                                 Posisi:
                             </span>
                             <span id="gps-coords-text" class="truncate font-semibold text-slate-700">Mendeteksi sensor satelit...</span>
+                        </div>
+                        <div class="flex items-center gap-2 pt-1 border-t border-slate-100">
+                            <span id="gps-accuracy-badge" class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                                Akurasi GPS: Mendeteksi...
+                            </span>
                         </div>
                     </div>
 
@@ -81,7 +82,10 @@
 
                 <!-- Camera / Swafoto Viewport -->
                 <div class="space-y-3">
-                    <div class="relative w-full aspect-4/3 rounded-3xl overflow-hidden bg-gradient-to-b from-slate-900 to-slate-950 border border-slate-800 flex items-center justify-center shadow-lg">
+                    <div id="camera-viewport" class="relative w-full aspect-4/3 rounded-3xl overflow-hidden bg-gradient-to-b from-slate-900 to-slate-950 border border-slate-800 flex items-center justify-center shadow-lg">
+                        <!-- Camera Shutter Flash Effect Overlay -->
+                        <div id="camera-flash-overlay" class="absolute inset-0 bg-white opacity-0 pointer-events-none z-30 transition-opacity duration-150"></div>
+
                         <!-- Video Stream -->
                         <video id="webcam-video" autoplay playsinline class="w-full h-full object-cover hidden"></video>
                         <canvas id="photo-canvas" class="hidden"></canvas>
@@ -150,6 +154,8 @@
                     @csrf
                     <input type="hidden" name="latitude" id="input-lat">
                     <input type="hidden" name="longitude" id="input-lng">
+                    <input type="hidden" name="accuracy" id="input-accuracy">
+                    <input type="hidden" name="is_mocked" id="input-is-mocked" value="0">
                     <input type="hidden" name="photo" id="input-photo">
                     <input type="hidden" name="reason" id="input-form-reason">
 
@@ -383,6 +389,15 @@
         const canvas = document.getElementById('photo-canvas');
         const preview = document.getElementById('photo-preview');
 
+        // Trigger camera shutter flash effect
+        const flashOverlay = document.getElementById('camera-flash-overlay');
+        if (flashOverlay) {
+            flashOverlay.style.opacity = '0.9';
+            setTimeout(() => {
+                flashOverlay.style.opacity = '0';
+            }, 120);
+        }
+
         canvas.width = video.videoWidth || 640;
         canvas.height = video.videoHeight || 480;
         const ctx = canvas.getContext('2d');
@@ -425,37 +440,74 @@
     }
 
     // Geolocation API
+    let currentAccuracy = null;
+    let isWeakGps = false;
+
     if ('geolocation' in navigator) {
         navigator.geolocation.getCurrentPosition(
             pos => {
                 userLat = pos.coords.latitude;
                 userLng = pos.coords.longitude;
+                currentAccuracy = pos.coords.accuracy ? Math.round(pos.coords.accuracy) : null;
+
                 document.getElementById('input-lat').value = userLat;
                 document.getElementById('input-lng').value = userLng;
+                if (currentAccuracy) {
+                    document.getElementById('input-accuracy').value = currentAccuracy;
+                }
+
+                // Check for Mock Location / Fake GPS indicators
+                if (pos.coords.isMocked || pos.mocked || currentAccuracy === 0) {
+                    document.getElementById('input-is-mocked').value = '1';
+                }
 
                 const coordText = userLat.toFixed(6) + ', ' + userLng.toFixed(6);
                 document.getElementById('gps-coords-text').innerText = coordText;
+
+                // Accuracy Guard evaluation
+                const accBadge = document.getElementById('gps-accuracy-badge');
+                if (accBadge && currentAccuracy !== null) {
+                    if (currentAccuracy > 80) {
+                        isWeakGps = true;
+                        accBadge.className = 'px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200 inline-flex items-center gap-1';
+                        accBadge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping"></span>Sinyal Lemah (±' + currentAccuracy + 'm - Pindah ke area terbuka)';
+                    } else if (currentAccuracy > 30) {
+                        isWeakGps = false;
+                        accBadge.className = 'px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 inline-flex items-center gap-1';
+                        accBadge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>Akurasi Sedang (±' + currentAccuracy + 'm)';
+                    } else {
+                        isWeakGps = false;
+                        accBadge.className = 'px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 inline-flex items-center gap-1';
+                        accBadge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>GPS Sangat Akurat (±' + currentAccuracy + 'm)';
+                    }
+                }
 
                 if (gpsEnabled) {
                     const dist = calculateDistance(userLat, userLng, targetLat, targetLng);
                     const badge = document.getElementById('gps-status-badge');
                     const reasonBox = document.getElementById('outside-radius-box');
 
+                    const radarWave = document.getElementById('gps-radar-wave');
                     if (dist <= maxRadius) {
                         isOutside = false;
-                        badge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200';
-                        badge.innerText = 'Dalam Radius (' + Math.round(dist) + 'm)';
+                        badge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 inline-flex items-center gap-1.5 animate-scale-in';
+                        badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Dalam Radius (' + Math.round(dist) + 'm)';
+                        if (radarWave) radarWave.className = 'absolute inset-0 rounded-xl bg-emerald-400 opacity-25 animate-radar pointer-events-none';
                         reasonBox.classList.add('hidden');
                     } else {
                         isOutside = true;
-                        badge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200';
-                        badge.innerText = 'Luar Radius (' + Math.round(dist) + 'm)';
+                        badge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200 inline-flex items-center gap-1.5 animate-scale-in';
+                        badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping"></span>Luar Radius (' + Math.round(dist) + 'm)';
+                        if (radarWave) radarWave.className = 'absolute inset-0 rounded-xl bg-rose-400 opacity-25 animate-radar pointer-events-none';
                         reasonBox.classList.remove('hidden');
+                        reasonBox.classList.add('animate-fade-in-down');
                     }
                 } else {
                     const badge = document.getElementById('gps-status-badge');
-                    badge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200';
-                    badge.innerText = 'GPS Terdeteksi';
+                    const radarWave = document.getElementById('gps-radar-wave');
+                    badge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 inline-flex items-center gap-1.5 animate-scale-in';
+                    badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>GPS Terdeteksi';
+                    if (radarWave) radarWave.className = 'absolute inset-0 rounded-xl bg-emerald-400 opacity-25 animate-radar pointer-events-none';
                 }
 
                 validateForm();
@@ -498,6 +550,13 @@
         const reasonInput = document.getElementById('input-location-reason');
         if (reasonInput) {
             document.getElementById('input-form-reason').value = reasonInput.value;
+        }
+
+        if (gpsEnabled && isWeakGps) {
+            submitBtn.disabled = true;
+            submitBtn.className = 'w-full min-h-[48px] py-3.5 px-4 rounded-2xl bg-rose-100 text-rose-800 border border-rose-200 font-bold text-xs tracking-wide cursor-not-allowed transition-all flex items-center justify-center space-x-2';
+            submitBtn.innerHTML = '<svg class="w-4 h-4 text-rose-600 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg><span>Sinyal GPS Lemah (±' + currentAccuracy + 'm) — Kalibrasi</span>';
+            return;
         }
 
         if (!photoData) {

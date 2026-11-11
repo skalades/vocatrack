@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Journal;
 use App\Models\JournalApproval;
 use App\Models\User;
+use App\Notifications\JournalStatusUpdatedNotification;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -49,6 +50,12 @@ class JournalService
                 'created_at' => now(),
             ]);
 
+            // Notify student
+            $studentUser = $lockedJournal->studentPkl?->student?->user;
+            if ($studentUser) {
+                $studentUser->notify(new JournalStatusUpdatedNotification($lockedJournal, $nextStatus, $notes));
+            }
+
             return $lockedJournal;
         });
     }
@@ -84,7 +91,97 @@ class JournalService
                 'created_at' => now(),
             ]);
 
+            // Notify student
+            $studentUser = $lockedJournal->studentPkl?->student?->user;
+            if ($studentUser) {
+                $studentUser->notify(new JournalStatusUpdatedNotification($lockedJournal, 'revision', $notes));
+            }
+
             return $lockedJournal;
         });
+    }
+
+    /**
+     * Bulk process journals (bulk approve or bulk revision) with pessimistic locking and validation.
+     */
+    public function bulkProcess(array $journalIds, string $action, ?string $notes, User $user): array
+    {
+        if (!in_array($action, ['approve', 'revision'])) {
+            throw ValidationException::withMessages(['action' => 'Aksi bulk tidak valid.']);
+        }
+
+        if ($action === 'revision' && empty($notes)) {
+            throw ValidationException::withMessages(['notes' => 'Catatan revisi wajib diisi untuk revisi massal.']);
+        }
+
+        $isDudi = $user->hasRole('pembimbing-dudi');
+        $isGuru = $user->hasRole('guru-pembimbing');
+
+        if (!$isDudi && !$isGuru) {
+            throw ValidationException::withMessages(['role' => 'Pengguna tidak memiliki wewenang approval jurnal.']);
+        }
+
+        $processed = 0;
+        $skipped = 0;
+
+        DB::transaction(function () use ($journalIds, $action, $notes, $user, $isDudi, $isGuru, &$processed, &$skipped) {
+            $journals = Journal::whereIn('id', $journalIds)
+                ->with('studentPkl')
+                ->lockForUpdate()
+                ->get();
+
+            foreach ($journals as $journal) {
+                // Verify ownership / tenant assignment
+                if ($isDudi) {
+                    $supervisor = $user->supervisor;
+                    if (!$supervisor || $journal->studentPkl->company_id !== $supervisor->company_id) {
+                        $skipped++;
+                        continue;
+                    }
+                    if ($journal->status !== 'submitted') {
+                        $skipped++;
+                        continue;
+                    }
+                    $nextStatus = ($action === 'approve') ? 'review_guru' : 'revision';
+                    $roleLevel = 'pembimbing-dudi';
+                } else { // Guru
+                    $teacher = $user->teacher;
+                    if (!$teacher || $journal->studentPkl->teacher_id !== $teacher->id) {
+                        $skipped++;
+                        continue;
+                    }
+                    if ($journal->status !== 'review_guru') {
+                        $skipped++;
+                        continue;
+                    }
+                    $nextStatus = ($action === 'approve') ? 'approved' : 'revision';
+                    $roleLevel = 'guru-pembimbing';
+                }
+
+                $journal->update(['status' => $nextStatus]);
+
+                JournalApproval::create([
+                    'journal_id' => $journal->id,
+                    'approver_id' => $user->id,
+                    'role_level' => $roleLevel,
+                    'status' => $action === 'approve' ? 'approved' : 'revision',
+                    'notes' => $notes,
+                    'created_at' => now(),
+                ]);
+
+                // Notify student
+                $studentUser = $journal->studentPkl?->student?->user;
+                if ($studentUser) {
+                    $studentUser->notify(new JournalStatusUpdatedNotification($journal, $nextStatus, $notes));
+                }
+
+                $processed++;
+            }
+        });
+
+        return [
+            'processed' => $processed,
+            'skipped' => $skipped,
+        ];
     }
 }

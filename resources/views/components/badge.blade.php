@@ -2,10 +2,12 @@
     'variant' => 'neutral',
     'dot' => true,
     'size' => 'md',
+    'pulse' => null,
 ])
 
 @php
     $normalized = strtolower(str_replace([' ', '-'], '_', $variant));
+    $shouldPulse = $pulse ?? in_array($normalized, ['pending', 'menunggu', 'proses', 'aktif', 'active', 'hadir']);
 
     $colorClasses = match ($normalized) {
         'success', 'hadir', 'approved', 'disetujui', 'aktif', 'active' => 'bg-emerald-50 text-emerald-700 border-emerald-200/80',
@@ -37,9 +39,14 @@
     };
 @endphp
 
-<span {{ $attributes->merge(['class' => "inline-flex items-center gap-1.5 rounded-full border shadow-2xs {$colorClasses} {$sizeClasses}"]) }}>
+<span {{ $attributes->merge(['class' => "inline-flex items-center gap-1.5 rounded-full border shadow-2xs transition-all duration-200 {$colorClasses} {$sizeClasses}"]) }}>
     @if($dot)
-        <span class="w-1.5 h-1.5 rounded-full shrink-0 {{ $dotColors }}"></span>
+        <span class="relative flex h-1.5 w-1.5 shrink-0">
+            @if($shouldPulse)
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full {{ $dotColors }} opacity-75"></span>
+            @endif
+            <span class="relative inline-flex rounded-full h-1.5 w-1.5 {{ $dotColors }}"></span>
+        </span>
     @endif
     <span>{{ $slot }}</span>
 </span>

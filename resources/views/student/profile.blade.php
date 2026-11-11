@@ -23,10 +23,13 @@
         <div class="relative px-5 pb-5 pt-0 text-center">
             <!-- Avatar with Outer Ring & Status Indicator -->
             <div class="relative -mt-10 mx-auto w-20 h-20 rounded-3xl bg-white p-1.5 shadow-md flex items-center justify-center">
-                <div class="w-full h-full rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-700 to-indigo-500 text-white font-black text-2xl flex items-center justify-center shadow-inner select-none">
+                <div class="w-full h-full rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-700 to-indigo-500 text-white font-black text-2xl flex items-center justify-center shadow-inner select-none transition-transform hover:scale-105 duration-200">
                     {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
                 </div>
-                <span class="absolute bottom-1 right-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-white shadow-xs" title="Siswa Aktif"></span>
+                <span class="absolute bottom-1 right-1 flex h-4 w-4">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-4 w-4 bg-emerald-500 border-2 border-white shadow-xs" title="Siswa Aktif"></span>
+                </span>
             </div>
 
             <!-- Student Full Name & Affiliation -->
@@ -316,6 +319,59 @@
             <div>
                 <span class="text-xs font-bold text-slate-900 block leading-tight">Lembar Nilai Belum Terbit</span>
                 <span class="text-[11px] text-slate-400 font-medium leading-relaxed block mt-0.5">Penilaian akhir akan muncul setelah dievaluasi oleh mentor DU/DI dan guru pembimbing.</span>
+            </div>
+        </div>
+    @endif
+
+    <!-- E-Sertifikat & Transkrip PKL (Sprint 4) -->
+    @if(isset($certificate) && $certificate)
+        <div class="relative overflow-hidden bg-gradient-to-br from-indigo-900 via-slate-900 to-slate-900 rounded-3xl p-5 border border-indigo-500/40 shadow-lg text-white space-y-4">
+            <div class="absolute -right-8 -bottom-10 w-36 h-36 rounded-full bg-indigo-500/10 blur-xl pointer-events-none"></div>
+
+            <div class="flex items-center justify-between pb-3 border-b border-white/10">
+                <div class="flex items-center space-x-2.5">
+                    <div class="w-9 h-9 rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-300 flex items-center justify-center shrink-0">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                            <h3 class="text-xs font-black uppercase tracking-wider text-white">E-Sertifikat PKL Resmi</h3>
+                        </div>
+                        <p class="text-[10px] text-slate-300 font-medium">Nomor: {{ $certificate->certificate_number }}</p>
+                    </div>
+                </div>
+                <span class="px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                    {{ $certificate->final_predicate }}
+                </span>
+            </div>
+
+            <div class="bg-white/5 rounded-2xl p-3.5 border border-white/10 text-xs text-slate-300 space-y-1">
+                <div class="flex justify-between">
+                    <span class="text-slate-400">Skor Akhir Evaluasi:</span>
+                    <strong class="text-white font-mono text-sm">{{ number_format($certificate->final_score, 1) }} / 100</strong>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-400">Tanggal Penerbitan:</span>
+                    <strong class="text-slate-200">{{ $certificate->issued_date ? $certificate->issued_date->translatedFormat('d M Y') : '-' }}</strong>
+                </div>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-2 pt-1">
+                <a href="{{ route('student.certificate.download') }}" class="flex-1 py-3 px-4 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs text-center transition-colors shadow-md shadow-indigo-600/30 flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <span>Unduh E-Sertifikat (PDF)</span>
+                </a>
+                <a href="{{ $certificate->verification_url }}" target="_blank" class="py-3 px-4 rounded-2xl bg-white/10 hover:bg-white/15 text-white font-bold text-xs text-center transition-colors border border-white/15 flex items-center justify-center gap-1.5">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                    <span>Validasi QR</span>
+                </a>
             </div>
         </div>
     @endif

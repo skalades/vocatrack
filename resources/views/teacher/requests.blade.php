@@ -78,9 +78,12 @@
     <!-- Requests List Card -->
     <x-card noPadding>
         <div class="p-4 sm:p-5 bg-white border-b border-slate-100 flex items-center justify-between">
-            <div>
-                <h3 class="text-sm font-extrabold text-slate-900 tracking-tight">Antrean Pengajuan Izin & Sakit</h3>
-                <p class="text-xs text-slate-500 font-medium">Verifikasi alasan dan bukti berkas lampiran siswa</p>
+            <div class="flex items-center space-x-3">
+                <input type="checkbox" id="master-checkbox-teacher-requests" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" title="Pilih Semua Permohonan Pending">
+                <div>
+                    <h3 class="text-sm font-extrabold text-slate-900 tracking-tight">Antrean Pengajuan Izin & Sakit</h3>
+                    <p class="text-xs text-slate-500 font-medium">Verifikasi alasan dan bukti berkas lampiran siswa</p>
+                </div>
             </div>
             <span class="text-xs text-slate-500 font-semibold">
                 {{ $requests->count() }} data di halaman ini
@@ -93,6 +96,11 @@
                     
                     <div class="space-y-3 flex-1 min-w-0">
                         <div class="flex items-center space-x-3.5">
+                            @if($req->status === 'pending')
+                                <input type="checkbox" value="{{ $req->id }}" class="bulk-checkbox-teacher-requests rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 shrink-0">
+                            @else
+                                <span class="w-4 h-4 shrink-0"></span>
+                            @endif
                             <div class="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-700 font-black text-xs flex items-center justify-center shrink-0 shadow-xs shadow-indigo-600/10">
                                 {{ substr($req->studentPkl->student->user->name, 0, 1) }}
                             </div>
@@ -176,6 +184,17 @@
             </div>
         @endif
     </x-card>
+
+    <!-- Bulk Action Bar -->
+    <x-bulk-action-bar 
+        barId="teacher-requests"
+        :formAction="route('guru.requests.bulk')"
+        idParam="request_ids[]"
+        itemLabel="permohonan izin"
+        rejectActionLabel="Tolak Permohonan"
+        rejectActionValue="reject"
+        :notesRequired="false"
+    />
 
 </div>
 @endsection

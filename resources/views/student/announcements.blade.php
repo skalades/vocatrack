@@ -179,7 +179,7 @@
 
 <!-- Modal Detail Pengumuman -->
 <div id="announcement-modal" onclick="if(event.target === this) closeDetailModal()" class="hidden fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-3.5 sm:p-4 animate-in fade-in duration-200">
-    <div class="bg-white w-full max-w-sm sm:max-w-md rounded-3xl shadow-2xl max-h-[86vh] sm:max-h-[90vh] flex flex-col border border-slate-100 overflow-hidden my-auto transform transition-all duration-200">
+    <div class="bg-white w-full max-w-sm sm:max-w-md rounded-3xl shadow-2xl max-h-[86vh] sm:max-h-[90vh] flex flex-col border border-slate-100 overflow-hidden my-auto transform animate-in zoom-in-95 duration-200">
         
         <!-- Modal Sticky Header -->
         <div class="px-4 py-3 sm:px-5 sm:py-3.5 border-b border-slate-100 flex items-center justify-between gap-2 shrink-0 bg-white">

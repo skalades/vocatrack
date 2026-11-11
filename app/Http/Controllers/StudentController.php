@@ -4,10 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Models\Attendance;
 use App\Models\AttendanceRequest;
+use App\Models\Certificate;
 use App\Models\Journal;
 use App\Models\JournalPhoto;
 use App\Services\AnnouncementService;
 use App\Services\AttendanceService;
+use App\Services\CertificateService;
+use App\Services\IncidentReportService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -101,6 +104,8 @@ class StudentController extends Controller
         $request->validate([
             'latitude' => ['nullable', 'numeric'],
             'longitude' => ['nullable', 'numeric'],
+            'accuracy' => ['nullable', 'numeric'],
+            'is_mocked' => ['nullable', 'boolean'],
             'photo' => ['nullable', 'string'], // base64 or file
         ]);
 
@@ -144,6 +149,8 @@ class StudentController extends Controller
             $attendance = $attendanceService->recordCheckIn($spkl, [
                 'latitude' => $request->latitude,
                 'longitude' => $request->longitude,
+                'accuracy' => $request->accuracy,
+                'is_mocked' => $request->boolean('is_mocked'),
                 'photo_path' => $photoPath,
                 'reason' => $request->reason,
             ]);
@@ -395,7 +402,47 @@ class StudentController extends Controller
         $spkl = $this->getActiveSpkl();
         $student = Auth::user()->student->load('class.major');
         $assessment = $spkl->assessment;
+        $certificate = Certificate::where('student_pkl_id', $spkl->id)->first();
 
-        return view('student.profile', compact('spkl', 'student', 'assessment'));
+        return view('student.profile', compact('spkl', 'student', 'assessment', 'certificate'));
+    }
+
+    public function downloadCertificate(CertificateService $certificateService)
+    {
+        $student = Auth::user()->student;
+        if (!$student) {
+            abort(403);
+        }
+
+        $spklIds = $student->studentPkls()->pluck('id');
+        $certificate = Certificate::whereIn('student_pkl_id', $spklIds)->firstOrFail();
+
+        $pdf = $certificateService->renderPdf($certificate);
+        $sanitizedName = Str::slug(Auth::user()->name);
+        $safeCertNumber = str_replace(['/', '\\'], '-', $certificate->certificate_number);
+
+        return $pdf->download("E-Sertifikat_PKL_{$sanitizedName}_{$safeCertNumber}.pdf");
+    }
+
+    public function storeIncident(Request $request, IncidentReportService $incidentService)
+    {
+        $spkl = $this->getActiveSpkl();
+
+        $validated = $request->validate([
+            'category' => ['required', 'in:administrative,curriculum_mismatch,interpersonal,safety_health,emergency'],
+            'urgency' => ['required', 'in:low,medium,high,critical'],
+            'subject' => ['required', 'string', 'max:200'],
+            'description' => ['required', 'string', 'max:2000'],
+            'attachment' => ['nullable', 'file', 'image', 'max:5120'], // max 5MB image
+        ]);
+
+        $incidentService->createReport($spkl, $validated, $request->file('attachment'));
+
+        $isEmergency = in_array($validated['urgency'], ['high', 'critical']);
+        $msg = $isEmergency 
+            ? 'Laporan Darurat / SOS telah dikirimkan ke Guru Pembimbing dan Admin Sekolah untuk penanganan segera.' 
+            : 'Laporan kendala Anda berhasil dikirimkan ke Guru Pembimbing.';
+
+        return back()->with('success', $msg);
     }
 }

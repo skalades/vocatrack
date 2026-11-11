@@ -21,6 +21,8 @@ class Attendance extends Model
         'checkin_lat',
         'checkin_lng',
         'is_within_radius',
+        'accuracy_meters',
+        'is_mock_detected',
         'checkout_time',
         'checkout_notes',
     ];
@@ -28,6 +30,8 @@ class Attendance extends Model
     protected $casts = [
         'date' => 'date',
         'is_within_radius' => 'boolean',
+        'accuracy_meters' => 'integer',
+        'is_mock_detected' => 'boolean',
         'checkin_lat' => 'float',
         'checkin_lng' => 'float',
     ];

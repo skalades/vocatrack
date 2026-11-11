@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\Attendance;
 use App\Models\AttendanceRequest;
 use App\Models\StudentPkl;
+use App\Services\HolidayService;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 
@@ -13,7 +14,7 @@ class EvaluateDailyAbsence extends Command
     protected $signature = 'vokatrack:evaluate-absence';
     protected $description = 'Evaluasi otomatis ketidakhadiran siswa PKL (alfa) pada akhir jam kerja';
 
-    public function handle(): int
+    public function handle(HolidayService $holidayService): int
     {
         $today = Carbon::today();
         $todayString = $today->toDateString();
@@ -22,11 +23,12 @@ class EvaluateDailyAbsence extends Command
         $this->info("Memulai evaluasi kehadiran untuk tanggal: {$todayString}");
 
         $alfaCount = 0;
+        $holidaySchoolCache = []; // Cache school holiday status: [school_id => bool]
 
         // Scalable chunking to avoid OOM and batch lookups to prevent N+1 queries
         StudentPkl::with(['company', 'school'])
             ->where('status', 'active')
-            ->chunkById(100, function ($activeStudentPkls) use (&$alfaCount, $todayString, $dayOfWeek) {
+            ->chunkById(100, function ($activeStudentPkls) use (&$alfaCount, &$holidaySchoolCache, $holidayService, $today, $todayString, $dayOfWeek) {
                 $spklIds = $activeStudentPkls->pluck('id');
 
                 // Batch fetch today's attendance and active requests for the whole chunk
@@ -48,7 +50,17 @@ class EvaluateDailyAbsence extends Command
                         continue;
                     }
 
-                    // Check work days: 5_days (Mon-Fri) or 6_days (Mon-Sat)
+                    // 1. Check school holiday status (memoized O(1) lookup per school)
+                    if (!array_key_exists($spkl->school_id, $holidaySchoolCache)) {
+                        $holidaySchoolCache[$spkl->school_id] = $holidayService->isHoliday($spkl->school_id, $today);
+                    }
+
+                    if ($holidaySchoolCache[$spkl->school_id]) {
+                        // Hari ini libur untuk sekolah ini, skip evaluasi alfa
+                        continue;
+                    }
+
+                    // 2. Check work days: 5_days (Mon-Fri) or 6_days (Mon-Sat)
                     $isWorkDay = ($company->work_days === '6_days') ? ($dayOfWeek <= 6) : ($dayOfWeek <= 5);
 
                     if (!$isWorkDay) {

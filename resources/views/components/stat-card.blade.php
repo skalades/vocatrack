@@ -61,14 +61,14 @@
     $scheme = $colorMap[$color] ?? $colorMap['indigo'];
 @endphp
 
-<div {{ $attributes->merge(['class' => 'group relative overflow-hidden bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs hover:border-slate-300 hover:shadow-md transition-all duration-200']) }}>
+<div {{ $attributes->merge(['class' => 'group relative overflow-hidden bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs hover-lift hover:border-slate-300 hover:shadow-lg transition-all duration-300']) }}>
     <div class="flex items-start justify-between gap-4">
         <div class="flex-1 min-w-0">
             <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5 truncate">
                 {{ $displayTitle }}
             </span>
             <div class="flex items-baseline gap-2">
-                <span class="text-2xl lg:text-3xl font-extrabold text-slate-900 tracking-tight">
+                <span class="text-2xl lg:text-3xl font-extrabold text-slate-900 tracking-tight stat-counter" data-target="{{ is_numeric($value) ? $value : '' }}">
                     {{ $value }}
                 </span>
                 @if($badge)
@@ -85,7 +85,7 @@
         </div>
 
         @if(isset($icon))
-            <div class="w-12 h-12 rounded-xl {{ $scheme['bg'] }} {{ $scheme['text'] }} border {{ $scheme['border'] }} flex items-center justify-center shrink-0 shadow-2xs group-hover:scale-105 transition-transform duration-200">
+            <div class="w-12 h-12 rounded-xl {{ $scheme['bg'] }} {{ $scheme['text'] }} border {{ $scheme['border'] }} flex items-center justify-center shrink-0 shadow-2xs group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300">
                 {{ $icon }}
             </div>
         @endif

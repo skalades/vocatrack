@@ -8,6 +8,7 @@ use App\Models\AttendanceRequest;
 use App\Models\Journal;
 use App\Models\StudentPkl;
 use App\Services\AssessmentService;
+use App\Services\AttendanceService;
 use App\Services\JournalService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -90,7 +91,7 @@ class SupervisorController extends Controller
         return view('dudi.requests', compact('requests'));
     }
 
-    public function processRequest(Request $request, AttendanceRequest $attRequest)
+    public function processRequest(Request $request, AttendanceRequest $attRequest, AttendanceService $attendanceService)
     {
         $supervisor = $this->getSupervisor();
         if ($attRequest->studentPkl->company_id !== $supervisor->company_id) {
@@ -102,52 +103,30 @@ class SupervisorController extends Controller
             'reviewer_notes' => ['nullable', 'string', 'max:255'],
         ]);
 
-        $status = ($request->action === 'approve') ? 'approved' : 'rejected';
+        $attendanceService->processRequest($attRequest, $request->action, $request->reviewer_notes, Auth::user());
 
-        \Illuminate\Support\Facades\DB::transaction(function () use ($attRequest, $request, $status) {
-            // Pessimistic lock row to prevent race conditions or double review
-            $lockedRequest = AttendanceRequest::where('id', $attRequest->id)
-                ->lockForUpdate()
-                ->firstOrFail();
-
-            if ($lockedRequest->status !== 'pending') {
-                throw \Illuminate\Validation\ValidationException::withMessages([
-                    'status' => 'Permohonan presensi ini sudah diproses sebelumnya (Status: ' . $lockedRequest->status . ').'
-                ]);
-            }
-
-            $lockedRequest->update([
-                'status' => $status,
-                'reviewer_id' => Auth::id(),
-                'reviewer_role' => 'pembimbing-dudi',
-                'reviewer_notes' => $request->reviewer_notes,
-                'reviewed_at' => now(),
-            ]);
-
-            if ($status === 'approved') {
-                $currentDate = Carbon::parse($lockedRequest->start_date);
-                $endDate = Carbon::parse($lockedRequest->end_date);
-
-                while ($currentDate->lessThanOrEqualTo($endDate)) {
-                    Attendance::updateOrCreate(
-                        [
-                            'student_pkl_id' => $lockedRequest->student_pkl_id,
-                            'date' => $currentDate->toDateString(),
-                        ],
-                        [
-                            'school_id' => $lockedRequest->school_id,
-                            'status' => $lockedRequest->type,
-                            'is_within_radius' => true,
-                            'checkout_notes' => 'Disetujui Mentor DU/DI: ' . $lockedRequest->reason,
-                        ]
-                    );
-                    $currentDate->addDay();
-                }
-            }
-        });
-
-        $actionText = ($status === 'approved') ? 'disetujui' : 'ditolak';
+        $actionText = ($request->action === 'approve') ? 'disetujui' : 'ditolak';
         return back()->with('success', "Permohonan penugasan dinas/WFH berhasil {$actionText}.");
+    }
+
+    public function bulkProcessRequests(Request $request, AttendanceService $attendanceService)
+    {
+        $request->validate([
+            'request_ids' => ['required', 'array', 'min:1'],
+            'request_ids.*' => ['integer', 'exists:attendance_requests,id'],
+            'action' => ['required', 'in:approve,reject'],
+            'notes' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $result = $attendanceService->bulkProcessRequests(
+            $request->request_ids,
+            $request->action,
+            $request->notes,
+            Auth::user()
+        );
+
+        $actionText = ($request->action === 'approve') ? 'disetujui' : 'ditolak';
+        return back()->with('success', "Berhasil memproses massal: {$result['processed']} permohonan telah {$actionText} (Dilewati: {$result['skipped']}).");
     }
 
     public function journals(Request $request)
@@ -222,6 +201,34 @@ class SupervisorController extends Controller
         }
     }
 
+    public function bulkProcessJournals(Request $request, JournalService $journalService)
+    {
+        $request->validate([
+            'journal_ids' => ['required', 'array', 'min:1'],
+            'journal_ids.*' => ['integer', 'exists:journals,id'],
+            'action' => ['required', 'in:approve,revision'],
+            'notes' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        if ($request->action === 'revision' && empty($request->notes)) {
+            return back()->withErrors(['notes' => 'Catatan revisi wajib diisi untuk revisi massal.']);
+        }
+
+        try {
+            $result = $journalService->bulkProcess(
+                $request->journal_ids,
+                $request->action,
+                $request->notes,
+                Auth::user()
+            );
+
+            $actionText = ($request->action === 'approve') ? 'disetujui' : 'diminta revisi';
+            return back()->with('success', "Berhasil memproses massal: {$result['processed']} jurnal telah {$actionText} (Dilewati: {$result['skipped']}).");
+        } catch (\Exception $e) {
+            return back()->withErrors(['status' => $e->getMessage()]);
+        }
+    }
+
     public function assessments()
     {
         $supervisor = $this->getSupervisor();
@@ -229,7 +236,11 @@ class SupervisorController extends Controller
             ->with(['student.user', 'student.class.major', 'assessment'])
             ->get();
 
-        return view('dudi.assessments', compact('studentPkls'));
+        $schoolId = $studentPkls->first()?->school_id;
+        $weightDudi = (float) ($schoolId ? \App\Models\SchoolSetting::where('school_id', $schoolId)->where('key', 'weight_dudi')->value('value') ?? 60 : 60);
+        $weightGuru = (float) ($schoolId ? \App\Models\SchoolSetting::where('school_id', $schoolId)->where('key', 'weight_guru')->value('value') ?? 40 : 40);
+
+        return view('dudi.assessments', compact('studentPkls', 'weightDudi', 'weightGuru'));
     }
 
     public function storeAssessment(Request $request, AssessmentService $assessmentService)

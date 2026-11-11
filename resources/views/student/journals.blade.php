@@ -5,26 +5,6 @@
 @section('content')
 <div class="space-y-4">
 
-    <!-- Header Title & Quick Status -->
-    <div class="flex items-center justify-between gap-3">
-        <div>
-            <h2 class="text-base font-extrabold text-slate-900 tracking-tight">Jurnal Harian PKL</h2>
-            <p class="text-xs text-slate-500 font-medium">Logbook aktivitas & kompetensi industri</p>
-        </div>
-        <div>
-            @if($todayJournal)
-                <x-badge :variant="$todayJournal->status" size="xs">
-                    {{ strtoupper($todayJournal->status) }}
-                </x-badge>
-            @else
-                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200/80">
-                    <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
-                    <span>Hari Ini Belum Diisi</span>
-                </span>
-            @endif
-        </div>
-    </div>
-
     <!-- Segmented Tab Switcher (iOS/Modern Mobile App Style) -->
     <div class="grid grid-cols-2 p-1 bg-slate-200/70 rounded-2xl text-xs font-bold transition-all">
         <button type="button" onclick="switchJournalTab('history')" id="tab-btn-history"
@@ -346,6 +326,10 @@
                         <x-badge :variant="$todayJournal->status" size="xs">
                             {{ strtoupper($todayJournal->status) }}
                         </x-badge>
+                    @else
+                        <x-badge variant="warning" size="xs">
+                            Hari Ini Belum Diisi
+                        </x-badge>
                     @endif
                 </div>
 
@@ -431,6 +415,9 @@
         if (tab === 'form') {
             historySection.classList.add('hidden');
             formSection.classList.remove('hidden');
+            formSection.classList.remove('animate-fade-in');
+            void formSection.offsetWidth;
+            formSection.classList.add('animate-fade-in');
 
             btnForm.className = 'py-2 px-3 rounded-xl bg-white text-slate-900 shadow-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer';
             btnHistory.className = 'py-2 px-3 rounded-xl text-slate-500 hover:text-slate-800 font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer';
@@ -439,6 +426,9 @@
         } else {
             formSection.classList.add('hidden');
             historySection.classList.remove('hidden');
+            historySection.classList.remove('animate-fade-in');
+            void historySection.offsetWidth;
+            historySection.classList.add('animate-fade-in');
 
             btnHistory.className = 'py-2 px-3 rounded-xl bg-white text-slate-900 shadow-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer';
             btnForm.className = 'py-2 px-3 rounded-xl text-slate-500 hover:text-slate-800 font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer';
@@ -539,7 +529,7 @@
             const reader = new FileReader();
             reader.onload = function(e) {
                 const div = document.createElement('div');
-                div.className = 'relative aspect-square rounded-2xl overflow-hidden border border-slate-200 shadow-2xs group bg-slate-100';
+                div.className = 'relative aspect-square rounded-2xl overflow-hidden border border-slate-200 shadow-2xs group bg-slate-100 animate-scale-in';
                 div.innerHTML = `
                     <img src="${e.target.result}" class="w-full h-full object-cover">
                     <span class="absolute bottom-1 right-1 text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-slate-900/70 text-white backdrop-blur-xs">

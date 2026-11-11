@@ -127,33 +127,33 @@
     >
         <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
             
-            <div class="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-100 flex flex-col items-center justify-center text-center transition-all hover:bg-emerald-50">
+            <div class="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-100 flex flex-col items-center justify-center text-center hover-lift transition-all hover:bg-emerald-50">
                 <span class="text-xs font-bold text-emerald-800 tracking-wider uppercase mb-1">Tepat Waktu</span>
-                <span class="text-3xl font-black text-emerald-700 tracking-tight">{{ $attendanceStats['hadir'] }}</span>
+                <span class="text-3xl font-black text-emerald-700 tracking-tight stat-counter" data-target="{{ $attendanceStats['hadir'] }}">{{ $attendanceStats['hadir'] }}</span>
                 <span class="text-[10px] text-emerald-600 font-semibold mt-1">Siswa Hadir</span>
             </div>
 
-            <div class="p-4 rounded-2xl bg-amber-50/70 border border-amber-100 flex flex-col items-center justify-center text-center transition-all hover:bg-amber-50">
+            <div class="p-4 rounded-2xl bg-amber-50/70 border border-amber-100 flex flex-col items-center justify-center text-center hover-lift transition-all hover:bg-amber-50">
                 <span class="text-xs font-bold text-amber-800 tracking-wider uppercase mb-1">Terlambat</span>
-                <span class="text-3xl font-black text-amber-700 tracking-tight">{{ $attendanceStats['terlambat'] }}</span>
+                <span class="text-3xl font-black text-amber-700 tracking-tight stat-counter" data-target="{{ $attendanceStats['terlambat'] }}">{{ $attendanceStats['terlambat'] }}</span>
                 <span class="text-[10px] text-amber-600 font-semibold mt-1">Lewat Jam Masuk</span>
             </div>
 
-            <div class="p-4 rounded-2xl bg-sky-50/70 border border-sky-100 flex flex-col items-center justify-center text-center transition-all hover:bg-sky-50">
+            <div class="p-4 rounded-2xl bg-sky-50/70 border border-sky-100 flex flex-col items-center justify-center text-center hover-lift transition-all hover:bg-sky-50">
                 <span class="text-xs font-bold text-sky-800 tracking-wider uppercase mb-1">Izin</span>
-                <span class="text-3xl font-black text-sky-700 tracking-tight">{{ $attendanceStats['izin'] }}</span>
+                <span class="text-3xl font-black text-sky-700 tracking-tight stat-counter" data-target="{{ $attendanceStats['izin'] }}">{{ $attendanceStats['izin'] }}</span>
                 <span class="text-[10px] text-sky-600 font-semibold mt-1">Permohonan Izin</span>
             </div>
 
-            <div class="p-4 rounded-2xl bg-purple-50/70 border border-purple-100 flex flex-col items-center justify-center text-center transition-all hover:bg-purple-50">
+            <div class="p-4 rounded-2xl bg-purple-50/70 border border-purple-100 flex flex-col items-center justify-center text-center hover-lift transition-all hover:bg-purple-50">
                 <span class="text-xs font-bold text-purple-800 tracking-wider uppercase mb-1">Sakit</span>
-                <span class="text-3xl font-black text-purple-700 tracking-tight">{{ $attendanceStats['sakit'] }}</span>
+                <span class="text-3xl font-black text-purple-700 tracking-tight stat-counter" data-target="{{ $attendanceStats['sakit'] }}">{{ $attendanceStats['sakit'] }}</span>
                 <span class="text-[10px] text-purple-600 font-semibold mt-1">Surat Dokter</span>
             </div>
 
-            <div class="col-span-2 sm:col-span-1 lg:col-span-1 p-4 rounded-2xl bg-rose-50/70 border border-rose-100 flex flex-col items-center justify-center text-center transition-all hover:bg-rose-50">
+            <div class="col-span-2 sm:col-span-1 lg:col-span-1 p-4 rounded-2xl bg-rose-50/70 border border-rose-100 flex flex-col items-center justify-center text-center hover-lift transition-all hover:bg-rose-50">
                 <span class="text-xs font-bold text-rose-800 tracking-wider uppercase mb-1">Alfa</span>
-                <span class="text-3xl font-black text-rose-700 tracking-tight">{{ $attendanceStats['alfa'] }}</span>
+                <span class="text-3xl font-black text-rose-700 tracking-tight stat-counter" data-target="{{ $attendanceStats['alfa'] }}">{{ $attendanceStats['alfa'] }}</span>
                 <span class="text-[10px] text-rose-600 font-semibold mt-1">Tanpa Keterangan</span>
             </div>
 

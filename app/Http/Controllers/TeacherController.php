@@ -5,12 +5,18 @@ namespace App\Http\Controllers;
 use App\Models\Assessment;
 use App\Models\Attendance;
 use App\Models\AttendanceRequest;
+use App\Models\IncidentReport;
 use App\Models\Journal;
+use App\Models\PklPeriod;
 use App\Models\SchoolSetting;
 use App\Models\StudentPkl;
+use App\Models\SupervisionVisit;
 use App\Services\AnnouncementService;
 use App\Services\AssessmentService;
+use App\Services\AttendanceService;
+use App\Services\IncidentReportService;
 use App\Services\JournalService;
+use App\Services\SupervisionService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -131,7 +137,7 @@ class TeacherController extends Controller
         return view('teacher.requests', compact('requests'));
     }
 
-    public function processRequest(Request $request, AttendanceRequest $attRequest)
+    public function processRequest(Request $request, AttendanceRequest $attRequest, AttendanceService $attendanceService)
     {
         $teacher = $this->getTeacher();
         if ($attRequest->studentPkl->teacher_id !== $teacher->id) {
@@ -143,52 +149,30 @@ class TeacherController extends Controller
             'reviewer_notes' => ['nullable', 'string', 'max:255'],
         ]);
 
-        $status = ($request->action === 'approve') ? 'approved' : 'rejected';
+        $attendanceService->processRequest($attRequest, $request->action, $request->reviewer_notes, Auth::user());
 
-        \Illuminate\Support\Facades\DB::transaction(function () use ($attRequest, $request, $status) {
-            // Pessimistic lock row to prevent race conditions or double review
-            $lockedRequest = AttendanceRequest::where('id', $attRequest->id)
-                ->lockForUpdate()
-                ->firstOrFail();
-
-            if ($lockedRequest->status !== 'pending') {
-                throw \Illuminate\Validation\ValidationException::withMessages([
-                    'status' => 'Permohonan presensi ini sudah diproses sebelumnya (Status: ' . $lockedRequest->status . ').'
-                ]);
-            }
-
-            $lockedRequest->update([
-                'status' => $status,
-                'reviewer_id' => Auth::id(),
-                'reviewer_role' => 'guru-pembimbing',
-                'reviewer_notes' => $request->reviewer_notes,
-                'reviewed_at' => now(),
-            ]);
-
-            // If approved, create or update attendance record for the date range
-            if ($status === 'approved') {
-                $currentDate = Carbon::parse($lockedRequest->start_date);
-                $endDate = Carbon::parse($lockedRequest->end_date);
-
-                while ($currentDate->lessThanOrEqualTo($endDate)) {
-                    Attendance::updateOrCreate(
-                        [
-                            'student_pkl_id' => $lockedRequest->student_pkl_id,
-                            'date' => $currentDate->toDateString(),
-                        ],
-                        [
-                            'school_id' => $lockedRequest->school_id,
-                            'status' => $lockedRequest->type,
-                            'checkout_notes' => 'Pengajuan disetujui Guru: ' . $lockedRequest->reason,
-                        ]
-                    );
-                    $currentDate->addDay();
-                }
-            }
-        });
-
-        $actionText = ($status === 'approved') ? 'disetujui' : 'ditolak';
+        $actionText = ($request->action === 'approve') ? 'disetujui' : 'ditolak';
         return back()->with('success', "Permohonan presensi siswa berhasil {$actionText}.");
+    }
+
+    public function bulkProcessRequests(Request $request, AttendanceService $attendanceService)
+    {
+        $request->validate([
+            'request_ids' => ['required', 'array', 'min:1'],
+            'request_ids.*' => ['integer', 'exists:attendance_requests,id'],
+            'action' => ['required', 'in:approve,reject'],
+            'notes' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $result = $attendanceService->bulkProcessRequests(
+            $request->request_ids,
+            $request->action,
+            $request->notes,
+            Auth::user()
+        );
+
+        $actionText = ($request->action === 'approve') ? 'disetujui' : 'ditolak';
+        return back()->with('success', "Berhasil memproses massal: {$result['processed']} permohonan telah {$actionText} (Dilewati: {$result['skipped']}).");
     }
 
     public function journals(Request $request)
@@ -263,6 +247,34 @@ class TeacherController extends Controller
         }
     }
 
+    public function bulkProcessJournals(Request $request, JournalService $journalService)
+    {
+        $request->validate([
+            'journal_ids' => ['required', 'array', 'min:1'],
+            'journal_ids.*' => ['integer', 'exists:journals,id'],
+            'action' => ['required', 'in:approve,revision'],
+            'notes' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        if ($request->action === 'revision' && empty($request->notes)) {
+            return back()->withErrors(['notes' => 'Catatan revisi wajib diisi untuk revisi massal.']);
+        }
+
+        try {
+            $result = $journalService->bulkProcess(
+                $request->journal_ids,
+                $request->action,
+                $request->notes,
+                Auth::user()
+            );
+
+            $actionText = ($request->action === 'approve') ? 'disetujui' : 'diminta revisi';
+            return back()->with('success', "Berhasil memproses massal: {$result['processed']} jurnal telah {$actionText} (Dilewati: {$result['skipped']}).");
+        } catch (\Exception $e) {
+            return back()->withErrors(['status' => $e->getMessage()]);
+        }
+    }
+
     public function assessments()
     {
         $teacher = $this->getTeacher();
@@ -270,7 +282,10 @@ class TeacherController extends Controller
             ->with(['student.user', 'student.class.major', 'company', 'assessment'])
             ->get();
 
-        return view('teacher.assessments', compact('studentPkls'));
+        $weightDudi = (float) (\App\Models\SchoolSetting::where('school_id', $teacher->school_id)->where('key', 'weight_dudi')->value('value') ?? 60);
+        $weightGuru = (float) (\App\Models\SchoolSetting::where('school_id', $teacher->school_id)->where('key', 'weight_guru')->value('value') ?? 40);
+
+        return view('teacher.assessments', compact('studentPkls', 'weightDudi', 'weightGuru'));
     }
 
     public function storeAssessment(Request $request, AssessmentService $assessmentService)
@@ -346,5 +361,103 @@ class TeacherController extends Controller
 
         $sanitizedName = Str::slug($spkl->student->user->name);
         return $pdf->download("Laporan_PKL_{$sanitizedName}.pdf");
+    }
+
+    public function incidents(Request $request, IncidentReportService $incidentService)
+    {
+        $teacher = $this->getTeacher();
+        $incidents = $incidentService->getIncidentsForTeacher($teacher, $request->only(['status', 'urgency']));
+
+        $spklIds = StudentPkl::where('teacher_id', $teacher->id)->pluck('id');
+        $stats = [
+            'total' => IncidentReport::whereIn('student_pkl_id', $spklIds)->count(),
+            'open' => IncidentReport::whereIn('student_pkl_id', $spklIds)->whereIn('status', ['submitted', 'in_progress'])->count(),
+            'critical' => IncidentReport::whereIn('student_pkl_id', $spklIds)->where('urgency', 'critical')->count(),
+            'resolved' => IncidentReport::whereIn('student_pkl_id', $spklIds)->where('status', 'resolved')->count(),
+        ];
+
+        return view('teacher.incidents', compact('incidents', 'stats'));
+    }
+
+    public function followupIncident(Request $request, IncidentReport $report, IncidentReportService $incidentService)
+    {
+        $teacher = $this->getTeacher();
+        if ($report->studentPkl->teacher_id !== $teacher->id) {
+            abort(403, 'Akses ditolak: Anda bukan guru pembimbing yang ditugaskan untuk siswa ini.');
+        }
+
+        $validated = $request->validate([
+            'action_note' => ['required', 'string', 'max:1000'],
+            'status' => ['nullable', 'in:in_progress,resolved,dismissed'],
+        ]);
+
+        $incidentService->addFollowup($report, Auth::user(), $validated['action_note'], $validated['status'] ?? null);
+
+        return back()->with('success', 'Tindak lanjut laporan kendala berhasil dicatat.');
+    }
+
+    public function supervisions(Request $request, SupervisionService $supervisionService)
+    {
+        $teacher = $this->getTeacher();
+        $visits = $supervisionService->getVisitsForTeacher($teacher, $request->only(['company_id', 'stage']));
+
+        $studentPkls = StudentPkl::where('teacher_id', $teacher->id)
+            ->with(['company', 'pklPeriod'])
+            ->get();
+
+        $companies = $studentPkls->pluck('company')->filter()->unique('id')->values();
+        $periods = $studentPkls->pluck('pklPeriod')->filter()->unique('id')->values();
+
+        $stats = [
+            'total' => SupervisionVisit::where('teacher_id', $teacher->id)->count(),
+            'this_month' => SupervisionVisit::where('teacher_id', $teacher->id)
+                ->whereYear('visit_date', now()->year)
+                ->whereMonth('visit_date', now()->month)
+                ->count(),
+            'companies_count' => $companies->count(),
+        ];
+
+        return view('teacher.supervisions', compact('visits', 'companies', 'periods', 'stats'));
+    }
+
+    public function storeSupervision(Request $request, SupervisionService $supervisionService)
+    {
+        $teacher = $this->getTeacher();
+
+        $validated = $request->validate([
+            'company_id' => ['required', 'exists:companies,id'],
+            'pkl_period_id' => ['required', 'exists:pkl_periods,id'],
+            'stage' => ['required', 'in:penyerahan,monitoring_1,monitoring_2,penjemputan,insidental'],
+            'visit_date' => ['required', 'date'],
+            'student_progress_summary' => ['required', 'string', 'min:10'],
+            'company_feedback' => ['required', 'string', 'min:10'],
+            'follow_up_agreement' => ['nullable', 'string'],
+            'photo_with_students' => ['nullable', 'image', 'max:4096'],
+            'photo_with_supervisor' => ['nullable', 'image', 'max:4096'],
+        ]);
+
+        $supervisionService->createVisit(
+            $teacher,
+            $validated,
+            $request->file('photo_with_students'),
+            $request->file('photo_with_supervisor')
+        );
+
+        return back()->with('success', 'Log kunjungan supervisi berhasil dicatat dan Berita Acara siap diunduh.');
+    }
+
+    public function downloadBeritaAcaraPdf(SupervisionVisit $supervisionVisit, SupervisionService $supervisionService)
+    {
+        $teacher = $this->getTeacher();
+
+        if ($supervisionVisit->teacher_id !== $teacher->id && Auth::user()->role !== 'admin-sekolah') {
+            abort(403, 'Akses ditolak: Anda tidak memiliki wewenang untuk mengunduh dokumen Berita Acara ini.');
+        }
+
+        $pdf = $supervisionService->generateBeritaAcaraPdf($supervisionVisit);
+        $dateStr = $supervisionVisit->visit_date ? $supervisionVisit->visit_date->format('Ymd') : date('Ymd');
+        $companySlug = Str::slug($supervisionVisit->company->name ?? 'DUDI');
+
+        return $pdf->download("Berita_Acara_Supervisi_{$companySlug}_{$dateStr}.pdf");
     }
 }

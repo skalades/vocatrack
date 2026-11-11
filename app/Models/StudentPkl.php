@@ -69,4 +69,9 @@ class StudentPkl extends Model
     {
         return $this->hasOne(Assessment::class);
     }
+
+    public function certificate(): HasOne
+    {
+        return $this->hasOne(Certificate::class);
+    }
 }

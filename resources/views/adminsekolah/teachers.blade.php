@@ -97,6 +97,7 @@
                         <th class="py-3.5 px-4">Nomor Induk Pegawai (NIP)</th>
                         <th class="py-3.5 px-4">Email Login Sistem</th>
                         <th class="py-3.5 px-6 text-center">Beban Bimbingan</th>
+                        <th class="py-3.5 px-4 text-right">Aksi</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 text-slate-700 font-medium">
@@ -126,10 +127,18 @@
                                     {{ $t->studentPkls->count() }} Siswa Binaan
                                 </x-badge>
                             </td>
+                            <td class="py-3.5 px-4 text-right whitespace-nowrap">
+                                <form action="{{ route('impersonate.start', $t->user) }}" method="POST" class="inline" onsubmit="return confirm('Masuk sebagai {{ $t->user->name }} (Mode Impersonasi)?')">
+                                    @csrf
+                                    <button type="submit" class="px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 text-[11px] font-bold border border-amber-200 transition-colors cursor-pointer" title="Masuk sebagai akun ini untuk inspeksi sistem">
+                                        Login As
+                                    </button>
+                                </form>
+                            </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="4" class="py-12">
+                            <td colspan="5" class="py-12">
                                 <x-empty-state 
                                     title="Belum Ada Guru Pembimbing" 
                                     description="Tambahkan akun guru pembimbing untuk memandu dan mengevaluasi siswa peserta PKL."
