@@ -291,84 +291,8 @@
     </div>
 </div>
 
-<!-- Modal Quick Request -->
-<div id="request-modal" onclick="if(event.target === this) this.classList.add('hidden')" class="hidden fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-4">
-    <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto border border-slate-100 animate-in fade-in duration-150">
-        <div class="flex items-center justify-between pb-3 mb-3 border-b border-slate-100">
-            <h3 class="text-sm font-extrabold text-slate-900 tracking-tight" id="modal-req-title">Pengajuan Presensi Khusus</h3>
-            <button type="button" onclick="closeRequestModal()" class="p-1 text-slate-400 hover:text-slate-600 rounded-lg">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-            </button>
-        </div>
-        <form action="{{ route('student.request.store') }}" method="POST" enctype="multipart/form-data" class="space-y-3.5">
-            @csrf
-            <input type="hidden" name="type" id="modal-req-type" value="izin">
-
-            <div class="grid grid-cols-2 gap-2.5">
-                <div>
-                    <label class="block text-[11px] font-bold text-slate-700 mb-1">Mulai Tanggal</label>
-                    <input type="date" name="start_date" value="{{ \Carbon\Carbon::today()->toDateString() }}" required 
-                           class="w-full text-xs p-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-indigo-500/20">
-                </div>
-                <div>
-                    <label class="block text-[11px] font-bold text-slate-700 mb-1">Sampai Tanggal</label>
-                    <input type="date" name="end_date" value="{{ \Carbon\Carbon::today()->toDateString() }}" required 
-                           class="w-full text-xs p-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-indigo-500/20">
-                </div>
-            </div>
-
-            <div id="dest-container" class="hidden">
-                <label class="block text-[11px] font-bold text-slate-700 mb-1">Lokasi Tujuan / Dinas</label>
-                <input type="text" name="destination_location" placeholder="Contoh: Kantor Cabang Tangerang" 
-                       class="w-full text-xs p-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-indigo-500/20">
-            </div>
-
-            <div>
-                <label class="block text-[11px] font-bold text-slate-700 mb-1">Alasan Pengajuan (Min. 10 Karakter)</label>
-                <textarea name="reason" rows="3" required placeholder="Jelaskan alasan pengajuan secara rinci..." 
-                          class="w-full text-xs p-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 font-medium leading-relaxed"></textarea>
-            </div>
-
-            <div>
-                <label class="block text-[11px] font-bold text-slate-700 mb-1">Foto Bukti / Surat Izin (Opsional)</label>
-                <input type="file" name="attachment" accept="image/*" 
-                       class="w-full text-[11px] text-slate-600 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:bg-slate-100 file:text-slate-700 file:font-semibold">
-            </div>
-
-            <div class="flex items-center space-x-2 pt-2 border-t border-slate-100">
-                <button type="button" onclick="closeRequestModal()" class="flex-1 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 cursor-pointer">
-                    Batal
-                </button>
-                <button type="submit" class="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-xs font-bold shadow-md shadow-indigo-600/20 cursor-pointer">
-                    Ajukan Permohonan
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<script>
-    function openRequestModal(type) {
-        document.getElementById('modal-req-type').value = type;
-        const titleMap = {
-            'izin': 'Permohonan Izin (Verifikator: Guru)',
-            'sakit': 'Permohonan Sakit (Verifikator: Guru)',
-            'dinas_luar': 'Pengajuan Dinas Luar (DU/DI)',
-            'luar_kantor': 'Pengajuan WFH / Luar Kantor'
-        };
-        document.getElementById('modal-req-title').innerText = titleMap[type] || 'Pengajuan Presensi';
-        const dest = document.getElementById('dest-container');
-        if (type === 'dinas_luar') {
-            dest.classList.remove('hidden');
-        } else {
-            dest.classList.add('hidden');
-        }
-        document.getElementById('request-modal').classList.remove('hidden');
-    }
-
-    function closeRequestModal() {
-        document.getElementById('request-modal').classList.add('hidden');
-    }
+<!-- Modal Quick Request (Reusable Component) -->
+<x-attendance-request-modal />
 
     let currentOpenAnnouncementId = null;
     const latestAnnouncementId = {{ $announcements->first()?->id ?? 'null' }};

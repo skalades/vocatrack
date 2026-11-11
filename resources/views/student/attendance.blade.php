@@ -156,6 +156,16 @@
                         <span>Ambil Selfie Dulu untuk Check-In</span>
                     </button>
                 </form>
+
+                <!-- Shortcut Link to Leave/Sick Request if cannot attend -->
+                <div class="pt-2 text-center border-t border-slate-100">
+                    <p class="text-[11px] text-slate-500 font-medium">
+                        Berhalangan hadir atau sedang sakit?
+                        <button type="button" onclick="openRequestModal('izin')" class="font-bold text-indigo-600 hover:text-indigo-700 underline cursor-pointer ml-0.5">
+                            Ajukan Izin / Sakit Di Sini
+                        </button>
+                    </p>
+                </div>
             </div>
         @elseif($todayAttendance && !$todayAttendance->checkout_time)
             <!-- Section Checkout Form -->
@@ -208,6 +218,94 @@
         @endif
     </div>
 
+    <!-- Permohonan Presensi Cepat (Izin, Sakit, Dinas Luar, WFH) -->
+    <div class="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs space-y-3">
+        <div class="flex items-center justify-between">
+            <div>
+                <h3 class="text-xs font-extrabold text-slate-900 tracking-tight">Permohonan Presensi Cepat</h3>
+                <p class="text-[11px] text-slate-500 font-medium">Berhalangan hadir atau dinas luar? Ajukan izin ke pembimbing.</p>
+            </div>
+        </div>
+        
+        <div class="grid grid-cols-4 gap-2">
+            <button type="button" onclick="openRequestModal('izin')" class="flex flex-col items-center justify-center p-3 rounded-2xl bg-slate-50/70 hover:bg-white border border-slate-200/80 hover:border-sky-300 shadow-2xs hover:shadow-xs transition-all cursor-pointer group active:scale-95">
+                <div class="w-9 h-9 rounded-xl bg-sky-50 text-sky-600 border border-sky-100 flex items-center justify-center mb-1.5 group-hover:scale-105 transition-transform">
+                    <svg class="w-4 h-4 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                </div>
+                <span class="text-[11px] font-bold text-slate-800 group-hover:text-sky-700 transition-colors">Izin</span>
+            </button>
+
+            <button type="button" onclick="openRequestModal('sakit')" class="flex flex-col items-center justify-center p-3 rounded-2xl bg-slate-50/70 hover:bg-white border border-slate-200/80 hover:border-purple-300 shadow-2xs hover:shadow-xs transition-all cursor-pointer group active:scale-95">
+                <div class="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 border border-purple-100 flex items-center justify-center mb-1.5 group-hover:scale-105 transition-transform">
+                    <svg class="w-4 h-4 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+                </div>
+                <span class="text-[11px] font-bold text-slate-800 group-hover:text-purple-700 transition-colors">Sakit</span>
+            </button>
+
+            <button type="button" onclick="openRequestModal('dinas_luar')" class="flex flex-col items-center justify-center p-3 rounded-2xl bg-slate-50/70 hover:bg-white border border-slate-200/80 hover:border-teal-300 shadow-2xs hover:shadow-xs transition-all cursor-pointer group active:scale-95">
+                <div class="w-9 h-9 rounded-xl bg-teal-50 text-teal-600 border border-teal-100 flex items-center justify-center mb-1.5 group-hover:scale-105 transition-transform">
+                    <svg class="w-4 h-4 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                </div>
+                <span class="text-[11px] font-bold text-slate-800 group-hover:text-teal-700 transition-colors">Dinas</span>
+            </button>
+
+            <button type="button" onclick="openRequestModal('luar_kantor')" class="flex flex-col items-center justify-center p-3 rounded-2xl bg-slate-50/70 hover:bg-white border border-slate-200/80 hover:border-indigo-300 shadow-2xs hover:shadow-xs transition-all cursor-pointer group active:scale-95">
+                <div class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100 flex items-center justify-center mb-1.5 group-hover:scale-105 transition-transform">
+                    <svg class="w-4 h-4 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+                </div>
+                <span class="text-[11px] font-bold text-slate-800 group-hover:text-indigo-700 transition-colors">WFH</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Status Pengajuan Presensi Terkini -->
+    @if(isset($pendingRequests) && $pendingRequests->isNotEmpty())
+        <div class="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs space-y-3">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-xs font-extrabold text-slate-900 tracking-tight">Status Pengajuan Terkini</h3>
+                    <p class="text-[11px] text-slate-500 font-medium">Permohonan izin atau dispensasi yang telah diajukan.</p>
+                </div>
+                <span class="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">{{ $pendingRequests->count() }} Pengajuan</span>
+            </div>
+
+            <div class="space-y-2.5">
+                @foreach($pendingRequests as $req)
+                    <div class="p-3.5 rounded-2xl bg-slate-50/90 border border-slate-200/70 space-y-2">
+                        <div class="flex items-center justify-between gap-2">
+                            <div class="flex items-center space-x-2">
+                                <x-badge :variant="$req->type" size="xs">
+                                    {{ strtoupper(str_replace('_', ' ', $req->type)) }}
+                                </x-badge>
+                                <span class="text-[11px] font-bold text-slate-700">
+                                    {{ \Carbon\Carbon::parse($req->start_date)->isoFormat('D MMM') }}
+                                    @if($req->start_date !== $req->end_date)
+                                        - {{ \Carbon\Carbon::parse($req->end_date)->isoFormat('D MMM Y') }}
+                                    @else
+                                        {{ \Carbon\Carbon::parse($req->start_date)->isoFormat('Y') }}
+                                    @endif
+                                </span>
+                            </div>
+                            <x-badge :variant="$req->status" size="xs">
+                                {{ $req->status === 'pending' ? 'Menunggu' : ($req->status === 'approved' ? 'Disetujui' : 'Ditolak') }}
+                            </x-badge>
+                        </div>
+
+                        <p class="text-xs text-slate-600 font-medium leading-relaxed">
+                            {{ $req->reason }}
+                        </p>
+
+                        @if($req->reviewer_notes)
+                            <div class="text-[11px] text-slate-600 bg-white p-2.5 rounded-xl border border-slate-200/60 font-medium">
+                                <span class="font-bold text-slate-800">Catatan Pembimbing:</span> {{ $req->reviewer_notes }}
+                            </div>
+                        @endif
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    @endif
+
     <!-- Attendance History List -->
     <div class="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs space-y-3">
         <h3 class="text-xs font-extrabold text-slate-900 tracking-tight">Riwayat Presensi</h3>
@@ -239,6 +337,9 @@
             <x-pagination :paginator="$history" />
         @endif
     </div>
+
+    <!-- Modal Quick Request (Reusable Component) -->
+    <x-attendance-request-modal />
 
 </div>
 @endsection
