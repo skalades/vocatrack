@@ -26,9 +26,9 @@
 
     <!-- Error Card Container -->
     <div class="w-full max-w-lg bg-slate-900/80 border border-slate-800/90 rounded-3xl p-8 sm:p-10 text-center shadow-2xl backdrop-blur-xl relative">
-        <div class="flex items-center justify-center gap-2 mb-6">
-            <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-indigo-500 flex items-center justify-center font-black text-white text-sm shadow-md shadow-indigo-600/30">
-                VT
+        <div class="flex items-center justify-center gap-2.5 mb-6">
+            <div class="w-10 h-10 rounded-xl bg-white p-1.5 flex items-center justify-center shadow-md shadow-indigo-600/30 border border-slate-700 shrink-0">
+                <img src="{{ asset('images/logo.png') }}" alt="VokaTrack Logo" class="w-full h-full object-contain">
             </div>
             <span class="font-extrabold text-white text-lg tracking-tight">VokaTrack</span>
         </div>

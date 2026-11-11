@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ $title ?? 'VokaTrack — Platform PKL SMK Terpadu' }}</title>
+    <link rel="icon" type="image/png" href="{{ asset('images/logo.png') }}">
     
     <!-- Google Fonts: Plus Jakarta Sans -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -28,8 +29,8 @@
             <!-- Sidebar Header / Brand -->
             <div class="h-16 flex items-center justify-between px-5 bg-slate-950/60 border-b border-slate-800/80">
                 <div class="flex items-center space-x-3">
-                    <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-indigo-500 flex items-center justify-center text-white font-extrabold text-sm shadow-md shadow-indigo-600/30">
-                        VT
+                    <div class="w-9 h-9 rounded-xl bg-white p-1 flex items-center justify-center shadow-md shadow-indigo-600/20 border border-slate-700/60 shrink-0">
+                        <img src="{{ asset('images/logo.png') }}" alt="VokaTrack Logo" class="w-full h-full object-contain">
                     </div>
                     <div>
                         <span class="text-white font-extrabold text-base tracking-tight leading-none block">VokaTrack</span>

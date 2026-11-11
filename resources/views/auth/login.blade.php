@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Masuk — VokaTrack PKL SMK Enterprise</title>
+    <link rel="icon" type="image/png" href="{{ asset('images/logo.png') }}">
     
     <!-- Google Fonts: Plus Jakarta Sans -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -28,8 +29,8 @@
         
         <!-- Brand Identity -->
         <div class="text-center mb-8">
-            <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-tr from-indigo-600 to-indigo-500 text-white font-black text-2xl shadow-xl shadow-indigo-500/20 mb-3.5">
-                VT
+            <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white shadow-xl shadow-slate-200/80 border border-slate-100 p-2.5 mb-3.5">
+                <img src="{{ asset('images/logo.png') }}" alt="VokaTrack Logo" class="w-full h-full object-contain">
             </div>
             <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">VokaTrack</h1>
             <p class="text-xs sm:text-sm text-slate-500 mt-1 font-medium">Sistem Presensi GPS & Jurnal PKL SMK Terintegrasi</p>
