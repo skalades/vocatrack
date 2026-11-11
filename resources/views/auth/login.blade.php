@@ -28,9 +28,9 @@
     <div class="w-full max-w-lg my-8">
         
         <!-- Brand Identity -->
-        <div class="text-center mb-8">
-            <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white shadow-xl shadow-slate-200/80 border border-slate-100 p-2.5 mb-3.5">
-                <img src="{{ asset('images/logo.png') }}" alt="VokaTrack Logo" class="w-full h-full object-contain">
+        <div class="text-center mb-6">
+            <div class="inline-flex items-center justify-center mb-3">
+                <img src="{{ asset('images/logo.png') }}" alt="VokaTrack Logo" class="h-24 sm:h-28 w-auto object-contain drop-shadow-md transition-transform hover:scale-105 duration-200">
             </div>
             <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">VokaTrack</h1>
             <p class="text-xs sm:text-sm text-slate-500 mt-1 font-medium">Sistem Presensi GPS & Jurnal PKL SMK Terintegrasi</p>
