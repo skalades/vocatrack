@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Company;
+use App\Models\Major;
 use App\Models\Profile;
 use App\Models\School;
 use App\Models\Supervisor;
@@ -15,6 +16,8 @@ class CompanyAndSupervisorSeeder extends Seeder
     public function run(): void
     {
         $school = School::where('npsn', '20209203')->firstOrFail();
+        $majorGp = Major::where('school_id', $school->id)->where('code', 'GP')->first();
+        $majorLog = Major::where('school_id', $school->id)->where('code', 'LOG')->first();
 
         // 1. PT Aneka Tambang Tbk (Antam) - Unit Bisnis Geomin & Eksplorasi
         $companyAntam = Company::create([
@@ -30,6 +33,10 @@ class CompanyAndSupervisorSeeder extends Seeder
             'override_hours' => false,
             'work_days' => '5_days',
         ]);
+        if ($majorGp) {
+            $antamMajors = array_filter([$majorGp->id, $majorLog?->id]);
+            $companyAntam->majors()->attach($antamMajors);
+        }
 
         $supervisorUserAntam = User::create([
             'school_id' => $school->id,
@@ -65,6 +72,9 @@ class CompanyAndSupervisorSeeder extends Seeder
             'override_hours' => false,
             'work_days' => '5_days',
         ]);
+        if ($majorGp) {
+            $companyTimah->majors()->attach($majorGp->id);
+        }
 
         $supervisorUserTimah = User::create([
             'school_id' => $school->id,
@@ -100,6 +110,9 @@ class CompanyAndSupervisorSeeder extends Seeder
             'override_hours' => false,
             'work_days' => '5_days',
         ]);
+        if ($majorGp) {
+            $companyGeologi->majors()->attach($majorGp->id);
+        }
 
         $supervisorUserGeologi = User::create([
             'school_id' => $school->id,
@@ -135,6 +148,9 @@ class CompanyAndSupervisorSeeder extends Seeder
             'override_hours' => false,
             'work_days' => '5_days',
         ]);
+        if ($majorGp) {
+            $companyGeoservices->majors()->attach($majorGp->id);
+        }
 
         $supervisorUserGeoservices = User::create([
             'school_id' => $school->id,

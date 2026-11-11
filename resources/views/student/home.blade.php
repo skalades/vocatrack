@@ -17,6 +17,19 @@
                     <span>&bull;</span>
                     <span class="truncate font-semibold">{{ $spkl->company->name ?? 'Mitra DU/DI' }}</span>
                 </div>
+
+                <!-- Live Date & Clock Widget -->
+                <div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-[10px] text-white/90 mt-2 shadow-inner">
+                    <div class="flex items-center gap-1 font-medium">
+                        <svg class="w-3 h-3 text-indigo-200 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                        <span id="banner-live-date">{{ \Carbon\Carbon::now()->isoFormat('dddd, D MMMM Y') }}</span>
+                    </div>
+                    <span class="text-white/40">&bull;</span>
+                    <div class="flex items-center gap-1 font-mono font-bold text-amber-200">
+                        <svg class="w-3 h-3 text-amber-200 shrink-0 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        <span id="banner-live-clock">{{ \Carbon\Carbon::now()->format('H:i:s') }} WIB</span>
+                    </div>
+                </div>
             </div>
             <div class="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white font-extrabold text-base shrink-0 shadow-inner">
                 {{ substr(auth()->user()->name, 0, 1) }}
@@ -48,8 +61,9 @@
                             <div class="flex items-center justify-between gap-1.5 mb-2.5">
                                 <div class="flex items-center gap-1.5 flex-wrap">
                                     @if($ann->is_pinned)
-                                        <span class="px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[9px] font-extrabold border border-amber-200">
-                                            📌 Pinned
+                                        <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[9px] font-extrabold border border-amber-200">
+                                            <svg class="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg>
+                                            Pinned
                                         </span>
                                     @endif
                                     <x-badge :variant="$ann->category_badge_variant" size="xs">
@@ -219,7 +233,7 @@
             <p class="text-xs text-slate-600 line-clamp-2 mb-3 bg-slate-50/80 p-3 rounded-xl border border-slate-100 leading-relaxed font-medium">
                 {{ $todayJournal->activity_description }}
             </p>
-            <a href="{{ route('student.journals') }}" class="inline-flex items-center text-xs font-bold text-indigo-600 hover:text-indigo-700">
+            <a href="{{ route('student.journals', ['tab' => 'history']) }}" class="inline-flex items-center text-xs font-bold text-indigo-600 hover:text-indigo-700">
                 <span>Buka Detail Jurnal</span>
                 <svg class="w-3.5 h-3.5 ml-1 stroke-[2.5]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
             </a>
@@ -227,7 +241,7 @@
             <p class="text-xs text-slate-500 mb-3 leading-relaxed font-medium">
                 Dokumentasikan aktivitas belajar dan praktik kerja industri Anda untuk hari ini.
             </p>
-            <a href="{{ route('student.journals') }}" class="w-full py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs flex items-center justify-center space-x-2 transition-colors">
+            <a href="{{ route('student.journals', ['tab' => 'form']) }}" class="w-full py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs flex items-center justify-center space-x-2 transition-colors">
                 <svg class="w-4 h-4 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
                 <span>Tulis Jurnal Harian Sekarang</span>
             </a>
@@ -403,6 +417,34 @@
         })
         .catch(() => {});
     }
+
+    // Real-time Live Clock Updater
+    function updateStudentClock() {
+        const clockElem = document.getElementById('banner-live-clock');
+        const dateElem = document.getElementById('banner-live-date');
+        if (!clockElem) return;
+
+        const now = new Date();
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const seconds = String(now.getSeconds()).padStart(2, '0');
+        clockElem.textContent = `${hours}:${minutes}:${seconds} WIB`;
+
+        if (dateElem) {
+            const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+            const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+            const dayName = days[now.getDay()];
+            const dateNum = now.getDate();
+            const monthName = months[now.getMonth()];
+            const year = now.getFullYear();
+            dateElem.textContent = `${dayName}, ${dateNum} ${monthName} ${year}`;
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        updateStudentClock();
+        setInterval(updateStudentClock, 1000);
+    });
 </script>
 
 <!-- Modal Detail Pengumuman Beranda (Responsive Mobile & Centered Popup) -->

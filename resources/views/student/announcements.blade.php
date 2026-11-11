@@ -86,7 +86,8 @@
                             <img src="{{ $ann->image_url }}" alt="{{ $ann->title }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy">
                             @if($ann->is_pinned)
                                 <div class="absolute top-3 left-3 px-2 py-0.5 rounded-full bg-amber-500/90 backdrop-blur-xs text-white text-[10px] font-extrabold flex items-center gap-1 shadow-sm">
-                                    <span>📌 Pinned</span>
+                                    <svg class="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg>
+                                    <span>Pinned</span>
                                 </div>
                             @endif
                             <div class="absolute bottom-2 right-2">
@@ -103,7 +104,8 @@
                                 <div class="flex items-center gap-1.5">
                                     @if($ann->is_pinned)
                                         <span class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-extrabold flex items-center gap-1 border border-amber-200">
-                                            📌 Pinned
+                                            <svg class="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg>
+                                            <span>Pinned</span>
                                         </span>
                                     @endif
                                     <x-badge :variant="$ann->category_badge_variant" size="xs">

@@ -4,19 +4,75 @@
 @section('page_subtitle', 'Sampaikan arahan, jadwal monitoring, dan instruksi penting kepada siswa bimbingan atau jurusan')
 
 @section('content')
-<div class="space-y-6">
+<div class="max-w-7xl mx-auto space-y-6">
 
+    <!-- Enterprise Hero Banner -->
     <x-page-header 
         title="Pengumuman Bimbingan PKL" 
         subtitle="Publikasikan pengumuman untuk siswa bimbingan Anda atau seluruh siswa dalam jurusan terkait. Lampirkan gambar jika diperlukan."
+        badge="GURU PEMBIMBING"
     >
         <x-button type="button" variant="primary" size="sm" onclick="openGuruAddModal()">
             <svg class="w-4 h-4 mr-1.5 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
             </svg>
-            Tulis Pengumuman
+            <span>+ Tulis Pengumuman Baru</span>
         </x-button>
     </x-page-header>
+
+    @php
+        $annTotal = $announcements->total();
+        $annActive = $announcements->where('is_active', true)->count();
+        $annPinned = $announcements->where('is_pinned', true)->count();
+        $annPenting = $announcements->where('category', 'penting')->count();
+    @endphp
+
+    <!-- Top KPI Metrics -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <x-stat-card 
+            title="Total Siaran Pengumuman" 
+            :value="$annTotal" 
+            subtitle="Seluruh arsip siaran"
+            color="indigo" 
+        >
+            <x-slot:icon>
+                <svg class="w-6 h-6 stroke-[1.8]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>
+            </x-slot:icon>
+        </x-stat-card>
+
+        <x-stat-card 
+            title="Siaran Aktif" 
+            :value="$annActive" 
+            subtitle="Sedang ditayangkan ke siswa"
+            color="emerald" 
+        >
+            <x-slot:icon>
+                <svg class="w-6 h-6 stroke-[1.8]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </x-slot:icon>
+        </x-stat-card>
+
+        <x-stat-card 
+            title="Disematkan (Pinned)" 
+            :value="$annPinned" 
+            subtitle="Posisi teratas di beranda siswa"
+            color="amber" 
+        >
+            <x-slot:icon>
+                <svg class="w-6 h-6 stroke-[1.8]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>
+            </x-slot:icon>
+        </x-stat-card>
+
+        <x-stat-card 
+            title="Kategori Penting / Urgent" 
+            :value="$annPenting" 
+            subtitle="Perlu perhatian segera"
+            color="rose" 
+        >
+            <x-slot:icon>
+                <svg class="w-6 h-6 stroke-[1.8]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            </x-slot:icon>
+        </x-stat-card>
+    </div>
 
     <!-- Filters & Search -->
     <x-card noPadding>
@@ -74,8 +130,9 @@
                                     <span>Perbesar</span>
                                 </div>
                                 @if($ann->is_pinned)
-                                    <span class="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-full bg-amber-500/90 text-white text-[9px] font-extrabold shadow-sm">
-                                        📌 Pinned
+                                    <span class="absolute top-2.5 left-2.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/90 text-white text-[9px] font-extrabold shadow-sm">
+                                        <svg class="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg>
+                                        Pinned
                                     </span>
                                 @endif
                                 <div class="absolute bottom-2 right-2">
@@ -91,8 +148,9 @@
                                 <div class="flex items-center justify-between mb-1">
                                     <div class="flex items-center gap-1.5">
                                         @if($ann->is_pinned)
-                                            <span class="px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[9px] font-extrabold border border-amber-200">
-                                                📌 Pinned
+                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[9px] font-extrabold border border-amber-200">
+                                                <svg class="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg>
+                                                Pinned
                                             </span>
                                         @endif
                                         <x-badge :variant="$ann->category_badge_variant" size="xs">

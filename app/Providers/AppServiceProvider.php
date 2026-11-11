@@ -20,6 +20,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        \Carbon\Carbon::setLocale('id');
+
         // Prevent N+1 queries during development and automated tests
         Model::preventLazyLoading(! $this->app->isProduction());
     }

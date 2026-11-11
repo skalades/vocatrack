@@ -4,17 +4,19 @@
 @section('page_subtitle', 'Publikasikan informasi, agenda, instruksi PKL, dan pengumuman dengan gambar berdasarkan kategori dan jurusan')
 
 @section('content')
-<div class="space-y-6">
+<div class="max-w-7xl mx-auto space-y-6">
 
+    <!-- Enterprise Hero Banner -->
     <x-page-header 
         title="Pengumuman & Siaran Sekolah" 
         subtitle="Kelola siaran berita resmi sekolah. Targetkan pengumuman ke seluruh civitas atau sebagian pengguna berdasarkan kategori peran dan jurusan."
+        badge="MANAJEMEN SEKOLAH"
     >
         <x-button type="button" variant="primary" size="sm" onclick="openAddModal()">
             <svg class="w-4 h-4 mr-1.5 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
             </svg>
-            Buat Pengumuman Baru
+            <span>+ Buat Pengumuman Baru</span>
         </x-button>
     </x-page-header>
 
@@ -152,8 +154,9 @@
                                     <div class="min-w-0 max-w-md">
                                         <div class="flex items-center gap-1.5 mb-0.5">
                                             @if($ann->is_pinned)
-                                                <span class="inline-flex items-center gap-0.5 text-[10px] font-extrabold text-amber-700 bg-amber-50 border border-amber-200/80 px-1.5 py-0.2 rounded-full">
-                                                    📌 Pinned
+                                                <span class="inline-flex items-center gap-1 text-[10px] font-extrabold text-amber-700 bg-amber-50 border border-amber-200/80 px-2 py-0.5 rounded-full">
+                                                    <svg class="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg>
+                                                    Pinned
                                                 </span>
                                             @endif
                                             <span class="font-bold text-slate-900 text-xs truncate">{{ $ann->title }}</span>

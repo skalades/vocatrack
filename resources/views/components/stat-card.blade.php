@@ -1,13 +1,18 @@
 @props([
-    'title',
-    'value',
+    'title' => null,
+    'label' => null,
+    'value' => 0,
     'subtitle' => null,
+    'description' => null,
     'color' => 'indigo',
     'badge' => null,
     'badgeVariant' => 'neutral',
 ])
 
 @php
+    $displayTitle = $title ?? $label ?? '';
+    $displaySubtitle = $subtitle ?? $description ?? null;
+
     $colorMap = [
         'indigo' => [
             'bg' => 'bg-indigo-50/80',
@@ -60,7 +65,7 @@
     <div class="flex items-start justify-between gap-4">
         <div class="flex-1 min-w-0">
             <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5 truncate">
-                {{ $title }}
+                {{ $displayTitle }}
             </span>
             <div class="flex items-baseline gap-2">
                 <span class="text-2xl lg:text-3xl font-extrabold text-slate-900 tracking-tight">
@@ -72,9 +77,9 @@
                     </x-badge>
                 @endif
             </div>
-            @if($subtitle)
+            @if($displaySubtitle)
                 <p class="text-xs text-slate-500 mt-1.5 font-medium truncate">
-                    {{ $subtitle }}
+                    {{ $displaySubtitle }}
                 </p>
             @endif
         </div>

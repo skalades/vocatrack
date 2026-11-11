@@ -4,29 +4,79 @@
 @section('page_subtitle', 'Kelola basis data siswa dan impor massal dari file CSV atau Excel')
 
 @section('content')
-<div class="space-y-6">
+<div class="max-w-7xl mx-auto space-y-6">
 
+    <!-- Enterprise Hero Banner -->
     <x-page-header 
         title="Daftar Siswa Sekolah" 
-        subtitle="Manajemen identitas siswa, NISN, penempatan rombel kelas, dan status PKL."
+        subtitle="Manajemen identitas siswa, nomor induk (NISN/NIS), penempatan rombel kelas, dan status keaktifan penugasan PKL."
+        badge="MANAJEMEN SEKOLAH"
     >
         <x-button type="button" variant="secondary" size="sm" onclick="document.getElementById('modal-import-student').classList.remove('hidden')">
             <svg class="w-4 h-4 mr-1.5 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
-            Impor CSV / Excel
+            <span>Impor Spreadsheet</span>
         </x-button>
         <x-button type="button" variant="primary" size="sm" onclick="document.getElementById('modal-add-student').classList.remove('hidden')">
             <svg class="w-4 h-4 mr-1.5 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-            Tambah Siswa Baru
+            <span>+ Tambah Siswa Baru</span>
         </x-button>
     </x-page-header>
 
+    <!-- Top KPI Metrics -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <x-stat-card 
+            title="Total Siswa Terdata" 
+            :value="$students->total()" 
+            subtitle="Akun peserta didik aktif"
+            color="indigo"
+        >
+            <x-slot:icon>
+                <svg class="w-6 h-6 stroke-[1.8]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+            </x-slot:icon>
+        </x-stat-card>
+
+        <x-stat-card 
+            title="Sudah Terplot ke DU/DI" 
+            :value="$students->whereNotNull('activePkl')->count()" 
+            subtitle="Siswa pada halaman ini"
+            color="emerald"
+        >
+            <x-slot:icon>
+                <svg class="w-6 h-6 stroke-[1.8]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </x-slot:icon>
+        </x-stat-card>
+
+        <x-stat-card 
+            title="Belum Memiliki DU/DI" 
+            :value="$students->whereNull('activePkl')->count()" 
+            subtitle="Menunggu plotting penugasan"
+            color="amber"
+        >
+            <x-slot:icon>
+                <svg class="w-6 h-6 stroke-[1.8]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </x-slot:icon>
+        </x-stat-card>
+
+        <x-stat-card 
+            title="Rombongan Belajar (Rombel)" 
+            :value="$classes->count() . ' Kelas'" 
+            subtitle="Total rombel terdaftar"
+            color="blue"
+        >
+            <x-slot:icon>
+                <svg class="w-6 h-6 stroke-[1.8]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+            </x-slot:icon>
+        </x-stat-card>
+    </div>
+
+    <!-- Alert for Failed Import Rows -->
     @if(session('failedRows'))
-        <div class="p-4 rounded-2xl bg-amber-50 border border-amber-200/80 text-amber-900 text-xs shadow-2xs space-y-2">
-            <div class="flex items-center gap-2 font-bold">
-                <svg class="w-4 h-4 text-amber-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-                <span>Baris Impor yang Gagal / Dilewati:</span>
+        <div class="p-5 rounded-2xl bg-amber-50 border border-amber-200/80 text-amber-900 text-xs shadow-2xs space-y-2">
+            <div class="flex items-center gap-2 font-bold text-sm">
+                <svg class="w-5 h-5 text-amber-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                <span>Catatan Baris Impor Spreadsheet yang Dilewati:</span>
             </div>
-            <ul class="list-disc list-inside space-y-1 font-mono text-[11px] text-amber-800 bg-white/60 p-2.5 rounded-xl border border-amber-100">
+            <ul class="list-disc list-inside space-y-1 font-mono text-[11px] text-amber-800 bg-white/70 p-3 rounded-xl border border-amber-100 max-h-40 overflow-y-auto">
                 @foreach(session('failedRows') as $failed)
                     <li>{{ $failed }}</li>
                 @endforeach
@@ -36,47 +86,72 @@
 
     <!-- Students Table Card -->
     <x-card noPadding>
+        <!-- Table Search & Filter Toolbar -->
+        <div class="p-4 sm:p-5 bg-white border-b border-slate-100 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+            <div class="relative flex-1 max-w-md">
+                <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                </div>
+                <input type="text" id="student-search-input" onkeyup="filterStudentsTable()" placeholder="Cari nama siswa, NISN, atau kelas..." 
+                       class="w-full text-xs font-semibold pl-9.5 pr-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all">
+            </div>
+
+            <div class="flex items-center gap-2">
+                <span class="text-xs text-slate-500 font-semibold hidden md:inline">
+                    Menampilkan {{ $students->count() }} dari {{ $students->total() }} siswa
+                </span>
+            </div>
+        </div>
+
         <div class="overflow-x-auto">
-            <table class="w-full text-left text-xs">
+            <table class="w-full text-left text-xs" id="students-table">
                 <thead class="bg-slate-50/80 text-slate-500 border-b border-slate-200/80 font-extrabold uppercase text-[10px] tracking-wider">
                     <tr>
-                        <th class="py-3.5 px-6">Nama Siswa</th>
+                        <th class="py-3.5 px-6">Identitas Siswa</th>
                         <th class="py-3.5 px-4">NISN / NIS</th>
                         <th class="py-3.5 px-4">Kelas & Jurusan</th>
-                        <th class="py-3.5 px-4">Email Login</th>
-                        <th class="py-3.5 px-6">Status PKL</th>
+                        <th class="py-3.5 px-4">Akun Login</th>
+                        <th class="py-3.5 px-6">Status Plotting PKL</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-100 text-slate-700 font-medium">
+                <tbody class="divide-y divide-slate-100 text-slate-700 font-medium" id="students-tbody">
                     @forelse($students as $st)
-                        <tr class="hover:bg-slate-50/70 transition-colors">
+                        <tr class="hover:bg-slate-50/70 transition-colors student-row">
                             <td class="py-3.5 px-6">
-                                <div class="flex items-center space-x-3">
-                                    <div class="w-8 h-8 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-700 font-bold text-xs flex items-center justify-center shrink-0">
+                                <div class="flex items-center space-x-3.5">
+                                    <div class="w-9 h-9 rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-700 font-black text-xs flex items-center justify-center shrink-0 shadow-xs shadow-indigo-600/10">
                                         {{ substr($st->user->name, 0, 1) }}
                                     </div>
                                     <div class="min-w-0">
-                                        <span class="font-bold text-slate-900 block truncate">{{ $st->user->name }}</span>
-                                        <span class="text-[10px] text-slate-400 font-medium">{{ $st->user->profile->gender === 'L' ? 'Laki-Laki' : 'Perempuan' }}</span>
+                                        <span class="font-bold text-slate-900 block truncate text-sm student-name">{{ $st->user->name }}</span>
+                                        <span class="text-[11px] text-slate-400 font-medium">
+                                            {{ $st->user->profile->gender === 'L' ? 'Laki-Laki' : 'Perempuan' }} 
+                                            @if($st->user->profile->phone) &bull; {{ $st->user->profile->phone }} @endif
+                                        </span>
                                     </div>
                                 </div>
                             </td>
                             <td class="py-3.5 px-4">
-                                <span class="font-bold text-slate-800 font-mono block">{{ $st->nisn }}</span>
+                                <span class="font-bold text-slate-800 font-mono block student-nisn">{{ $st->nisn }}</span>
                                 <span class="text-[10px] text-slate-400 font-mono block">NIS: {{ $st->nis }}</span>
                             </td>
                             <td class="py-3.5 px-4">
-                                <span class="font-bold text-slate-900 block">{{ $st->class->name }}</span>
-                                <span class="text-[11px] text-slate-500 font-medium block">{{ $st->class->major->code }}</span>
+                                <span class="font-bold text-slate-900 block student-class">{{ $st->class->name }}</span>
+                                <span class="text-[11px] text-slate-500 font-medium block">{{ $st->class->major->name }}</span>
                             </td>
                             <td class="py-3.5 px-4 font-mono text-[11px] text-slate-600">
                                 {{ $st->user->email }}
                             </td>
                             <td class="py-3.5 px-6">
                                 @if($st->activePkl)
-                                    <x-badge variant="success" size="xs">
-                                        {{ $st->activePkl->company->name }}
-                                    </x-badge>
+                                    <div class="flex flex-col items-start gap-1">
+                                        <x-badge variant="success" size="xs">
+                                            {{ $st->activePkl->company->name }}
+                                        </x-badge>
+                                        <span class="text-[10px] text-slate-400 font-medium">
+                                            Penempatan Aktif
+                                        </span>
+                                    </div>
                                 @else
                                     <x-badge variant="neutral" size="xs">
                                         Belum Diplot
@@ -197,7 +272,7 @@
         <form action="{{ route('adminsekolah.students.import') }}" method="POST" enctype="multipart/form-data" class="space-y-4">
             @csrf
             <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1.5">Target Kelas Siswa</label>
+                <label class="block text-xs font-bold text-slate-700 mb-1.5">Target Rombel Kelas</label>
                 <select name="class_id" required 
                         class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium text-slate-900">
                     @foreach($classes as $c)
@@ -236,4 +311,17 @@
         </form>
     </div>
 </div>
+
+@push('scripts')
+<script>
+    function filterStudentsTable() {
+        const query = document.getElementById('student-search-input').value.toLowerCase();
+        const rows = document.querySelectorAll('.student-row');
+        rows.forEach(row => {
+            const text = row.textContent.toLowerCase();
+            row.style.display = text.includes(query) ? '' : 'none';
+        });
+    }
+</script>
+@endpush
 @endsection

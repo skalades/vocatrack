@@ -32,14 +32,34 @@ class TeacherController extends Controller
     public function dashboard(AnnouncementService $announcementService)
     {
         $teacher = $this->getTeacher();
-        $studentPkls = StudentPkl::where('teacher_id', $teacher->id)->with(['student.user', 'student.class', 'company'])->get();
+        $studentPkls = StudentPkl::where('teacher_id', $teacher->id)
+            ->with(['student.user', 'student.class.major', 'company', 'supervisor.user', 'assessment'])
+            ->withCount([
+                'attendances',
+                'journals as approved_journals_count' => fn($q) => $q->where('status', 'approved')
+            ])
+            ->get();
+            
         $totalStudents = $studentPkls->count();
+        $totalCompanies = $studentPkls->pluck('company_id')->unique()->count();
 
         $today = Carbon::today()->toDateString();
         $spklIds = $studentPkls->pluck('id');
 
         $todayAttendances = Attendance::whereIn('student_pkl_id', $spklIds)
             ->where('date', $today)
+            ->get()
+            ->keyBy('student_pkl_id');
+
+        $todayPresentCount = $todayAttendances->whereIn('status', ['hadir', 'terlambat', 'dinas_luar', 'luar_kantor'])->count();
+        $todayLateCount = $todayAttendances->where('status', 'terlambat')->count();
+
+        $pendingRequestsList = AttendanceRequest::whereIn('student_pkl_id', $spklIds)
+            ->whereIn('type', ['izin', 'sakit'])
+            ->where('status', 'pending')
+            ->with(['studentPkl.student.user', 'studentPkl.company'])
+            ->latest()
+            ->take(3)
             ->get();
 
         $pendingRequests = AttendanceRequest::whereIn('student_pkl_id', $spklIds)
@@ -47,17 +67,30 @@ class TeacherController extends Controller
             ->where('status', 'pending')
             ->count();
 
+        $pendingJournalsList = Journal::whereIn('student_pkl_id', $spklIds)
+            ->where('status', 'review_guru')
+            ->with(['studentPkl.student.user', 'studentPkl.company'])
+            ->latest('date')
+            ->take(3)
+            ->get();
+
         $pendingJournals = Journal::whereIn('student_pkl_id', $spklIds)
             ->where('status', 'review_guru')
             ->count();
 
-        $recentAnnouncements = $announcementService->getLatestForUser(Auth::user(), 3);
+        $recentAnnouncements = $announcementService->getLatestForUser(Auth::user(), 4);
 
         return view('teacher.dashboard', compact(
+            'teacher',
             'totalStudents',
+            'totalCompanies',
             'todayAttendances',
+            'todayPresentCount',
+            'todayLateCount',
             'pendingRequests',
+            'pendingRequestsList',
             'pendingJournals',
+            'pendingJournalsList',
             'studentPkls',
             'recentAnnouncements'
         ));
@@ -158,18 +191,48 @@ class TeacherController extends Controller
         return back()->with('success', "Permohonan presensi siswa berhasil {$actionText}.");
     }
 
-    public function journals()
+    public function journals(Request $request)
     {
         $teacher = $this->getTeacher();
-        $spklIds = StudentPkl::where('teacher_id', $teacher->id)->pluck('id');
+        $studentPkls = StudentPkl::where('teacher_id', $teacher->id)
+            ->with([
+                'student.user', 
+                'student.class.major', 
+                'company',
+                'journals' => fn($q) => $q->orderBy('date', 'desc')->with(['photos', 'approvals.approver'])
+            ])
+            ->get();
+        $spklIds = $studentPkls->pluck('id');
 
-        $journals = Journal::whereIn('student_pkl_id', $spklIds)
-            ->with(['studentPkl.student.user', 'studentPkl.company', 'photos', 'approvals.approver'])
-            ->orderByRaw("CASE WHEN status = 'review_guru' THEN 1 ELSE 2 END")
+        $query = Journal::whereIn('student_pkl_id', $spklIds)
+            ->with(['studentPkl.student.user', 'studentPkl.student.class', 'studentPkl.company', 'photos', 'approvals.approver']);
+
+        if ($request->filled('student_pkl_id')) {
+            $query->where('student_pkl_id', $request->student_pkl_id);
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('date')) {
+            $query->whereDate('date', $request->date);
+        }
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('activity_description', 'like', "%{$search}%")
+                  ->orWhereHas('studentPkl.student.user', fn($u) => $u->where('name', 'like', "%{$search}%"));
+            });
+        }
+
+        $journals = $query->orderByRaw("CASE WHEN status = 'review_guru' THEN 1 ELSE 2 END")
             ->orderBy('date', 'desc')
-            ->paginate(15);
+            ->paginate(15)
+            ->withQueryString();
 
-        return view('teacher.journals', compact('journals'));
+        return view('teacher.journals', compact('journals', 'studentPkls'));
     }
 
     public function processJournal(Request $request, Journal $journal, JournalService $journalService)

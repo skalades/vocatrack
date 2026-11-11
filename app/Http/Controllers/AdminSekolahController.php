@@ -74,8 +74,9 @@ class AdminSekolahController extends Controller
         $schoolId = $this->getSchoolId();
         $school = School::findOrFail($schoolId);
         $settings = SchoolSetting::where('school_id', $schoolId)->pluck('value', 'key');
+        $periods = PklPeriod::where('school_id', $schoolId)->withCount('studentPkls')->latest()->get();
 
-        return view('adminsekolah.settings', compact('school', 'settings'));
+        return view('adminsekolah.settings', compact('school', 'settings', 'periods'));
     }
 
     public function updateSettings(Request $request)
@@ -401,15 +402,35 @@ class AdminSekolahController extends Controller
         return back()->with('success', 'Akun Guru Pembimbing berhasil dibuat.');
     }
 
-    public function companies()
+    public function companies(Request $request)
     {
         $schoolId = $this->getSchoolId();
-        $companies = Company::where('school_id', $schoolId)
-            ->with(['supervisors.user', 'studentPkls'])
-            ->latest()
-            ->paginate(10);
+        $query = Company::where('school_id', $schoolId)
+            ->with(['supervisors.user', 'studentPkls', 'majors']);
 
-        return view('adminsekolah.companies', compact('companies'));
+        // Search filter
+        if ($search = $request->query('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('contact_person', 'like', "%{$search}%")
+                  ->orWhere('address', 'like', "%{$search}%");
+            });
+        }
+
+        // Major filter
+        $selectedMajor = $request->query('major');
+        if ($selectedMajor && $selectedMajor !== 'all') {
+            if ($selectedMajor === 'lintas') {
+                $query->doesntHave('majors');
+            } else {
+                $query->whereHas('majors', fn($q) => $q->where('majors.id', $selectedMajor));
+            }
+        }
+
+        $companies = $query->latest()->paginate(10)->withQueryString();
+        $majors = Major::where('school_id', $schoolId)->orderBy('name')->get();
+
+        return view('adminsekolah.companies', compact('companies', 'majors', 'selectedMajor'));
     }
 
     public function storeCompany(Request $request)
@@ -425,6 +446,8 @@ class AdminSekolahController extends Controller
             'latitude' => ['nullable', 'numeric'],
             'longitude' => ['nullable', 'numeric'],
             'radius_meters' => ['nullable', 'integer', 'min:10', 'max:5000'],
+            'major_ids' => ['nullable', 'array'],
+            'major_ids.*' => [Rule::exists('majors', 'id')->where('school_id', $schoolId)],
             // Optional initial supervisor
             'supervisor_name' => ['nullable', 'string', 'max:100'],
             'supervisor_email' => ['nullable', 'email', 'unique:users,email'],
@@ -444,6 +467,10 @@ class AdminSekolahController extends Controller
                 'longitude' => $request->longitude,
                 'radius_meters' => $request->radius_meters ?? 100,
             ]);
+
+            if ($request->has('major_ids')) {
+                $company->majors()->sync($request->major_ids);
+            }
 
             if ($request->filled('supervisor_email')) {
                 $user = User::create([
@@ -471,30 +498,148 @@ class AdminSekolahController extends Controller
         return back()->with('success', 'Data Mitra DU/DI berhasil ditambahkan.');
     }
 
-    public function plotting()
+    public function updateCompany(Request $request, Company $company)
     {
         $schoolId = $this->getSchoolId();
-        $studentPkls = StudentPkl::where('school_id', $schoolId)
-            ->with(['student.user', 'student.class', 'company', 'teacher.user', 'supervisor.user', 'pklPeriod'])
-            ->latest()
-            ->paginate(15);
+        abort_if($company->school_id !== $schoolId, 403);
 
-        $students = Student::whereHas('user', fn($q) => $q->where('school_id', $schoolId))
-            ->with(['user', 'class'])
+        $request->validate([
+            'name' => ['required', 'string', 'max:150'],
+            'address' => ['required', 'string'],
+            'contact_person' => ['required', 'string', 'max:100'],
+            'phone' => ['required', 'string', 'max:20'],
+            'work_days' => ['required', 'in:5_days,6_days'],
+            'gps_enabled' => ['nullable', 'boolean'],
+            'latitude' => ['nullable', 'numeric'],
+            'longitude' => ['nullable', 'numeric'],
+            'radius_meters' => ['nullable', 'integer', 'min:10', 'max:5000'],
+            'major_ids' => ['nullable', 'array'],
+            'major_ids.*' => [Rule::exists('majors', 'id')->where('school_id', $schoolId)],
+        ]);
+
+        DB::transaction(function () use ($request, $company) {
+            $company->update([
+                'name' => $request->name,
+                'address' => $request->address,
+                'contact_person' => $request->contact_person,
+                'phone' => $request->phone,
+                'work_days' => $request->work_days,
+                'gps_enabled' => $request->boolean('gps_enabled'),
+                'latitude' => $request->latitude,
+                'longitude' => $request->longitude,
+                'radius_meters' => $request->radius_meters ?? 100,
+            ]);
+
+            $company->majors()->sync($request->major_ids ?? []);
+        });
+
+        return back()->with('success', 'Data Mitra DU/DI berhasil diperbarui.');
+    }
+
+    public function plotting(Request $request)
+    {
+        $schoolId = $this->getSchoolId();
+
+        // 1. Periods
+        $periods = PklPeriod::where('school_id', $schoolId)->withCount('studentPkls')->latest()->get();
+        $activePeriod = $periods->firstWhere('is_active', true) ?? $periods->first();
+        $selectedPeriodId = $request->query('period_id', $activePeriod?->id);
+
+        // 2. Query StudentPkls (Filter & Search)
+        $query = StudentPkl::where('school_id', $schoolId)
+            ->with(['student.user', 'student.class.major', 'company.majors', 'teacher.user', 'supervisor.user', 'pklPeriod']);
+
+        if ($search = $request->query('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->whereHas('student.user', fn($sq) => $sq->where('name', 'like', "%{$search}%"))
+                  ->orWhereHas('student', fn($sq) => $sq->where('nisn', 'like', "%{$search}%"))
+                  ->orWhereHas('company', fn($cq) => $cq->where('name', 'like', "%{$search}%"));
+            });
+        }
+
+        if ($majorId = $request->query('major_id')) {
+            if ($majorId !== 'all') {
+                $query->whereHas('student.class', fn($cq) => $cq->where('major_id', $majorId));
+            }
+        }
+
+        if ($periodFilter = $request->query('period')) {
+            if ($periodFilter !== 'all') {
+                $query->where('pkl_period_id', $periodFilter);
+            }
+        }
+
+        if ($teacherId = $request->query('teacher_id')) {
+            if ($teacherId !== 'all') {
+                $query->where('teacher_id', $teacherId);
+            }
+        }
+
+        $studentPkls = $query->latest()->paginate(15)->withQueryString();
+
+        // 3. All students with plotting status for active period
+        $allStudents = Student::whereHas('user', fn($q) => $q->where('school_id', $schoolId))
+            ->with(['user', 'class.major'])
             ->get();
-        $companies = Company::where('school_id', $schoolId)->with('supervisors.user')->get();
-        $periods = PklPeriod::where('school_id', $schoolId)->where('is_active', true)->get();
-        $teachers = Teacher::whereHas('user', fn($q) => $q->where('school_id', $schoolId))->with('user')->get();
 
-        return view('adminsekolah.plotting', compact('studentPkls', 'students', 'companies', 'periods', 'teachers'));
+        $plottedMap = [];
+        if ($selectedPeriodId) {
+            $plottedRecords = StudentPkl::where('school_id', $schoolId)
+                ->where('pkl_period_id', $selectedPeriodId)
+                ->with('company')
+                ->get();
+            foreach ($plottedRecords as $pr) {
+                $plottedMap[$pr->student_id] = $pr->company->name ?? 'DU/DI';
+            }
+        }
+
+        $students = $allStudents->map(function ($st) use ($plottedMap) {
+            $st->is_plotted = isset($plottedMap[$st->id]);
+            $st->plotted_company = $st->is_plotted ? $plottedMap[$st->id] : null;
+            return $st;
+        });
+
+        // 4. Other master data
+        $companies = Company::where('school_id', $schoolId)->with(['supervisors.user', 'majors'])->get();
+        $teachers = Teacher::whereHas('user', fn($q) => $q->where('school_id', $schoolId))->with('user')->get();
+        $majors = Major::where('school_id', $schoolId)->with('classes')->orderBy('name')->get();
+        $classes = SchoolClass::where('school_id', $schoolId)->with('major')->orderBy('name')->get();
+
+        // 5. KPI Stats
+        $totalStudents = $allStudents->count();
+        $totalPlotted = count($plottedMap);
+        $totalUnplotted = max(0, $totalStudents - $totalPlotted);
+        $totalCompanies = $companies->count();
+
+        return view('adminsekolah.plotting', compact(
+            'studentPkls',
+            'students',
+            'companies',
+            'periods',
+            'teachers',
+            'majors',
+            'classes',
+            'totalStudents',
+            'totalPlotted',
+            'totalUnplotted',
+            'totalCompanies'
+        ));
     }
 
     public function storePlotting(Request $request)
     {
         $schoolId = $this->getSchoolId();
+
         $request->validate([
             'student_id' => [
-                'required',
+                'required_without:student_ids',
+                'nullable',
+                Rule::exists('students', 'id')->where(function ($query) use ($schoolId) {
+                    $query->whereIn('user_id', User::where('school_id', $schoolId)->select('id'));
+                })
+            ],
+            'student_ids' => ['nullable', 'array'],
+            'student_ids.*' => [
                 Rule::exists('students', 'id')->where(function ($query) use ($schoolId) {
                     $query->whereIn('user_id', User::where('school_id', $schoolId)->select('id'));
                 })
@@ -521,27 +666,42 @@ class AdminSekolahController extends Controller
             ],
         ]);
 
-        // Concurrency-safe plotting with lock and duplicate key catch
-        return DB::transaction(function () use ($schoolId, $request) {
-            $exists = StudentPkl::where('student_id', $request->student_id)
-                ->where('pkl_period_id', $request->pkl_period_id)
-                ->lockForUpdate()
-                ->exists();
+        $studentIds = $request->has('student_ids') && is_array($request->student_ids) && count($request->student_ids) > 0
+            ? array_unique(array_filter($request->student_ids))
+            : ($request->filled('student_id') ? [$request->student_id] : []);
 
-            if ($exists) {
-                return back()->withErrors(['student_id' => 'Siswa sudah diplot ke DU/DI pada periode PKL yang sama.']);
+        if (empty($studentIds)) {
+            return back()->withErrors(['student_id' => 'Pilih setidaknya satu siswa untuk diplot.']);
+        }
+
+        // Concurrency-safe plotting with lock and duplicate key catch
+        return DB::transaction(function () use ($schoolId, $request, $studentIds) {
+            $alreadyPlotted = StudentPkl::where('school_id', $schoolId)
+                ->where('pkl_period_id', $request->pkl_period_id)
+                ->whereIn('student_id', $studentIds)
+                ->lockForUpdate()
+                ->pluck('student_id')
+                ->toArray();
+
+            if (!empty($alreadyPlotted)) {
+                if (count($studentIds) === 1) {
+                    return back()->withErrors(['student_id' => 'Siswa sudah diplot ke DU/DI pada periode PKL yang sama.']);
+                }
+                return back()->withErrors(['student_id' => count($alreadyPlotted) . ' siswa yang dipilih sudah memiliki penugasan DU/DI di periode ini.']);
             }
 
             try {
-                StudentPkl::create([
-                    'school_id' => $schoolId,
-                    'student_id' => $request->student_id,
-                    'company_id' => $request->company_id,
-                    'pkl_period_id' => $request->pkl_period_id,
-                    'teacher_id' => $request->teacher_id,
-                    'supervisor_id' => $request->supervisor_id,
-                    'status' => 'active',
-                ]);
+                foreach ($studentIds as $sId) {
+                    StudentPkl::create([
+                        'school_id' => $schoolId,
+                        'student_id' => $sId,
+                        'company_id' => $request->company_id,
+                        'pkl_period_id' => $request->pkl_period_id,
+                        'teacher_id' => $request->teacher_id,
+                        'supervisor_id' => $request->supervisor_id,
+                        'status' => 'active',
+                    ]);
+                }
             } catch (\Illuminate\Database\QueryException $e) {
                 if (str_contains($e->getMessage(), 'UNIQUE') || str_contains($e->getMessage(), 'Integrity constraint violation')) {
                     return back()->withErrors(['student_id' => 'Siswa sudah diplot ke DU/DI pada periode PKL yang sama.']);
@@ -549,7 +709,64 @@ class AdminSekolahController extends Controller
                 throw $e;
             }
 
-            return back()->with('success', 'Plotting penempatan PKL siswa berhasil disimpan.');
+            $count = count($studentIds);
+            return back()->with('success', "Penugasan PKL untuk {$count} siswa berhasil disimpan.");
         });
+    }
+
+    public function storePeriod(Request $request)
+    {
+        $schoolId = $this->getSchoolId();
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:100'],
+            'start_date' => ['required', 'date'],
+            'end_date' => ['required', 'date', 'after_or_equal:start_date'],
+            'is_active' => ['nullable', 'boolean'],
+        ]);
+
+        $period = PklPeriod::create([
+            'school_id' => $schoolId,
+            'name' => $validated['name'],
+            'start_date' => $validated['start_date'],
+            'end_date' => $validated['end_date'],
+            'is_active' => $request->boolean('is_active', true),
+        ]);
+
+        return back()->with('success', "Periode PKL '{$period->name}' berhasil ditambahkan.");
+    }
+
+    public function updatePeriod(Request $request, PklPeriod $period)
+    {
+        $schoolId = $this->getSchoolId();
+        abort_if($period->school_id !== $schoolId, 403);
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:100'],
+            'start_date' => ['required', 'date'],
+            'end_date' => ['required', 'date', 'after_or_equal:start_date'],
+            'is_active' => ['nullable', 'boolean'],
+        ]);
+
+        $period->update([
+            'name' => $validated['name'],
+            'start_date' => $validated['start_date'],
+            'end_date' => $validated['end_date'],
+            'is_active' => $request->boolean('is_active'),
+        ]);
+
+        return back()->with('success', "Periode PKL '{$period->name}' berhasil diperbarui.");
+    }
+
+    public function togglePeriodActive(PklPeriod $period)
+    {
+        $schoolId = $this->getSchoolId();
+        abort_if($period->school_id !== $schoolId, 403);
+
+        $period->update([
+            'is_active' => !$period->is_active,
+        ]);
+
+        $status = $period->is_active ? 'diaktifkan' : 'dinonaktifkan';
+        return back()->with('success', "Periode PKL '{$period->name}' berhasil {$status}.");
     }
 }

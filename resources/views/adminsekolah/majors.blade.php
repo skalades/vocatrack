@@ -1,60 +1,115 @@
 @extends('layouts.app')
 
-@section('page_title', 'Master Jurusan & Kelas')
-@section('page_subtitle', 'Manajemen kompetensi keahlian dan rombongan belajar PKL')
+@section('page_title', 'Master Jurusan & Rombel Kelas')
+@section('page_subtitle', 'Manajemen kompetensi keahlian dan rombongan belajar peserta PKL')
 
 @section('content')
-<div class="space-y-6">
+<div class="max-w-7xl mx-auto space-y-6">
 
+    <!-- Enterprise Hero Banner -->
     <x-page-header 
-        title="Jurusan & Rombongan Belajar" 
-        subtitle="Struktur program keahlian vokasi dan kelas siswa peserta program PKL."
+        title="Jurusan Keahlian & Rombongan Belajar" 
+        subtitle="Struktur program keahlian vokasi dan pembagian rombel kelas siswa peserta Praktik Kerja Lapangan."
+        badge="MANAJEMEN SEKOLAH"
     >
         <x-button type="button" variant="secondary" size="sm" onclick="document.getElementById('modal-add-major').classList.remove('hidden')">
-            <svg class="w-4 h-4 mr-1 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-            Tambah Jurusan
+            <svg class="w-4 h-4 mr-1.5 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+            <span>+ Tambah Jurusan</span>
         </x-button>
         <x-button type="button" variant="primary" size="sm" onclick="document.getElementById('modal-add-class').classList.remove('hidden')">
-            <svg class="w-4 h-4 mr-1 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-            Tambah Kelas Baru
+            <svg class="w-4 h-4 mr-1.5 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+            <span>+ Tambah Rombel Kelas</span>
         </x-button>
     </x-page-header>
 
+    <!-- Top KPI Metrics -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <x-stat-card 
+            title="Program Keahlian (Jurusan)" 
+            :value="$majors->count()" 
+            subtitle="Konsentrasi keahlian aktif"
+            color="indigo"
+        >
+            <x-slot:icon>
+                <svg class="w-6 h-6 stroke-[1.8]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+            </x-slot:icon>
+        </x-stat-card>
+
+        <x-stat-card 
+            title="Rombongan Belajar (Kelas)" 
+            :value="$classes->count()" 
+            subtitle="Rombel terdaftar"
+            color="emerald"
+        >
+            <x-slot:icon>
+                <svg class="w-6 h-6 stroke-[1.8]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+            </x-slot:icon>
+        </x-stat-card>
+
+        <x-stat-card 
+            title="Tingkat XII (Kelas Akhir)" 
+            :value="$classes->where('grade_level', 'XII')->count()" 
+            subtitle="Peserta utama program PKL"
+            color="blue"
+        >
+            <x-slot:icon>
+                <svg class="w-6 h-6 stroke-[1.8]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </x-slot:icon>
+        </x-stat-card>
+
+        <x-stat-card 
+            title="Tingkat XI & X" 
+            :value="$classes->whereIn('grade_level', ['X', 'XI'])->count()" 
+            subtitle="Kelas persiapan kejuruan"
+            color="amber"
+        >
+            <x-slot:icon>
+                <svg class="w-6 h-6 stroke-[1.8]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            </x-slot:icon>
+        </x-stat-card>
+    </div>
+
+    <!-- Dual Master Grid: Jurusan & Kelas -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
         <!-- Jurusan (Majors) Card -->
         <x-card 
-            title="Daftar Jurusan Keahlian" 
+            title="Daftar Jurusan Keahlian Vokasi" 
             :subtitle="$majors->count() . ' Program Keahlian Terdaftar'"
         >
             <x-slot:headerActions>
                 <x-button type="button" variant="primary" size="xs" onclick="document.getElementById('modal-add-major').classList.remove('hidden')">
-                    + Tambah
+                    <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                    + Jurusan
                 </x-button>
             </x-slot:headerActions>
 
             @if($majors->isEmpty())
                 <x-empty-state 
-                    title="Belum Ada Jurusan" 
-                    description="Tambahkan program keahlian seperti RPL, TKJ, atau Akuntansi terlebih dahulu."
+                    title="Belum Ada Jurusan Keahlian" 
+                    description="Tambahkan konsentrasi keahlian seperti RPL, TKJ, Akuntansi, atau DKV terlebih dahulu."
                     actionLabel="+ Tambah Jurusan Sekarang"
                     actionClick="document.getElementById('modal-add-major').classList.remove('hidden')"
                 />
             @else
                 <div class="divide-y divide-slate-100">
                     @foreach($majors as $m)
-                        <div class="py-3.5 first:pt-0 last:pb-0 flex items-center justify-between gap-3 group">
-                            <div class="flex items-center space-x-3 min-w-0">
-                                <div class="w-10 h-10 rounded-xl bg-indigo-50/80 border border-indigo-100 text-indigo-700 font-extrabold text-xs flex items-center justify-center shrink-0">
+                        <div class="py-4 first:pt-0 last:pb-0 flex items-center justify-between gap-3 group">
+                            <div class="flex items-center space-x-3.5 min-w-0">
+                                <div class="w-11 h-11 rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-700 font-black text-xs flex items-center justify-center shrink-0 shadow-xs shadow-indigo-600/10 group-hover:scale-105 transition-transform">
                                     {{ $m->code }}
                                 </div>
                                 <div class="min-w-0">
-                                    <span class="font-bold text-slate-900 block truncate group-hover:text-indigo-600 transition-colors">{{ $m->name }}</span>
-                                    <span class="text-[11px] font-mono text-slate-400 font-medium">Kode ID: #{{ $m->id }}</span>
+                                    <span class="font-bold text-slate-900 block truncate group-hover:text-indigo-600 transition-colors text-sm">
+                                        {{ $m->name }}
+                                    </span>
+                                    <span class="text-[11px] font-mono text-slate-400 font-medium">
+                                        Kode ID: #{{ $m->id }} &bull; {{ $m->classes_count }} Rombel Kelas
+                                    </span>
                                 </div>
                             </div>
-                            <x-badge variant="neutral" size="sm">
-                                {{ $m->classes_count }} Rombel Kelas
+                            <x-badge variant="indigo" size="sm">
+                                {{ $m->classes_count }} Rombel
                             </x-badge>
                         </div>
                     @endforeach
@@ -64,33 +119,36 @@
 
         <!-- Kelas (Classes) Card -->
         <x-card 
-            title="Daftar Rombel / Kelas" 
-            :subtitle="$classes->count() . ' Rombongan Belajar Aktif'"
+            title="Daftar Rombongan Belajar (Rombel)" 
+            :subtitle="$classes->count() . ' Rombel Kelas Aktif Terdata'"
         >
             <x-slot:headerActions>
                 <x-button type="button" variant="primary" size="xs" onclick="document.getElementById('modal-add-class').classList.remove('hidden')">
-                    + Tambah
+                    <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                    + Kelas
                 </x-button>
             </x-slot:headerActions>
 
             @if($classes->isEmpty())
                 <x-empty-state 
                     title="Belum Ada Rombel Kelas" 
-                    description="Tambahkan rombel kelas agar siswa dapat dikelompokkan dengan rapi."
+                    description="Tambahkan rombel kelas agar peserta didik dapat dikelompokkan dengan rapi."
                     actionLabel="+ Tambah Kelas Sekarang"
                     actionClick="document.getElementById('modal-add-class').classList.remove('hidden')"
                 />
             @else
-                <div class="divide-y divide-slate-100">
+                <div class="divide-y divide-slate-100 max-h-[500px] overflow-y-auto pr-1 custom-scrollbar">
                     @foreach($classes as $c)
                         <div class="py-3.5 first:pt-0 last:pb-0 flex items-center justify-between gap-3 group">
-                            <div class="flex items-center space-x-3 min-w-0">
-                                <div class="w-10 h-10 rounded-xl bg-emerald-50/80 border border-emerald-100 text-emerald-700 font-extrabold text-xs flex items-center justify-center shrink-0">
+                            <div class="flex items-center space-x-3.5 min-w-0">
+                                <div class="w-10 h-10 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-700 font-black text-xs flex items-center justify-center shrink-0 shadow-xs shadow-emerald-600/10 group-hover:scale-105 transition-transform">
                                     {{ $c->grade_level }}
                                 </div>
                                 <div class="min-w-0">
-                                    <span class="font-bold text-slate-900 block truncate group-hover:text-emerald-700 transition-colors">{{ $c->name }}</span>
-                                    <span class="text-[11px] text-slate-500 block truncate font-medium">
+                                    <span class="font-bold text-slate-900 block truncate group-hover:text-emerald-700 transition-colors text-sm">
+                                        {{ $c->name }}
+                                    </span>
+                                    <span class="text-[11px] text-slate-500 block truncate font-medium mt-0.5">
                                         {{ $c->major->name }} &bull; TA {{ $c->academic_year }}
                                     </span>
                                 </div>
@@ -110,11 +168,11 @@
 
 <!-- Modal Add Major -->
 <div id="modal-add-major" onclick="if(event.target === this) this.classList.add('hidden')" class="hidden fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
-    <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto animate-in fade-in duration-150">
+    <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl border border-slate-100 animate-in fade-in duration-150">
         <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
             <div>
                 <h3 class="text-base font-extrabold text-slate-900 tracking-tight">Tambah Jurusan Baru</h3>
-                <p class="text-xs text-slate-500 font-medium">Buat program kompetensi keahlian</p>
+                <p class="text-xs text-slate-500 font-medium">Program keahlian kurikulum SMK</p>
             </div>
             <button type="button" onclick="document.getElementById('modal-add-major').classList.add('hidden')" class="p-1.5 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition-colors">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -123,13 +181,13 @@
         <form action="{{ route('adminsekolah.majors.store') }}" method="POST" class="space-y-4">
             @csrf
             <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1.5">Kode Singkat (Contoh: RPL, TKJ, AKL)</label>
-                <input type="text" name="code" required placeholder="RPL" 
-                       class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 uppercase font-mono font-bold text-slate-900">
+                <label class="block text-xs font-bold text-slate-700 mb-1.5">Singkatan / Kode Jurusan</label>
+                <input type="text" name="code" required placeholder="Contoh: RPL, TKJ, AKL, DKV" 
+                       class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-bold uppercase text-slate-900">
             </div>
             <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1.5">Nama Lengkap Jurusan Keahlian</label>
-                <input type="text" name="name" required placeholder="Rekayasa Perangkat Lunak" 
+                <label class="block text-xs font-bold text-slate-700 mb-1.5">Nama Lengkap Program Keahlian</label>
+                <input type="text" name="name" required placeholder="Contoh: Rekayasa Perangkat Lunak" 
                        class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium text-slate-900">
             </div>
             <div class="flex items-center justify-end space-x-2.5 pt-3 border-t border-slate-100">
@@ -146,11 +204,11 @@
 
 <!-- Modal Add Class -->
 <div id="modal-add-class" onclick="if(event.target === this) this.classList.add('hidden')" class="hidden fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
-    <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto animate-in fade-in duration-150">
+    <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl border border-slate-100 animate-in fade-in duration-150">
         <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
             <div>
-                <h3 class="text-base font-extrabold text-slate-900 tracking-tight">Tambah Rombel Kelas</h3>
-                <p class="text-xs text-slate-500 font-medium">Hubungkan rombel ke jurusan keahlian</p>
+                <h3 class="text-base font-extrabold text-slate-900 tracking-tight">Tambah Rombel Kelas Baru</h3>
+                <p class="text-xs text-slate-500 font-medium">Kelompok belajar siswa per angkatan</p>
             </div>
             <button type="button" onclick="document.getElementById('modal-add-class').classList.add('hidden')" class="p-1.5 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition-colors">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -159,34 +217,34 @@
         <form action="{{ route('adminsekolah.classes.store') }}" method="POST" class="space-y-4">
             @csrf
             <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1.5">Jurusan Induk</label>
+                <label class="block text-xs font-bold text-slate-700 mb-1.5">Pilih Jurusan Keahlian</label>
                 <select name="major_id" required 
                         class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium text-slate-900">
                     @foreach($majors as $m)
-                        <option value="{{ $m->id }}">{{ $m->name }} ({{ $m->code }})</option>
+                        <option value="{{ $m->id }}">{{ $m->code }} - {{ $m->name }}</option>
                     @endforeach
                 </select>
             </div>
-            <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1.5">Nama Rombel Kelas (Contoh: XII RPL 1)</label>
-                <input type="text" name="name" required placeholder="XII RPL 1" 
-                       class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium text-slate-900">
-            </div>
             <div class="grid grid-cols-2 gap-3">
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1.5">Tingkat Jenjang</label>
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5">Tingkat Kelas</label>
                     <select name="grade_level" 
                             class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium text-slate-900">
-                        <option value="XII" selected>Tingkat XII</option>
-                        <option value="XI">Tingkat XI</option>
-                        <option value="X">Tingkat X</option>
+                        <option value="XII">XII (Dua Belas)</option>
+                        <option value="XI">XI (Sebelas)</option>
+                        <option value="X">X (Sepuluh)</option>
                     </select>
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-slate-700 mb-1.5">Tahun Ajaran</label>
-                    <input type="text" name="academic_year" value="2026/2027" required 
+                    <input type="text" name="academic_year" required value="2026/2027" placeholder="2026/2027" 
                            class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-mono text-slate-900">
                 </div>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1.5">Nama Rombel / Kelas</label>
+                <input type="text" name="name" required placeholder="Contoh: XII RPL 1" 
+                       class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium text-slate-900">
             </div>
             <div class="flex items-center justify-end space-x-2.5 pt-3 border-t border-slate-100">
                 <x-button type="button" variant="secondary" size="md" onclick="document.getElementById('modal-add-class').classList.add('hidden')">

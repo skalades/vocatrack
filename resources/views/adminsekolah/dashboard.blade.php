@@ -1,24 +1,67 @@
 @extends('layouts.app')
 
-@section('page_title', 'Dashboard Admin Sekolah')
-@section('page_subtitle', 'Monitoring operasional dan presensi PKL di ' . (auth()->user()->school->name ?? 'Sekolah'))
+@section('title', 'Dashboard Admin Sekolah — VokaTrack')
+@section('hide_header', true)
 
 @section('content')
-<div class="space-y-6">
+<div class="max-w-7xl mx-auto space-y-6">
 
-    <x-page-header 
-        title="Ringkasan Operasional PKL" 
-        subtitle="Selamat datang di panel kontrol PKL. Pantau presensi harian, plotting penugasan, dan kemitraan industri."
-    >
-        <x-button type="button" variant="secondary" size="sm" onclick="window.location.href='{{ route('adminsekolah.settings') }}'">
-            <svg class="w-4 h-4 mr-1.5 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-            <span>Konfigurasi Jam Kerja</span>
-        </x-button>
-        <x-button type="button" variant="primary" size="sm" onclick="window.location.href='{{ route('adminsekolah.students') }}'">
-            <svg class="w-4 h-4 mr-1.5 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-            <span>Kelola Siswa</span>
-        </x-button>
-    </x-page-header>
+    <h1 class="sr-only">Dashboard Admin Sekolah</h1>
+
+    <!-- Hero Welcome Banner -->
+    <div class="relative overflow-hidden bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-6 sm:p-7 text-white shadow-xl shadow-slate-950/20 border border-slate-800">
+        <div class="absolute -right-10 -bottom-10 w-60 h-60 rounded-full bg-indigo-500/10 blur-3xl pointer-events-none"></div>
+
+        <div class="relative space-y-4">
+            <!-- Top Banner Meta: Badge + School + Live Date & Time -->
+            <div class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-white/10">
+                <div class="flex items-center gap-2 flex-wrap">
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 uppercase tracking-wider">
+                        ADMIN SEKOLAH
+                    </span>
+                    <span class="text-xs text-slate-500">&bull;</span>
+                    <span class="text-xs font-semibold text-slate-300 truncate">{{ auth()->user()->school->name ?? 'SMK Terpadu' }}</span>
+                </div>
+
+                <!-- Live Date & Clock Widget -->
+                <div class="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-2xl bg-white/10 backdrop-blur-md border border-white/15 text-xs text-slate-200 shadow-inner">
+                    <div class="flex items-center gap-1.5 font-semibold text-slate-200">
+                        <svg class="w-3.5 h-3.5 text-indigo-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                        <span id="banner-live-date">{{ \Carbon\Carbon::now()->isoFormat('dddd, D MMMM Y') }}</span>
+                    </div>
+                    <span class="text-white/30">&bull;</span>
+                    <div class="flex items-center gap-1.5 font-mono font-bold text-amber-300">
+                        <svg class="w-3.5 h-3.5 text-amber-300 shrink-0 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        <span id="banner-live-clock">{{ \Carbon\Carbon::now()->format('H:i:s') }} WIB</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Greeting & Action Buttons -->
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-5">
+                <div class="space-y-1.5 min-w-0">
+                    <h2 class="text-xl sm:text-2xl font-black tracking-tight text-white">
+                        Selamat Datang, {{ auth()->user()->name }}
+                    </h2>
+                    <p class="text-xs sm:text-sm text-slate-300 font-medium max-w-2xl leading-relaxed">
+                        Selamat datang di panel kontrol operasional PKL. Pantau presensi harian, plotting penugasan siswa, dan kemitraan industri.
+                    </p>
+                </div>
+
+                <!-- Header Quick Actions -->
+                <div class="flex flex-wrap items-center gap-2.5 shrink-0">
+                    <x-button type="button" variant="secondary" size="sm" onclick="window.location.href='{{ route('adminsekolah.settings') }}'">
+                        <svg class="w-4 h-4 mr-1.5 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                        <span>Konfigurasi Jam Kerja</span>
+                    </x-button>
+                    <x-button type="button" variant="primary" size="sm" onclick="window.location.href='{{ route('adminsekolah.students') }}'">
+                        <svg class="w-4 h-4 mr-1.5 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                        <span>Kelola Siswa</span>
+                    </x-button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Primary Stat Metric Cards -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -144,7 +187,10 @@
                                     {{ $ann->category_label }}
                                 </x-badge>
                                 @if($ann->is_pinned)
-                                    <span class="text-[9px] font-extrabold text-amber-700">📌 Pinned</span>
+                                    <span class="inline-flex items-center gap-1 text-[9px] font-extrabold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-full border border-amber-200/80">
+                                        <svg class="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg>
+                                        Pinned
+                                    </span>
                                 @endif
                             </div>
                             <h4 class="text-xs font-extrabold text-slate-900 line-clamp-2 leading-snug">{{ $ann->title }}</h4>
@@ -210,4 +256,35 @@
     </div>
 
 </div>
+
+@push('scripts')
+<script>
+    function updateDashboardClock() {
+        const clockElem = document.getElementById('banner-live-clock');
+        const dateElem = document.getElementById('banner-live-date');
+        if (!clockElem) return;
+
+        const now = new Date();
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const seconds = String(now.getSeconds()).padStart(2, '0');
+        clockElem.textContent = `${hours}:${minutes}:${seconds} WIB`;
+
+        if (dateElem) {
+            const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+            const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+            const dayName = days[now.getDay()];
+            const dateNum = now.getDate();
+            const monthName = months[now.getMonth()];
+            const year = now.getFullYear();
+            dateElem.textContent = `${dayName}, ${dateNum} ${monthName} ${year}`;
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        updateDashboardClock();
+        setInterval(updateDashboardClock, 1000);
+    });
+</script>
+@endpush
 @endsection

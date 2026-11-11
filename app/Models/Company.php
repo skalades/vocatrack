@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Traits\BelongsToSchool;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Company extends Model
@@ -43,5 +44,10 @@ class Company extends Model
     public function studentPkls(): HasMany
     {
         return $this->hasMany(StudentPkl::class);
+    }
+
+    public function majors(): BelongsToMany
+    {
+        return $this->belongsToMany(Major::class, 'company_major')->withTimestamps();
     }
 }

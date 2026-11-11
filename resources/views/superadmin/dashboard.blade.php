@@ -1,21 +1,64 @@
 @extends('layouts.app')
 
-@section('page_title', 'Dashboard Platform Super Admin')
-@section('page_subtitle', 'Monitoring agregat instalasi multi-sekolah VokaTrack')
+@section('title', 'Dashboard Platform Super Admin — VokaTrack')
+@section('hide_header', true)
 
 @section('content')
-<div class="space-y-6">
+<div class="max-w-7xl mx-auto space-y-6">
 
-    <x-page-header 
-        title="Dashboard Platform Multi-Sekolah" 
-        subtitle="Monitoring status infrastruktur multi-tenancy, total sekolah mitra, dan total pengguna ekosistem VokaTrack."
-    >
-        <a href="{{ route('superadmin.schools') }}" 
-           class="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-bold text-xs shadow-xs shadow-indigo-600/20 transition-all cursor-pointer">
-            <svg class="w-4 h-4 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-            <span>Daftarkan Sekolah Baru</span>
-        </a>
-    </x-page-header>
+    <h1 class="sr-only">Dashboard Platform Super Admin</h1>
+
+    <!-- Hero Welcome Banner -->
+    <div class="relative overflow-hidden bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-6 sm:p-7 text-white shadow-xl shadow-slate-950/20 border border-slate-800">
+        <div class="absolute -right-10 -bottom-10 w-60 h-60 rounded-full bg-indigo-500/10 blur-3xl pointer-events-none"></div>
+
+        <div class="relative space-y-4">
+            <!-- Top Banner Meta: Badge + Cloud + Live Date & Time -->
+            <div class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-white/10">
+                <div class="flex items-center gap-2 flex-wrap">
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 uppercase tracking-wider">
+                        SUPER ADMIN PLATFORM
+                    </span>
+                    <span class="text-xs text-slate-500">&bull;</span>
+                    <span class="text-xs font-semibold text-slate-300 truncate">VokaTrack Enterprise Cloud</span>
+                </div>
+
+                <!-- Live Date & Clock Widget -->
+                <div class="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-2xl bg-white/10 backdrop-blur-md border border-white/15 text-xs text-slate-200 shadow-inner">
+                    <div class="flex items-center gap-1.5 font-semibold text-slate-200">
+                        <svg class="w-3.5 h-3.5 text-indigo-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                        <span id="banner-live-date">{{ \Carbon\Carbon::now()->isoFormat('dddd, D MMMM Y') }}</span>
+                    </div>
+                    <span class="text-white/30">&bull;</span>
+                    <div class="flex items-center gap-1.5 font-mono font-bold text-amber-300">
+                        <svg class="w-3.5 h-3.5 text-amber-300 shrink-0 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        <span id="banner-live-clock">{{ \Carbon\Carbon::now()->format('H:i:s') }} WIB</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Greeting & Action Buttons -->
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-5">
+                <div class="space-y-1.5 min-w-0">
+                    <h2 class="text-xl sm:text-2xl font-black tracking-tight text-white">
+                        Selamat Datang, {{ auth()->user()->name }}
+                    </h2>
+                    <p class="text-xs sm:text-sm text-slate-300 font-medium max-w-2xl leading-relaxed">
+                        Monitoring status infrastruktur multi-tenancy, total sekolah mitra, dan total pengguna ekosistem VokaTrack.
+                    </p>
+                </div>
+
+                <!-- Header Quick Actions -->
+                <div class="flex flex-wrap items-center gap-2.5 shrink-0">
+                    <a href="{{ route('superadmin.schools') }}" 
+                       class="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-bold text-xs shadow-xs shadow-indigo-600/20 transition-all cursor-pointer">
+                        <svg class="w-4 h-4 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                        <span>Daftarkan Sekolah Baru</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Stat Metric Cards -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -143,4 +186,35 @@
     </x-card>
 
 </div>
+
+@push('scripts')
+<script>
+    function updateDashboardClock() {
+        const clockElem = document.getElementById('banner-live-clock');
+        const dateElem = document.getElementById('banner-live-date');
+        if (!clockElem) return;
+
+        const now = new Date();
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const seconds = String(now.getSeconds()).padStart(2, '0');
+        clockElem.textContent = `${hours}:${minutes}:${seconds} WIB`;
+
+        if (dateElem) {
+            const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+            const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+            const dayName = days[now.getDay()];
+            const dateNum = now.getDate();
+            const monthName = months[now.getMonth()];
+            const year = now.getFullYear();
+            dateElem.textContent = `${dayName}, ${dateNum} ${monthName} ${year}`;
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        updateDashboardClock();
+        setInterval(updateDashboardClock, 1000);
+    });
+</script>
+@endpush
 @endsection

@@ -150,18 +150,48 @@ class SupervisorController extends Controller
         return back()->with('success', "Permohonan penugasan dinas/WFH berhasil {$actionText}.");
     }
 
-    public function journals()
+    public function journals(Request $request)
     {
         $supervisor = $this->getSupervisor();
-        $spklIds = StudentPkl::where('company_id', $supervisor->company_id)->pluck('id');
+        $studentPkls = StudentPkl::where('company_id', $supervisor->company_id)
+            ->with([
+                'student.user', 
+                'student.class.major', 
+                'company',
+                'journals' => fn($q) => $q->orderBy('date', 'desc')->with(['photos', 'approvals.approver'])
+            ])
+            ->get();
+        $spklIds = $studentPkls->pluck('id');
 
-        $journals = Journal::whereIn('student_pkl_id', $spklIds)
-            ->with(['studentPkl.student.user', 'photos', 'approvals.approver'])
-            ->orderByRaw("CASE WHEN status = 'submitted' THEN 1 ELSE 2 END")
+        $query = Journal::whereIn('student_pkl_id', $spklIds)
+            ->with(['studentPkl.student.user', 'studentPkl.student.class', 'studentPkl.company', 'photos', 'approvals.approver']);
+
+        if ($request->filled('student_pkl_id')) {
+            $query->where('student_pkl_id', $request->student_pkl_id);
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('date')) {
+            $query->whereDate('date', $request->date);
+        }
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('activity_description', 'like', "%{$search}%")
+                  ->orWhereHas('studentPkl.student.user', fn($u) => $u->where('name', 'like', "%{$search}%"));
+            });
+        }
+
+        $journals = $query->orderByRaw("CASE WHEN status = 'submitted' THEN 1 ELSE 2 END")
             ->orderBy('date', 'desc')
-            ->paginate(15);
+            ->paginate(15)
+            ->withQueryString();
 
-        return view('dudi.journals', compact('journals'));
+        return view('dudi.journals', compact('journals', 'studentPkls'));
     }
 
     public function processJournal(Request $request, Journal $journal, JournalService $journalService)

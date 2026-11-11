@@ -52,10 +52,16 @@ Route::middleware(['auth', 'IdentifyTenant', 'role:admin-sekolah'])->prefix('adm
     // DU/DI Companies & Supervisors
     Route::get('/companies', [AdminSekolahController::class, 'companies'])->name('adminsekolah.companies');
     Route::post('/companies', [AdminSekolahController::class, 'storeCompany'])->name('adminsekolah.companies.store');
+    Route::put('/companies/{company}', [AdminSekolahController::class, 'updateCompany'])->name('adminsekolah.companies.update');
 
     // Plotting PKL
     Route::get('/plotting', [AdminSekolahController::class, 'plotting'])->name('adminsekolah.plotting');
     Route::post('/plotting', [AdminSekolahController::class, 'storePlotting'])->name('adminsekolah.plotting.store');
+
+    // Periode Pelaksanaan PKL
+    Route::post('/periods', [AdminSekolahController::class, 'storePeriod'])->name('adminsekolah.periods.store');
+    Route::put('/periods/{period}', [AdminSekolahController::class, 'updatePeriod'])->name('adminsekolah.periods.update');
+    Route::post('/periods/{period}/toggle-active', [AdminSekolahController::class, 'togglePeriodActive'])->name('adminsekolah.periods.toggle-active');
 
     // Announcements / Pengumuman
     Route::get('/announcements', [AnnouncementController::class, 'adminIndex'])->name('adminsekolah.announcements');
