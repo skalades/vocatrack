@@ -215,7 +215,7 @@ class CertificateService
         $school = $certificate->school;
         $verificationUrl = url('/verify/cert/' . $certificate->uuid);
         
-        // Generate SVG QR Code dan encode Base64 dengan penanganan error defensif
+        // Generate SVG QR Code dan encode Base64 dengan penanganan error defensif & dual-engine
         $qrCodeBase64 = null;
         try {
             if (class_exists(\SimpleSoftwareIO\QrCode\Facades\QrCode::class)) {
@@ -228,7 +228,21 @@ class CertificateService
                 $qrCodeBase64 = 'data:image/svg+xml;base64,' . base64_encode($qrSvg);
             }
         } catch (\Throwable $e) {
-            Log::warning("CertificateService: Gagal generate QR code (UUID: {$certificate->uuid}): " . $e->getMessage());
+            Log::warning("CertificateService: Gagal generate QR code via local package (UUID: {$certificate->uuid}): " . $e->getMessage());
+        }
+
+        // Fallback otomatis jika package belum terpasang di vendor server live
+        if (empty($qrCodeBase64)) {
+            try {
+                $qrResponse = \Illuminate\Support\Facades\Http::timeout(4)->get(
+                    'https://api.qrserver.com/v1/create-qr-code/?size=130x130&format=svg&data=' . urlencode($verificationUrl)
+                );
+                if ($qrResponse->successful() && str_contains($qrResponse->body(), '<svg')) {
+                    $qrCodeBase64 = 'data:image/svg+xml;base64,' . base64_encode($qrResponse->body());
+                }
+            } catch (\Throwable $e) {
+                Log::warning("CertificateService: Gagal generate QR code via fallback service: " . $e->getMessage());
+            }
         }
 
         // Siapkan Logo Sekolah (Base64) dengan fallback aman tanpa ketergantungan ekstensi fileinfo
