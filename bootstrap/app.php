@@ -17,5 +17,13 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        $exceptions->render(function (\Illuminate\Session\TokenMismatchException $e, \Illuminate\Http\Request $request) {
+            if ($request->is('logout') || $request->routeIs('logout')) {
+                \Illuminate\Support\Facades\Auth::logout();
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+
+                return redirect()->route('login')->with('success', 'Sesi Anda telah berakhir. Anda telah keluar dari sistem.');
+            }
+        });
     })->create();

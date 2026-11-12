@@ -434,7 +434,7 @@
 
     <!-- 5. Account & Session Management -->
     <div class="p-4 rounded-3xl bg-white border border-slate-200/80 shadow-xs space-y-3">
-        <form action="{{ route('logout') }}" method="POST">
+        <form action="{{ route('logout') }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin keluar dari akun Siswa?');">
             @csrf
             <button type="submit" class="w-full py-3.5 px-4 rounded-2xl bg-rose-50 hover:bg-rose-100 active:bg-rose-200 border border-rose-200/80 text-rose-700 font-bold text-xs transition-colors flex items-center justify-center space-x-2 cursor-pointer shadow-2xs">
                 <svg class="w-4 h-4 text-rose-600 stroke-[2.2]" fill="none" stroke="currentColor" viewBox="0 0 24 24">

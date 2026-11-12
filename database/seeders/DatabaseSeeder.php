@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
             PklPeriodAndPlottingSeeder::class,
             PklActivitySeeder::class,
             AnnouncementSeeder::class,
+            PsptPklSeeder::class,
         ]);
     }
 }
