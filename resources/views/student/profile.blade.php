@@ -376,7 +376,63 @@
         </div>
     @endif
 
-    <!-- 4. Account & Session Management -->
+    <!-- 4. Portal Monitoring Orang Tua (1 Siswa 1 Link Tanpa Login) -->
+    <div class="p-5 rounded-3xl bg-white border border-slate-200/80 shadow-xs space-y-4">
+        <div class="flex items-start justify-between gap-3">
+            <div class="flex items-center space-x-2.5">
+                <div class="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-200/80 text-indigo-600 flex items-center justify-center shrink-0">
+                    <svg class="w-5 h-5 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="text-xs font-black uppercase tracking-wider text-slate-900">Portal Monitoring Orang Tua</h3>
+                    <p class="text-[11px] text-slate-500 font-medium mt-0.5">Link khusus untuk orang tua tanpa perlu login</p>
+                </div>
+            </div>
+            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                <span>Aktif</span>
+            </span>
+        </div>
+
+        <p class="text-xs text-slate-600 leading-relaxed">
+            Berikan tautan ini kepada orang tua/wali Anda. Mereka dapat langsung memantau kehadiran harian dan jurnal PKL Anda secara aman tanpa perlu membuat akun atau memasukkan kata sandi.
+        </p>
+
+        @php
+            $monitorUrl = $student->parent_monitoring_url ?? route('parent.monitor', ['token' => $student->parent_token ?? '']);
+            $waMessage = rawurlencode("Halo Ayah/Bunda, ini link khusus untuk memantau kehadiran & jurnal kegiatan PKL saya di VokaTrack tanpa perlu login:\n" . $monitorUrl);
+        @endphp
+
+        <div class="space-y-2">
+            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Tautan Pribadi Orang Tua</label>
+            <div class="flex items-center gap-2">
+                <input type="text" id="parent-portal-link" readonly value="{{ $monitorUrl }}" class="flex-1 bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 text-xs text-slate-700 font-mono select-all focus:outline-hidden focus:border-indigo-400">
+                <button type="button" onclick="copyParentPortalLink()" id="btn-copy-link" class="shrink-0 px-3.5 py-2.5 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-bold text-xs rounded-2xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer">
+                    <svg class="w-4 h-4 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                    <span id="copy-text">Salin</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2 pt-1">
+            <a href="https://wa.me/?text={{ $waMessage }}" target="_blank" class="flex-1 py-3 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-bold text-xs transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer">
+                <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg>
+                <span>Bagikan ke WhatsApp</span>
+            </a>
+
+            <form action="{{ route('student.parent-token.regenerate') }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin membuat ulang tautan monitoring? Tautan lama yang sudah dibagikan sebelumnya tidak akan dapat digunakan lagi.');">
+                @csrf
+                <button type="submit" title="Buat Ulang Link Baru (Reset)" class="py-3 px-3.5 rounded-2xl bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer">
+                    <svg class="w-4 h-4 text-slate-600 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                    <span class="hidden sm:inline">Reset</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 5. Account & Session Management -->
     <div class="p-4 rounded-3xl bg-white border border-slate-200/80 shadow-xs space-y-3">
         <form action="{{ route('logout') }}" method="POST">
             @csrf
@@ -394,3 +450,36 @@
 
 </div>
 @endsection
+
+@push('scripts')
+<script>
+    function copyParentPortalLink() {
+        const input = document.getElementById('parent-portal-link');
+        const copyText = document.getElementById('copy-text');
+        if (!input) return;
+
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(input.value).then(() => {
+                if (copyText) {
+                    copyText.innerText = 'Tersalin!';
+                    setTimeout(() => { copyText.innerText = 'Salin'; }, 2000);
+                }
+            }).catch(() => {
+                fallbackCopy(input, copyText);
+            });
+        } else {
+            fallbackCopy(input, copyText);
+        }
+    }
+
+    function fallbackCopy(input, copyText) {
+        input.select();
+        input.setSelectionRange(0, 99999);
+        document.execCommand('copy');
+        if (copyText) {
+            copyText.innerText = 'Tersalin!';
+            setTimeout(() => { copyText.innerText = 'Salin'; }, 2000);
+        }
+    }
+</script>
+@endpush

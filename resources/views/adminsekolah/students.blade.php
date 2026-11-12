@@ -159,7 +159,13 @@
                                     </x-badge>
                                 @endif
                             </td>
-                            <td class="py-3.5 px-4 text-right whitespace-nowrap">
+                            <td class="py-3.5 px-4 text-right whitespace-nowrap space-x-1.5">
+                                @if($st->parent_monitoring_url)
+                                    <a href="{{ $st->parent_monitoring_url }}" target="_blank" class="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[11px] font-bold border border-indigo-200 transition-colors inline-flex items-center gap-1 cursor-pointer" title="Lihat Portal Monitoring Orang Tua (Tanpa Login)">
+                                        <svg class="w-3 h-3 stroke-[2.5]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                                        <span>Link Ortu</span>
+                                    </a>
+                                @endif
                                 <form action="{{ route('impersonate.start', $st->user) }}" method="POST" class="inline" onsubmit="return confirm('Masuk sebagai {{ $st->user->name }} (Mode Impersonasi)?')">
                                     @csrf
                                     <button type="submit" class="px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 text-[11px] font-bold border border-amber-200 transition-colors cursor-pointer" title="Masuk sebagai siswa ini untuk inspeksi sistem">

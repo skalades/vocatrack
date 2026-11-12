@@ -7,6 +7,7 @@ use App\Http\Controllers\CertificateVerificationController;
 use App\Http\Controllers\ImpersonationController;
 use App\Http\Controllers\KepsekController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\ParentMonitoringController;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\SuperAdminController;
 use App\Http\Controllers\SupervisorController;
@@ -25,6 +26,9 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 // Guest Public Verification for E-Sertifikat PKL (QR Code Destination)
 Route::get('/verify/cert/{uuid}', [CertificateVerificationController::class, 'verify'])->middleware('throttle:60,1')->name('public.cert.verify');
 Route::get('/verify/cert/{uuid}/download', [CertificateVerificationController::class, 'download'])->middleware('throttle:30,1')->name('public.cert.download');
+
+// Guest Public Parent Monitoring Portal (No Login Required)
+Route::get('/pantau/{token}', [ParentMonitoringController::class, 'show'])->middleware('throttle:60,1')->name('parent.monitor');
 
 // Shared Authenticated Notification Routes
 Route::middleware(['auth'])->group(function () {
@@ -119,6 +123,7 @@ Route::middleware(['auth', 'IdentifyTenant', 'role:siswa'])->prefix('siswa')->gr
     Route::post('/jurnal/{journal}/submit', [StudentController::class, 'submitJournal'])->name('student.journal.submit');
 
     Route::get('/profil', [StudentController::class, 'profile'])->name('student.profile');
+    Route::post('/parent-token/regenerate', [ParentMonitoringController::class, 'regenerate'])->name('student.parent-token.regenerate');
     Route::get('/sertifikat/download', [StudentController::class, 'downloadCertificate'])->name('student.certificate.download');
 
     // Pengumuman Siswa
