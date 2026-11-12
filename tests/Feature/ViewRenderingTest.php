@@ -111,4 +111,17 @@ class ViewRenderingTest extends TestCase
         $this->actingAs($user)->get(route('kepsek.dashboard'))->assertStatus(200)->assertSee('Dashboard Eksekutif PKL');
         $this->actingAs($user)->get(route('kepsek.rekap'))->assertStatus(200)->assertSee('Rekapitulasi Presensi Matriks Bulanan');
     }
+
+    public function test_notifications_view_renders_for_users(): void
+    {
+        $teacher = User::where('role', 'guru-pembimbing')->first();
+        if ($teacher) {
+            $this->actingAs($teacher)->get(route('notifications.index'))->assertStatus(200)->assertSee('Pusat Pemberitahuan');
+        }
+
+        $student = User::where('role', 'siswa')->first();
+        if ($student) {
+            $this->actingAs($student)->get(route('notifications.index'))->assertStatus(200)->assertSee('Pusat Pemberitahuan');
+        }
+    }
 }
