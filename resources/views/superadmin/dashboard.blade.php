@@ -50,11 +50,10 @@
 
                 <!-- Header Quick Actions -->
                 <div class="flex flex-wrap items-center gap-2.5 shrink-0">
-                    <a href="{{ route('superadmin.schools') }}" 
-                       class="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-bold text-xs shadow-xs shadow-indigo-600/20 transition-all cursor-pointer">
+                    <x-button variant="primary" onclick="window.location.href='{{ route('superadmin.schools') }}'">
                         <svg class="w-4 h-4 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
                         <span>Daftarkan Sekolah Baru</span>
-                    </a>
+                    </x-button>
                 </div>
             </div>
         </div>

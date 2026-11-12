@@ -74,7 +74,18 @@ class SupervisorController extends Controller
 
         $attendances = $query->paginate(20)->withQueryString();
 
-        return view('dudi.attendances', compact('attendances'));
+        $baseStatsQuery = Attendance::whereIn('student_pkl_id', $spklIds);
+        if ($request->filled('date')) {
+            $baseStatsQuery->where('date', $request->date);
+        }
+        $stats = [
+            'total' => (clone $baseStatsQuery)->count(),
+            'in_radius' => (clone $baseStatsQuery)->where('is_within_radius', true)->count(),
+            'out_radius' => (clone $baseStatsQuery)->where('is_within_radius', false)->count(),
+            'on_time' => (clone $baseStatsQuery)->where('status', 'hadir')->count(),
+        ];
+
+        return view('dudi.attendances', compact('attendances', 'stats'));
     }
 
     public function requests()
@@ -88,7 +99,15 @@ class SupervisorController extends Controller
             ->orderBy('created_at', 'desc')
             ->paginate(15);
 
-        return view('dudi.requests', compact('requests'));
+        $baseStatsQuery = AttendanceRequest::whereIn('student_pkl_id', $spklIds)->whereIn('type', ['dinas_luar', 'luar_kantor']);
+        $stats = [
+            'total' => (clone $baseStatsQuery)->count(),
+            'pending' => (clone $baseStatsQuery)->where('status', 'pending')->count(),
+            'approved' => (clone $baseStatsQuery)->where('status', 'approved')->count(),
+            'rejected' => (clone $baseStatsQuery)->where('status', 'rejected')->count(),
+        ];
+
+        return view('dudi.requests', compact('requests', 'stats'));
     }
 
     public function processRequest(Request $request, AttendanceRequest $attRequest, AttendanceService $attendanceService)
@@ -170,7 +189,15 @@ class SupervisorController extends Controller
             ->paginate(15)
             ->withQueryString();
 
-        return view('dudi.journals', compact('journals', 'studentPkls'));
+        $baseStatsQuery = Journal::whereIn('student_pkl_id', $spklIds);
+        $stats = [
+            'total' => (clone $baseStatsQuery)->count(),
+            'pending_dudi' => (clone $baseStatsQuery)->where('status', 'submitted')->count(),
+            'approved_level1' => (clone $baseStatsQuery)->whereIn('status', ['review_guru', 'approved'])->count(),
+            'revision' => (clone $baseStatsQuery)->where('status', 'revision')->count(),
+        ];
+
+        return view('dudi.journals', compact('journals', 'studentPkls', 'stats'));
     }
 
     public function processJournal(Request $request, Journal $journal, JournalService $journalService)

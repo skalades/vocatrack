@@ -23,9 +23,9 @@
     </x-page-header>
 
     @php
-        $pendingDudi = $journals->where('status', 'submitted')->count();
-        $approvedLevel1 = $journals->whereIn('status', ['review_guru', 'approved'])->count();
-        $revisionCount = $journals->where('status', 'revision')->count();
+        $pendingDudi = $stats['pending_dudi'] ?? 0;
+        $approvedLevel1 = $stats['approved_level1'] ?? 0;
+        $revisionCount = $stats['revision'] ?? 0;
         $allPendingJournals = $studentPkls->flatMap->journals->where('status', 'submitted');
     @endphp
 

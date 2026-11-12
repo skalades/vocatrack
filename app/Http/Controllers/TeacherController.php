@@ -23,6 +23,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class TeacherController extends Controller
 {
@@ -120,7 +121,18 @@ class TeacherController extends Controller
 
         $attendances = $query->paginate(20)->withQueryString();
 
-        return view('teacher.monitoring', compact('attendances'));
+        $baseStatsQuery = Attendance::whereIn('student_pkl_id', $spklIds);
+        if ($request->filled('date')) {
+            $baseStatsQuery->where('date', $request->date);
+        }
+        $stats = [
+            'total' => (clone $baseStatsQuery)->count(),
+            'hadir' => (clone $baseStatsQuery)->where('status', 'hadir')->count(),
+            'late' => (clone $baseStatsQuery)->where('status', 'terlambat')->count(),
+            'leave' => (clone $baseStatsQuery)->whereIn('status', ['izin', 'sakit', 'dinas_luar', 'luar_kantor'])->count(),
+        ];
+
+        return view('teacher.monitoring', compact('attendances', 'stats'));
     }
 
     public function requests()
@@ -134,7 +146,15 @@ class TeacherController extends Controller
             ->orderBy('created_at', 'desc')
             ->paginate(15);
 
-        return view('teacher.requests', compact('requests'));
+        $baseStatsQuery = AttendanceRequest::whereIn('student_pkl_id', $spklIds)->whereIn('type', ['izin', 'sakit']);
+        $stats = [
+            'total' => (clone $baseStatsQuery)->count(),
+            'pending' => (clone $baseStatsQuery)->where('status', 'pending')->count(),
+            'approved' => (clone $baseStatsQuery)->where('status', 'approved')->count(),
+            'rejected' => (clone $baseStatsQuery)->where('status', 'rejected')->count(),
+        ];
+
+        return view('teacher.requests', compact('requests', 'stats'));
     }
 
     public function processRequest(Request $request, AttendanceRequest $attRequest, AttendanceService $attendanceService)
@@ -216,7 +236,15 @@ class TeacherController extends Controller
             ->paginate(15)
             ->withQueryString();
 
-        return view('teacher.journals', compact('journals', 'studentPkls'));
+        $baseStatsQuery = Journal::whereIn('student_pkl_id', $spklIds);
+        $stats = [
+            'total' => (clone $baseStatsQuery)->count(),
+            'pending_guru' => (clone $baseStatsQuery)->where('status', 'review_guru')->count(),
+            'approved' => (clone $baseStatsQuery)->where('status', 'approved')->count(),
+            'revision' => (clone $baseStatsQuery)->where('status', 'revision')->count(),
+        ];
+
+        return view('teacher.journals', compact('journals', 'studentPkls', 'stats'));
     }
 
     public function processJournal(Request $request, Journal $journal, JournalService $journalService)
@@ -423,10 +451,17 @@ class TeacherController extends Controller
     public function storeSupervision(Request $request, SupervisionService $supervisionService)
     {
         $teacher = $this->getTeacher();
+        $schoolId = Auth::user()->school_id;
 
         $validated = $request->validate([
-            'company_id' => ['required', 'exists:companies,id'],
-            'pkl_period_id' => ['required', 'exists:pkl_periods,id'],
+            'company_id' => [
+                'required',
+                Rule::exists('companies', 'id')->where('school_id', $schoolId),
+            ],
+            'pkl_period_id' => [
+                'required',
+                Rule::exists('pkl_periods', 'id')->where('school_id', $schoolId),
+            ],
             'stage' => ['required', 'in:penyerahan,monitoring_1,monitoring_2,penjemputan,insidental'],
             'visit_date' => ['required', 'date'],
             'student_progress_summary' => ['required', 'string', 'min:10'],
@@ -435,6 +470,15 @@ class TeacherController extends Controller
             'photo_with_students' => ['nullable', 'image', 'max:4096'],
             'photo_with_supervisor' => ['nullable', 'image', 'max:4096'],
         ]);
+
+        $hasStudents = StudentPkl::where('teacher_id', $teacher->id)
+            ->where('company_id', $validated['company_id'])
+            ->where('pkl_period_id', $validated['pkl_period_id'])
+            ->exists();
+
+        if (!$hasStudents) {
+            return back()->withErrors(['company_id' => 'Anda tidak memiliki alokasi siswa bimbingan aktif pada mitra industri dan periode ini.'])->withInput();
+        }
 
         $supervisionService->createVisit(
             $teacher,

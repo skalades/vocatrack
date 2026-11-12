@@ -22,17 +22,11 @@
         </x-button>
     </x-page-header>
 
-    @php
-        $inRadiusCount = $attendances->where('is_within_radius', true)->count();
-        $outRadiusCount = $attendances->where('is_within_radius', false)->count();
-        $onTimeCount = $attendances->where('status', 'hadir')->count();
-    @endphp
-
     <!-- Top KPI Metrics -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <x-stat-card 
             title="Total Log Presensi" 
-            :value="$attendances->total()" 
+            :value="$stats['total'] ?? $attendances->total()" 
             subtitle="Rekaman presensi terdata"
             color="indigo"
         >
@@ -43,7 +37,7 @@
 
         <x-stat-card 
             title="Dalam Radius Geofence" 
-            :value="$inRadiusCount" 
+            :value="$stats['in_radius'] ?? 0" 
             subtitle="Sesuai koordinat kantor DU/DI"
             color="emerald"
         >
@@ -54,9 +48,9 @@
 
         <x-stat-card 
             title="Di Luar Radius Kantor" 
-            :value="$outRadiusCount" 
+            :value="$stats['out_radius'] ?? 0" 
             subtitle="Perlu pengecekan alasan"
-            :color="$outRadiusCount > 0 ? 'rose' : 'indigo'"
+            :color="($stats['out_radius'] ?? 0) > 0 ? 'rose' : 'indigo'"
         >
             <x-slot:icon>
                 <svg class="w-6 h-6 stroke-[1.8]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
@@ -65,7 +59,7 @@
 
         <x-stat-card 
             title="Hadir Tepat Waktu" 
-            :value="$onTimeCount" 
+            :value="$stats['on_time'] ?? 0" 
             subtitle="Disiplin jam kerja industri"
             color="blue"
         >

@@ -348,17 +348,22 @@
                 @endif
 
                 @if($errors->any())
-                    <div class="p-4 rounded-2xl bg-rose-50 border border-rose-200/80 text-rose-900 text-xs shadow-2xs space-y-1.5">
-                        <div class="flex items-center space-x-2 font-bold text-rose-950 mb-1">
-                            <svg class="w-4 h-4 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-                            <span>Terdapat kendala pada input Anda:</span>
-                        </div>
-                        @foreach($errors->all() as $err)
-                            <div class="flex items-center space-x-2 text-rose-800">
-                                <span class="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0"></span>
-                                <span>{{ $err }}</span>
+                    <div id="flash-validation-errors" class="p-4 rounded-2xl bg-rose-50 border border-rose-200/80 text-rose-900 text-xs shadow-2xs space-y-1.5 flex items-start justify-between">
+                        <div class="space-y-1.5 flex-1 pr-2">
+                            <div class="flex items-center space-x-2 font-bold text-rose-950 mb-1">
+                                <svg class="w-4 h-4 text-rose-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                                <span>Terdapat kendala pada input Anda:</span>
                             </div>
-                        @endforeach
+                            @foreach($errors->all() as $err)
+                                <div class="flex items-center space-x-2 text-rose-800">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0"></span>
+                                    <span>{{ $err }}</span>
+                                </div>
+                            @endforeach
+                        </div>
+                        <button type="button" onclick="document.getElementById('flash-validation-errors').remove()" class="text-rose-700 hover:text-rose-900 p-1 rounded-lg hover:bg-rose-100/50 shrink-0">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
                     </div>
                 @endif
             </div>

@@ -18,17 +18,12 @@
         </x-button>
     </x-page-header>
 
-    @php
-        $totalPlotted = $teachers->sum(fn($t) => $t->studentPkls->count());
-        $avgPlotted = $teachers->count() > 0 ? round($totalPlotted / $teachers->count(), 1) : 0;
-    @endphp
-
     <!-- Top KPI Metrics -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <x-stat-card 
             title="Total Guru Pembimbing" 
-            :value="$teachers->total()" 
-            subtitle="Tenaga pendidik pembimbing"
+            :value="$totalTeachers" 
+            subtitle="Tenaga pendidik pembimbing di sekolah"
             color="indigo"
         >
             <x-slot:icon>
@@ -60,9 +55,9 @@
 
         <x-stat-card 
             title="Pembimbing Aktif Lapangan" 
-            :value="$teachers->where('student_pkls_count', '>', 0)->count() ?: $teachers->filter(fn($t) => $t->studentPkls->count() > 0)->count()" 
+            :value="$activeTeachersCount" 
             subtitle="Memiliki siswa binaan aktif"
-            color="amber"
+            :color="$activeTeachersCount > 0 ? 'emerald' : 'amber'"
         >
             <x-slot:icon>
                 <svg class="w-6 h-6 stroke-[1.8]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
@@ -127,13 +122,36 @@
                                     {{ $t->studentPkls->count() }} Siswa Binaan
                                 </x-badge>
                             </td>
-                            <td class="py-3.5 px-4 text-right whitespace-nowrap">
+                            <td class="py-3.5 px-4 text-right whitespace-nowrap space-x-1.5">
+                                <button type="button" 
+                                        onclick="openEditTeacherModal({{ json_encode([
+                                            'id' => $t->id,
+                                            'name' => $t->user->name,
+                                            'email' => $t->user->email,
+                                            'nip' => $t->nip ?? '',
+                                            'phone' => $t->user->profile->phone ?? '',
+                                            'update_url' => route('adminsekolah.teachers.update', $t),
+                                        ]) }})"
+                                        class="px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 text-[11px] font-bold border border-slate-200 transition-colors cursor-pointer inline-flex items-center gap-1"
+                                        title="Ubah data guru pembimbing">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                                    <span>Edit</span>
+                                </button>
                                 <form action="{{ route('impersonate.start', $t->user) }}" method="POST" class="inline" onsubmit="return confirm('Masuk sebagai {{ $t->user->name }} (Mode Impersonasi)?')">
                                     @csrf
                                     <button type="submit" class="px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 text-[11px] font-bold border border-amber-200 transition-colors cursor-pointer" title="Masuk sebagai akun ini untuk inspeksi sistem">
                                         Login As
                                     </button>
                                 </form>
+                                @if($t->studentPkls->whereIn('status', ['assigned', 'active'])->count() === 0)
+                                    <form action="{{ route('adminsekolah.teachers.destroy', $t) }}" method="POST" class="inline" onsubmit="return confirm('Apakah Anda yakin ingin menghapus akun guru {{ $t->user->name }}?')">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 text-[11px] font-bold border border-rose-200 transition-colors cursor-pointer" title="Hapus akun guru pembimbing">
+                                            Hapus
+                                        </button>
+                                    </form>
+                                @endif
                             </td>
                         </tr>
                     @empty
@@ -208,6 +226,59 @@
     </div>
 </div>
 
+<!-- Modal Edit Teacher -->
+<div id="modal-edit-teacher" onclick="if(event.target === this) this.classList.add('hidden')" class="hidden fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-lg rounded-3xl p-6 shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto animate-in fade-in duration-150">
+        <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
+            <div>
+                <h3 class="text-base font-extrabold text-slate-900 tracking-tight">Edit Guru Pembimbing</h3>
+                <p class="text-xs text-slate-500 mt-0.5">Perbarui profil tenaga pendidik pembimbing PKL</p>
+            </div>
+            <button type="button" onclick="document.getElementById('modal-edit-teacher').classList.add('hidden')" class="p-1 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+
+        <form id="edit-teacher-form" method="POST" class="space-y-4">
+            @csrf
+            @method('PUT')
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1.5">Nama Lengkap & Gelar</label>
+                <input type="text" id="edit-teacher-name" name="name" required 
+                       class="w-full text-xs font-semibold px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 text-slate-800">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1.5">Nomor Induk Pegawai (NIP)</label>
+                <input type="text" id="edit-teacher-nip" name="nip" placeholder="Opsional / NIP" 
+                       class="w-full text-xs font-mono font-semibold px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 text-slate-800">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1.5">Nomor Kontak WhatsApp / HP</label>
+                <input type="text" id="edit-teacher-phone" name="phone" placeholder="08..." 
+                       class="w-full text-xs font-mono font-semibold px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 text-slate-800">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1.5">Alamat Email (Username Login)</label>
+                <input type="email" id="edit-teacher-email" name="email" required 
+                       class="w-full text-xs font-mono font-semibold px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 text-slate-800">
+            </div>
+
+            <div class="flex items-center justify-end space-x-2.5 pt-3 border-t border-slate-100">
+                <x-button type="button" variant="secondary" size="md" onclick="document.getElementById('modal-edit-teacher').classList.add('hidden')">
+                    Batal
+                </x-button>
+                <x-button type="submit" variant="primary" size="md">
+                    Simpan Perubahan
+                </x-button>
+            </div>
+        </form>
+    </div>
+</div>
+
 @push('scripts')
 <script>
     function filterTeachersTable() {
@@ -217,6 +288,15 @@
             const text = row.textContent.toLowerCase();
             row.style.display = text.includes(query) ? '' : 'none';
         });
+    }
+
+    function openEditTeacherModal(data) {
+        document.getElementById('edit-teacher-form').action = data.update_url;
+        document.getElementById('edit-teacher-name').value = data.name;
+        document.getElementById('edit-teacher-nip').value = data.nip || '';
+        document.getElementById('edit-teacher-phone').value = data.phone || '';
+        document.getElementById('edit-teacher-email').value = data.email;
+        document.getElementById('modal-edit-teacher').classList.remove('hidden');
     }
 </script>
 @endpush

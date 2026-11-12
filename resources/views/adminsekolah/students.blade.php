@@ -26,8 +26,8 @@
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <x-stat-card 
             title="Total Siswa Terdata" 
-            :value="$students->total()" 
-            subtitle="Akun peserta didik aktif"
+            :value="$totalStudents" 
+            subtitle="Akun peserta didik aktif di sekolah"
             color="indigo"
         >
             <x-slot:icon>
@@ -37,8 +37,8 @@
 
         <x-stat-card 
             title="Sudah Terplot ke DU/DI" 
-            :value="$students->whereNotNull('activePkl')->count()" 
-            subtitle="Siswa pada halaman ini"
+            :value="$totalPlotted" 
+            subtitle="Memiliki penugasan PKL aktif"
             color="emerald"
         >
             <x-slot:icon>
@@ -48,9 +48,9 @@
 
         <x-stat-card 
             title="Belum Memiliki DU/DI" 
-            :value="$students->whereNull('activePkl')->count()" 
-            subtitle="Menunggu plotting penugasan"
-            color="amber"
+            :value="$totalUnplotted" 
+            subtitle="Menunggu alokasi plotting PKL"
+            :color="$totalUnplotted > 0 ? 'amber' : 'emerald'"
         >
             <x-slot:icon>
                 <svg class="w-6 h-6 stroke-[1.8]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
@@ -166,12 +166,38 @@
                                         <span>Link Ortu</span>
                                     </a>
                                 @endif
+                                <button type="button" 
+                                        onclick="openEditStudentModal({{ json_encode([
+                                            'id' => $st->id,
+                                            'name' => $st->user->name,
+                                            'email' => $st->user->email,
+                                            'nis' => $st->nis,
+                                            'nisn' => $st->nisn,
+                                            'class_id' => $st->class_id,
+                                            'gender' => $st->user->profile->gender ?? 'L',
+                                            'phone' => $st->user->profile->phone ?? '',
+                                            'update_url' => route('adminsekolah.students.update', $st),
+                                        ]) }})"
+                                        class="px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 text-[11px] font-bold border border-slate-200 transition-colors cursor-pointer inline-flex items-center gap-1"
+                                        title="Ubah data identitas siswa">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                                    <span>Edit</span>
+                                </button>
                                 <form action="{{ route('impersonate.start', $st->user) }}" method="POST" class="inline" onsubmit="return confirm('Masuk sebagai {{ $st->user->name }} (Mode Impersonasi)?')">
                                     @csrf
                                     <button type="submit" class="px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 text-[11px] font-bold border border-amber-200 transition-colors cursor-pointer" title="Masuk sebagai siswa ini untuk inspeksi sistem">
                                         Login As
                                     </button>
                                 </form>
+                                @if(!$st->activePkl)
+                                    <form action="{{ route('adminsekolah.students.destroy', $st) }}" method="POST" class="inline" onsubmit="return confirm('Apakah Anda yakin ingin menghapus data siswa {{ $st->user->name }}?')">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 text-[11px] font-bold border border-rose-200 transition-colors cursor-pointer" title="Hapus akun dan profil siswa">
+                                            Hapus
+                                        </button>
+                                    </form>
+                                @endif
                             </td>
                         </tr>
                     @empty
@@ -327,6 +353,86 @@
     </div>
 </div>
 
+<!-- Modal Edit Student -->
+<div id="modal-edit-student" onclick="if(event.target === this) this.classList.add('hidden')" class="hidden fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-lg rounded-3xl p-6 shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto animate-in fade-in duration-150">
+        <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
+            <div>
+                <h3 class="text-base font-extrabold text-slate-900 tracking-tight">Edit Data Siswa</h3>
+                <p class="text-xs text-slate-500 mt-0.5">Perbarui biodata siswa dan rombongan belajar</p>
+            </div>
+            <button type="button" onclick="document.getElementById('modal-edit-student').classList.add('hidden')" class="p-1 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+
+        <form id="edit-student-form" method="POST" class="space-y-4">
+            @csrf
+            @method('PUT')
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1.5">Nama Lengkap Siswa</label>
+                <input type="text" id="edit-student-name" name="name" required 
+                       class="w-full text-xs font-semibold px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 text-slate-800">
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5">NIS (Sekolah)</label>
+                    <input type="text" id="edit-student-nis" name="nis" required 
+                           class="w-full text-xs font-mono font-semibold px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 text-slate-800">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5">NISN (Nasional)</label>
+                    <input type="text" id="edit-student-nisn" name="nisn" required 
+                           class="w-full text-xs font-mono font-semibold px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 text-slate-800">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1.5">Rombongan Belajar (Kelas)</label>
+                <select id="edit-student-class-id" name="class_id" required 
+                        class="w-full text-xs font-semibold px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 text-slate-800">
+                    @foreach($classes as $c)
+                        <option value="{{ $c->id }}">{{ $c->name }} ({{ $c->major->name }})</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1.5">Alamat Email (Akun Login)</label>
+                <input type="email" id="edit-student-email" name="email" required 
+                       class="w-full text-xs font-mono font-semibold px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 text-slate-800">
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5">Jenis Kelamin</label>
+                    <select id="edit-student-gender" name="gender" required 
+                            class="w-full text-xs font-semibold px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 text-slate-800">
+                        <option value="L">Laki-Laki</option>
+                        <option value="P">Perempuan</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5">Nomor WhatsApp / HP</label>
+                    <input type="text" id="edit-student-phone" name="phone" placeholder="08..." 
+                           class="w-full text-xs font-mono font-semibold px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 text-slate-800">
+                </div>
+            </div>
+
+            <div class="flex items-center justify-end space-x-2.5 pt-3 border-t border-slate-100">
+                <x-button type="button" variant="secondary" size="md" onclick="document.getElementById('modal-edit-student').classList.add('hidden')">
+                    Batal
+                </x-button>
+                <x-button type="submit" variant="primary" size="md">
+                    Simpan Perubahan
+                </x-button>
+            </div>
+        </form>
+    </div>
+</div>
+
 @push('scripts')
 <script>
     function filterStudentsTable() {
@@ -336,6 +442,18 @@
             const text = row.textContent.toLowerCase();
             row.style.display = text.includes(query) ? '' : 'none';
         });
+    }
+
+    function openEditStudentModal(data) {
+        document.getElementById('edit-student-form').action = data.update_url;
+        document.getElementById('edit-student-name').value = data.name;
+        document.getElementById('edit-student-email').value = data.email;
+        document.getElementById('edit-student-nis').value = data.nis;
+        document.getElementById('edit-student-nisn').value = data.nisn;
+        document.getElementById('edit-student-class-id').value = data.class_id;
+        document.getElementById('edit-student-gender').value = data.gender;
+        document.getElementById('edit-student-phone').value = data.phone || '';
+        document.getElementById('modal-edit-student').classList.remove('hidden');
     }
 </script>
 @endpush

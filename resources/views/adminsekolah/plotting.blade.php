@@ -133,6 +133,7 @@
                         <th class="py-3.5 px-4">Mentor DU/DI</th>
                         <th class="py-3.5 px-4">Periode PKL</th>
                         <th class="py-3.5 px-6 text-center">Status</th>
+                        <th class="py-3.5 px-4 text-right">Aksi</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 text-slate-700 font-medium">
@@ -188,10 +189,19 @@
                                     {{ strtoupper($sp->status) }}
                                 </x-badge>
                             </td>
+                            <td class="py-3.5 px-4 text-right whitespace-nowrap">
+                                <form action="{{ route('adminsekolah.plotting.destroy', $sp) }}" method="POST" class="inline" onsubmit="return confirm('Batalkan penugasan PKL siswa {{ $sp->student->user->name }} di {{ $sp->company->name }}?')">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 text-[11px] font-bold border border-rose-200 transition-colors cursor-pointer" title="Batalkan penugasan siswa (unplot)">
+                                        Unplot
+                                    </button>
+                                </form>
+                            </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="py-12">
+                            <td colspan="7" class="py-12">
                                 <x-empty-state 
                                     title="Belum Ada Plotting Penugasan" 
                                     description="Hubungkan siswa dengan mitra industri DU/DI dan guru pembimbing sekolah."

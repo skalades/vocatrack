@@ -94,7 +94,7 @@ class AdminSekolahController extends Controller
             'school_name' => ['required', 'string', 'max:150'],
             'school_phone' => ['required', 'string', 'max:20'],
             'school_address' => ['required', 'string'],
-            'school_logo' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp,svg', 'max:2048'],
+            'school_logo' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
             'checkin_start' => ['required'],
             'checkin_late' => ['required'],
             'checkin_alfa' => ['required'],
@@ -103,6 +103,10 @@ class AdminSekolahController extends Controller
             'weight_dudi' => ['required', 'numeric', 'min:0', 'max:100'],
             'weight_guru' => ['required', 'numeric', 'min:0', 'max:100'],
         ]);
+
+        if (round((float) $request->weight_dudi + (float) $request->weight_guru, 2) !== 100.0) {
+            return back()->withErrors(['weight_dudi' => 'Total persentase bobot penilaian DU/DI dan Guru Pembimbing harus tepat 100% (saat ini: ' . ((float) $request->weight_dudi + (float) $request->weight_guru) . '%).'])->withInput();
+        }
 
         $schoolData = [
             'name' => $request->school_name,
@@ -165,8 +169,13 @@ class AdminSekolahController extends Controller
     {
         $schoolId = $this->getSchoolId();
         $request->validate([
-            'code' => ['required', 'string', 'max:20'],
+            'code' => [
+                'required', 'string', 'max:20',
+                Rule::unique('majors', 'code')->where('school_id', $schoolId),
+            ],
             'name' => ['required', 'string', 'max:100'],
+        ], [
+            'code.unique' => 'Kode jurusan ini sudah digunakan.',
         ]);
 
         Major::create([
@@ -178,14 +187,55 @@ class AdminSekolahController extends Controller
         return back()->with('success', 'Jurusan keahlian berhasil ditambahkan.');
     }
 
+    public function updateMajor(Request $request, Major $major)
+    {
+        $schoolId = $this->getSchoolId();
+        abort_if($major->school_id !== $schoolId, 403);
+
+        $request->validate([
+            'code' => [
+                'required', 'string', 'max:20',
+                Rule::unique('majors', 'code')->where('school_id', $schoolId)->ignore($major->id),
+            ],
+            'name' => ['required', 'string', 'max:100'],
+        ], [
+            'code.unique' => 'Kode jurusan ini sudah digunakan.',
+        ]);
+
+        $major->update([
+            'code' => strtoupper($request->code),
+            'name' => $request->name,
+        ]);
+
+        return back()->with('success', 'Data jurusan berhasil diperbarui.');
+    }
+
+    public function destroyMajor(Major $major)
+    {
+        $schoolId = $this->getSchoolId();
+        abort_if($major->school_id !== $schoolId, 403);
+
+        if ($major->classes()->exists()) {
+            return back()->withErrors(['major' => 'Jurusan tidak dapat dihapus karena masih memiliki rombel kelas terdaftar.']);
+        }
+
+        $major->delete();
+        return back()->with('success', 'Jurusan berhasil dihapus.');
+    }
+
     public function storeClass(Request $request)
     {
         $schoolId = $this->getSchoolId();
         $request->validate([
             'major_id' => ['required', Rule::exists('majors', 'id')->where('school_id', $schoolId)],
-            'name' => ['required', 'string', 'max:50'],
+            'name' => [
+                'required', 'string', 'max:50',
+                Rule::unique('classes', 'name')->where('school_id', $schoolId)->where('academic_year', $request->academic_year),
+            ],
             'grade_level' => ['required', 'in:X,XI,XII'],
             'academic_year' => ['required', 'string', 'max:15'],
+        ], [
+            'name.unique' => 'Nama rombel kelas ini sudah ada untuk tahun ajaran yang dipilih.',
         ]);
 
         SchoolClass::create([
@@ -199,17 +249,76 @@ class AdminSekolahController extends Controller
         return back()->with('success', 'Kelas berhasil didaftarkan.');
     }
 
-    public function students()
+    public function updateClass(Request $request, SchoolClass $schoolClass)
     {
         $schoolId = $this->getSchoolId();
-        $students = Student::whereHas('user', fn($q) => $q->where('school_id', $schoolId))
-            ->with(['user.profile', 'class.major', 'activePkl.company'])
-            ->latest()
-            ->paginate(15);
+        abort_if($schoolClass->school_id !== $schoolId, 403);
 
+        $request->validate([
+            'major_id' => ['required', Rule::exists('majors', 'id')->where('school_id', $schoolId)],
+            'name' => [
+                'required', 'string', 'max:50',
+                Rule::unique('classes', 'name')->where('school_id', $schoolId)->where('academic_year', $request->academic_year)->ignore($schoolClass->id),
+            ],
+            'grade_level' => ['required', 'in:X,XI,XII'],
+            'academic_year' => ['required', 'string', 'max:15'],
+        ], [
+            'name.unique' => 'Nama rombel kelas ini sudah ada untuk tahun ajaran yang dipilih.',
+        ]);
+
+        $schoolClass->update([
+            'major_id' => $request->major_id,
+            'name' => $request->name,
+            'grade_level' => $request->grade_level,
+            'academic_year' => $request->academic_year,
+        ]);
+
+        return back()->with('success', 'Data rombel kelas berhasil diperbarui.');
+    }
+
+    public function destroyClass(SchoolClass $schoolClass)
+    {
+        $schoolId = $this->getSchoolId();
+        abort_if($schoolClass->school_id !== $schoolId, 403);
+
+        if ($schoolClass->students()->exists()) {
+            return back()->withErrors(['class' => 'Kelas tidak dapat dihapus karena masih memiliki siswa terdaftar di dalamnya.']);
+        }
+
+        $schoolClass->delete();
+        return back()->with('success', 'Rombel kelas berhasil dihapus.');
+    }
+
+    public function students(Request $request)
+    {
+        $schoolId = $this->getSchoolId();
+        $query = Student::whereHas('user', fn($q) => $q->where('school_id', $schoolId))
+            ->with(['user.profile', 'class.major', 'activePkl.company']);
+
+        if ($search = $request->query('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->whereHas('user', fn($uq) => $uq->where('name', 'like', "%{$search}%")->orWhere('email', 'like', "%{$search}%"))
+                  ->orWhere('nisn', 'like', "%{$search}%")
+                  ->orWhere('nis', 'like', "%{$search}%")
+                  ->orWhereHas('class', fn($cq) => $cq->where('name', 'like', "%{$search}%"));
+            });
+        }
+
+        if ($classId = $request->query('class_id')) {
+            if ($classId !== 'all') {
+                $query->where('class_id', $classId);
+            }
+        }
+
+        $students = $query->latest()->paginate(15)->withQueryString();
         $classes = SchoolClass::where('school_id', $schoolId)->with('major')->get();
 
-        return view('adminsekolah.students', compact('students', 'classes'));
+        // Exact DB metrics across the entire school (Scalable)
+        $totalStudents = Student::whereHas('user', fn($q) => $q->where('school_id', $schoolId))->count();
+        $totalPlotted = StudentPkl::where('school_id', $schoolId)->whereIn('status', ['assigned', 'active'])->distinct('student_id')->count('student_id');
+        $totalUnplotted = max(0, $totalStudents - $totalPlotted);
+
+        return view('adminsekolah.students', compact('students', 'classes', 'totalStudents', 'totalPlotted', 'totalUnplotted'));
     }
 
     public function storeStudent(Request $request)
@@ -222,6 +331,7 @@ class AdminSekolahController extends Controller
             'name' => ['required', 'string', 'max:100'],
             'email' => ['required', 'email', 'unique:users,email'],
             'gender' => ['required', 'in:L,P'],
+            'phone' => ['nullable', 'string', 'max:20'],
         ]);
 
         DB::transaction(function () use ($request, $schoolId) {
@@ -249,6 +359,66 @@ class AdminSekolahController extends Controller
         });
 
         return back()->with('success', 'Data siswa berhasil ditambahkan.');
+    }
+
+    public function updateStudent(Request $request, Student $student)
+    {
+        $schoolId = $this->getSchoolId();
+        abort_if($student->user->school_id !== $schoolId, 403);
+
+        $request->validate([
+            'class_id' => ['required', Rule::exists('classes', 'id')->where('school_id', $schoolId)],
+            'nis' => ['required', 'string', 'max:30'],
+            'nisn' => ['required', 'string', 'max:30', Rule::unique('students', 'nisn')->ignore($student->id)],
+            'name' => ['required', 'string', 'max:100'],
+            'email' => ['required', 'email', Rule::unique('users', 'email')->ignore($student->user_id)],
+            'gender' => ['required', 'in:L,P'],
+            'phone' => ['nullable', 'string', 'max:20'],
+        ]);
+
+        DB::transaction(function () use ($request, $student) {
+            $student->user->update([
+                'name' => $request->name,
+                'email' => $request->email,
+            ]);
+
+            $student->user->profile()->updateOrCreate(
+                ['user_id' => $student->user_id],
+                [
+                    'gender' => $request->gender,
+                    'phone' => $request->phone,
+                ]
+            );
+
+            $student->update([
+                'class_id' => $request->class_id,
+                'nis' => $request->nis,
+                'nisn' => $request->nisn,
+            ]);
+        });
+
+        return back()->with('success', 'Data siswa berhasil diperbarui.');
+    }
+
+    public function destroyStudent(Student $student)
+    {
+        $schoolId = $this->getSchoolId();
+        abort_if($student->user->school_id !== $schoolId, 403);
+
+        if ($student->studentPkls()->exists()) {
+            return back()->withErrors(['student' => 'Siswa tidak dapat dihapus karena sudah memiliki riwayat penugasan PKL.']);
+        }
+
+        DB::transaction(function () use ($student) {
+            $user = $student->user;
+            $student->delete();
+            if ($user) {
+                $user->profile()->delete();
+                $user->delete();
+            }
+        });
+
+        return back()->with('success', 'Data siswa dan akun login berhasil dihapus.');
     }
 
     public function importStudents(Request $request)
@@ -362,15 +532,30 @@ class AdminSekolahController extends Controller
         return back()->with('success', $msg);
     }
 
-    public function teachers()
+    public function teachers(Request $request)
     {
         $schoolId = $this->getSchoolId();
-        $teachers = Teacher::whereHas('user', fn($q) => $q->where('school_id', $schoolId))
-            ->with(['user.profile', 'studentPkls.student.user'])
-            ->latest()
-            ->paginate(15);
+        $query = Teacher::whereHas('user', fn($q) => $q->where('school_id', $schoolId))
+            ->with(['user.profile', 'studentPkls.student.user']);
 
-        return view('adminsekolah.teachers', compact('teachers'));
+        if ($search = $request->query('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->whereHas('user', fn($uq) => $uq->where('name', 'like', "%{$search}%")->orWhere('email', 'like', "%{$search}%"))
+                  ->orWhere('nip', 'like', "%{$search}%");
+            });
+        }
+
+        $teachers = $query->latest()->paginate(15)->withQueryString();
+
+        // Exact DB metrics across the entire school (Scalable)
+        $totalTeachers = Teacher::whereHas('user', fn($q) => $q->where('school_id', $schoolId))->count();
+        $totalPlotted = StudentPkl::where('school_id', $schoolId)->whereIn('status', ['assigned', 'active'])->count();
+        $avgPlotted = $totalTeachers > 0 ? round($totalPlotted / $totalTeachers, 1) : 0;
+        $activeTeachersCount = Teacher::whereHas('user', fn($q) => $q->where('school_id', $schoolId))
+            ->whereHas('studentPkls', fn($q) => $q->whereIn('status', ['assigned', 'active']))
+            ->count();
+
+        return view('adminsekolah.teachers', compact('teachers', 'totalTeachers', 'totalPlotted', 'avgPlotted', 'activeTeachersCount'));
     }
 
     public function storeTeacher(Request $request)
@@ -406,6 +591,58 @@ class AdminSekolahController extends Controller
         });
 
         return back()->with('success', 'Akun Guru Pembimbing berhasil dibuat.');
+    }
+
+    public function updateTeacher(Request $request, Teacher $teacher)
+    {
+        $schoolId = $this->getSchoolId();
+        abort_if($teacher->user->school_id !== $schoolId, 403);
+
+        $request->validate([
+            'name' => ['required', 'string', 'max:100'],
+            'email' => ['required', 'email', Rule::unique('users', 'email')->ignore($teacher->user_id)],
+            'nip' => ['nullable', 'string', 'max:30'],
+            'phone' => ['nullable', 'string', 'max:20'],
+        ]);
+
+        DB::transaction(function () use ($request, $teacher) {
+            $teacher->user->update([
+                'name' => $request->name,
+                'email' => $request->email,
+            ]);
+
+            $teacher->user->profile()->updateOrCreate(
+                ['user_id' => $teacher->user_id],
+                ['phone' => $request->phone]
+            );
+
+            $teacher->update([
+                'nip' => $request->nip,
+            ]);
+        });
+
+        return back()->with('success', 'Data guru pembimbing berhasil diperbarui.');
+    }
+
+    public function destroyTeacher(Teacher $teacher)
+    {
+        $schoolId = $this->getSchoolId();
+        abort_if($teacher->user->school_id !== $schoolId, 403);
+
+        if ($teacher->studentPkls()->whereIn('status', ['assigned', 'active'])->exists()) {
+            return back()->withErrors(['teacher' => 'Guru tidak dapat dihapus karena masih memiliki alokasi siswa bimbingan aktif.']);
+        }
+
+        DB::transaction(function () use ($teacher) {
+            $user = $teacher->user;
+            $teacher->delete();
+            if ($user) {
+                $user->profile()->delete();
+                $user->delete();
+            }
+        });
+
+        return back()->with('success', 'Akun guru pembimbing berhasil dihapus.');
     }
 
     public function companies(Request $request)
@@ -540,6 +777,31 @@ class AdminSekolahController extends Controller
         });
 
         return back()->with('success', 'Data Mitra DU/DI berhasil diperbarui.');
+    }
+
+    public function destroyCompany(Company $company)
+    {
+        $schoolId = $this->getSchoolId();
+        abort_if($company->school_id !== $schoolId, 403);
+
+        if ($company->studentPkls()->exists()) {
+            return back()->withErrors(['company' => 'Mitra DU/DI tidak dapat dihapus karena memiliki riwayat penugasan siswa PKL.']);
+        }
+
+        DB::transaction(function () use ($company) {
+            $company->supervisors()->each(function ($sup) {
+                $user = $sup->user;
+                $sup->delete();
+                if ($user) {
+                    $user->profile()->delete();
+                    $user->delete();
+                }
+            });
+            $company->majors()->detach();
+            $company->delete();
+        });
+
+        return back()->with('success', 'Data mitra DU/DI berhasil dihapus.');
     }
 
     public function plotting(Request $request)
@@ -718,6 +980,27 @@ class AdminSekolahController extends Controller
             $count = count($studentIds);
             return back()->with('success', "Penugasan PKL untuk {$count} siswa berhasil disimpan.");
         });
+    }
+
+    public function destroyPlotting(StudentPkl $studentPkl)
+    {
+        $schoolId = $this->getSchoolId();
+        abort_if($studentPkl->school_id !== $schoolId, 403);
+
+        $hasAttendances = $studentPkl->attendances()->exists();
+        $hasJournals = $studentPkl->journals()->exists();
+        $hasAssessment = $studentPkl->assessment()->exists();
+
+        if ($hasAttendances || $hasJournals || $hasAssessment) {
+            return back()->withErrors([
+                'student_pkl' => "Tidak dapat membatalkan plotting untuk {$studentPkl->student->user->name} karena sudah ada data riwayat presensi, jurnal, atau penilaian."
+            ]);
+        }
+
+        $studentName = $studentPkl->student->user->name;
+        $studentPkl->delete();
+
+        return back()->with('success', "Penugasan PKL untuk siswa {$studentName} berhasil dibatalkan (unplot).");
     }
 
     public function storePeriod(Request $request)

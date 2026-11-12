@@ -22,17 +22,11 @@
         </x-button>
     </x-page-header>
 
-    @php
-        $hadirCount = $attendances->where('status', 'hadir')->count();
-        $lateCount = $attendances->where('status', 'terlambat')->count();
-        $leaveCount = $attendances->whereIn('status', ['izin', 'sakit', 'dinas_luar', 'luar_kantor'])->count();
-    @endphp
-
     <!-- Top KPI Metrics -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <x-stat-card 
             title="Total Log Kehadiran" 
-            :value="$attendances->total()" 
+            :value="$stats['total'] ?? $attendances->total()" 
             subtitle="Rekaman presensi terdata"
             color="indigo"
         >
@@ -43,8 +37,8 @@
 
         <x-stat-card 
             title="Hadir Tepat Waktu" 
-            :value="$hadirCount" 
-            subtitle="Pada halaman filter saat ini"
+            :value="$stats['hadir'] ?? 0" 
+            subtitle="Hadir tepat waktu terverifikasi"
             color="emerald"
         >
             <x-slot:icon>
@@ -54,9 +48,9 @@
 
         <x-stat-card 
             title="Terlambat Masuk" 
-            :value="$lateCount" 
+            :value="$stats['late'] ?? 0" 
             subtitle="Perlu pembinaan disiplin"
-            :color="$lateCount > 0 ? 'amber' : 'indigo'"
+            :color="($stats['late'] ?? 0) > 0 ? 'amber' : 'indigo'"
         >
             <x-slot:icon>
                 <svg class="w-6 h-6 stroke-[1.8]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
@@ -65,7 +59,7 @@
 
         <x-stat-card 
             title="Izin, Sakit & Dinas" 
-            :value="$leaveCount" 
+            :value="$stats['leave'] ?? 0" 
             subtitle="Permohonan & penugasan luar"
             color="blue"
         >

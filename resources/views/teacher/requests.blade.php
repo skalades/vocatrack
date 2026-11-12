@@ -22,17 +22,11 @@
         </x-button>
     </x-page-header>
 
-    @php
-        $pendingCount = $requests->where('status', 'pending')->count();
-        $approvedCount = $requests->where('status', 'approved')->count();
-        $rejectedCount = $requests->where('status', 'rejected')->count();
-    @endphp
-
     <!-- Top KPI Metrics -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <x-stat-card 
             title="Total Permohonan" 
-            :value="$requests->total()" 
+            :value="$stats['total'] ?? $requests->total()" 
             subtitle="Seluruh arsip pengajuan"
             color="indigo"
         >
@@ -43,9 +37,9 @@
 
         <x-stat-card 
             title="Menunggu Review" 
-            :value="$pendingCount" 
+            :value="$stats['pending'] ?? 0" 
             subtitle="Perlu keputusan guru"
-            :color="$pendingCount > 0 ? 'amber' : 'indigo'"
+            :color="($stats['pending'] ?? 0) > 0 ? 'amber' : 'indigo'"
         >
             <x-slot:icon>
                 <svg class="w-6 h-6 stroke-[1.8]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
@@ -54,7 +48,7 @@
 
         <x-stat-card 
             title="Telah Disetujui" 
-            :value="$approvedCount" 
+            :value="$stats['approved'] ?? 0" 
             subtitle="Tercatat di presensi otomatis"
             color="emerald"
         >
@@ -65,7 +59,7 @@
 
         <x-stat-card 
             title="Permohonan Ditolak" 
-            :value="$rejectedCount" 
+            :value="$stats['rejected'] ?? 0" 
             subtitle="Tidak memenuhi syarat izin"
             color="rose"
         >

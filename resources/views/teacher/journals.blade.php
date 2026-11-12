@@ -23,9 +23,9 @@
     </x-page-header>
 
     @php
-        $pendingGuru = $journals->where('status', 'review_guru')->count();
-        $approvedCount = $journals->where('status', 'approved')->count();
-        $revisionCount = $journals->where('status', 'revision')->count();
+        $pendingGuru = $stats['pending_guru'] ?? 0;
+        $approvedCount = $stats['approved'] ?? 0;
+        $revisionCount = $stats['revision'] ?? 0;
         $allPendingJournals = $studentPkls->flatMap->journals->where('status', 'review_guru');
     @endphp
 
