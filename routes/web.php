@@ -84,6 +84,8 @@ Route::middleware(['auth', 'IdentifyTenant', 'role:admin-sekolah'])->prefix('adm
     Route::post('/companies', [AdminSekolahController::class, 'storeCompany'])->name('adminsekolah.companies.store');
     Route::put('/companies/{company}', [AdminSekolahController::class, 'updateCompany'])->name('adminsekolah.companies.update');
     Route::delete('/companies/{company}', [AdminSekolahController::class, 'destroyCompany'])->name('adminsekolah.companies.destroy');
+    Route::post('/companies/{company}/supervisors', [AdminSekolahController::class, 'storeCompanySupervisor'])->name('adminsekolah.companies.supervisors.store');
+    Route::delete('/companies/{company}/supervisors/{supervisor}', [AdminSekolahController::class, 'destroyCompanySupervisor'])->name('adminsekolah.companies.supervisors.destroy');
 
     // Plotting PKL
     Route::get('/plotting', [AdminSekolahController::class, 'plotting'])->name('adminsekolah.plotting');

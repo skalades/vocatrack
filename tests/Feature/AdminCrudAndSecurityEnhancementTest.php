@@ -303,6 +303,44 @@ class AdminCrudAndSecurityEnhancementTest extends TestCase
         $this->assertDatabaseHas('companies', ['id' => $company->id]);
     }
 
+    public function test_company_supervisor_store_and_destroy(): void
+    {
+        $company = Company::create([
+            'school_id' => $this->school->id,
+            'name' => 'PT Media Sejahtera',
+            'address' => 'Jl. Sudirman No. 10',
+            'contact_person' => 'Dedi',
+            'phone' => '0812345678',
+            'work_days' => '5_days',
+        ]);
+
+        // Add supervisor
+        $resStore = $this->actingAs($this->adminUser)
+            ->post(route('adminsekolah.companies.supervisors.store', $company->id), [
+                'name' => 'Mentor Baru DU/DI',
+                'email' => 'mentorbaru@dudi.com',
+                'position' => 'Senior Technical Lead',
+                'phone' => '081299887766',
+            ]);
+        $resStore->assertSessionHas('success');
+
+        $user = User::where('email', 'mentorbaru@dudi.com')->first();
+        $this->assertNotNull($user);
+        $this->assertEquals('pembimbing-dudi', $user->role);
+
+        $supervisor = \App\Models\Supervisor::where('user_id', $user->id)->first();
+        $this->assertNotNull($supervisor);
+        $this->assertEquals($company->id, $supervisor->company_id);
+
+        // Delete supervisor
+        $resDelete = $this->actingAs($this->adminUser)
+            ->delete(route('adminsekolah.companies.supervisors.destroy', [$company->id, $supervisor->id]));
+        $resDelete->assertSessionHas('success');
+
+        $this->assertDatabaseMissing('supervisors', ['id' => $supervisor->id]);
+        $this->assertDatabaseMissing('users', ['id' => $user->id]);
+    }
+
     public function test_unplot_protection_when_records_exist_and_success_when_clean(): void
     {
         $company = Company::create([

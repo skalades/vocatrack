@@ -193,25 +193,58 @@
                                 </x-badge>
                             </td>
                             <td class="py-3.5 px-6 text-center whitespace-nowrap space-x-1.5">
+                                @php
+                                    $modalData = [
+                                        'id' => $cp->id,
+                                        'name' => $cp->name,
+                                        'address' => $cp->address,
+                                        'contact_person' => $cp->contact_person,
+                                        'phone' => $cp->phone,
+                                        'work_days' => $cp->work_days,
+                                        'gps_enabled' => (bool) $cp->gps_enabled,
+                                        'latitude' => $cp->latitude,
+                                        'longitude' => $cp->longitude,
+                                        'radius_meters' => $cp->radius_meters,
+                                        'major_ids' => $cp->majors->pluck('id')->toArray(),
+                                        'update_url' => route('adminsekolah.companies.update', $cp),
+                                        'store_supervisor_url' => route('adminsekolah.companies.supervisors.store', $cp),
+                                        'students' => $cp->studentPkls->map(fn($sp) => [
+                                            'id' => $sp->id,
+                                            'name' => $sp->student->user->name ?? '-',
+                                            'nisn' => $sp->student->nisn ?? '-',
+                                            'nis' => $sp->student->nis ?? '-',
+                                            'class' => $sp->student->class->name ?? '-',
+                                            'major' => $sp->student->class->major->code ?? '-',
+                                            'teacher_name' => $sp->teacher->user->name ?? 'Belum Ditugaskan',
+                                            'supervisor_name' => $sp->supervisor->user->name ?? 'Belum Ditentukan',
+                                            'status' => strtoupper($sp->status),
+                                            'unplot_url' => route('adminsekolah.plotting.destroy', $sp),
+                                        ])->values()->toArray(),
+                                        'supervisors' => $cp->supervisors->map(fn($sup) => [
+                                            'id' => $sup->id,
+                                            'name' => $sup->user->name ?? '-',
+                                            'email' => $sup->user->email ?? '-',
+                                            'phone' => $sup->user->profile->phone ?? '-',
+                                            'position' => $sup->position ?? 'Mentor Lapangan DU/DI',
+                                            'has_students' => $cp->studentPkls->where('supervisor_id', $sup->id)->isNotEmpty(),
+                                            'destroy_url' => route('adminsekolah.companies.supervisors.destroy', [$cp, $sup]),
+                                        ])->values()->toArray(),
+                                        'teachers' => $cp->studentPkls->pluck('teacher')->filter()->unique('id')->map(fn($tc) => [
+                                            'id' => $tc->id,
+                                            'name' => $tc->user->name ?? '-',
+                                            'email' => $tc->user->email ?? '-',
+                                            'nip' => $tc->nip ?? '-',
+                                            'phone' => $tc->user->profile->phone ?? '-',
+                                            'student_count' => $cp->studentPkls->where('teacher_id', $tc->id)->count(),
+                                        ])->values()->toArray(),
+                                    ];
+                                @endphp
                                 <button type="button" 
-                                        onclick="openEditCompanyModal({{ json_encode([
-                                            'id' => $cp->id,
-                                            'name' => $cp->name,
-                                            'address' => $cp->address,
-                                            'contact_person' => $cp->contact_person,
-                                            'phone' => $cp->phone,
-                                            'work_days' => $cp->work_days,
-                                            'gps_enabled' => (bool) $cp->gps_enabled,
-                                            'latitude' => $cp->latitude,
-                                            'longitude' => $cp->longitude,
-                                            'radius_meters' => $cp->radius_meters,
-                                            'major_ids' => $cp->majors->pluck('id')->toArray(),
-                                            'update_url' => route('adminsekolah.companies.update', $cp),
-                                        ]) }})"
+                                        onclick="openEditCompanyModal({{ json_encode($modalData) }})"
                                         class="inline-flex items-center px-2.5 py-1.5 rounded-lg text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 transition-colors cursor-pointer"
-                                        title="Ubah data kemitraan DU/DI">
+                                        title="Kelola & edit data kemitraan DU/DI">
                                     <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-                                    Edit
+                                    Kelola & Edit
                                 </button>
                                 @if($cp->studentPkls->count() === 0)
                                     <form action="{{ route('adminsekolah.companies.destroy', $cp) }}" method="POST" class="inline" onsubmit="return confirm('Hapus data mitra industri {{ $cp->name }}?')">
@@ -395,130 +428,320 @@
     </div>
 </div>
 
-<!-- Modal Edit Company -->
+<!-- Modal Edit & Management Company (Multi-Tab: Profil, Siswa PKL, Guru, Mentor) -->
 <div id="modal-edit-company" onclick="if(event.target === this) this.classList.add('hidden')" class="hidden fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
-    <div class="bg-white w-full max-w-xl rounded-3xl p-6 shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto animate-in fade-in duration-150">
-        <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
+    <div class="bg-white w-full max-w-3xl rounded-3xl p-6 shadow-2xl border border-slate-100 max-h-[92vh] overflow-y-auto animate-in fade-in duration-150 space-y-5">
+        
+        <!-- Modal Header -->
+        <div class="flex items-start justify-between pb-3 border-b border-slate-100">
             <div>
-                <h3 class="text-base font-extrabold text-slate-900 tracking-tight">Edit Data Mitra DU/DI</h3>
-                <p class="text-xs text-slate-500 font-medium">Perbarui profil industri, jurusan kejuruan terkait, dan lokasi geofencing</p>
+                <div class="flex items-center space-x-2">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                        MITRA DU/DI
+                    </span>
+                    <h3 id="modal-company-title" class="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight">GARUDA TV</h3>
+                </div>
+                <p class="text-xs text-slate-500 font-medium mt-0.5">Kelola profil industri, pantau siswa PKL aktif, guru pembimbing, dan mentor lapangan</p>
             </div>
             <button type="button" onclick="document.getElementById('modal-edit-company').classList.add('hidden')" class="p-1.5 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition-colors">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
         </div>
 
-        <form id="form-edit-company" method="POST" class="space-y-4">
-            @csrf
-            @method('PUT')
+        <!-- Tab Navigation Bar -->
+        <div class="flex items-center bg-slate-100/80 p-1.5 rounded-2xl gap-1 text-xs font-bold overflow-x-auto">
+            <button type="button" id="btn-tab-profile" onclick="switchCompanyTab('tab-profile')"
+                    class="company-tab-btn px-3.5 py-2 rounded-xl bg-indigo-600 text-white shadow-xs transition-all flex items-center space-x-1.5 shrink-0 cursor-pointer">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+                <span>Profil & Lokasi</span>
+            </button>
 
-            <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1.5">Nama Perusahaan / Industri</label>
-                <input type="text" name="name" id="edit-name" required 
-                       class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-semibold text-slate-900">
-            </div>
+            <button type="button" id="btn-tab-students" onclick="switchCompanyTab('tab-students')"
+                    class="company-tab-btn px-3.5 py-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-white/80 transition-all flex items-center space-x-1.5 shrink-0 cursor-pointer">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                <span>Siswa PKL</span>
+                <span id="modal-badge-student-count" class="ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-extrabold bg-indigo-100 text-indigo-700">0</span>
+            </button>
 
-            <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1.5">Alamat Kantor / Pabrik Tempat PKL</label>
-                <textarea name="address" id="edit-address" rows="2" required 
-                          class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium text-slate-900 leading-relaxed"></textarea>
-            </div>
+            <button type="button" id="btn-tab-teachers" onclick="switchCompanyTab('tab-teachers')"
+                    class="company-tab-btn px-3.5 py-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-white/80 transition-all flex items-center space-x-1.5 shrink-0 cursor-pointer">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                <span>Guru Pembimbing</span>
+                <span id="modal-badge-teacher-count" class="ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-extrabold bg-blue-100 text-blue-700">0</span>
+            </button>
 
-            <!-- Jurusan Terkait / Program Keahlian -->
-            <div class="p-4 rounded-2xl bg-indigo-50/50 border border-indigo-100/80 space-y-2.5">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <span class="text-xs font-bold text-indigo-950 block">Jurusan / Kompetensi Keahlian Terkait</span>
-                        <span class="text-[11px] text-slate-500 font-medium">Tentukan program keahlian yang relevan untuk DU/DI ini</span>
+            <button type="button" id="btn-tab-mentors" onclick="switchCompanyTab('tab-mentors')"
+                    class="company-tab-btn px-3.5 py-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-white/80 transition-all flex items-center space-x-1.5 shrink-0 cursor-pointer">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                <span>Mentor DU/DI</span>
+                <span id="modal-badge-mentor-count" class="ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-700">0</span>
+            </button>
+        </div>
+
+        <!-- ================= TAB 1: PROFIL & GEOFENCING FORM ================= -->
+        <div id="tab-profile" class="company-tab-pane space-y-4">
+            <form id="form-edit-company" method="POST" class="space-y-4">
+                @csrf
+                @method('PUT')
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5">Nama Perusahaan / Industri</label>
+                    <input type="text" name="name" id="edit-name" required 
+                           class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-semibold text-slate-900">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5">Alamat Kantor / Pabrik Tempat PKL</label>
+                    <textarea name="address" id="edit-address" rows="2" required 
+                              class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium text-slate-900 leading-relaxed"></textarea>
+                </div>
+
+                <!-- Jurusan Terkait / Program Keahlian -->
+                <div class="p-4 rounded-2xl bg-indigo-50/50 border border-indigo-100/80 space-y-2.5">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <span class="text-xs font-bold text-indigo-950 block">Jurusan / Kompetensi Keahlian Terkait</span>
+                            <span class="text-[11px] text-slate-500 font-medium">Tentukan program keahlian yang relevan untuk DU/DI ini</span>
+                        </div>
+                        <div class="flex items-center space-x-2 text-[11px]">
+                            <button type="button" onclick="toggleAllMajors('edit-major-check', true)" class="font-bold text-indigo-600 hover:text-indigo-800">Pilih Semua</button>
+                            <span class="text-slate-300">|</span>
+                            <button type="button" onclick="toggleAllMajors('edit-major-check', false)" class="font-bold text-slate-500 hover:text-slate-700">Kosongkan</button>
+                        </div>
                     </div>
-                    <div class="flex items-center space-x-2 text-[11px]">
-                        <button type="button" onclick="toggleAllMajors('edit-major-check', true)" class="font-bold text-indigo-600 hover:text-indigo-800">Pilih Semua</button>
-                        <span class="text-slate-300">|</span>
-                        <button type="button" onclick="toggleAllMajors('edit-major-check', false)" class="font-bold text-slate-500 hover:text-slate-700">Kosongkan</button>
+
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto p-1">
+                        @foreach($majors as $m)
+                            <label class="flex items-start space-x-2 p-2 rounded-xl bg-white border border-slate-200 hover:border-indigo-300 hover:bg-white/90 transition cursor-pointer select-none">
+                                <input type="checkbox" name="major_ids[]" value="{{ $m->id }}" id="edit-major-{{ $m->id }}"
+                                       class="edit-major-check mt-0.5 w-4 h-4 rounded text-indigo-600 border-slate-300 focus:ring-indigo-500/20 cursor-pointer">
+                                <div class="min-w-0">
+                                    <span class="block text-xs font-extrabold text-slate-800 leading-tight">{{ $m->code }}</span>
+                                    <span class="block text-[10px] text-slate-500 leading-tight truncate" title="{{ $m->name }}">{{ $m->name }}</span>
+                                </div>
+                            </label>
+                        @endforeach
+                    </div>
+                    <p class="text-[10px] text-slate-500 font-medium">Jika tidak ada yang dicentang, DU/DI akan otomatis berstatus <strong>Semua Jurusan / Lintas Program Keahlian</strong>.</p>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">Nama Penanggung Jawab (PIC)</label>
+                        <input type="text" name="contact_person" id="edit-contact-person" required 
+                               class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium text-slate-900">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">Telepon Kantor / PIC</label>
+                        <input type="text" name="phone" id="edit-phone" required 
+                               class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium text-slate-900">
                     </div>
                 </div>
 
-                <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto p-1">
-                    @foreach($majors as $m)
-                        <label class="flex items-start space-x-2 p-2 rounded-xl bg-white border border-slate-200 hover:border-indigo-300 hover:bg-white/90 transition cursor-pointer select-none">
-                            <input type="checkbox" name="major_ids[]" value="{{ $m->id }}" id="edit-major-{{ $m->id }}"
-                                   class="edit-major-check mt-0.5 w-4 h-4 rounded text-indigo-600 border-slate-300 focus:ring-indigo-500/20 cursor-pointer">
-                            <div class="min-w-0">
-                                <span class="block text-xs font-extrabold text-slate-800 leading-tight">{{ $m->code }}</span>
-                                <span class="block text-[10px] text-slate-500 leading-tight truncate" title="{{ $m->name }}">{{ $m->name }}</span>
-                            </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5">Hari Kerja Mingguan</label>
+                    <select name="work_days" id="edit-work-days" 
+                            class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-semibold text-slate-900">
+                        <option value="5_days">5 Hari Kerja (Senin s.d. Jumat)</option>
+                        <option value="6_days">6 Hari Kerja (Senin s.d. Sabtu)</option>
+                    </select>
+                </div>
+
+                <!-- GPS Geofencing Section -->
+                <div class="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/80 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <span class="text-xs font-bold text-slate-900 block">Validasi Presensi Geofencing GPS</span>
+                            <span class="text-[11px] text-slate-500 font-medium">Kunci radius presensi hanya di lokasi kantor</span>
+                        </div>
+                        <label class="flex items-center space-x-2 cursor-pointer select-none">
+                            <input type="checkbox" name="gps_enabled" value="1" id="edit-check-gps" onchange="toggleEditGpsFields()" 
+                                   class="w-4 h-4 rounded text-indigo-600 border-slate-300 focus:ring-indigo-500/20 cursor-pointer">
+                            <span class="text-xs text-indigo-700 font-bold">Aktifkan</span>
                         </label>
-                    @endforeach
+                    </div>
+
+                    <div id="edit-gps-fields" class="hidden grid grid-cols-3 gap-2.5 pt-2 border-t border-slate-200/60">
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-600 mb-1">Latitude</label>
+                            <input type="text" name="latitude" id="edit-lat-in" placeholder="-6.2088" 
+                                   class="w-full text-xs p-2 rounded-xl bg-white border border-slate-200 font-mono text-slate-800">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-600 mb-1">Longitude</label>
+                            <input type="text" name="longitude" id="edit-lng-in" placeholder="106.8456" 
+                                   class="w-full text-xs p-2 rounded-xl bg-white border border-slate-200 font-mono text-slate-800">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-600 mb-1">Radius (Meter)</label>
+                            <input type="number" name="radius_meters" id="edit-radius-in" value="100" min="10" max="5000" 
+                                   class="w-full text-xs p-2 rounded-xl bg-white border border-slate-200 font-bold text-slate-800">
+                        </div>
+                    </div>
                 </div>
-                <p class="text-[10px] text-slate-500 font-medium">Jika tidak ada yang dicentang, DU/DI akan otomatis berstatus <strong>Semua Jurusan / Lintas Program Keahlian</strong>.</p>
+
+                <div class="flex items-center justify-end space-x-2.5 pt-3 border-t border-slate-100">
+                    <x-button type="button" variant="secondary" size="md" onclick="document.getElementById('modal-edit-company').classList.add('hidden')">
+                        Batal
+                    </x-button>
+                    <x-button type="submit" variant="primary" size="md">
+                        Simpan Perubahan
+                    </x-button>
+                </div>
+            </form>
+        </div>
+
+        <!-- ================= TAB 2: SISWA PKL DI PERUSAHAAN INI ================= -->
+        <div id="tab-students" class="company-tab-pane hidden space-y-4">
+            <div class="flex items-center justify-between p-3 rounded-2xl bg-indigo-50/60 border border-indigo-100 text-xs">
+                <div class="flex items-center space-x-2">
+                    <span class="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                    </span>
+                    <span class="text-indigo-950 font-medium">Daftar siswa magang aktif yang ditempatkan di mitra industri ini.</span>
+                </div>
+                <a href="{{ route('adminsekolah.plotting') }}" class="px-3 py-1.5 rounded-xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 transition-colors shadow-xs">
+                    + Plotting Siswa Baru
+                </a>
             </div>
 
-            <div class="grid grid-cols-2 gap-3">
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1.5">Nama Penanggung Jawab (PIC)</label>
-                    <input type="text" name="contact_person" id="edit-contact-person" required 
-                           class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium text-slate-900">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1.5">Telepon Kantor / PIC</label>
-                    <input type="text" name="phone" id="edit-phone" required 
-                           class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium text-slate-900">
-                </div>
+            <!-- Student List Table -->
+            <div class="overflow-x-auto border border-slate-200/80 rounded-2xl">
+                <table class="w-full text-left text-xs">
+                    <thead class="bg-slate-50 text-slate-500 font-extrabold uppercase text-[10px] tracking-wider border-b border-slate-200/80">
+                        <tr>
+                            <th class="py-3 px-4">Nama Siswa</th>
+                            <th class="py-3 px-3">Kelas & Jurusan</th>
+                            <th class="py-3 px-3">Guru Pembimbing</th>
+                            <th class="py-3 px-3">Mentor DU/DI</th>
+                            <th class="py-3 px-3 text-center">Status</th>
+                            <th class="py-3 px-4 text-right">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="modal-student-tbody" class="divide-y divide-slate-100 text-slate-700 font-medium">
+                        <!-- Populated by JavaScript -->
+                    </tbody>
+                </table>
             </div>
 
+            <div id="modal-students-empty" class="hidden p-8 text-center rounded-2xl bg-slate-50 border border-slate-200/80">
+                <div class="w-10 h-10 rounded-xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                </div>
+                <span class="text-xs font-bold text-slate-800 block">Belum Ada Siswa Ditempatkan</span>
+                <p class="text-[11px] text-slate-500 mt-0.5">Belum ada siswa yang diplot ke perusahaan ini untuk periode aktif.</p>
+                <div class="mt-3">
+                    <a href="{{ route('adminsekolah.plotting') }}" class="inline-flex items-center px-3 py-1.5 rounded-xl bg-indigo-600 text-white font-bold text-xs hover:bg-indigo-700 transition shadow-xs">
+                        + Plotting Siswa Sekarang
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= TAB 3: GURU PEMBIMBING SEKOLAH ================= -->
+        <div id="tab-teachers" class="company-tab-pane hidden space-y-4">
+            <div class="p-3 rounded-2xl bg-blue-50/60 border border-blue-100 text-xs text-blue-950 flex items-center space-x-2">
+                <span class="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center font-bold shrink-0">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                </span>
+                <span>Guru pembimbing sekolah yang bertugas mendampingi, memantau absensi/jurnal, dan melakukan supervisi siswa di perusahaan ini.</span>
+            </div>
+
+            <div id="modal-teacher-container" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <!-- Populated by JavaScript -->
+            </div>
+
+            <div id="modal-teachers-empty" class="hidden p-8 text-center rounded-2xl bg-slate-50 border border-slate-200/80">
+                <div class="w-10 h-10 rounded-xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                </div>
+                <span class="text-xs font-bold text-slate-800 block">Belum Ada Guru Ditugaskan</span>
+                <p class="text-[11px] text-slate-500 mt-0.5">Guru pembimbing otomatis terhubung ke DU/DI ini saat siswa diplot pada menu Plotting.</p>
+            </div>
+        </div>
+
+        <!-- ================= TAB 4: MENTOR LAPANGAN DU/DI ================= -->
+        <div id="tab-mentors" class="company-tab-pane hidden space-y-4">
+            <div class="p-3 rounded-2xl bg-emerald-50/60 border border-emerald-100 text-xs text-emerald-950 flex items-center space-x-2">
+                <span class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold shrink-0">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                </span>
+                <span>Akun pembimbing industri / mentor lapangan untuk verifikasi presensi, approval jurnal kegiatan, dan evaluasi nilai akhir.</span>
+            </div>
+
+            <!-- Existing Mentors List -->
             <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1.5">Hari Kerja Mingguan</label>
-                <select name="work_days" id="edit-work-days" 
-                        class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-semibold text-slate-900">
-                    <option value="5_days">5 Hari Kerja (Senin s.d. Jumat)</option>
-                    <option value="6_days">6 Hari Kerja (Senin s.d. Sabtu)</option>
-                </select>
+                <h4 class="text-xs font-bold text-slate-900 mb-2">Mentor Terdaftar</h4>
+                <div id="modal-mentor-container" class="space-y-2">
+                    <!-- Populated by JavaScript -->
+                </div>
+                <div id="modal-mentors-empty" class="hidden p-6 text-center rounded-2xl bg-slate-50 border border-slate-200/80">
+                    <span class="text-xs font-bold text-slate-600 block">Belum Ada Mentor Terdaftar</span>
+                    <p class="text-[11px] text-slate-400 mt-0.5">Tambahkan akun mentor industri melalui formulir di bawah ini.</p>
+                </div>
             </div>
 
-            <!-- GPS Geofencing Section -->
+            <!-- Form Add New Supervisor for this Company -->
             <div class="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/80 space-y-3">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <span class="text-xs font-bold text-slate-900 block">Validasi Presensi Geofencing GPS</span>
-                        <span class="text-[11px] text-slate-500 font-medium">Kunci radius presensi hanya di lokasi kantor</span>
-                    </div>
-                    <label class="flex items-center space-x-2 cursor-pointer select-none">
-                        <input type="checkbox" name="gps_enabled" value="1" id="edit-check-gps" onchange="toggleEditGpsFields()" 
-                               class="w-4 h-4 rounded text-indigo-600 border-slate-300 focus:ring-indigo-500/20 cursor-pointer">
-                        <span class="text-xs text-indigo-700 font-bold">Aktifkan</span>
-                    </label>
+                <div class="flex items-center space-x-2 pb-2 border-b border-slate-200/60">
+                    <span class="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs font-bold">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                    </span>
+                    <span class="text-xs font-bold text-slate-900">+ Tambah Akun Mentor DU/DI Baru</span>
                 </div>
 
-                <div id="edit-gps-fields" class="hidden grid grid-cols-3 gap-2.5 pt-2 border-t border-slate-200/60">
-                    <div>
-                        <label class="block text-[10px] font-bold text-slate-600 mb-1">Latitude</label>
-                        <input type="text" name="latitude" id="edit-lat-in" placeholder="-6.2088" 
-                               class="w-full text-xs p-2 rounded-xl bg-white border border-slate-200 font-mono text-slate-800">
+                <form id="form-add-supervisor-to-company" method="POST" class="space-y-3">
+                    @csrf
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-600 mb-1">Nama Lengkap Mentor</label>
+                            <input type="text" name="name" required placeholder="Nama Pembimbing Lapangan"
+                                   class="w-full text-xs p-2.5 rounded-xl bg-white border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 font-semibold text-slate-900">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-600 mb-1">Email Login Mentor</label>
+                            <input type="email" name="email" required placeholder="mentor@perusahaan.com"
+                                   class="w-full text-xs p-2.5 rounded-xl bg-white border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 font-semibold text-slate-900">
+                        </div>
                     </div>
-                    <div>
-                        <label class="block text-[10px] font-bold text-slate-600 mb-1">Longitude</label>
-                        <input type="text" name="longitude" id="edit-lng-in" placeholder="106.8456" 
-                               class="w-full text-xs p-2 rounded-xl bg-white border border-slate-200 font-mono text-slate-800">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-bold text-slate-600 mb-1">Radius (Meter)</label>
-                        <input type="number" name="radius_meters" id="edit-radius-in" value="100" min="10" max="5000" 
-                               class="w-full text-xs p-2 rounded-xl bg-white border border-slate-200 font-bold text-slate-800">
-                    </div>
-                </div>
-            </div>
 
-            <div class="flex items-center justify-end space-x-2.5 pt-3 border-t border-slate-100">
-                <x-button type="button" variant="secondary" size="md" onclick="document.getElementById('modal-edit-company').classList.add('hidden')">
-                    Batal
-                </x-button>
-                <x-button type="submit" variant="primary" size="md">
-                    Simpan Perubahan
-                </x-button>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-600 mb-1">Jabatan / Posisi (Opsional)</label>
+                            <input type="text" name="position" placeholder="Contoh: Senior Video Editor / HRD"
+                                   class="w-full text-xs p-2.5 rounded-xl bg-white border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 font-medium text-slate-900">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-600 mb-1">Nomor Telepon / WhatsApp</label>
+                            <input type="text" name="phone" placeholder="08123456789"
+                                   class="w-full text-xs p-2.5 rounded-xl bg-white border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 font-medium text-slate-900">
+                        </div>
+                    </div>
+
+                    <p class="text-[10px] text-slate-500">Kata sandi default login mentor adalah <code class="font-bold text-emerald-700 bg-emerald-50 px-1 py-0.5 rounded">password</code>.</p>
+
+                    <div class="flex justify-end pt-1">
+                        <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 transition shadow-xs cursor-pointer">
+                            Simpan & Buat Akun Mentor
+                        </button>
+                    </div>
+                </form>
             </div>
-        </form>
+        </div>
+
     </div>
 </div>
+
+<!-- Hidden Action Forms for Modal Buttons -->
+<form id="form-unplot-from-modal" method="POST" class="hidden">
+    @csrf
+    @method('DELETE')
+</form>
+
+<form id="form-destroy-supervisor-from-modal" method="POST" class="hidden">
+    @csrf
+    @method('DELETE')
+</form>
 
 <script>
     function openAddCompanyModal() {
@@ -551,7 +774,34 @@
         });
     }
 
+    function switchCompanyTab(tabId) {
+        // Sembunyikan semua tab pane
+        document.querySelectorAll('.company-tab-pane').forEach(el => el.classList.add('hidden'));
+
+        // Reset style tombol tab
+        document.querySelectorAll('.company-tab-btn').forEach(btn => {
+            btn.className = "company-tab-btn px-3.5 py-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-white/80 transition-all flex items-center space-x-1.5 shrink-0 cursor-pointer";
+        });
+
+        // Tampilkan pane aktif
+        const activePane = document.getElementById(tabId);
+        if (activePane) activePane.classList.remove('hidden');
+
+        // Beri style aktif pada tombol
+        const activeBtn = document.getElementById('btn-' + tabId);
+        if (activeBtn) {
+            activeBtn.className = "company-tab-btn px-3.5 py-2 rounded-xl bg-indigo-600 text-white shadow-xs transition-all flex items-center space-x-1.5 shrink-0 cursor-pointer";
+        }
+    }
+
     function openEditCompanyModal(data) {
+        // Reset ke tab profil secara default
+        switchCompanyTab('tab-profile');
+
+        // Judul modal
+        document.getElementById('modal-company-title').textContent = data.name || 'Mitra DU/DI';
+
+        // 1. Populasi Form Edit Profil
         const form = document.getElementById('form-edit-company');
         form.action = data.update_url;
 
@@ -561,7 +811,6 @@
         document.getElementById('edit-phone').value = data.phone || '';
         document.getElementById('edit-work-days').value = data.work_days || '5_days';
 
-        // Check GPS
         const gpsCheck = document.getElementById('edit-check-gps');
         gpsCheck.checked = !!data.gps_enabled;
         document.getElementById('edit-lat-in').value = data.latitude !== null ? data.latitude : '';
@@ -569,7 +818,6 @@
         document.getElementById('edit-radius-in').value = data.radius_meters || 100;
         toggleEditGpsFields();
 
-        // Check majors
         document.querySelectorAll('.edit-major-check').forEach(el => {
             el.checked = false;
         });
@@ -580,7 +828,174 @@
             });
         }
 
+        // 2. Populasi Tab Siswa PKL
+        const students = Array.isArray(data.students) ? data.students : [];
+        document.getElementById('modal-badge-student-count').textContent = students.length;
+
+        const studentTbody = document.getElementById('modal-student-tbody');
+        const studentsEmpty = document.getElementById('modal-students-empty');
+        studentTbody.innerHTML = '';
+
+        if (students.length > 0) {
+            studentsEmpty.classList.add('hidden');
+            studentTbody.closest('div').classList.remove('hidden');
+
+            students.forEach(st => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50/70 transition-colors";
+                tr.innerHTML = `
+                    <td class="py-3 px-4">
+                        <div class="flex items-center space-x-2.5">
+                            <div class="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-700 font-bold text-xs flex items-center justify-center shrink-0">
+                                ${st.name.charAt(0)}
+                            </div>
+                            <div class="min-w-0">
+                                <span class="font-bold text-slate-900 block truncate">${st.name}</span>
+                                <span class="text-[10px] text-slate-400 font-mono block">NISN: ${st.nisn}</span>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="py-3 px-3">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200/60">
+                            ${st.class}
+                        </span>
+                    </td>
+                    <td class="py-3 px-3">
+                        <span class="font-semibold text-slate-800 block text-xs">${st.teacher_name}</span>
+                    </td>
+                    <td class="py-3 px-3">
+                        <span class="font-medium text-slate-700 block text-xs">${st.supervisor_name}</span>
+                    </td>
+                    <td class="py-3 px-3 text-center">
+                        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            ${st.status}
+                        </span>
+                    </td>
+                    <td class="py-3 px-4 text-right whitespace-nowrap">
+                        <button type="button" onclick="submitUnplot('${st.unplot_url}', '${st.name}')"
+                                class="px-2 py-1 rounded-lg bg-rose-50 text-rose-700 text-[10px] font-bold border border-rose-200 hover:bg-rose-100 transition cursor-pointer"
+                                title="Batalkan penugasan siswa dari mitra ini">
+                            Unplot
+                        </button>
+                    </td>
+                `;
+                studentTbody.appendChild(tr);
+            });
+        } else {
+            studentTbody.closest('div').classList.add('hidden');
+            studentsEmpty.classList.remove('hidden');
+        }
+
+        // 3. Populasi Tab Guru Pembimbing
+        const teachers = Array.isArray(data.teachers) ? data.teachers : [];
+        document.getElementById('modal-badge-teacher-count').textContent = teachers.length;
+
+        const teacherContainer = document.getElementById('modal-teacher-container');
+        const teachersEmpty = document.getElementById('modal-teachers-empty');
+        teacherContainer.innerHTML = '';
+
+        if (teachers.length > 0) {
+            teachersEmpty.classList.add('hidden');
+            teacherContainer.classList.remove('hidden');
+
+            teachers.forEach(tc => {
+                const card = document.createElement('div');
+                card.className = "p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-start space-x-3";
+                card.innerHTML = `
+                    <div class="w-9 h-9 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs shrink-0">
+                        ${tc.name.charAt(0)}
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <span class="font-bold text-slate-900 block text-xs truncate">${tc.name}</span>
+                        <span class="text-[10px] text-slate-400 font-mono block">NIP: ${tc.nip || '-'}</span>
+                        <div class="flex items-center space-x-2 mt-1 text-[11px] text-slate-500">
+                            <span>${tc.email}</span>
+                            ${tc.phone ? `<span>&bull; ${tc.phone}</span>` : ''}
+                        </div>
+                        <div class="mt-2">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-blue-50 text-blue-700 border border-blue-200/80">
+                                Membimbing ${tc.student_count} Siswa di DU/DI ini
+                            </span>
+                        </div>
+                    </div>
+                `;
+                teacherContainer.appendChild(card);
+            });
+        } else {
+            teacherContainer.classList.add('hidden');
+            teachersEmpty.classList.remove('hidden');
+        }
+
+        // 4. Populasi Tab Mentor DU/DI
+        const supervisors = Array.isArray(data.supervisors) ? data.supervisors : [];
+        document.getElementById('modal-badge-mentor-count').textContent = supervisors.length;
+
+        const mentorContainer = document.getElementById('modal-mentor-container');
+        const mentorsEmpty = document.getElementById('modal-mentors-empty');
+        mentorContainer.innerHTML = '';
+
+        if (supervisors.length > 0) {
+            mentorsEmpty.classList.add('hidden');
+            mentorContainer.classList.remove('hidden');
+
+            supervisors.forEach(sup => {
+                const card = document.createElement('div');
+                card.className = "p-3 rounded-2xl bg-white border border-slate-200 flex items-center justify-between";
+                card.innerHTML = `
+                    <div class="flex items-center space-x-3 min-w-0">
+                        <div class="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 font-bold text-xs flex items-center justify-center shrink-0">
+                            ${sup.name.charAt(0)}
+                        </div>
+                        <div class="min-w-0">
+                            <div class="flex items-center space-x-1.5">
+                                <span class="font-bold text-slate-900 text-xs block truncate">${sup.name}</span>
+                                <span class="text-[9px] font-semibold px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 border border-slate-200">
+                                    ${sup.position}
+                                </span>
+                            </div>
+                            <span class="text-[11px] text-slate-400 font-mono block">${sup.email} ${sup.phone ? '&bull; ' + sup.phone : ''}</span>
+                        </div>
+                    </div>
+
+                    ${!sup.has_students ? `
+                        <button type="button" onclick="submitDestroySupervisor('${sup.destroy_url}', '${sup.name}')"
+                                class="px-2 py-1 rounded-lg text-rose-600 hover:bg-rose-50 border border-rose-200 text-[10px] font-bold transition cursor-pointer">
+                            Hapus
+                        </button>
+                    ` : `
+                        <span class="text-[10px] text-slate-400 font-medium px-2 py-1 bg-slate-50 rounded-lg">
+                            Mentor Aktif
+                        </span>
+                    `}
+                `;
+                mentorContainer.appendChild(card);
+            });
+        } else {
+            mentorContainer.classList.add('hidden');
+            mentorsEmpty.classList.remove('hidden');
+        }
+
+        // Set action URL form tambah mentor baru
+        document.getElementById('form-add-supervisor-to-company').action = data.store_supervisor_url;
+
+        // Buka Modal
         document.getElementById('modal-edit-company').classList.remove('hidden');
+    }
+
+    function submitUnplot(url, studentName) {
+        if (confirm(`Batalkan penugasan PKL siswa "${studentName}" dari mitra industri ini?`)) {
+            const form = document.getElementById('form-unplot-from-modal');
+            form.action = url;
+            form.submit();
+        }
+    }
+
+    function submitDestroySupervisor(url, mentorName) {
+        if (confirm(`Hapus akun mentor lapangan "${mentorName}"?`)) {
+            const form = document.getElementById('form-destroy-supervisor-from-modal');
+            form.action = url;
+            form.submit();
+        }
     }
 </script>
 @endsection

@@ -649,7 +649,14 @@ class AdminSekolahController extends Controller
     {
         $schoolId = $this->getSchoolId();
         $query = Company::where('school_id', $schoolId)
-            ->with(['supervisors.user', 'studentPkls', 'majors']);
+            ->with([
+                'supervisors.user.profile',
+                'studentPkls.student.user.profile',
+                'studentPkls.student.class.major',
+                'studentPkls.teacher.user.profile',
+                'studentPkls.supervisor.user',
+                'majors',
+            ]);
 
         // Search filter
         if ($search = $request->query('search')) {
@@ -802,6 +809,66 @@ class AdminSekolahController extends Controller
         });
 
         return back()->with('success', 'Data mitra DU/DI berhasil dihapus.');
+    }
+
+    public function storeCompanySupervisor(Request $request, Company $company)
+    {
+        $schoolId = $this->getSchoolId();
+        abort_if($company->school_id !== $schoolId, 403);
+
+        $request->validate([
+            'name' => ['required', 'string', 'max:100'],
+            'email' => ['required', 'email', 'unique:users,email'],
+            'phone' => ['nullable', 'string', 'max:20'],
+            'position' => ['nullable', 'string', 'max:100'],
+        ]);
+
+        DB::transaction(function () use ($request, $schoolId, $company) {
+            $user = User::create([
+                'school_id' => $schoolId,
+                'name' => $request->name,
+                'email' => $request->email,
+                'password' => Hash::make('password'),
+                'role' => 'pembimbing-dudi',
+                'is_active' => true,
+            ]);
+
+            Profile::create([
+                'user_id' => $user->id,
+                'gender' => 'L',
+                'phone' => $request->phone,
+                'address' => $company->address,
+            ]);
+
+            Supervisor::create([
+                'user_id' => $user->id,
+                'company_id' => $company->id,
+                'position' => $request->position ?? 'Mentor Lapangan DU/DI',
+            ]);
+        });
+
+        return back()->with('success', 'Mentor DU/DI berhasil ditambahkan untuk ' . $company->name);
+    }
+
+    public function destroyCompanySupervisor(Company $company, Supervisor $supervisor)
+    {
+        $schoolId = $this->getSchoolId();
+        abort_if($company->school_id !== $schoolId || $supervisor->company_id !== $company->id, 403);
+
+        if ($supervisor->studentPkls()->exists()) {
+            return back()->withErrors(['supervisor' => 'Mentor tidak dapat dihapus karena masih ditugaskan pada siswa PKL aktif.']);
+        }
+
+        DB::transaction(function () use ($supervisor) {
+            $user = $supervisor->user;
+            $supervisor->delete();
+            if ($user) {
+                $user->profile()->delete();
+                $user->delete();
+            }
+        });
+
+        return back()->with('success', 'Akun mentor DU/DI berhasil dihapus.');
     }
 
     public function plotting(Request $request)
