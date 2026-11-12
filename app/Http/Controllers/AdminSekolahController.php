@@ -679,8 +679,13 @@ class AdminSekolahController extends Controller
 
         $companies = $query->latest()->paginate(10)->withQueryString();
         $majors = Major::where('school_id', $schoolId)->orderBy('name')->get();
+        $allTeachers = Teacher::whereHas('user', fn($q) => $q->where('school_id', $schoolId))
+            ->with(['user.profile'])
+            ->get()
+            ->sortBy('user.name')
+            ->values();
 
-        return view('adminsekolah.companies', compact('companies', 'majors', 'selectedMajor'));
+        return view('adminsekolah.companies', compact('companies', 'majors', 'selectedMajor', 'allTeachers'));
     }
 
     public function storeCompany(Request $request)
@@ -850,16 +855,79 @@ class AdminSekolahController extends Controller
         return back()->with('success', 'Mentor DU/DI berhasil ditambahkan untuk ' . $company->name);
     }
 
-    public function destroyCompanySupervisor(Company $company, Supervisor $supervisor)
+    public function updateCompanySupervisor(Request $request, Company $company, Supervisor $supervisor)
     {
         $schoolId = $this->getSchoolId();
         abort_if($company->school_id !== $schoolId || $supervisor->company_id !== $company->id, 403);
+        abort_if($supervisor->user->school_id !== $schoolId, 403);
 
-        if ($supervisor->studentPkls()->exists()) {
-            return back()->withErrors(['supervisor' => 'Mentor tidak dapat dihapus karena masih ditugaskan pada siswa PKL aktif.']);
+        $request->validate([
+            'name' => ['required', 'string', 'max:100'],
+            'email' => ['required', 'email', 'max:100', Rule::unique('users', 'email')->ignore($supervisor->user_id)],
+            'phone' => ['nullable', 'string', 'max:20'],
+            'position' => ['nullable', 'string', 'max:100'],
+            'password' => ['nullable', 'string', 'min:6'],
+        ]);
+
+        DB::transaction(function () use ($request, $supervisor) {
+            $user = $supervisor->user;
+            $userData = [
+                'name' => $request->name,
+                'email' => $request->email,
+            ];
+            if ($request->filled('password')) {
+                $userData['password'] = Hash::make($request->password);
+            }
+            $user->update($userData);
+
+            $supervisor->update([
+                'position' => $request->position ?? 'Mentor Lapangan DU/DI',
+            ]);
+
+            $profile = $user->profile;
+            if ($profile) {
+                $profile->update([
+                    'phone' => $request->phone,
+                ]);
+            } else {
+                Profile::create([
+                    'user_id' => $user->id,
+                    'gender' => 'L',
+                    'phone' => $request->phone,
+                ]);
+            }
+        });
+
+        return back()->with('success', 'Data mentor DU/DI ' . $request->name . ' berhasil diperbarui.');
+    }
+
+    public function destroyCompanySupervisor(Request $request, Company $company, Supervisor $supervisor)
+    {
+        $schoolId = $this->getSchoolId();
+        abort_if($company->school_id !== $schoolId || $supervisor->company_id !== $company->id, 403);
+        abort_if($supervisor->user->school_id !== $schoolId, 403);
+
+        $hasStudents = $supervisor->studentPkls()->exists();
+        $replacementId = $request->input('replacement_supervisor_id');
+        $confirmDetach = $request->boolean('confirm_detach') || $replacementId === 'detach';
+
+        if ($hasStudents && !$replacementId && !$confirmDetach) {
+            return back()->withErrors(['supervisor' => 'Mentor tidak dapat dihapus karena masih ditugaskan pada siswa PKL aktif. Silakan pilih mentor pengganti atau lepas penugasan terlebih dahulu.']);
         }
 
-        DB::transaction(function () use ($supervisor) {
+        DB::transaction(function () use ($supervisor, $company, $hasStudents, $replacementId, $confirmDetach) {
+            if ($hasStudents) {
+                if ($replacementId && $replacementId !== 'detach') {
+                    $replacement = Supervisor::where('id', $replacementId)
+                        ->where('company_id', $company->id)
+                        ->firstOrFail();
+
+                    $supervisor->studentPkls()->update(['supervisor_id' => $replacement->id]);
+                } elseif ($confirmDetach) {
+                    $supervisor->studentPkls()->update(['supervisor_id' => null]);
+                }
+            }
+
             $user = $supervisor->user;
             $supervisor->delete();
             if ($user) {
@@ -869,6 +937,64 @@ class AdminSekolahController extends Controller
         });
 
         return back()->with('success', 'Akun mentor DU/DI berhasil dihapus.');
+    }
+
+    public function reassignCompanyBatch(Request $request, Company $company)
+    {
+        $schoolId = $this->getSchoolId();
+        abort_if($company->school_id !== $schoolId, 403);
+
+        $request->validate([
+            'target_type' => ['required', 'in:teacher,supervisor,both'],
+            'teacher_id' => [
+                'nullable',
+                'required_if:target_type,teacher',
+                'required_if:target_type,both',
+                Rule::exists('teachers', 'id')->where(function ($query) use ($schoolId) {
+                    $query->whereIn('user_id', User::where('school_id', $schoolId)->select('id'));
+                }),
+            ],
+            'supervisor_id' => [
+                'nullable',
+                Rule::exists('supervisors', 'id')->where('company_id', $company->id),
+            ],
+            'filter_teacher_id' => ['nullable', 'integer'],
+            'filter_supervisor_id' => ['nullable', 'integer'],
+            'student_pkl_ids' => ['nullable', 'array'],
+            'student_pkl_ids.*' => [Rule::exists('student_pkl', 'id')->where('company_id', $company->id)],
+        ]);
+
+        $query = StudentPkl::where('company_id', $company->id)
+            ->where('school_id', $schoolId);
+
+        if ($request->filled('student_pkl_ids')) {
+            $query->whereIn('id', $request->student_pkl_ids);
+        }
+
+        if ($request->filled('filter_teacher_id')) {
+            $query->where('teacher_id', $request->filter_teacher_id);
+        }
+
+        if ($request->filled('filter_supervisor_id')) {
+            $query->where('supervisor_id', $request->filter_supervisor_id);
+        }
+
+        $updates = [];
+        if (in_array($request->target_type, ['teacher', 'both']) && $request->filled('teacher_id')) {
+            $updates['teacher_id'] = $request->teacher_id;
+        }
+
+        if (in_array($request->target_type, ['supervisor', 'both'])) {
+            $updates['supervisor_id'] = $request->filled('supervisor_id') ? $request->supervisor_id : null;
+        }
+
+        if (empty($updates)) {
+            return back()->withErrors(['batch' => 'Tidak ada perubahan pembimbing yang dipilih.']);
+        }
+
+        $count = $query->update($updates);
+
+        return back()->with('success', "Berhasil memperbarui pembimbing untuk {$count} siswa di {$company->name}.");
     }
 
     public function plotting(Request $request)
@@ -1047,6 +1173,33 @@ class AdminSekolahController extends Controller
             $count = count($studentIds);
             return back()->with('success', "Penugasan PKL untuk {$count} siswa berhasil disimpan.");
         });
+    }
+
+    public function reassignPlotting(Request $request, StudentPkl $studentPkl)
+    {
+        $schoolId = $this->getSchoolId();
+        abort_if($studentPkl->school_id !== $schoolId, 403);
+
+        $request->validate([
+            'teacher_id' => [
+                'required',
+                Rule::exists('teachers', 'id')->where(function ($query) use ($schoolId) {
+                    $query->whereIn('user_id', User::where('school_id', $schoolId)->select('id'));
+                }),
+            ],
+            'supervisor_id' => [
+                'nullable',
+                Rule::exists('supervisors', 'id')->where('company_id', $studentPkl->company_id),
+            ],
+        ]);
+
+        $studentPkl->update([
+            'teacher_id' => $request->teacher_id,
+            'supervisor_id' => $request->filled('supervisor_id') ? $request->supervisor_id : null,
+        ]);
+
+        $studentName = $studentPkl->student->user->name ?? 'Siswa';
+        return back()->with('success', "Guru pembimbing dan mentor untuk {$studentName} berhasil diperbarui.");
     }
 
     public function destroyPlotting(StudentPkl $studentPkl)

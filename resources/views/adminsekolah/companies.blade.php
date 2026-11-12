@@ -208,6 +208,7 @@
                                         'major_ids' => $cp->majors->pluck('id')->toArray(),
                                         'update_url' => route('adminsekolah.companies.update', $cp),
                                         'store_supervisor_url' => route('adminsekolah.companies.supervisors.store', $cp),
+                                        'batch_reassign_url' => route('adminsekolah.companies.reassign-batch', $cp),
                                         'students' => $cp->studentPkls->map(fn($sp) => [
                                             'id' => $sp->id,
                                             'name' => $sp->student->user->name ?? '-',
@@ -215,18 +216,23 @@
                                             'nis' => $sp->student->nis ?? '-',
                                             'class' => $sp->student->class->name ?? '-',
                                             'major' => $sp->student->class->major->code ?? '-',
+                                            'teacher_id' => $sp->teacher_id,
                                             'teacher_name' => $sp->teacher->user->name ?? 'Belum Ditugaskan',
+                                            'supervisor_id' => $sp->supervisor_id,
                                             'supervisor_name' => $sp->supervisor->user->name ?? 'Belum Ditentukan',
                                             'status' => strtoupper($sp->status),
+                                            'reassign_url' => route('adminsekolah.plotting.reassign', $sp),
                                             'unplot_url' => route('adminsekolah.plotting.destroy', $sp),
                                         ])->values()->toArray(),
                                         'supervisors' => $cp->supervisors->map(fn($sup) => [
                                             'id' => $sup->id,
                                             'name' => $sup->user->name ?? '-',
                                             'email' => $sup->user->email ?? '-',
-                                            'phone' => $sup->user->profile->phone ?? '-',
+                                            'phone' => $sup->user->profile->phone ?? '',
                                             'position' => $sup->position ?? 'Mentor Lapangan DU/DI',
+                                            'student_count' => $cp->studentPkls->where('supervisor_id', $sup->id)->count(),
                                             'has_students' => $cp->studentPkls->where('supervisor_id', $sup->id)->isNotEmpty(),
+                                            'update_url' => route('adminsekolah.companies.supervisors.update', [$cp, $sup]),
                                             'destroy_url' => route('adminsekolah.companies.supervisors.destroy', [$cp, $sup]),
                                         ])->values()->toArray(),
                                         'teachers' => $cp->studentPkls->pluck('teacher')->filter()->unique('id')->map(fn($tc) => [
@@ -593,16 +599,23 @@
 
         <!-- ================= TAB 2: SISWA PKL DI PERUSAHAAN INI ================= -->
         <div id="tab-students" class="company-tab-pane hidden space-y-4">
-            <div class="flex items-center justify-between p-3 rounded-2xl bg-indigo-50/60 border border-indigo-100 text-xs">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 rounded-2xl bg-indigo-50/60 border border-indigo-100 text-xs">
                 <div class="flex items-center space-x-2">
-                    <span class="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold">
+                    <span class="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold shrink-0">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
                     </span>
                     <span class="text-indigo-950 font-medium">Daftar siswa magang aktif yang ditempatkan di mitra industri ini.</span>
                 </div>
-                <a href="{{ route('adminsekolah.plotting') }}" class="px-3 py-1.5 rounded-xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 transition-colors shadow-xs">
-                    + Plotting Siswa Baru
-                </a>
+                <div class="flex items-center space-x-2 shrink-0">
+                    <button type="button" onclick="openBatchReassignModal()"
+                            class="px-3 py-1.5 rounded-xl bg-white border border-indigo-200 text-indigo-700 font-bold hover:bg-indigo-50 transition shadow-xs flex items-center space-x-1.5 cursor-pointer">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+                        <span>Ganti Pembimbing Massal</span>
+                    </button>
+                    <a href="{{ route('adminsekolah.plotting') }}" class="px-3 py-1.5 rounded-xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 transition-colors shadow-xs">
+                        + Plotting Siswa
+                    </a>
+                </div>
             </div>
 
             <!-- Student List Table -->
@@ -732,6 +745,242 @@
     </div>
 </div>
 
+<!-- ================= HELPER MODALS: EDIT/REMOVE/GANTI GURU & MENTOR ================= -->
+
+<!-- Modal 1: Ganti Pembimbing Siswa Tertentu -->
+<div id="modal-single-reassign" onclick="if(event.target === this) this.classList.add('hidden')" class="hidden fixed inset-0 z-60 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-slate-100 overflow-hidden transform transition-all animate-in fade-in zoom-in-95 duration-200">
+        <div class="flex items-center justify-between p-5 border-b border-slate-100">
+            <div>
+                <h3 class="text-base font-extrabold text-slate-900 tracking-tight">Ganti Pembimbing Siswa</h3>
+                <p id="single-reassign-student-name" class="text-xs text-slate-500 font-medium mt-0.5">Nama Siswa</p>
+            </div>
+            <button type="button" onclick="document.getElementById('modal-single-reassign').classList.add('hidden')" class="p-1.5 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition cursor-pointer">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+
+        <form id="form-single-reassign" method="POST" class="p-5 space-y-4">
+            @csrf
+            @method('PUT')
+            
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1.5">Guru Pembimbing (Sekolah) <span class="text-rose-500">*</span></label>
+                <select id="single-reassign-teacher-select" name="teacher_id" required
+                        class="w-full text-xs p-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-semibold text-slate-800">
+                    <!-- Populated dynamically -->
+                </select>
+                <p class="text-[10px] text-slate-400 mt-1">Guru dari sekolah yang mendampingi dan memantau siswa.</p>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1.5">Mentor Lapangan DU/DI</label>
+                <select id="single-reassign-supervisor-select" name="supervisor_id"
+                        class="w-full text-xs p-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-semibold text-slate-800">
+                    <!-- Populated dynamically -->
+                </select>
+                <p class="text-[10px] text-slate-400 mt-1">Mentor industri di tempat mitra yang bertugas membimbing di lapangan.</p>
+            </div>
+
+            <div class="flex items-center justify-end space-x-2 pt-2 border-t border-slate-100">
+                <button type="button" onclick="document.getElementById('modal-single-reassign').classList.add('hidden')"
+                        class="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition cursor-pointer">
+                    Batal
+                </button>
+                <button type="submit"
+                        class="px-4 py-2 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition shadow-xs cursor-pointer">
+                    Simpan Perubahan
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal 2: Ganti Pembimbing Massal / Batch Reassign -->
+<div id="modal-batch-reassign" onclick="if(event.target === this) this.classList.add('hidden')" class="hidden fixed inset-0 z-60 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-slate-100 overflow-hidden transform transition-all animate-in fade-in zoom-in-95 duration-200">
+        <div class="flex items-center justify-between p-5 border-b border-slate-100">
+            <div>
+                <h3 id="batch-reassign-modal-title" class="text-base font-extrabold text-slate-900 tracking-tight">Ganti Pembimbing Massal</h3>
+                <p id="batch-reassign-company-name" class="text-xs text-slate-500 font-medium mt-0.5">Nama Perusahaan</p>
+            </div>
+            <button type="button" onclick="document.getElementById('modal-batch-reassign').classList.add('hidden')" class="p-1.5 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition cursor-pointer">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+
+        <form id="form-batch-reassign" method="POST" class="p-5 space-y-4">
+            @csrf
+            <input type="hidden" id="batch-filter-teacher-id" name="filter_teacher_id" value="">
+            <input type="hidden" id="batch-filter-supervisor-id" name="filter_supervisor_id" value="">
+
+            <div id="batch-notice-box" class="hidden p-3 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-amber-900">
+                <span id="batch-notice-text">Memindahkan siswa yang saat ini dibimbing oleh Guru X.</span>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1.5">Target Yang Ingin Diubah <span class="text-rose-500">*</span></label>
+                <select id="batch-target-type-select" name="target_type" onchange="handleBatchTargetChange()" required
+                        class="w-full text-xs p-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-semibold text-slate-800">
+                    <option value="teacher">Hanya Guru Pembimbing Sekolah</option>
+                    <option value="supervisor">Hanya Mentor DU/DI Lapangan</option>
+                    <option value="both">Keduanya (Guru & Mentor Sekaligus)</option>
+                </select>
+            </div>
+
+            <div id="batch-field-teacher">
+                <label class="block text-xs font-bold text-slate-700 mb-1.5">Pilih Guru Pembimbing Pengganti <span class="text-rose-500">*</span></label>
+                <select id="batch-teacher-select" name="teacher_id"
+                        class="w-full text-xs p-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-semibold text-slate-800">
+                    <!-- Populated dynamically -->
+                </select>
+                <p class="text-[10px] text-slate-400 mt-1">Seluruh siswa yang ditargetkan di DU/DI ini akan dialihkan ke guru ini.</p>
+            </div>
+
+            <div id="batch-field-supervisor" class="hidden">
+                <label class="block text-xs font-bold text-slate-700 mb-1.5">Pilih Mentor DU/DI Pengganti</label>
+                <select id="batch-supervisor-select" name="supervisor_id"
+                        class="w-full text-xs p-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-semibold text-slate-800">
+                    <!-- Populated dynamically -->
+                </select>
+                <p class="text-[10px] text-slate-400 mt-1">Pilih mentor yang bertugas atau pilih "(Lepas Penugasan Mentor DU/DI)" untuk mengosongkan.</p>
+            </div>
+
+            <div class="flex items-center justify-end space-x-2 pt-2 border-t border-slate-100">
+                <button type="button" onclick="document.getElementById('modal-batch-reassign').classList.add('hidden')"
+                        class="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition cursor-pointer">
+                    Batal
+                </button>
+                <button type="submit"
+                        class="px-4 py-2 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition shadow-xs cursor-pointer">
+                    Terapkan Perubahan Massal
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal 3: Edit Data Mentor DU/DI -->
+<div id="modal-edit-supervisor" onclick="if(event.target === this) this.classList.add('hidden')" class="hidden fixed inset-0 z-60 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-slate-100 overflow-hidden transform transition-all animate-in fade-in zoom-in-95 duration-200">
+        <div class="flex items-center justify-between p-5 border-b border-slate-100">
+            <div>
+                <h3 class="text-base font-extrabold text-slate-900 tracking-tight">Edit Data Mentor DU/DI</h3>
+                <p class="text-xs text-slate-500 font-medium mt-0.5">Perbarui informasi profil dan akun login mentor industri</p>
+            </div>
+            <button type="button" onclick="document.getElementById('modal-edit-supervisor').classList.add('hidden')" class="p-1.5 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition cursor-pointer">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+
+        <form id="form-edit-supervisor" method="POST" class="p-5 space-y-3.5">
+            @csrf
+            @method('PUT')
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Nama Lengkap Mentor <span class="text-rose-500">*</span></label>
+                <input type="text" id="edit-sup-name" name="name" required
+                       class="w-full text-xs p-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 font-semibold text-slate-800">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Email Login Mentor <span class="text-rose-500">*</span></label>
+                <input type="email" id="edit-sup-email" name="email" required
+                       class="w-full text-xs p-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 font-semibold text-slate-800">
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Jabatan / Posisi</label>
+                    <input type="text" id="edit-sup-position" name="position" placeholder="HRD / Supervisor"
+                           class="w-full text-xs p-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 font-medium text-slate-800">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Nomor Telepon / WA</label>
+                    <input type="text" id="edit-sup-phone" name="phone" placeholder="08xxxxxxxx"
+                           class="w-full text-xs p-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 font-medium text-slate-800">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Reset Kata Sandi (Opsional)</label>
+                <input type="password" id="edit-sup-password" name="password" placeholder="Kosongkan jika tidak diubah (min. 6 karakter)"
+                       class="w-full text-xs p-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 font-medium text-slate-800">
+            </div>
+
+            <div class="flex items-center justify-end space-x-2 pt-2 border-t border-slate-100">
+                <button type="button" onclick="document.getElementById('modal-edit-supervisor').classList.add('hidden')"
+                        class="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition cursor-pointer">
+                    Batal
+                </button>
+                <button type="submit"
+                        class="px-4 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition shadow-xs cursor-pointer">
+                    Simpan Perubahan
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal 4: Hapus Mentor DU/DI (Aman Dengan Opsi Reassign) -->
+<div id="modal-remove-supervisor" onclick="if(event.target === this) this.classList.add('hidden')" class="hidden fixed inset-0 z-60 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-slate-100 overflow-hidden transform transition-all animate-in fade-in zoom-in-95 duration-200">
+        <div class="flex items-center justify-between p-5 border-b border-slate-100">
+            <div>
+                <h3 class="text-base font-extrabold text-slate-900 tracking-tight">Hapus Akun Mentor DU/DI</h3>
+                <p id="remove-sup-title-name" class="text-xs text-rose-600 font-bold mt-0.5">Nama Mentor</p>
+            </div>
+            <button type="button" onclick="document.getElementById('modal-remove-supervisor').classList.add('hidden')" class="p-1.5 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition cursor-pointer">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+
+        <form id="form-remove-supervisor" method="POST" class="p-5 space-y-4">
+            @csrf
+            @method('DELETE')
+
+            <div class="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-950">
+                <p class="font-bold">Perhatian:</p>
+                <p id="remove-sup-info-text" class="mt-0.5">Mentor ini saat ini sedang membimbing <span id="remove-sup-count" class="font-bold">0</span> siswa PKL.</p>
+            </div>
+
+            <div class="space-y-2">
+                <label class="block text-xs font-bold text-slate-700">Pilih Penanganan Siswa Terkait:</label>
+                
+                <div id="remove-sup-opt-reassign-container" class="p-3 rounded-xl border border-slate-200 bg-slate-50 space-y-2">
+                    <label class="flex items-center space-x-2 text-xs font-bold text-slate-800 cursor-pointer">
+                        <input type="radio" name="handling_mode" value="reassign" id="radio-sup-reassign" checked onchange="toggleRemoveSupMode()" class="text-indigo-600">
+                        <span>Pindahkan siswa ke mentor lain di perusahaan ini</span>
+                    </label>
+                    <select id="remove-sup-replacement-select" name="replacement_supervisor_id"
+                            class="w-full text-xs p-2 rounded-lg bg-white border border-slate-200 font-semibold text-slate-800">
+                        <!-- Populated with other supervisors -->
+                    </select>
+                </div>
+
+                <div class="p-3 rounded-xl border border-slate-200 bg-slate-50">
+                    <label class="flex items-center space-x-2 text-xs font-bold text-slate-800 cursor-pointer">
+                        <input type="radio" name="handling_mode" value="detach" id="radio-sup-detach" onchange="toggleRemoveSupMode()" class="text-indigo-600">
+                        <span>Lepas penugasan mentor (siswa tetap aktif di DU/DI ini tanpa mentor)</span>
+                    </label>
+                    <input type="hidden" id="remove-sup-confirm-detach" name="confirm_detach" value="0">
+                </div>
+            </div>
+
+            <div class="flex items-center justify-end space-x-2 pt-2 border-t border-slate-100">
+                <button type="button" onclick="document.getElementById('modal-remove-supervisor').classList.add('hidden')"
+                        class="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition cursor-pointer">
+                    Batal
+                </button>
+                <button type="submit"
+                        class="px-4 py-2 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 transition shadow-xs cursor-pointer">
+                    Hapus Mentor Sekarang
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <!-- Hidden Action Forms for Modal Buttons -->
 <form id="form-unplot-from-modal" method="POST" class="hidden">
     @csrf
@@ -743,7 +992,27 @@
     @method('DELETE')
 </form>
 
+<!-- Data Semua Guru Sekolah untuk Pemilihan Cepat -->
+<script id="all-teachers-data" type="application/json">
+    {!! json_encode($allTeachers->map(fn($t) => [
+        'id' => $t->id,
+        'name' => $t->user->name ?? '-',
+        'nip' => $t->nip ?? '',
+        'email' => $t->user->email ?? '',
+    ])) !!}
+</script>
+
 <script>
+    let currentCompanyData = null;
+
+    function getAllTeachers() {
+        try {
+            return JSON.parse(document.getElementById('all-teachers-data').textContent || '[]');
+        } catch (e) {
+            return [];
+        }
+    }
+
     function openAddCompanyModal() {
         document.getElementById('modal-add-company').classList.remove('hidden');
     }
@@ -795,6 +1064,8 @@
     }
 
     function openEditCompanyModal(data) {
+        currentCompanyData = data;
+
         // Reset ke tab profil secara default
         switchCompanyTab('tab-profile');
 
@@ -840,7 +1111,7 @@
             studentsEmpty.classList.add('hidden');
             studentTbody.closest('div').classList.remove('hidden');
 
-            students.forEach(st => {
+            students.forEach((st, index) => {
                 const tr = document.createElement('tr');
                 tr.className = "hover:bg-slate-50/70 transition-colors";
                 tr.innerHTML = `
@@ -871,7 +1142,12 @@
                             ${st.status}
                         </span>
                     </td>
-                    <td class="py-3 px-4 text-right whitespace-nowrap">
+                    <td class="py-3 px-4 text-right whitespace-nowrap space-x-1">
+                        <button type="button" onclick="openSingleReassignModal(${index})"
+                                class="px-2 py-1 rounded-lg bg-indigo-50 text-indigo-700 text-[10px] font-bold border border-indigo-200 hover:bg-indigo-100 transition cursor-pointer"
+                                title="Ganti guru pembimbing atau mentor untuk siswa ini">
+                            Ganti Pembimbing
+                        </button>
                         <button type="button" onclick="submitUnplot('${st.unplot_url}', '${st.name}')"
                                 class="px-2 py-1 rounded-lg bg-rose-50 text-rose-700 text-[10px] font-bold border border-rose-200 hover:bg-rose-100 transition cursor-pointer"
                                 title="Batalkan penugasan siswa dari mitra ini">
@@ -906,16 +1182,22 @@
                         ${tc.name.charAt(0)}
                     </div>
                     <div class="min-w-0 flex-1">
-                        <span class="font-bold text-slate-900 block text-xs truncate">${tc.name}</span>
+                        <div class="flex items-center justify-between">
+                            <span class="font-bold text-slate-900 block text-xs truncate">${tc.name}</span>
+                        </div>
                         <span class="text-[10px] text-slate-400 font-mono block">NIP: ${tc.nip || '-'}</span>
                         <div class="flex items-center space-x-2 mt-1 text-[11px] text-slate-500">
                             <span>${tc.email}</span>
                             ${tc.phone ? `<span>&bull; ${tc.phone}</span>` : ''}
                         </div>
-                        <div class="mt-2">
+                        <div class="flex items-center justify-between mt-2.5 pt-2 border-t border-slate-200/60">
                             <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-blue-50 text-blue-700 border border-blue-200/80">
                                 Membimbing ${tc.student_count} Siswa di DU/DI ini
                             </span>
+                            <button type="button" onclick="openReplaceTeacherModal(${tc.id}, '${tc.name.replace(/'/g, "\\'")}', ${tc.student_count})"
+                                    class="inline-flex items-center px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold transition shadow-xs cursor-pointer">
+                                Ganti Guru Ini
+                            </button>
                         </div>
                     </div>
                 `;
@@ -938,35 +1220,40 @@
             mentorsEmpty.classList.add('hidden');
             mentorContainer.classList.remove('hidden');
 
-            supervisors.forEach(sup => {
+            supervisors.forEach((sup, index) => {
                 const card = document.createElement('div');
-                card.className = "p-3 rounded-2xl bg-white border border-slate-200 flex items-center justify-between";
+                card.className = "p-3 rounded-2xl bg-white border border-slate-200 flex items-center justify-between gap-3";
                 card.innerHTML = `
                     <div class="flex items-center space-x-3 min-w-0">
                         <div class="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 font-bold text-xs flex items-center justify-center shrink-0">
                             ${sup.name.charAt(0)}
                         </div>
                         <div class="min-w-0">
-                            <div class="flex items-center space-x-1.5">
+                            <div class="flex items-center space-x-1.5 flex-wrap">
                                 <span class="font-bold text-slate-900 text-xs block truncate">${sup.name}</span>
                                 <span class="text-[9px] font-semibold px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 border border-slate-200">
                                     ${sup.position}
                                 </span>
+                                <span class="text-[9px] font-extrabold px-1.5 py-0.2 rounded ${sup.has_students ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-500'}">
+                                    ${sup.student_count} Siswa
+                                </span>
                             </div>
-                            <span class="text-[11px] text-slate-400 font-mono block">${sup.email} ${sup.phone ? '&bull; ' + sup.phone : ''}</span>
+                            <span class="text-[11px] text-slate-400 font-mono block truncate">${sup.email} ${sup.phone ? '&bull; ' + sup.phone : ''}</span>
                         </div>
                     </div>
 
-                    ${!sup.has_students ? `
-                        <button type="button" onclick="submitDestroySupervisor('${sup.destroy_url}', '${sup.name}')"
-                                class="px-2 py-1 rounded-lg text-rose-600 hover:bg-rose-50 border border-rose-200 text-[10px] font-bold transition cursor-pointer">
+                    <div class="flex items-center space-x-1.5 shrink-0">
+                        <button type="button" onclick="openEditSupervisorModal(${index})"
+                                class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200 text-[10px] font-bold transition cursor-pointer"
+                                title="Edit data profil & akun login mentor">
+                            Edit
+                        </button>
+                        <button type="button" onclick="handleDestroySupervisor(${index})"
+                                class="px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 text-[10px] font-bold transition cursor-pointer"
+                                title="Hapus akun mentor ini">
                             Hapus
                         </button>
-                    ` : `
-                        <span class="text-[10px] text-slate-400 font-medium px-2 py-1 bg-slate-50 rounded-lg">
-                            Mentor Aktif
-                        </span>
-                    `}
+                    </div>
                 `;
                 mentorContainer.appendChild(card);
             });
@@ -980,6 +1267,217 @@
 
         // Buka Modal
         document.getElementById('modal-edit-company').classList.remove('hidden');
+    }
+
+    function openSingleReassignModal(studentIndex) {
+        if (!currentCompanyData || !currentCompanyData.students) return;
+        const st = currentCompanyData.students[studentIndex];
+        if (!st) return;
+
+        document.getElementById('single-reassign-student-name').textContent = `${st.name} (NISN: ${st.nisn}) - ${st.class}`;
+
+        // Populate teachers
+        const tSelect = document.getElementById('single-reassign-teacher-select');
+        tSelect.innerHTML = '';
+        getAllTeachers().forEach(t => {
+            const opt = document.createElement('option');
+            opt.value = t.id;
+            opt.textContent = `${t.name} (${t.email})`;
+            if (Number(t.id) === Number(st.teacher_id)) opt.selected = true;
+            tSelect.appendChild(opt);
+        });
+
+        // Populate supervisors
+        const sSelect = document.getElementById('single-reassign-supervisor-select');
+        sSelect.innerHTML = '<option value="">(Belum Ada / Lepas Mentor DU/DI)</option>';
+        if (Array.isArray(currentCompanyData.supervisors)) {
+            currentCompanyData.supervisors.forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s.id;
+                opt.textContent = `${s.name} - ${s.position}`;
+                if (Number(s.id) === Number(st.supervisor_id)) opt.selected = true;
+                sSelect.appendChild(opt);
+            });
+        }
+
+        const form = document.getElementById('form-single-reassign');
+        form.action = st.reassign_url;
+
+        document.getElementById('modal-single-reassign').classList.remove('hidden');
+    }
+
+    function openBatchReassignModal() {
+        if (!currentCompanyData) return;
+
+        document.getElementById('batch-reassign-modal-title').textContent = "Ganti Pembimbing Massal";
+        document.getElementById('batch-reassign-company-name').textContent = currentCompanyData.name;
+        document.getElementById('batch-notice-box').classList.add('hidden');
+        document.getElementById('batch-filter-teacher-id').value = '';
+        document.getElementById('batch-filter-supervisor-id').value = '';
+
+        const targetSelect = document.getElementById('batch-target-type-select');
+        targetSelect.value = 'teacher';
+        targetSelect.disabled = false;
+        handleBatchTargetChange();
+
+        // Populate teachers
+        const tSelect = document.getElementById('batch-teacher-select');
+        tSelect.innerHTML = '<option value="">-- Pilih Guru Pembimbing --</option>';
+        getAllTeachers().forEach(t => {
+            const opt = document.createElement('option');
+            opt.value = t.id;
+            opt.textContent = `${t.name} (${t.email})`;
+            tSelect.appendChild(opt);
+        });
+
+        // Populate supervisors
+        const sSelect = document.getElementById('batch-supervisor-select');
+        sSelect.innerHTML = '<option value="">(Lepas Penugasan Mentor DU/DI)</option>';
+        if (Array.isArray(currentCompanyData.supervisors)) {
+            currentCompanyData.supervisors.forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s.id;
+                opt.textContent = `${s.name} - ${s.position}`;
+                sSelect.appendChild(opt);
+            });
+        }
+
+        const form = document.getElementById('form-batch-reassign');
+        form.action = currentCompanyData.batch_reassign_url;
+
+        document.getElementById('modal-batch-reassign').classList.remove('hidden');
+    }
+
+    function openReplaceTeacherModal(teacherId, teacherName, studentCount) {
+        if (!currentCompanyData) return;
+
+        document.getElementById('batch-reassign-modal-title').textContent = "Ganti Guru Pembimbing";
+        document.getElementById('batch-reassign-company-name').textContent = currentCompanyData.name;
+
+        const noticeBox = document.getElementById('batch-notice-box');
+        noticeBox.classList.remove('hidden');
+        document.getElementById('batch-notice-text').innerHTML = `Memindahkan <b>${studentCount} siswa</b> di ${currentCompanyData.name} yang saat ini dibimbing oleh <b>${teacherName}</b> ke guru pembimbing baru.`;
+
+        document.getElementById('batch-filter-teacher-id').value = teacherId;
+        document.getElementById('batch-filter-supervisor-id').value = '';
+
+        const targetSelect = document.getElementById('batch-target-type-select');
+        targetSelect.value = 'teacher';
+        targetSelect.disabled = false;
+        handleBatchTargetChange();
+
+        // Populate teachers except current
+        const tSelect = document.getElementById('batch-teacher-select');
+        tSelect.innerHTML = '<option value="">-- Pilih Guru Pengganti --</option>';
+        getAllTeachers().forEach(t => {
+            if (Number(t.id) !== Number(teacherId)) {
+                const opt = document.createElement('option');
+                opt.value = t.id;
+                opt.textContent = `${t.name} (${t.email})`;
+                tSelect.appendChild(opt);
+            }
+        });
+
+        const form = document.getElementById('form-batch-reassign');
+        form.action = currentCompanyData.batch_reassign_url;
+
+        document.getElementById('modal-batch-reassign').classList.remove('hidden');
+    }
+
+    function handleBatchTargetChange() {
+        const type = document.getElementById('batch-target-type-select').value;
+        const fieldT = document.getElementById('batch-field-teacher');
+        const fieldS = document.getElementById('batch-field-supervisor');
+
+        if (type === 'teacher') {
+            fieldT.classList.remove('hidden');
+            fieldS.classList.add('hidden');
+            document.getElementById('batch-teacher-select').required = true;
+        } else if (type === 'supervisor') {
+            fieldT.classList.add('hidden');
+            fieldS.classList.remove('hidden');
+            document.getElementById('batch-teacher-select').required = false;
+        } else {
+            fieldT.classList.remove('hidden');
+            fieldS.classList.remove('hidden');
+            document.getElementById('batch-teacher-select').required = true;
+        }
+    }
+
+    function openEditSupervisorModal(index) {
+        if (!currentCompanyData || !currentCompanyData.supervisors) return;
+        const sup = currentCompanyData.supervisors[index];
+        if (!sup) return;
+
+        document.getElementById('edit-sup-name').value = sup.name || '';
+        document.getElementById('edit-sup-email').value = sup.email || '';
+        document.getElementById('edit-sup-position').value = sup.position || '';
+        document.getElementById('edit-sup-phone').value = sup.phone || '';
+        document.getElementById('edit-sup-password').value = '';
+
+        const form = document.getElementById('form-edit-supervisor');
+        form.action = sup.update_url;
+
+        document.getElementById('modal-edit-supervisor').classList.remove('hidden');
+    }
+
+    function handleDestroySupervisor(index) {
+        if (!currentCompanyData || !currentCompanyData.supervisors) return;
+        const sup = currentCompanyData.supervisors[index];
+        if (!sup) return;
+
+        if (!sup.has_students) {
+            if (confirm(`Hapus akun mentor DU/DI "${sup.name}"?`)) {
+                const form = document.getElementById('form-destroy-supervisor-from-modal');
+                form.action = sup.destroy_url;
+                form.submit();
+            }
+            return;
+        }
+
+        // Has students: open safe removal modal
+        document.getElementById('remove-sup-title-name').textContent = sup.name;
+        document.getElementById('remove-sup-count').textContent = sup.student_count;
+
+        const others = currentCompanyData.supervisors.filter(s => s.id !== sup.id);
+        const reassignContainer = document.getElementById('remove-sup-opt-reassign-container');
+        const selectReplacement = document.getElementById('remove-sup-replacement-select');
+
+        selectReplacement.innerHTML = '';
+        if (others.length > 0) {
+            reassignContainer.classList.remove('hidden');
+            others.forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s.id;
+                opt.textContent = `${s.name} (${s.position})`;
+                selectReplacement.appendChild(opt);
+            });
+            document.getElementById('radio-sup-reassign').checked = true;
+        } else {
+            reassignContainer.classList.add('hidden');
+            document.getElementById('radio-sup-detach').checked = true;
+        }
+
+        toggleRemoveSupMode();
+
+        const form = document.getElementById('form-remove-supervisor');
+        form.action = sup.destroy_url;
+
+        document.getElementById('modal-remove-supervisor').classList.remove('hidden');
+    }
+
+    function toggleRemoveSupMode() {
+        const isDetach = document.getElementById('radio-sup-detach').checked;
+        const sel = document.getElementById('remove-sup-replacement-select');
+        const confirmDetach = document.getElementById('remove-sup-confirm-detach');
+
+        if (isDetach) {
+            if (sel) sel.disabled = true;
+            confirmDetach.value = '1';
+        } else {
+            if (sel) sel.disabled = false;
+            confirmDetach.value = '0';
+        }
     }
 
     function submitUnplot(url, studentName) {

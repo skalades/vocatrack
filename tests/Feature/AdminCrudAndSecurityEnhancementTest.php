@@ -470,4 +470,208 @@ class AdminCrudAndSecurityEnhancementTest extends TestCase
             'company_id' => $company->id,
         ]);
     }
+
+    public function test_company_supervisor_update_and_safe_destroy_with_reassign(): void
+    {
+        $company = Company::create([
+            'school_id' => $this->school->id,
+            'name' => 'PT Teknologi Unggul',
+            'address' => 'Jl. Asia Afrika No. 1',
+            'contact_person' => 'Rina',
+            'phone' => '0812345678',
+            'work_days' => '5_days',
+        ]);
+
+        $user1 = User::create([
+            'school_id' => $this->school->id,
+            'name' => 'Mentor A',
+            'email' => 'mentora@test.com',
+            'password' => \Illuminate\Support\Facades\Hash::make('password'),
+            'role' => 'pembimbing-dudi',
+            'is_active' => true,
+        ]);
+        $sup1 = \App\Models\Supervisor::create([
+            'user_id' => $user1->id,
+            'company_id' => $company->id,
+            'position' => 'Senior Developer',
+        ]);
+
+        $user2 = User::create([
+            'school_id' => $this->school->id,
+            'name' => 'Mentor B',
+            'email' => 'mentorb@test.com',
+            'password' => \Illuminate\Support\Facades\Hash::make('password'),
+            'role' => 'pembimbing-dudi',
+            'is_active' => true,
+        ]);
+        $sup2 = \App\Models\Supervisor::create([
+            'user_id' => $user2->id,
+            'company_id' => $company->id,
+            'position' => 'Tech Lead',
+        ]);
+
+        // 1. Test Update Supervisor
+        $resUpdate = $this->actingAs($this->adminUser)
+            ->put(route('adminsekolah.companies.supervisors.update', [$company->id, $sup1->id]), [
+                'name' => 'Mentor A Diperbarui',
+                'email' => 'mentora_updated@test.com',
+                'position' => 'Head of Engineering',
+                'phone' => '0899887766',
+                'password' => 'newpassword123',
+            ]);
+        $resUpdate->assertSessionHas('success');
+        $this->assertDatabaseHas('users', [
+            'id' => $user1->id,
+            'name' => 'Mentor A Diperbarui',
+            'email' => 'mentora_updated@test.com',
+        ]);
+        $this->assertDatabaseHas('supervisors', [
+            'id' => $sup1->id,
+            'position' => 'Head of Engineering',
+        ]);
+
+        // 2. Assign student to sup1
+        $teacherUser = User::create([
+            'school_id' => $this->school->id,
+            'name' => 'Guru Penguji',
+            'email' => 'gurupenguji@test.com',
+            'password' => \Illuminate\Support\Facades\Hash::make('password'),
+            'role' => 'guru-pembimbing',
+            'is_active' => true,
+        ]);
+        $teacher = \App\Models\Teacher::create([
+            'user_id' => $teacherUser->id,
+            'nip' => '9988776655',
+        ]);
+
+        $studentUser = User::create([
+            'school_id' => $this->school->id,
+            'name' => 'Siswa Binaan',
+            'email' => 'siswabinaan@test.com',
+            'password' => \Illuminate\Support\Facades\Hash::make('password'),
+            'role' => 'siswa',
+            'is_active' => true,
+        ]);
+        $student = \App\Models\Student::create([
+            'user_id' => $studentUser->id,
+            'class_id' => $this->class->id,
+            'nis' => '1001',
+            'nisn' => '7766554433',
+        ]);
+
+        $studentPkl = \App\Models\StudentPkl::create([
+            'school_id' => $this->school->id,
+            'student_id' => $student->id,
+            'company_id' => $company->id,
+            'pkl_period_id' => $this->period->id,
+            'teacher_id' => $teacher->id,
+            'supervisor_id' => $sup1->id,
+            'status' => 'active',
+        ]);
+
+        // Deleting sup1 without replacement or detach must fail
+        $resFail = $this->actingAs($this->adminUser)
+            ->delete(route('adminsekolah.companies.supervisors.destroy', [$company->id, $sup1->id]));
+        $resFail->assertSessionHasErrors('supervisor');
+
+        // Deleting sup1 with replacement_supervisor_id reassigns student to sup2
+        $resSuccess = $this->actingAs($this->adminUser)
+            ->delete(route('adminsekolah.companies.supervisors.destroy', [$company->id, $sup1->id]), [
+                'replacement_supervisor_id' => $sup2->id,
+            ]);
+        $resSuccess->assertSessionHas('success');
+        $this->assertDatabaseMissing('supervisors', ['id' => $sup1->id]);
+        $this->assertDatabaseHas('student_pkl', [
+            'id' => $studentPkl->id,
+            'supervisor_id' => $sup2->id,
+        ]);
+    }
+
+    public function test_plotting_reassign_and_batch_reassign(): void
+    {
+        $company = Company::create([
+            'school_id' => $this->school->id,
+            'name' => 'PT Studio Kreatif',
+            'address' => 'Jl. Riau No. 10',
+            'contact_person' => 'Budi',
+            'phone' => '0812345678',
+            'work_days' => '5_days',
+        ]);
+
+        $teacherUser1 = User::create([
+            'school_id' => $this->school->id,
+            'name' => 'Guru Pertama',
+            'email' => 'guru1@test.com',
+            'password' => \Illuminate\Support\Facades\Hash::make('password'),
+            'role' => 'guru-pembimbing',
+            'is_active' => true,
+        ]);
+        $teacher1 = \App\Models\Teacher::create(['user_id' => $teacherUser1->id, 'nip' => '111111']);
+
+        $teacherUser2 = User::create([
+            'school_id' => $this->school->id,
+            'name' => 'Guru Kedua',
+            'email' => 'guru2@test.com',
+            'password' => \Illuminate\Support\Facades\Hash::make('password'),
+            'role' => 'guru-pembimbing',
+            'is_active' => true,
+        ]);
+        $teacher2 = \App\Models\Teacher::create(['user_id' => $teacherUser2->id, 'nip' => '222222']);
+
+        $supUser = User::create([
+            'school_id' => $this->school->id,
+            'name' => 'Mentor Utama',
+            'email' => 'mentorutama@test.com',
+            'password' => \Illuminate\Support\Facades\Hash::make('password'),
+            'role' => 'pembimbing-dudi',
+            'is_active' => true,
+        ]);
+        $sup = \App\Models\Supervisor::create(['user_id' => $supUser->id, 'company_id' => $company->id, 'position' => 'Supervisor']);
+
+        $stUser = User::create([
+            'school_id' => $this->school->id,
+            'name' => 'Siswa Kreatif',
+            'email' => 'siswakreatif@test.com',
+            'password' => \Illuminate\Support\Facades\Hash::make('password'),
+            'role' => 'siswa',
+            'is_active' => true,
+        ]);
+        $st = \App\Models\Student::create(['user_id' => $stUser->id, 'class_id' => $this->class->id, 'nis' => '1002', 'nisn' => '5544332211']);
+
+        $studentPkl = \App\Models\StudentPkl::create([
+            'school_id' => $this->school->id,
+            'student_id' => $st->id,
+            'company_id' => $company->id,
+            'pkl_period_id' => $this->period->id,
+            'teacher_id' => $teacher1->id,
+            'supervisor_id' => null,
+            'status' => 'active',
+        ]);
+
+        // 1. Single Reassign Plotting
+        $resReassign = $this->actingAs($this->adminUser)
+            ->put(route('adminsekolah.plotting.reassign', $studentPkl->id), [
+                'teacher_id' => $teacher2->id,
+                'supervisor_id' => $sup->id,
+            ]);
+        $resReassign->assertSessionHas('success');
+        $this->assertDatabaseHas('student_pkl', [
+            'id' => $studentPkl->id,
+            'teacher_id' => $teacher2->id,
+            'supervisor_id' => $sup->id,
+        ]);
+
+        // 2. Batch Reassign across Company
+        $resBatch = $this->actingAs($this->adminUser)
+            ->post(route('adminsekolah.companies.reassign-batch', $company->id), [
+                'target_type' => 'teacher',
+                'teacher_id' => $teacher1->id,
+                'filter_teacher_id' => $teacher2->id,
+            ]);
+        $resBatch->assertSessionHas('success');
+        $this->assertDatabaseHas('student_pkl', [
+            'id' => $studentPkl->id,
+            'teacher_id' => $teacher1->id,
+        ]);
+    }
 }

@@ -85,11 +85,14 @@ Route::middleware(['auth', 'IdentifyTenant', 'role:admin-sekolah'])->prefix('adm
     Route::put('/companies/{company}', [AdminSekolahController::class, 'updateCompany'])->name('adminsekolah.companies.update');
     Route::delete('/companies/{company}', [AdminSekolahController::class, 'destroyCompany'])->name('adminsekolah.companies.destroy');
     Route::post('/companies/{company}/supervisors', [AdminSekolahController::class, 'storeCompanySupervisor'])->name('adminsekolah.companies.supervisors.store');
+    Route::put('/companies/{company}/supervisors/{supervisor}', [AdminSekolahController::class, 'updateCompanySupervisor'])->name('adminsekolah.companies.supervisors.update');
     Route::delete('/companies/{company}/supervisors/{supervisor}', [AdminSekolahController::class, 'destroyCompanySupervisor'])->name('adminsekolah.companies.supervisors.destroy');
+    Route::post('/companies/{company}/reassign-batch', [AdminSekolahController::class, 'reassignCompanyBatch'])->name('adminsekolah.companies.reassign-batch');
 
     // Plotting PKL
     Route::get('/plotting', [AdminSekolahController::class, 'plotting'])->name('adminsekolah.plotting');
     Route::post('/plotting', [AdminSekolahController::class, 'storePlotting'])->name('adminsekolah.plotting.store');
+    Route::put('/plotting/{studentPkl}/reassign', [AdminSekolahController::class, 'reassignPlotting'])->name('adminsekolah.plotting.reassign');
     Route::delete('/plotting/{studentPkl}', [AdminSekolahController::class, 'destroyPlotting'])->name('adminsekolah.plotting.destroy');
 
     // Periode Pelaksanaan PKL
