@@ -454,10 +454,18 @@ class TeacherController extends Controller
             abort(403, 'Akses ditolak: Anda tidak memiliki wewenang untuk mengunduh dokumen Berita Acara ini.');
         }
 
-        $pdf = $supervisionService->generateBeritaAcaraPdf($supervisionVisit);
-        $dateStr = $supervisionVisit->visit_date ? $supervisionVisit->visit_date->format('Ymd') : date('Ymd');
-        $companySlug = Str::slug($supervisionVisit->company->name ?? 'DUDI');
+        try {
+            $pdf = $supervisionService->generateBeritaAcaraPdf($supervisionVisit);
+            $dateStr = $supervisionVisit->visit_date ? $supervisionVisit->visit_date->format('Ymd') : date('Ymd');
+            $companySlug = Str::slug($supervisionVisit->company->name ?? 'DUDI');
 
-        return $pdf->download("Berita_Acara_Supervisi_{$companySlug}_{$dateStr}.pdf");
+            return $pdf->download("Berita_Acara_Supervisi_{$companySlug}_{$dateStr}.pdf");
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error("Download Berita Acara PDF gagal (Visit ID: {$supervisionVisit->id}): " . $e->getMessage(), [
+                'exception' => $e,
+            ]);
+
+            return back()->with('error', 'Gagal memproses pengunduhan dokumen Berita Acara PDF: ' . $e->getMessage());
+        }
     }
 }

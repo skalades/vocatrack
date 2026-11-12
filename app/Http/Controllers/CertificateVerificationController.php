@@ -33,10 +33,18 @@ class CertificateVerificationController extends Controller
             abort(404, 'Sertifikat tidak ditemukan atau kode verifikasi tidak valid.');
         }
 
-        $pdf = $certificateService->renderPdf($certificate);
-        $studentName = Str::slug($certificate->studentPkl->student->user->name ?? 'Siswa');
-        $safeCertNumber = str_replace(['/', '\\'], '-', $certificate->certificate_number);
+        try {
+            $pdf = $certificateService->renderPdf($certificate);
+            $studentName = Str::slug($certificate->studentPkl?->student?->user?->name ?? 'Siswa');
+            $safeCertNumber = str_replace(['/', '\\'], '-', $certificate->certificate_number);
 
-        return $pdf->download("E-Sertifikat_PKL_{$studentName}_{$safeCertNumber}.pdf");
+            return $pdf->download("E-Sertifikat_PKL_{$studentName}_{$safeCertNumber}.pdf");
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error("Download sertifikat publik gagal (UUID: {$uuid}): " . $e->getMessage(), [
+                'exception' => $e,
+            ]);
+
+            return back()->with('error', 'Gagal memproses pengunduhan dokumen PDF: ' . $e->getMessage());
+        }
     }
 }

@@ -96,6 +96,19 @@ class SupervisionService
      */
     public function generateBeritaAcaraPdf(SupervisionVisit $visit): DomPdfInstance
     {
+        ini_set('memory_limit', '256M');
+        set_time_limit(120);
+
+        // Pastikan direktori fonts & cache tersedia untuk DomPDF
+        $fontDir = storage_path('fonts');
+        if (!file_exists($fontDir)) {
+            @mkdir($fontDir, 0755, true);
+        }
+        $tempDir = storage_path('framework/cache');
+        if (!file_exists($tempDir)) {
+            @mkdir($tempDir, 0755, true);
+        }
+
         $visit->loadMissing(['teacher.user', 'company', 'pklPeriod', 'school']);
 
         // Ambil daftar siswa bimbingan guru pada perusahaan dan periode ini

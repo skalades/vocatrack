@@ -915,10 +915,18 @@ class AdminSekolahController extends Controller
         $schoolId = $this->getSchoolId();
         abort_if($certificate->school_id !== $schoolId, 403, 'Akses ditolak.');
 
-        $pdf = $certificateService->renderPdf($certificate);
-        $nameSlug = Str::slug($certificate->studentPkl->student->user->name ?? 'Siswa');
-        $safeCertNumber = str_replace(['/', '\\'], '-', $certificate->certificate_number);
+        try {
+            $pdf = $certificateService->renderPdf($certificate);
+            $nameSlug = Str::slug($certificate->studentPkl?->student?->user?->name ?? 'Siswa');
+            $safeCertNumber = str_replace(['/', '\\'], '-', $certificate->certificate_number);
 
-        return $pdf->download("E-Sertifikat_PKL_{$nameSlug}_{$safeCertNumber}.pdf");
+            return $pdf->download("E-Sertifikat_PKL_{$nameSlug}_{$safeCertNumber}.pdf");
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error("Download E-Sertifikat gagal (ID: {$certificate->id}): " . $e->getMessage(), [
+                'exception' => $e,
+            ]);
+
+            return back()->with('error', 'Gagal memproses pengunduhan dokumen PDF E-Sertifikat: ' . $e->getMessage());
+        }
     }
 }

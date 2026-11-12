@@ -385,7 +385,13 @@
                     </td>
                     <td style="width: 28%;">
                         <div class="qr-box">
-                            <img src="{{ $qrCodeBase64 }}" class="qr-img" alt="QR Verifikasi">
+                            @if(!empty($qrCodeBase64))
+                                <img src="{{ $qrCodeBase64 }}" class="qr-img" alt="QR Verifikasi">
+                            @else
+                                <div style="width: 62px; height: 62px; margin: 0 auto; border: 1px dashed #94a3b8; line-height: 60px; font-size: 7pt; color: #64748b; text-align: center;">
+                                    TERVERIFIKASI
+                                </div>
+                            @endif
                             <div class="qr-caption">Pindai Untuk Verifikasi Keaslian</div>
                             <div class="qr-uuid">ID: {{ substr($certificate->uuid, 0, 8) }}...</div>
                         </div>
@@ -460,23 +466,23 @@
                 <tr>
                     <td style="text-align: center;">1</td>
                     <td>Kedisiplinan, Tanggung Jawab & Kepatuhan SOP Industri</td>
-                    <td style="text-align: center; font-weight: bold;">{{ number_format($assessment->score_dudi_discipline ?? 82, 1) }}</td>
-                    <td style="text-align: center;">{{ ($assessment->score_dudi_discipline ?? 82) >= 85 ? 'A' : 'B' }}</td>
-                    <td style="text-align: center;">{{ ($assessment->score_dudi_discipline ?? 82) >= 85 ? 'Sangat Baik' : 'Baik' }}</td>
+                    <td style="text-align: center; font-weight: bold;">{{ number_format($gradeDiscipline['score'], 1) }}</td>
+                    <td style="text-align: center;">{{ $gradeDiscipline['letter'] }}</td>
+                    <td style="text-align: center;">{{ $gradeDiscipline['predicate'] }}</td>
                 </tr>
                 <tr>
                     <td style="text-align: center;">2</td>
                     <td>Keterampilan Teknis & Penguasaan Kompetensi Kejuruan</td>
-                    <td style="text-align: center; font-weight: bold;">{{ number_format($assessment->score_dudi_technical ?? 85, 1) }}</td>
-                    <td style="text-align: center;">{{ ($assessment->score_dudi_technical ?? 85) >= 85 ? 'A' : 'B' }}</td>
-                    <td style="text-align: center;">{{ ($assessment->score_dudi_technical ?? 85) >= 85 ? 'Sangat Baik' : 'Baik' }}</td>
+                    <td style="text-align: center; font-weight: bold;">{{ number_format($gradeTechnical['score'], 1) }}</td>
+                    <td style="text-align: center;">{{ $gradeTechnical['letter'] }}</td>
+                    <td style="text-align: center;">{{ $gradeTechnical['predicate'] }}</td>
                 </tr>
                 <tr>
                     <td style="text-align: center;">3</td>
                     <td>Inisiatif, Kreativitas Kerja & Kerjasama Tim (Teamwork)</td>
-                    <td style="text-align: center; font-weight: bold;">{{ number_format($assessment->score_dudi_initiative ?? 80, 1) }}</td>
-                    <td style="text-align: center;">{{ ($assessment->score_dudi_initiative ?? 80) >= 85 ? 'A' : 'B' }}</td>
-                    <td style="text-align: center;">{{ ($assessment->score_dudi_initiative ?? 80) >= 85 ? 'Sangat Baik' : 'Baik' }}</td>
+                    <td style="text-align: center; font-weight: bold;">{{ number_format($gradeInitiative['score'], 1) }}</td>
+                    <td style="text-align: center;">{{ $gradeInitiative['letter'] }}</td>
+                    <td style="text-align: center;">{{ $gradeInitiative['predicate'] }}</td>
                 </tr>
                 <tr style="background-color: #f8fafc; font-weight: bold;">
                     <td colspan="5">B. ASPEK PENILAIAN SEKOLAH</td>
@@ -484,14 +490,14 @@
                 <tr>
                     <td style="text-align: center;">4</td>
                     <td>Penulisan Laporan Akhir PKL & Presentasi Sidang</td>
-                    <td style="text-align: center; font-weight: bold;">{{ number_format($assessment->score_teacher_report ?? 83, 1) }}</td>
-                    <td style="text-align: center;">{{ ($assessment->score_teacher_report ?? 83) >= 85 ? 'A' : 'B' }}</td>
-                    <td style="text-align: center;">{{ ($assessment->score_teacher_report ?? 83) >= 85 ? 'Sangat Baik' : 'Baik' }}</td>
+                    <td style="text-align: center; font-weight: bold;">{{ number_format($gradeReport['score'], 1) }}</td>
+                    <td style="text-align: center;">{{ $gradeReport['letter'] }}</td>
+                    <td style="text-align: center;">{{ $gradeReport['predicate'] }}</td>
                 </tr>
                 <tr style="background-color: #f1f5f9; font-weight: bold;">
                     <td colspan="2" style="text-align: right; padding-right: 15px;">NILAI AKHIR RATA-RATA:</td>
                     <td style="text-align: center; color: #1e3a8a;">{{ number_format($certificate->final_score, 2) }}</td>
-                    <td style="text-align: center;">{{ $certificate->final_score >= 85 ? 'A' : ($certificate->final_score >= 75 ? 'B' : 'C') }}</td>
+                    <td style="text-align: center;">{{ $finalGradeLetter }}</td>
                     <td style="text-align: center; color: #059669;">{{ $certificate->final_predicate }}</td>
                 </tr>
             </tbody>

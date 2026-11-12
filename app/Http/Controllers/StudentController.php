@@ -417,11 +417,19 @@ class StudentController extends Controller
         $spklIds = $student->studentPkls()->pluck('id');
         $certificate = Certificate::whereIn('student_pkl_id', $spklIds)->firstOrFail();
 
-        $pdf = $certificateService->renderPdf($certificate);
-        $sanitizedName = Str::slug(Auth::user()->name);
-        $safeCertNumber = str_replace(['/', '\\'], '-', $certificate->certificate_number);
+        try {
+            $pdf = $certificateService->renderPdf($certificate);
+            $sanitizedName = Str::slug(Auth::user()->name);
+            $safeCertNumber = str_replace(['/', '\\'], '-', $certificate->certificate_number);
 
-        return $pdf->download("E-Sertifikat_PKL_{$sanitizedName}_{$safeCertNumber}.pdf");
+            return $pdf->download("E-Sertifikat_PKL_{$sanitizedName}_{$safeCertNumber}.pdf");
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error("Download sertifikat siswa gagal (User ID: " . Auth::id() . "): " . $e->getMessage(), [
+                'exception' => $e,
+            ]);
+
+            return back()->with('error', 'Gagal mengunduh dokumen sertifikat: ' . $e->getMessage());
+        }
     }
 
     public function storeIncident(Request $request, IncidentReportService $incidentService)
