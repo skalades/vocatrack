@@ -200,33 +200,36 @@ class AdminCrudAndSecurityEnhancementTest extends TestCase
 
     public function test_teacher_crud_lifecycle(): void
     {
-        $teacherUser = User::create([
-            'school_id' => $this->school->id,
-            'name' => 'Guru Lama',
-            'email' => 'gurulama@test.com',
-            'password' => bcrypt('password123'),
-            'role' => 'guru-pembimbing',
-        ]);
-        $teacher = Teacher::create([
-            'school_id' => $this->school->id,
-            'user_id' => $teacherUser->id,
-            'nip' => '198001012005011002',
-            'phone' => '081234567890',
-        ]);
+        // 1. Create Teacher with Majors
+        $resStore = $this->actingAs($this->adminUser)
+            ->post(route('adminsekolah.teachers.store'), [
+                'name' => 'Guru Kejuruan PSPT',
+                'email' => 'gurukejuruan@test.com',
+                'nip' => '198001012005011002',
+                'phone' => '081234567890',
+                'major_ids' => [$this->major->id],
+            ]);
+        $resStore->assertSessionHas('success');
 
-        // Update Teacher
+        $storedUser = User::where('email', 'gurukejuruan@test.com')->first();
+        $this->assertNotNull($storedUser);
+        $teacher = Teacher::where('user_id', $storedUser->id)->first();
+        $this->assertNotNull($teacher);
+        $this->assertTrue($teacher->majors->contains('id', $this->major->id));
+
+        // 2. Update Teacher
         $resUpdate = $this->actingAs($this->adminUser)
             ->put(route('adminsekolah.teachers.update', $teacher->id), [
                 'name' => 'Guru Pembimbing Baru',
                 'email' => 'gurubaru@test.com',
                 'nip' => '198001012005011099',
                 'phone' => '089876543210',
-                'is_active' => '1',
+                'major_ids' => [$this->major->id],
             ]);
         $resUpdate->assertSessionHas('success');
 
         $this->assertDatabaseHas('users', [
-            'id' => $teacherUser->id,
+            'id' => $storedUser->id,
             'name' => 'Guru Pembimbing Baru',
             'email' => 'gurubaru@test.com',
         ]);
@@ -234,14 +237,16 @@ class AdminCrudAndSecurityEnhancementTest extends TestCase
             'id' => $teacher->id,
             'nip' => '198001012005011099',
         ]);
+        $this->assertTrue($teacher->fresh()->majors->contains('id', $this->major->id));
 
-        // Delete Teacher
+        // 3. Delete Teacher
         $resDelete = $this->actingAs($this->adminUser)
             ->delete(route('adminsekolah.teachers.destroy', $teacher->id));
         $resDelete->assertSessionHas('success');
 
         $this->assertDatabaseMissing('teachers', ['id' => $teacher->id]);
-        $this->assertDatabaseMissing('users', ['id' => $teacherUser->id]);
+        $this->assertDatabaseMissing('users', ['id' => $storedUser->id]);
+        $this->assertDatabaseMissing('major_teacher', ['teacher_id' => $teacher->id]);
     }
 
     public function test_company_destroy_prevented_when_students_assigned(): void

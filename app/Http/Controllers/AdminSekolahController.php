@@ -536,7 +536,7 @@ class AdminSekolahController extends Controller
     {
         $schoolId = $this->getSchoolId();
         $query = Teacher::whereHas('user', fn($q) => $q->where('school_id', $schoolId))
-            ->with(['user.profile', 'studentPkls.student.user']);
+            ->with(['user.profile', 'studentPkls.student.user', 'majors']);
 
         if ($search = $request->query('search')) {
             $query->where(function ($q) use ($search) {
@@ -545,7 +545,18 @@ class AdminSekolahController extends Controller
             });
         }
 
+        // Major filter
+        $selectedMajor = $request->query('major');
+        if ($selectedMajor && $selectedMajor !== 'all') {
+            if ($selectedMajor === 'lintas') {
+                $query->doesntHave('majors');
+            } else {
+                $query->whereHas('majors', fn($q) => $q->where('majors.id', $selectedMajor));
+            }
+        }
+
         $teachers = $query->latest()->paginate(15)->withQueryString();
+        $majors = Major::where('school_id', $schoolId)->orderBy('name')->get();
 
         // Exact DB metrics across the entire school (Scalable)
         $totalTeachers = Teacher::whereHas('user', fn($q) => $q->where('school_id', $schoolId))->count();
@@ -555,7 +566,7 @@ class AdminSekolahController extends Controller
             ->whereHas('studentPkls', fn($q) => $q->whereIn('status', ['assigned', 'active']))
             ->count();
 
-        return view('adminsekolah.teachers', compact('teachers', 'totalTeachers', 'totalPlotted', 'avgPlotted', 'activeTeachersCount'));
+        return view('adminsekolah.teachers', compact('teachers', 'totalTeachers', 'totalPlotted', 'avgPlotted', 'activeTeachersCount', 'majors', 'selectedMajor'));
     }
 
     public function storeTeacher(Request $request)
@@ -566,6 +577,8 @@ class AdminSekolahController extends Controller
             'email' => ['required', 'email', 'unique:users,email'],
             'nip' => ['nullable', 'string', 'max:30'],
             'phone' => ['nullable', 'string', 'max:20'],
+            'major_ids' => ['nullable', 'array'],
+            'major_ids.*' => [Rule::exists('majors', 'id')->where('school_id', $schoolId)],
         ]);
 
         DB::transaction(function () use ($request, $schoolId) {
@@ -584,10 +597,14 @@ class AdminSekolahController extends Controller
                 'phone' => $request->phone,
             ]);
 
-            Teacher::create([
+            $teacher = Teacher::create([
                 'user_id' => $user->id,
                 'nip' => $request->nip,
             ]);
+
+            if ($request->has('major_ids')) {
+                $teacher->majors()->sync($request->major_ids);
+            }
         });
 
         return back()->with('success', 'Akun Guru Pembimbing berhasil dibuat.');
@@ -603,6 +620,8 @@ class AdminSekolahController extends Controller
             'email' => ['required', 'email', Rule::unique('users', 'email')->ignore($teacher->user_id)],
             'nip' => ['nullable', 'string', 'max:30'],
             'phone' => ['nullable', 'string', 'max:20'],
+            'major_ids' => ['nullable', 'array'],
+            'major_ids.*' => [Rule::exists('majors', 'id')->where('school_id', $schoolId)],
         ]);
 
         DB::transaction(function () use ($request, $teacher) {
@@ -619,6 +638,8 @@ class AdminSekolahController extends Controller
             $teacher->update([
                 'nip' => $request->nip,
             ]);
+
+            $teacher->majors()->sync($request->major_ids ?? []);
         });
 
         return back()->with('success', 'Data guru pembimbing berhasil diperbarui.');
@@ -680,7 +701,7 @@ class AdminSekolahController extends Controller
         $companies = $query->latest()->paginate(10)->withQueryString();
         $majors = Major::where('school_id', $schoolId)->orderBy('name')->get();
         $allTeachers = Teacher::whereHas('user', fn($q) => $q->where('school_id', $schoolId))
-            ->with(['user.profile'])
+            ->with(['user.profile', 'majors'])
             ->get()
             ->sortBy('user.name')
             ->values();

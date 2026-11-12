@@ -206,6 +206,7 @@
                                         'longitude' => $cp->longitude,
                                         'radius_meters' => $cp->radius_meters,
                                         'major_ids' => $cp->majors->pluck('id')->toArray(),
+                                        'major_codes' => $cp->majors->pluck('code')->toArray(),
                                         'update_url' => route('adminsekolah.companies.update', $cp),
                                         'store_supervisor_url' => route('adminsekolah.companies.supervisors.store', $cp),
                                         'batch_reassign_url' => route('adminsekolah.companies.reassign-batch', $cp),
@@ -216,6 +217,7 @@
                                             'nis' => $sp->student->nis ?? '-',
                                             'class' => $sp->student->class->name ?? '-',
                                             'major' => $sp->student->class->major->code ?? '-',
+                                            'major_id' => $sp->student->class->major_id ?? null,
                                             'teacher_id' => $sp->teacher_id,
                                             'teacher_name' => $sp->teacher->user->name ?? 'Belum Ditugaskan',
                                             'supervisor_id' => $sp->supervisor_id,
@@ -765,12 +767,21 @@
             @method('PUT')
             
             <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1.5">Guru Pembimbing (Sekolah) <span class="text-rose-500">*</span></label>
+                <div class="flex items-center justify-between mb-1.5">
+                    <label class="block text-xs font-bold text-slate-700">Guru Pembimbing (Sekolah) <span class="text-rose-500">*</span></label>
+                    <span id="single-major-hint" class="text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200/60 px-2 py-0.5 rounded-md">Jurusan</span>
+                </div>
                 <select id="single-reassign-teacher-select" name="teacher_id" required
                         class="w-full text-xs p-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-semibold text-slate-800">
                     <!-- Populated dynamically -->
                 </select>
-                <p class="text-[10px] text-slate-400 mt-1">Guru dari sekolah yang mendampingi dan memantau siswa.</p>
+                <div class="flex items-center justify-between mt-1.5">
+                    <p class="text-[10px] text-slate-400">Guru dari sekolah yang mendampingi dan memantau siswa.</p>
+                    <label class="inline-flex items-center space-x-1.5 text-[10px] font-semibold text-slate-600 cursor-pointer">
+                        <input type="checkbox" id="single-toggle-all-teachers" onchange="renderSingleTeacherOptions()" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                        <span>Tampilkan semua jurusan</span>
+                    </label>
+                </div>
             </div>
 
             <div>
@@ -829,12 +840,21 @@
             </div>
 
             <div id="batch-field-teacher">
-                <label class="block text-xs font-bold text-slate-700 mb-1.5">Pilih Guru Pembimbing Pengganti <span class="text-rose-500">*</span></label>
+                <div class="flex items-center justify-between mb-1.5">
+                    <label class="block text-xs font-bold text-slate-700">Pilih Guru Pembimbing Pengganti <span class="text-rose-500">*</span></label>
+                    <span id="batch-major-hint" class="text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200/60 px-2 py-0.5 rounded-md">Jurusan DU/DI</span>
+                </div>
                 <select id="batch-teacher-select" name="teacher_id"
                         class="w-full text-xs p-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-semibold text-slate-800">
                     <!-- Populated dynamically -->
                 </select>
-                <p class="text-[10px] text-slate-400 mt-1">Seluruh siswa yang ditargetkan di DU/DI ini akan dialihkan ke guru ini.</p>
+                <div class="flex items-center justify-between mt-1.5">
+                    <p class="text-[10px] text-slate-400">Hanya menampilkan guru di jurusan ini.</p>
+                    <label class="inline-flex items-center space-x-1.5 text-[10px] font-semibold text-slate-600 cursor-pointer">
+                        <input type="checkbox" id="batch-toggle-all-teachers" onchange="renderBatchTeacherOptions()" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                        <span>Tampilkan semua jurusan</span>
+                    </label>
+                </div>
             </div>
 
             <div id="batch-field-supervisor" class="hidden">
@@ -999,6 +1019,8 @@
         'name' => $t->user->name ?? '-',
         'nip' => $t->nip ?? '',
         'email' => $t->user->email ?? '',
+        'major_ids' => $t->majors->pluck('id')->toArray(),
+        'major_codes' => $t->majors->pluck('code')->toArray(),
     ])) !!}
 </script>
 
@@ -1269,23 +1291,95 @@
         document.getElementById('modal-edit-company').classList.remove('hidden');
     }
 
+    let currentSingleStudent = null;
+    let batchExcludedTeacherId = null;
+
+    function renderBatchTeacherOptions() {
+        if (!currentCompanyData) return;
+        const tSelect = document.getElementById('batch-teacher-select');
+        tSelect.innerHTML = '<option value="">-- Pilih Guru Pengganti --</option>';
+
+        const showAll = document.getElementById('batch-toggle-all-teachers').checked;
+        const companyMajorIds = Array.isArray(currentCompanyData.major_ids) ? currentCompanyData.major_ids : [];
+        const allTeachers = getAllTeachers();
+
+        let filteredTeachers = allTeachers;
+        if (batchExcludedTeacherId) {
+            filteredTeachers = filteredTeachers.filter(t => Number(t.id) !== Number(batchExcludedTeacherId));
+        }
+
+        if (!showAll && companyMajorIds.length > 0) {
+            filteredTeachers = filteredTeachers.filter(t => {
+                const tMajorIds = Array.isArray(t.major_ids) ? t.major_ids : [];
+                return tMajorIds.length === 0 || tMajorIds.some(id => companyMajorIds.includes(id));
+            });
+        }
+
+        if (filteredTeachers.length === 0) {
+            const opt = document.createElement('option');
+            opt.value = "";
+            opt.textContent = "(Tidak ada guru di jurusan ini — centang 'Tampilkan semua jurusan')";
+            tSelect.appendChild(opt);
+        } else {
+            filteredTeachers.forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t.id;
+                const majorText = (t.major_codes && t.major_codes.length > 0) 
+                    ? `[${t.major_codes.join(', ')}]` 
+                    : '[Lintas Jurusan]';
+                opt.textContent = `${t.name} ${majorText} (${t.email})`;
+                tSelect.appendChild(opt);
+            });
+        }
+    }
+
+    function renderSingleTeacherOptions() {
+        if (!currentSingleStudent) return;
+        const st = currentSingleStudent;
+        const tSelect = document.getElementById('single-reassign-teacher-select');
+        tSelect.innerHTML = '';
+
+        const showAll = document.getElementById('single-toggle-all-teachers').checked;
+        const allTeachers = getAllTeachers();
+
+        let filteredTeachers = allTeachers;
+        if (!showAll && st.major_id) {
+            filteredTeachers = filteredTeachers.filter(t => {
+                const tMajorIds = Array.isArray(t.major_ids) ? t.major_ids : [];
+                return tMajorIds.length === 0 || tMajorIds.includes(Number(st.major_id));
+            });
+        }
+
+        if (filteredTeachers.length === 0) {
+            const opt = document.createElement('option');
+            opt.value = "";
+            opt.textContent = "(Tidak ada guru di jurusan ini — centang 'Tampilkan semua jurusan')";
+            tSelect.appendChild(opt);
+        } else {
+            filteredTeachers.forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t.id;
+                const majorText = (t.major_codes && t.major_codes.length > 0) 
+                    ? `[${t.major_codes.join(', ')}]` 
+                    : '[Lintas Jurusan]';
+                opt.textContent = `${t.name} ${majorText} (${t.email})`;
+                if (Number(t.id) === Number(st.teacher_id)) opt.selected = true;
+                tSelect.appendChild(opt);
+            });
+        }
+    }
+
     function openSingleReassignModal(studentIndex) {
         if (!currentCompanyData || !currentCompanyData.students) return;
         const st = currentCompanyData.students[studentIndex];
         if (!st) return;
 
+        currentSingleStudent = st;
         document.getElementById('single-reassign-student-name').textContent = `${st.name} (NISN: ${st.nisn}) - ${st.class}`;
+        document.getElementById('single-major-hint').textContent = `Jurusan ${st.major || '-'}`;
+        document.getElementById('single-toggle-all-teachers').checked = false;
 
-        // Populate teachers
-        const tSelect = document.getElementById('single-reassign-teacher-select');
-        tSelect.innerHTML = '';
-        getAllTeachers().forEach(t => {
-            const opt = document.createElement('option');
-            opt.value = t.id;
-            opt.textContent = `${t.name} (${t.email})`;
-            if (Number(t.id) === Number(st.teacher_id)) opt.selected = true;
-            tSelect.appendChild(opt);
-        });
+        renderSingleTeacherOptions();
 
         // Populate supervisors
         const sSelect = document.getElementById('single-reassign-supervisor-select');
@@ -1309,26 +1403,25 @@
     function openBatchReassignModal() {
         if (!currentCompanyData) return;
 
+        batchExcludedTeacherId = null;
         document.getElementById('batch-reassign-modal-title').textContent = "Ganti Pembimbing Massal";
         document.getElementById('batch-reassign-company-name').textContent = currentCompanyData.name;
         document.getElementById('batch-notice-box').classList.add('hidden');
         document.getElementById('batch-filter-teacher-id').value = '';
         document.getElementById('batch-filter-supervisor-id').value = '';
 
+        const majorCodes = Array.isArray(currentCompanyData.major_codes) && currentCompanyData.major_codes.length > 0 
+            ? currentCompanyData.major_codes.join(', ') 
+            : 'Lintas Jurusan';
+        document.getElementById('batch-major-hint').textContent = `Jurusan: ${majorCodes}`;
+        document.getElementById('batch-toggle-all-teachers').checked = false;
+
         const targetSelect = document.getElementById('batch-target-type-select');
         targetSelect.value = 'teacher';
         targetSelect.disabled = false;
         handleBatchTargetChange();
 
-        // Populate teachers
-        const tSelect = document.getElementById('batch-teacher-select');
-        tSelect.innerHTML = '<option value="">-- Pilih Guru Pembimbing --</option>';
-        getAllTeachers().forEach(t => {
-            const opt = document.createElement('option');
-            opt.value = t.id;
-            opt.textContent = `${t.name} (${t.email})`;
-            tSelect.appendChild(opt);
-        });
+        renderBatchTeacherOptions();
 
         // Populate supervisors
         const sSelect = document.getElementById('batch-supervisor-select');
@@ -1351,8 +1444,15 @@
     function openReplaceTeacherModal(teacherId, teacherName, studentCount) {
         if (!currentCompanyData) return;
 
+        batchExcludedTeacherId = teacherId;
         document.getElementById('batch-reassign-modal-title').textContent = "Ganti Guru Pembimbing";
         document.getElementById('batch-reassign-company-name').textContent = currentCompanyData.name;
+
+        const majorCodes = Array.isArray(currentCompanyData.major_codes) && currentCompanyData.major_codes.length > 0 
+            ? currentCompanyData.major_codes.join(', ') 
+            : 'Lintas Jurusan';
+        document.getElementById('batch-major-hint').textContent = `Jurusan: ${majorCodes}`;
+        document.getElementById('batch-toggle-all-teachers').checked = false;
 
         const noticeBox = document.getElementById('batch-notice-box');
         noticeBox.classList.remove('hidden');
@@ -1366,17 +1466,7 @@
         targetSelect.disabled = false;
         handleBatchTargetChange();
 
-        // Populate teachers except current
-        const tSelect = document.getElementById('batch-teacher-select');
-        tSelect.innerHTML = '<option value="">-- Pilih Guru Pengganti --</option>';
-        getAllTeachers().forEach(t => {
-            if (Number(t.id) !== Number(teacherId)) {
-                const opt = document.createElement('option');
-                opt.value = t.id;
-                opt.textContent = `${t.name} (${t.email})`;
-                tSelect.appendChild(opt);
-            }
-        });
+        renderBatchTeacherOptions();
 
         const form = document.getElementById('form-batch-reassign');
         form.action = currentCompanyData.batch_reassign_url;

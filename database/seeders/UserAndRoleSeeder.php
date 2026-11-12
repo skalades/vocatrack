@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Major;
 use App\Models\Profile;
 use App\Models\School;
 use App\Models\SchoolClass;
@@ -64,10 +65,14 @@ class UserAndRoleSeeder extends Seeder
             'phone' => '081223344552',
             'address' => 'Jl. Pembangunan No. 42, Garut Kota',
         ]);
-        Teacher::create([
+        $tc1 = Teacher::create([
             'user_id' => $guru1->id,
             'nip' => '198702142011011003',
         ]);
+        $majorGp = Major::where('code', 'GP')->first();
+        if ($majorGp) {
+            $tc1->majors()->sync([$majorGp->id]);
+        }
 
         $guru2 = User::create([
             'school_id' => $school->id,
@@ -83,10 +88,13 @@ class UserAndRoleSeeder extends Seeder
             'phone' => '081223344553',
             'address' => 'Jl. Samarang No. 18, Tarogong Kidul, Garut',
         ]);
-        Teacher::create([
+        $tc2 = Teacher::create([
             'user_id' => $guru2->id,
             'nip' => '198203142008011005',
         ]);
+        if ($majorGp) {
+            $tc2->majors()->sync([$majorGp->id]);
+        }
 
         // 4. Siswa Kejuruan Geologi Pertambangan SMKN 2 Garut
         $classGp1 = SchoolClass::where('school_id', $school->id)->where('name', 'XII GP 1')->firstOrFail();

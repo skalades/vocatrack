@@ -92,6 +92,7 @@ class PsptPklSeeder extends Seeder
             ['user_id' => $teacherUser1->id],
             ['nip' => '198504122009021004']
         );
+        $teacher1->majors()->syncWithoutDetaching([$majorPspt->id]);
 
         $teacherUser2 = User::firstOrCreate(
             ['email' => 'guru.pspt2@smkn2garut.sch.id'],
@@ -115,6 +116,7 @@ class PsptPklSeeder extends Seeder
             ['user_id' => $teacherUser2->id],
             ['nip' => '198906232014032002']
         );
+        $teacher2->majors()->syncWithoutDetaching([$majorPspt->id]);
 
         // 5. Dapatkan atau buat Periode PKL aktif
         $period = PklPeriod::where('school_id', $school->id)->where('is_active', true)->first();

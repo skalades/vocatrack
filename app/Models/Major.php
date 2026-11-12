@@ -27,4 +27,9 @@ class Major extends Model
     {
         return $this->belongsToMany(Company::class, 'company_major')->withTimestamps();
     }
+
+    public function teachers(): BelongsToMany
+    {
+        return $this->belongsToMany(Teacher::class, 'major_teacher')->withTimestamps();
+    }
 }

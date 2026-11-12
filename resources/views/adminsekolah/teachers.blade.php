@@ -68,7 +68,7 @@
     <!-- Table Card -->
     <x-card noPadding>
         <!-- Table Search Toolbar -->
-        <div class="p-4 sm:p-5 bg-white border-b border-slate-100 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        <div class="p-4 sm:p-5 bg-white border-b border-slate-100 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
             <div class="relative flex-1 max-w-md">
                 <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
@@ -78,8 +78,20 @@
             </div>
 
             <div class="flex items-center gap-2">
-                <span class="text-xs text-slate-500 font-semibold hidden md:inline">
-                    Menampilkan {{ $teachers->count() }} dari {{ $teachers->total() }} guru
+                <form method="GET" action="{{ route('adminsekolah.teachers') }}" class="flex items-center gap-2">
+                    <select name="major" onchange="this.form.submit()" 
+                            class="text-xs font-bold px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
+                        <option value="all" {{ ($selectedMajor ?? 'all') === 'all' ? 'selected' : '' }}>Semua Jurusan</option>
+                        <option value="lintas" {{ ($selectedMajor ?? '') === 'lintas' ? 'selected' : '' }}>Lintas Jurusan</option>
+                        @foreach($majors as $m)
+                            <option value="{{ $m->id }}" {{ ($selectedMajor ?? '') == $m->id ? 'selected' : '' }}>
+                                {{ $m->code }} - {{ $m->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </form>
+                <span class="text-xs text-slate-500 font-semibold hidden md:inline ml-2">
+                    {{ $teachers->total() }} Guru Terdaftar
                 </span>
             </div>
         </div>
@@ -90,6 +102,7 @@
                     <tr>
                         <th class="py-3.5 px-6">Identitas Guru Pembimbing</th>
                         <th class="py-3.5 px-4">Nomor Induk Pegawai (NIP)</th>
+                        <th class="py-3.5 px-4">Jurusan yang Diampu</th>
                         <th class="py-3.5 px-4">Email Login Sistem</th>
                         <th class="py-3.5 px-6 text-center">Beban Bimbingan</th>
                         <th class="py-3.5 px-4 text-right">Aksi</th>
@@ -114,6 +127,21 @@
                             <td class="py-3.5 px-4">
                                 <span class="font-mono font-bold text-slate-800 text-xs teacher-nip">{{ $t->nip ?? '-' }}</span>
                             </td>
+                            <td class="py-3.5 px-4">
+                                @if($t->majors->isNotEmpty())
+                                    <div class="flex flex-wrap gap-1">
+                                        @foreach($t->majors as $mj)
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-extrabold bg-indigo-50 text-indigo-700 border border-indigo-200/60" title="{{ $mj->name }}">
+                                                {{ $mj->code }}
+                                            </span>
+                                        @endforeach
+                                    </div>
+                                @else
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+                                        Lintas Jurusan
+                                    </span>
+                                @endif
+                            </td>
                             <td class="py-3.5 px-4 font-mono text-[11px] text-slate-600">
                                 {{ $t->user->email }}
                             </td>
@@ -130,6 +158,7 @@
                                             'email' => $t->user->email,
                                             'nip' => $t->nip ?? '',
                                             'phone' => $t->user->profile->phone ?? '',
+                                            'major_ids' => $t->majors->pluck('id')->toArray(),
                                             'update_url' => route('adminsekolah.teachers.update', $t),
                                         ]) }})"
                                         class="px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 text-[11px] font-bold border border-slate-200 transition-colors cursor-pointer inline-flex items-center gap-1"
@@ -156,7 +185,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="py-12">
+                            <td colspan="6" class="py-12">
                                 <x-empty-state 
                                     title="Belum Ada Guru Pembimbing" 
                                     description="Tambahkan akun guru pembimbing untuk memandu dan mengevaluasi siswa peserta PKL."
@@ -214,6 +243,25 @@
                        class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium text-slate-900">
                 <span class="text-[11px] text-slate-400 block mt-1 font-medium">Kata sandi default awal: <code class="text-slate-700 font-mono font-bold">password</code></span>
             </div>
+            <div>
+                <div class="flex items-center justify-between mb-1.5">
+                    <label class="block text-xs font-bold text-slate-700">Jurusan yang Diampu</label>
+                    <div class="space-x-2 text-[10px]">
+                        <button type="button" onclick="toggleAllTeacherMajors('add-teacher-major-check', true)" class="text-indigo-600 hover:underline font-bold cursor-pointer">Pilih Semua</button>
+                        <span class="text-slate-300">|</span>
+                        <button type="button" onclick="toggleAllTeacherMajors('add-teacher-major-check', false)" class="text-slate-500 hover:underline cursor-pointer">Kosongkan</button>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 p-3 bg-slate-50 border border-slate-200 rounded-2xl max-h-48 overflow-y-auto">
+                    @foreach($majors as $m)
+                        <label class="flex items-center space-x-2 text-xs font-semibold text-slate-700 cursor-pointer p-1.5 rounded-lg hover:bg-white transition">
+                            <input type="checkbox" name="major_ids[]" value="{{ $m->id }}" class="add-teacher-major-check rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                            <span class="truncate" title="{{ $m->name }}">{{ $m->code }}</span>
+                        </label>
+                    @endforeach
+                </div>
+                <span class="text-[11px] text-slate-400 block mt-1 font-medium">Jika kosong, guru dapat membimbing siswa di semua jurusan (Lintas Jurusan).</span>
+            </div>
             <div class="flex items-center justify-end space-x-2.5 pt-3 border-t border-slate-100">
                 <x-button type="button" variant="secondary" size="md" onclick="document.getElementById('modal-add-teacher').classList.add('hidden')">
                     Batal
@@ -267,6 +315,26 @@
                        class="w-full text-xs font-mono font-semibold px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 text-slate-800">
             </div>
 
+            <div>
+                <div class="flex items-center justify-between mb-1.5">
+                    <label class="block text-xs font-bold text-slate-700">Jurusan yang Diampu</label>
+                    <div class="space-x-2 text-[10px]">
+                        <button type="button" onclick="toggleAllTeacherMajors('edit-teacher-major-check', true)" class="text-indigo-600 hover:underline font-bold cursor-pointer">Pilih Semua</button>
+                        <span class="text-slate-300">|</span>
+                        <button type="button" onclick="toggleAllTeacherMajors('edit-teacher-major-check', false)" class="text-slate-500 hover:underline cursor-pointer">Kosongkan</button>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 p-3 bg-slate-50 border border-slate-200 rounded-2xl max-h-48 overflow-y-auto">
+                    @foreach($majors as $m)
+                        <label class="flex items-center space-x-2 text-xs font-semibold text-slate-700 cursor-pointer p-1.5 rounded-lg hover:bg-white transition">
+                            <input type="checkbox" name="major_ids[]" value="{{ $m->id }}" id="edit-t-major-{{ $m->id }}" class="edit-teacher-major-check rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                            <span class="truncate" title="{{ $m->name }}">{{ $m->code }}</span>
+                        </label>
+                    @endforeach
+                </div>
+                <span class="text-[11px] text-slate-400 block mt-1 font-medium">Jika kosong, guru dapat membimbing siswa di semua jurusan (Lintas Jurusan).</span>
+            </div>
+
             <div class="flex items-center justify-end space-x-2.5 pt-3 border-t border-slate-100">
                 <x-button type="button" variant="secondary" size="md" onclick="document.getElementById('modal-edit-teacher').classList.add('hidden')">
                     Batal
@@ -281,6 +349,12 @@
 
 @push('scripts')
 <script>
+    function toggleAllTeacherMajors(className, checked) {
+        document.querySelectorAll('.' + className).forEach(el => {
+            el.checked = checked;
+        });
+    }
+
     function filterTeachersTable() {
         const query = document.getElementById('teacher-search-input').value.toLowerCase();
         const rows = document.querySelectorAll('.teacher-row');
@@ -296,6 +370,16 @@
         document.getElementById('edit-teacher-nip').value = data.nip || '';
         document.getElementById('edit-teacher-phone').value = data.phone || '';
         document.getElementById('edit-teacher-email').value = data.email;
+
+        // Reset and set majors
+        document.querySelectorAll('.edit-teacher-major-check').forEach(el => el.checked = false);
+        if (Array.isArray(data.major_ids)) {
+            data.major_ids.forEach(id => {
+                const el = document.getElementById('edit-t-major-' + id);
+                if (el) el.checked = true;
+            });
+        }
+
         document.getElementById('modal-edit-teacher').classList.remove('hidden');
     }
 </script>
