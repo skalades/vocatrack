@@ -4,7 +4,7 @@
 @section('page_subtitle', 'Monitoring aduan kendala siswa, keselamatan kerja industri, dan riwayat tindak lanjut pembimbing')
 
 @section('content')
-<div class="max-w-7xl mx-auto space-y-6">
+<div class="w-full space-y-6">
 
     <!-- Enterprise Hero Banner -->
     <x-page-header 

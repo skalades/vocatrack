@@ -4,7 +4,7 @@
 @section('page_subtitle', 'Publikasikan informasi, agenda, instruksi PKL, dan pengumuman dengan gambar berdasarkan kategori dan jurusan')
 
 @section('content')
-<div class="max-w-7xl mx-auto space-y-6">
+<div class="w-full space-y-6">
 
     <!-- Enterprise Hero Banner -->
     <x-page-header 
@@ -120,22 +120,22 @@
         </div>
 
         <!-- Announcements Table -->
-        <div class="overflow-x-auto">
-            <table class="w-full text-left text-xs">
+        <div class="overflow-x-auto custom-scrollbar">
+            <table class="w-full text-left text-xs min-w-[980px]">
                 <thead class="bg-slate-50/80 text-slate-500 border-b border-slate-200/80 font-extrabold uppercase text-[10px] tracking-wider">
                     <tr>
-                        <th class="py-3.5 px-6">Informasi & Judul</th>
-                        <th class="py-3.5 px-4">Kategori</th>
-                        <th class="py-3.5 px-4">Target Audiens</th>
-                        <th class="py-3.5 px-4">Jurusan Target</th>
-                        <th class="py-3.5 px-4">Penulis & Tanggal</th>
-                        <th class="py-3.5 px-4 text-center">Status</th>
-                        <th class="py-3.5 px-6 text-right">Aksi</th>
+                        <th class="py-3.5 px-6 min-w-[240px]">Informasi & Judul</th>
+                        <th class="py-3.5 px-4 min-w-[120px]">Kategori</th>
+                        <th class="py-3.5 px-4 min-w-[120px]">Target Audiens</th>
+                        <th class="py-3.5 px-4 min-w-[120px]">Jurusan Target</th>
+                        <th class="py-3.5 px-4 min-w-[140px]">Penulis & Tanggal</th>
+                        <th class="py-3.5 px-4 text-center min-w-[90px]">Status</th>
+                        <th class="py-3.5 px-6 text-right table-sticky-right">Aksi</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 text-slate-700 font-medium">
                     @forelse($announcements as $ann)
-                        <tr class="hover:bg-slate-50/70 transition-colors">
+                        <tr class="hover:bg-slate-50/70 transition-colors group">
                             <td class="py-3.5 px-6">
                                 <div class="flex items-start gap-3">
                                     @if($ann->image_path)
@@ -203,7 +203,7 @@
                                     </span>
                                 @endif
                             </td>
-                            <td class="py-3.5 px-6 text-right whitespace-nowrap">
+                            <td class="py-3.5 px-6 text-right whitespace-nowrap table-sticky-right">
                                 <div class="flex items-center justify-end gap-1.5">
                                     
                                     <!-- Toggle Pin -->

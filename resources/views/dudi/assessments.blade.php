@@ -4,7 +4,7 @@
 @section('page_subtitle', 'Evaluasi etos kerja, kedisiplinan, dan penguasaan teknis siswa selama praktik kerja lapangan')
 
 @section('content')
-<div class="max-w-7xl mx-auto space-y-6">
+<div class="w-full space-y-6">
 
     <!-- Enterprise Hero Banner -->
     <x-page-header 
@@ -376,18 +376,18 @@
         <!-- VIEW 2: COMPACT TABLE VIEW FOR DU/DI                                      -->
         <!-- ========================================================================= -->
         <div id="dudi-table-container" class="hidden bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden">
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
+            <div class="overflow-x-auto custom-scrollbar">
+                <table class="w-full text-left border-collapse min-w-[920px]">
                     <thead>
                         <tr class="bg-slate-50/80 border-b border-slate-200/80 text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">
-                            <th class="py-3.5 px-4 sm:px-5">Siswa Magang</th>
-                            <th class="py-3.5 px-3 text-center">Disiplin</th>
-                            <th class="py-3.5 px-3 text-center">Teknis</th>
-                            <th class="py-3.5 px-3 text-center">Inisiatif</th>
-                            <th class="py-3.5 px-3 text-center">Rata-rata ({{ $wDudi }}%)</th>
-                            <th class="py-3.5 px-3 text-center">Nilai Terpadu</th>
-                            <th class="py-3.5 px-4 text-center">Status</th>
-                            <th class="py-3.5 px-4 text-right">Aksi</th>
+                            <th class="py-3.5 px-4 sm:px-5 min-w-[200px]">Siswa Magang</th>
+                            <th class="py-3.5 px-3 text-center min-w-[80px]">Disiplin</th>
+                            <th class="py-3.5 px-3 text-center min-w-[80px]">Teknis</th>
+                            <th class="py-3.5 px-3 text-center min-w-[80px]">Inisiatif</th>
+                            <th class="py-3.5 px-3 text-center min-w-[120px]">Rata-rata ({{ $wDudi }}%)</th>
+                            <th class="py-3.5 px-3 text-center min-w-[100px]">Nilai Terpadu</th>
+                            <th class="py-3.5 px-4 text-center min-w-[110px]">Status</th>
+                            <th class="py-3.5 px-4 text-right table-sticky-right">Aksi</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100 text-xs font-medium text-slate-700">
@@ -399,7 +399,7 @@
                                 $isComplete = $a && $a->final_score !== null && $a->final_score > 0;
                                 $statusTag = $hasEvaluated ? 'evaluated' : 'pending';
                             @endphp
-                            <tr class="dudi-table-row hover:bg-slate-50/70 transition-colors"
+                            <tr class="dudi-table-row hover:bg-slate-50/70 transition-colors group"
                                 data-name="{{ strtolower($sp->student->user->name) }}"
                                 data-nisn="{{ $sp->student->nisn }}"
                                 data-class="{{ strtolower($sp->student->class->name ?? '') }}"
@@ -457,7 +457,7 @@
                                     @endif
                                 </td>
 
-                                <td class="py-3.5 px-4 text-right">
+                                <td class="py-3.5 px-4 text-right whitespace-nowrap table-sticky-right">
                                     <button type="button" 
                                             onclick="openDudiCardForStudent('{{ $sp->id }}')" 
                                             class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition-colors">

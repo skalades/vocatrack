@@ -4,7 +4,7 @@
 @section('page_subtitle', 'Tambah sekolah baru dan kelola hak akses tenant multi-sekolah')
 
 @section('content')
-<div class="max-w-7xl mx-auto space-y-6 sm:space-y-8 animate-in fade-in duration-300">
+<div class="w-full space-y-6 sm:space-y-8 animate-in fade-in duration-300">
 
     <!-- Enterprise Hero Header -->
     <x-page-header 
@@ -86,20 +86,20 @@
 
     <!-- Table Card -->
     <x-card noPadding>
-        <div class="overflow-x-auto">
-            <table class="w-full text-left text-xs" id="schools-table">
+        <div class="overflow-x-auto custom-scrollbar">
+            <table class="w-full text-left text-xs min-w-[860px]" id="schools-table">
                 <thead class="bg-slate-50/80 text-slate-500 border-b border-slate-200/80 font-extrabold uppercase text-[10px] tracking-wider">
                     <tr>
-                        <th class="py-3.5 px-6">Satuan Pendidikan & NPSN</th>
-                        <th class="py-3.5 px-4">Kontak Resmi</th>
-                        <th class="py-3.5 px-4 text-center">Metrik Tenant</th>
-                        <th class="py-3.5 px-4 text-center">Status</th>
-                        <th class="py-3.5 px-6 text-center">Aksi Manajemen</th>
+                        <th class="py-3.5 px-6 min-w-[240px]">Satuan Pendidikan & NPSN</th>
+                        <th class="py-3.5 px-4 min-w-[160px]">Kontak Resmi</th>
+                        <th class="py-3.5 px-4 text-center min-w-[140px]">Metrik Tenant</th>
+                        <th class="py-3.5 px-4 text-center min-w-[110px]">Status</th>
+                        <th class="py-3.5 px-6 text-center table-sticky-right">Aksi Manajemen</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 text-slate-700 font-medium">
                     @forelse($schools as $sch)
-                        <tr class="hover:bg-slate-50/70 transition-colors school-row" data-name="{{ strtolower($sch->name) }}" data-npsn="{{ $sch->npsn }}" data-status="{{ $sch->is_active ? 'active' : 'inactive' }}">
+                        <tr class="hover:bg-slate-50/70 transition-colors school-row group" data-name="{{ strtolower($sch->name) }}" data-npsn="{{ $sch->npsn }}" data-status="{{ $sch->is_active ? 'active' : 'inactive' }}">
                             <td class="py-4 px-6">
                                 <div class="flex items-start space-x-3.5">
                                     <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500 to-indigo-700 text-white font-extrabold text-sm flex items-center justify-center shrink-0 shadow-sm shadow-indigo-500/20">
@@ -141,7 +141,7 @@
                                     {{ $sch->is_active ? 'Tenant Aktif' : 'Non-Aktif' }}
                                 </x-badge>
                             </td>
-                            <td class="py-4 px-6 text-center">
+                            <td class="py-4 px-6 text-center whitespace-nowrap table-sticky-right">
                                 <form action="{{ route('superadmin.schools.toggle', $sch->id) }}" method="POST" onsubmit="return confirm('Ubah status aktifasi sekolah ini?')">
                                     @csrf
                                     <button type="submit" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer {{ $sch->is_active ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 hover:shadow-rose-600/10' : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 hover:shadow-emerald-600/10' }}">

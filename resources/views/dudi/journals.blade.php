@@ -4,7 +4,7 @@
 @section('page_subtitle', 'Verifikasi kesesuaian aktivitas teknis di lapangan sebelum diteruskan ke guru pembimbing')
 
 @section('content')
-<div class="max-w-7xl mx-auto space-y-6 animate-in fade-in duration-300">
+<div class="w-full space-y-6 animate-in fade-in duration-300">
 
     <!-- Enterprise Hero Banner -->
     <x-page-header 
@@ -336,8 +336,8 @@
         </x-card>
 
         <x-card noPadding>
-            <div class="overflow-x-auto">
-                <table class="w-full text-left text-xs border-collapse table-fixed min-w-[760px]">
+            <div class="overflow-x-auto custom-scrollbar">
+                <table class="w-full text-left text-xs border-collapse table-fixed min-w-[880px]">
                     <thead class="bg-slate-50/80 text-slate-500 border-b border-slate-200/80 font-extrabold uppercase text-[10px] tracking-wider">
                         <tr>
                             <th class="py-3.5 px-3 w-10 text-center">
@@ -347,12 +347,12 @@
                             <th class="py-3.5 px-4 w-[160px]">Tanggal Jurnal</th>
                             <th class="py-3.5 px-4 min-w-[240px]">Ringkasan Aktivitas Lapangan</th>
                             <th class="py-3.5 px-4 w-[130px] text-center">Status Verifikasi</th>
-                            <th class="py-3.5 px-4 w-[130px] text-center">Aksi Mentor</th>
+                            <th class="py-3.5 px-4 w-[130px] text-center table-sticky-right">Aksi Mentor</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100 text-slate-700 font-medium">
                         @forelse($journals as $j)
-                            <tr class="hover:bg-slate-50/70 transition-colors">
+                            <tr class="hover:bg-slate-50/70 transition-colors group">
                                 <td class="py-3 px-3 text-center">
                                     @if($j->status === 'submitted')
                                         <input type="checkbox" value="{{ $j->id }}" class="bulk-checkbox-dudi-journals rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
@@ -395,7 +395,7 @@
                                     </x-badge>
                                 </td>
 
-                                <td class="py-3 px-4 text-center whitespace-nowrap">
+                                <td class="py-3 px-4 text-center whitespace-nowrap table-sticky-right">
                                     <button type="button" onclick="openJournalModal('{{ $j->id }}')" 
                                             class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all {{ $j->status === 'submitted' ? 'bg-cyan-600 hover:bg-cyan-700 text-white shadow-xs' : 'bg-slate-100 hover:bg-slate-200 text-slate-700' }}">
                                         {{ $j->status === 'submitted' ? 'Validasi' : 'Detail' }}
@@ -404,7 +404,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="5" class="py-12">
+                                <td colspan="6" class="py-12">
                                     <x-empty-state 
                                         title="Tidak Ada Jurnal" 
                                         description="Tidak ada data jurnal magang yang ditemukan."

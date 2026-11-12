@@ -4,7 +4,7 @@
 @section('page_subtitle', 'Pemetaan penempatan siswa ke DU/DI, guru pembimbing, dan mentor industri')
 
 @section('content')
-<div class="max-w-7xl mx-auto space-y-6">
+<div class="w-full space-y-6">
 
     <!-- Enterprise Hero Banner -->
     <x-page-header 
@@ -123,42 +123,42 @@
 
     <!-- Table Card -->
     <x-card noPadding>
-        <div class="overflow-x-auto">
-            <table class="w-full text-left text-xs">
+        <div class="overflow-x-auto custom-scrollbar">
+            <table class="w-full text-left text-xs min-w-[1020px]">
                 <thead class="bg-slate-50/80 text-slate-500 border-b border-slate-200/80 font-extrabold uppercase text-[10px] tracking-wider">
                     <tr>
-                        <th class="py-3.5 px-6">Nama Siswa & Rombel</th>
-                        <th class="py-3.5 px-4">Perusahaan Mitra (DU/DI)</th>
-                        <th class="py-3.5 px-4">Guru Pembimbing</th>
-                        <th class="py-3.5 px-4">Mentor DU/DI</th>
-                        <th class="py-3.5 px-4">Periode PKL</th>
-                        <th class="py-3.5 px-6 text-center">Status</th>
-                        <th class="py-3.5 px-4 text-right">Aksi</th>
+                        <th class="py-3.5 px-6 min-w-[210px]">Nama Siswa & Rombel</th>
+                        <th class="py-3.5 px-4 min-w-[200px]">Perusahaan Mitra (DU/DI)</th>
+                        <th class="py-3.5 px-4 min-w-[160px]">Guru Pembimbing</th>
+                        <th class="py-3.5 px-4 min-w-[160px]">Mentor DU/DI</th>
+                        <th class="py-3.5 px-4 min-w-[180px]">Periode PKL</th>
+                        <th class="py-3.5 px-6 text-center min-w-[100px]">Status</th>
+                        <th class="py-3.5 px-4 text-right table-sticky-right">Aksi</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 text-slate-700 font-medium">
                     @forelse($studentPkls as $sp)
-                        <tr class="hover:bg-slate-50/70 transition-colors">
-                            <td class="py-3.5 px-6">
+                        <tr class="hover:bg-slate-50/70 transition-colors group">
+                            <td class="py-3.5 px-6 min-w-[210px]">
                                 <div class="flex items-center space-x-3">
                                     <div class="w-8 h-8 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-700 font-bold text-xs flex items-center justify-center shrink-0">
                                         {{ substr($sp->student->user->name, 0, 1) }}
                                     </div>
                                     <div class="min-w-0">
                                         <div class="flex items-center space-x-1.5">
-                                            <span class="font-bold text-slate-900 block truncate">{{ $sp->student->user->name }}</span>
+                                            <span class="font-bold text-slate-900 block truncate" title="{{ $sp->student->user->name }}">{{ $sp->student->user->name }}</span>
                                             @if($sp->student->class && $sp->student->class->major)
                                                 <span class="inline-flex items-center px-1.5 py-0.2 rounded text-[9px] font-bold bg-slate-100 text-slate-700 border border-slate-200/80">
                                                     {{ $sp->student->class->major->code }}
                                                 </span>
                                             @endif
                                         </div>
-                                        <span class="text-[11px] text-slate-500 font-medium">{{ $sp->student->class->name ?? '-' }} &bull; NISN: {{ $sp->student->nisn }}</span>
+                                        <span class="text-[11px] text-slate-500 font-medium whitespace-nowrap">{{ $sp->student->class->name ?? '-' }} &bull; NISN: {{ $sp->student->nisn }}</span>
                                     </div>
                                 </div>
                             </td>
-                            <td class="py-3.5 px-4">
-                                <span class="font-bold text-indigo-900 block">{{ $sp->company->name }}</span>
+                            <td class="py-3.5 px-4 min-w-[200px] max-w-[240px]">
+                                <span class="font-bold text-indigo-900 block truncate" title="{{ $sp->company->name }}">{{ $sp->company->name }}</span>
                                 <div class="flex flex-wrap gap-1 mt-1">
                                     @forelse($sp->company->majors as $m)
                                         <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200/60" title="{{ $m->name }}">{{ $m->code }}</span>
@@ -166,30 +166,30 @@
                                         <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium bg-slate-100 text-slate-500">Semua Jurusan</span>
                                     @endforelse
                                 </div>
-                                <span class="text-[11px] text-slate-400 block truncate max-w-xs font-normal mt-0.5">{{ $sp->company->address }}</span>
+                                <span class="text-[11px] text-slate-400 block truncate font-normal mt-0.5" title="{{ $sp->company->address }}">{{ $sp->company->address }}</span>
                             </td>
-                            <td class="py-3.5 px-4">
-                                <span class="font-semibold text-slate-900 block">{{ $sp->teacher->user->name }}</span>
-                                <span class="text-[10px] text-slate-400 font-mono">NIP: {{ $sp->teacher->nip ?? '-' }}</span>
+                            <td class="py-3.5 px-4 min-w-[160px]">
+                                <span class="font-semibold text-slate-900 block truncate" title="{{ $sp->teacher->user->name }}">{{ $sp->teacher->user->name }}</span>
+                                <span class="text-[10px] text-slate-400 font-mono block whitespace-nowrap">NIP: {{ $sp->teacher->nip ?? '-' }}</span>
                             </td>
-                            <td class="py-3.5 px-4">
+                            <td class="py-3.5 px-4 min-w-[160px]">
                                 @if($sp->supervisor)
-                                    <span class="font-semibold text-slate-900 block">{{ $sp->supervisor->user->name }}</span>
-                                    <span class="text-[10px] text-slate-400 font-mono">{{ $sp->supervisor->user->email }}</span>
+                                    <span class="font-semibold text-slate-900 block truncate" title="{{ $sp->supervisor->user->name }}">{{ $sp->supervisor->user->name }}</span>
+                                    <span class="text-[10px] text-slate-400 font-mono block truncate" title="{{ $sp->supervisor->user->email }}">{{ $sp->supervisor->user->email }}</span>
                                 @else
                                     <span class="text-slate-400 text-xs italic">Belum Ditentukan</span>
                                 @endif
                             </td>
-                            <td class="py-3.5 px-4">
-                                <span class="text-xs font-semibold text-slate-700 block">{{ $sp->pklPeriod->name }}</span>
-                                <span class="text-[10px] text-slate-400 font-mono">{{ \Carbon\Carbon::parse($sp->pklPeriod->start_date)->format('d M') }} - {{ \Carbon\Carbon::parse($sp->pklPeriod->end_date)->format('d M Y') }}</span>
+                            <td class="py-3.5 px-4 min-w-[180px] max-w-[220px]">
+                                <span class="text-xs font-semibold text-slate-700 block truncate" title="{{ $sp->pklPeriod->name }}">{{ $sp->pklPeriod->name }}</span>
+                                <span class="text-[10px] text-slate-400 font-mono whitespace-nowrap block mt-0.5">{{ \Carbon\Carbon::parse($sp->pklPeriod->start_date)->format('d M') }} - {{ \Carbon\Carbon::parse($sp->pklPeriod->end_date)->format('d M Y') }}</span>
                             </td>
-                            <td class="py-3.5 px-6 text-center">
+                            <td class="py-3.5 px-6 text-center min-w-[100px] whitespace-nowrap">
                                 <x-badge variant="success" size="xs">
                                     {{ strtoupper($sp->status) }}
                                 </x-badge>
                             </td>
-                            <td class="py-3.5 px-4 text-right whitespace-nowrap">
+                            <td class="py-3.5 px-4 text-right whitespace-nowrap table-sticky-right">
                                 <form action="{{ route('adminsekolah.plotting.destroy', $sp) }}" method="POST" class="inline" onsubmit="return confirm('Batalkan penugasan PKL siswa {{ $sp->student->user->name }} di {{ $sp->company->name }}?')">
                                     @csrf
                                     @method('DELETE')

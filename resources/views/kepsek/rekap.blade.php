@@ -4,7 +4,7 @@
 @section('page_subtitle', 'Penyajian matriks absensi siswa per tanggal dengan kode status dan ringkasan total')
 
 @section('content')
-<div class="max-w-7xl mx-auto space-y-6 sm:space-y-8 animate-in fade-in duration-300">
+<div class="w-full space-y-6 sm:space-y-8 animate-in fade-in duration-300">
 
     <!-- Enterprise Hero Header -->
     <x-page-header 
@@ -142,7 +142,7 @@
     <!-- Matrix Table Card -->
     <x-card noPadding>
         <div class="overflow-x-auto custom-scrollbar">
-            <table class="w-full text-center text-xs border-collapse">
+            <table class="w-full text-center text-xs border-collapse min-w-[1260px]">
                 <thead class="bg-slate-50 text-slate-600 font-extrabold border-b border-slate-200 text-[10px] tracking-wider uppercase">
                     <tr>
                         <th class="py-3.5 px-4 text-left sticky left-0 bg-slate-50 z-20 min-w-[200px] border-r border-slate-200 shadow-sm">Nama Siswa & NISN</th>

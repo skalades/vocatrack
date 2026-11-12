@@ -4,7 +4,7 @@
 @section('page_subtitle', 'Kelola akun guru pembimbing PKL sekolah dan pantau alokasi siswa binaan')
 
 @section('content')
-<div class="max-w-7xl mx-auto space-y-6">
+<div class="w-full space-y-6">
 
     <!-- Enterprise Hero Banner -->
     <x-page-header 
@@ -96,38 +96,38 @@
             </div>
         </div>
 
-        <div class="overflow-x-auto">
-            <table class="w-full text-left text-xs" id="teachers-table">
+        <div class="overflow-x-auto custom-scrollbar">
+            <table class="w-full text-left text-xs min-w-[960px]" id="teachers-table">
                 <thead class="bg-slate-50/80 text-slate-500 border-b border-slate-200/80 font-extrabold uppercase text-[10px] tracking-wider">
                     <tr>
-                        <th class="py-3.5 px-6">Identitas Guru Pembimbing</th>
-                        <th class="py-3.5 px-4">Nomor Induk Pegawai (NIP)</th>
-                        <th class="py-3.5 px-4">Jurusan yang Diampu</th>
-                        <th class="py-3.5 px-4">Email Login Sistem</th>
-                        <th class="py-3.5 px-6 text-center">Beban Bimbingan</th>
-                        <th class="py-3.5 px-4 text-right">Aksi</th>
+                        <th class="py-3.5 px-6 min-w-[210px]">Identitas Guru Pembimbing</th>
+                        <th class="py-3.5 px-4 min-w-[140px]">Nomor Induk Pegawai (NIP)</th>
+                        <th class="py-3.5 px-4 min-w-[140px]">Jurusan yang Diampu</th>
+                        <th class="py-3.5 px-4 min-w-[160px]">Email Login Sistem</th>
+                        <th class="py-3.5 px-6 text-center min-w-[120px]">Beban Bimbingan</th>
+                        <th class="py-3.5 px-4 text-right table-sticky-right">Aksi</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 text-slate-700 font-medium">
                     @forelse($teachers as $t)
-                        <tr class="hover:bg-slate-50/70 transition-colors teacher-row">
-                            <td class="py-3.5 px-6">
+                        <tr class="hover:bg-slate-50/70 transition-colors teacher-row group">
+                            <td class="py-3.5 px-6 min-w-[210px]">
                                 <div class="flex items-center space-x-3.5">
                                     <div class="w-10 h-10 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-700 font-black text-xs flex items-center justify-center shrink-0 shadow-xs shadow-emerald-600/10">
                                         {{ substr($t->user->name, 0, 1) }}
                                     </div>
                                     <div class="min-w-0">
-                                        <span class="font-bold text-slate-900 block truncate text-sm teacher-name">{{ $t->user->name }}</span>
+                                        <span class="font-bold text-slate-900 block truncate text-sm teacher-name" title="{{ $t->user->name }}">{{ $t->user->name }}</span>
                                         <span class="text-[11px] text-slate-400 font-medium">
                                             {{ $t->user->profile->phone ?? 'Kontak belum diisi' }}
                                         </span>
                                     </div>
                                 </div>
                             </td>
-                            <td class="py-3.5 px-4">
-                                <span class="font-mono font-bold text-slate-800 text-xs teacher-nip">{{ $t->nip ?? '-' }}</span>
+                            <td class="py-3.5 px-4 min-w-[140px]">
+                                <span class="font-mono font-bold text-slate-800 text-xs teacher-nip whitespace-nowrap">{{ $t->nip ?? '-' }}</span>
                             </td>
-                            <td class="py-3.5 px-4">
+                            <td class="py-3.5 px-4 min-w-[140px]">
                                 @if($t->majors->isNotEmpty())
                                     <div class="flex flex-wrap gap-1">
                                         @foreach($t->majors as $mj)
@@ -142,15 +142,15 @@
                                     </span>
                                 @endif
                             </td>
-                            <td class="py-3.5 px-4 font-mono text-[11px] text-slate-600">
-                                {{ $t->user->email }}
+                            <td class="py-3.5 px-4 font-mono text-[11px] text-slate-600 min-w-[160px]">
+                                <span class="block truncate" title="{{ $t->user->email }}">{{ $t->user->email }}</span>
                             </td>
-                            <td class="py-3.5 px-6 text-center">
+                            <td class="py-3.5 px-6 text-center min-w-[120px] whitespace-nowrap">
                                 <x-badge variant="indigo" size="sm">
                                     {{ $t->studentPkls->count() }} Siswa Binaan
                                 </x-badge>
                             </td>
-                            <td class="py-3.5 px-4 text-right whitespace-nowrap space-x-1.5">
+                            <td class="py-3.5 px-4 text-right whitespace-nowrap space-x-1.5 table-sticky-right">
                                 <button type="button" 
                                         onclick="openEditTeacherModal({{ json_encode([
                                             'id' => $t->id,

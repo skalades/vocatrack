@@ -4,7 +4,7 @@
 @section('page_subtitle', 'Pengaturan lokasi kantor perusahaan rekanan dan aturan geofencing presensi')
 
 @section('content')
-<div class="max-w-7xl mx-auto space-y-6">
+<div class="w-full space-y-6">
 
     <!-- Enterprise Hero Banner -->
     <x-page-header 
@@ -113,23 +113,23 @@
 
     <!-- Table Card -->
     <x-card noPadding>
-        <div class="overflow-x-auto">
-            <table class="w-full text-left text-xs">
+        <div class="overflow-x-auto custom-scrollbar">
+            <table class="w-full text-left text-xs min-w-[1100px]">
                 <thead class="bg-slate-50/80 text-slate-500 border-b border-slate-200/80 font-extrabold uppercase text-[10px] tracking-wider">
                     <tr>
-                        <th class="py-3.5 px-6">Nama Perusahaan & Alamat</th>
-                        <th class="py-3.5 px-4">Jurusan Terkait</th>
-                        <th class="py-3.5 px-4">Kontak PIC</th>
-                        <th class="py-3.5 px-4">Geofencing GPS</th>
-                        <th class="py-3.5 px-4">Hari Kerja</th>
-                        <th class="py-3.5 px-4">Mentor Lapangan</th>
-                        <th class="py-3.5 px-4 text-center">Siswa Aktif</th>
-                        <th class="py-3.5 px-6 text-center">Aksi</th>
+                        <th class="py-3.5 px-6 min-w-[220px]">Nama Perusahaan & Alamat</th>
+                        <th class="py-3.5 px-4 min-w-[140px]">Jurusan Terkait</th>
+                        <th class="py-3.5 px-4 min-w-[130px]">Kontak PIC</th>
+                        <th class="py-3.5 px-4 min-w-[130px]">Geofencing GPS</th>
+                        <th class="py-3.5 px-4 min-w-[120px]">Hari Kerja</th>
+                        <th class="py-3.5 px-4 min-w-[150px]">Mentor Lapangan</th>
+                        <th class="py-3.5 px-4 text-center min-w-[100px]">Siswa Aktif</th>
+                        <th class="py-3.5 px-6 text-center table-sticky-right">Aksi</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 text-slate-700 font-medium">
                     @forelse($companies as $cp)
-                        <tr class="hover:bg-slate-50/70 transition-colors">
+                        <tr class="hover:bg-slate-50/70 transition-colors group">
                             <td class="py-3.5 px-6">
                                 <div class="flex items-start space-x-3">
                                     <div class="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100 text-blue-700 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">
@@ -192,7 +192,7 @@
                                     {{ $cp->studentPkls->count() }} Siswa
                                 </x-badge>
                             </td>
-                            <td class="py-3.5 px-6 text-center whitespace-nowrap space-x-1.5">
+                            <td class="py-3.5 px-6 text-center whitespace-nowrap space-x-1.5 table-sticky-right">
                                 @php
                                     $modalData = [
                                         'id' => $cp->id,
@@ -621,8 +621,8 @@
             </div>
 
             <!-- Student List Table -->
-            <div class="overflow-x-auto border border-slate-200/80 rounded-2xl">
-                <table class="w-full text-left text-xs">
+            <div class="overflow-x-auto custom-scrollbar border border-slate-200/80 rounded-2xl">
+                <table class="w-full text-left text-xs min-w-[720px]">
                     <thead class="bg-slate-50 text-slate-500 font-extrabold uppercase text-[10px] tracking-wider border-b border-slate-200/80">
                         <tr>
                             <th class="py-3 px-4">Nama Siswa</th>

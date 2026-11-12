@@ -4,7 +4,7 @@
 @section('page_subtitle', 'Kelola hari libur nasional dan libur khusus sekolah untuk filter evaluasi presensi')
 
 @section('content')
-<div class="max-w-7xl mx-auto space-y-6">
+<div class="w-full space-y-6">
 
     <!-- Enterprise Hero Banner -->
     <x-page-header 
@@ -124,24 +124,24 @@
                 </div>
             </div>
         @else
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
+            <div class="overflow-x-auto custom-scrollbar">
+                <table class="w-full text-left border-collapse min-w-[700px]">
                     <thead>
                         <tr class="bg-slate-50/80 border-b border-slate-200/80 text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">
                             <th class="py-3.5 px-4 w-12 text-center">No</th>
-                            <th class="py-3.5 px-4">Tanggal Libur</th>
-                            <th class="py-3.5 px-4">Nama Hari Libur / Keterangan</th>
-                            <th class="py-3.5 px-4">Tipe</th>
-                            <th class="py-3.5 px-4 text-right">Aksi</th>
+                            <th class="py-3.5 px-4 min-w-[160px]">Tanggal Libur</th>
+                            <th class="py-3.5 px-4 min-w-[220px]">Nama Hari Libur / Keterangan</th>
+                            <th class="py-3.5 px-4 min-w-[130px]">Tipe</th>
+                            <th class="py-3.5 px-4 text-right table-sticky-right">Aksi</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100 text-xs text-slate-700">
                         @foreach($holidays as $index => $holiday)
-                            <tr class="hover:bg-slate-50/60 transition-colors">
+                            <tr class="hover:bg-slate-50/60 transition-colors group">
                                 <td class="py-3.5 px-4 text-center text-slate-400 font-semibold">
                                     {{ $index + 1 }}
                                 </td>
-                                <td class="py-3.5 px-4 whitespace-nowrap">
+                                <td class="py-3.5 px-4 whitespace-nowrap min-w-[160px]">
                                     <div class="font-bold text-slate-900">
                                         {{ \Carbon\Carbon::parse($holiday->holiday_date)->translatedFormat('l, d F Y') }}
                                     </div>
@@ -149,20 +149,20 @@
                                         {{ \Carbon\Carbon::parse($holiday->holiday_date)->format('Y-m-d') }}
                                     </span>
                                 </td>
-                                <td class="py-3.5 px-4">
+                                <td class="py-3.5 px-4 min-w-[220px]">
                                     <div class="font-bold text-slate-800">{{ $holiday->title }}</div>
                                     @if($holiday->description)
                                         <div class="text-[11px] text-slate-500">{{ $holiday->description }}</div>
                                     @endif
                                 </td>
-                                <td class="py-3.5 px-4 whitespace-nowrap">
+                                <td class="py-3.5 px-4 whitespace-nowrap min-w-[130px]">
                                     @if($holiday->is_national)
                                         <x-badge color="emerald">Libur Nasional</x-badge>
                                     @else
                                         <x-badge color="indigo">Khusus Sekolah</x-badge>
                                     @endif
                                 </td>
-                                <td class="py-3.5 px-4 text-right whitespace-nowrap">
+                                <td class="py-3.5 px-4 text-right whitespace-nowrap table-sticky-right">
                                     <form action="{{ route('adminsekolah.holidays.destroy', $holiday) }}" method="POST" class="inline" onsubmit="return confirm('Apakah Anda yakin ingin menghapus hari libur ini?')">
                                         @csrf
                                         @method('DELETE')

@@ -4,7 +4,7 @@
 @section('page_subtitle', 'Pantau catatan jam masuk, jam pulang, dan status presensi harian siswa')
 
 @section('content')
-<div class="max-w-7xl mx-auto space-y-6">
+<div class="w-full space-y-6">
 
     <!-- Enterprise Hero Banner -->
     <x-page-header 
@@ -106,19 +106,19 @@
 
     <!-- Table Card -->
     <x-card noPadding>
-        <div class="overflow-x-auto">
-            <table class="w-full text-left text-xs">
+        <div class="overflow-x-auto custom-scrollbar">
+            <table class="w-full text-left text-xs min-w-[1100px]">
                 <thead class="bg-slate-50/80 text-slate-500 border-b border-slate-200/80 font-extrabold uppercase text-[10px] tracking-wider">
                     <tr>
-                        <th class="py-3.5 px-5">Identitas Siswa</th>
-                        <th class="py-3.5 px-4">Tanggal</th>
-                        <th class="py-3.5 px-3 text-center">Swafoto</th>
-                        <th class="py-3.5 px-4">Jam Presensi</th>
-                        <th class="py-3.5 px-4">Mitra DU/DI</th>
-                        <th class="py-3.5 px-4">Lokasi & GPS</th>
-                        <th class="py-3.5 px-4">Status</th>
-                        <th class="py-3.5 px-5">Catatan Capaian</th>
-                        <th class="py-3.5 px-4 text-center">Aksi</th>
+                        <th class="py-3.5 px-5 min-w-[200px]">Identitas Siswa</th>
+                        <th class="py-3.5 px-4 min-w-[110px]">Tanggal</th>
+                        <th class="py-3.5 px-3 text-center min-w-[100px]">Swafoto</th>
+                        <th class="py-3.5 px-4 min-w-[140px]">Jam Presensi</th>
+                        <th class="py-3.5 px-4 min-w-[160px]">Mitra DU/DI</th>
+                        <th class="py-3.5 px-4 min-w-[140px]">Lokasi & GPS</th>
+                        <th class="py-3.5 px-4 min-w-[110px]">Status</th>
+                        <th class="py-3.5 px-5 min-w-[150px]">Catatan Capaian</th>
+                        <th class="py-3.5 px-4 text-center table-sticky-right">Aksi</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 text-slate-700 font-medium">
@@ -142,7 +142,7 @@
                                 'notes' => $a->checkout_notes ?? '',
                             ];
                         @endphp
-                        <tr class="hover:bg-slate-50/70 transition-colors">
+                        <tr class="hover:bg-slate-50/70 transition-colors group">
                             <td class="py-3.5 px-5">
                                 <div class="flex items-center space-x-3">
                                     <div class="w-9 h-9 rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-700 font-black text-xs flex items-center justify-center shrink-0 shadow-xs shadow-indigo-600/10">
@@ -233,7 +233,7 @@
                             <td class="py-3.5 px-5 text-[11px] text-slate-500 max-w-[200px] truncate font-medium" title="{{ $a->checkout_notes }}">
                                 {{ $a->checkout_notes ?? '-' }}
                             </td>
-                            <td class="py-3.5 px-4 text-center whitespace-nowrap">
+                            <td class="py-3.5 px-4 text-center whitespace-nowrap table-sticky-right">
                                 <button type="button" 
                                         onclick='showAttendanceDetail(@json($detailPayload))'
                                         class="py-1.5 px-2.5 rounded-xl border border-slate-200 bg-white hover:bg-indigo-50 hover:border-indigo-300 text-slate-700 hover:text-indigo-700 font-bold text-xs shadow-2xs transition-all cursor-pointer inline-flex items-center gap-1.5"

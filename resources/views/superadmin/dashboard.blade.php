@@ -4,7 +4,7 @@
 @section('hide_header', true)
 
 @section('content')
-<div class="max-w-7xl mx-auto space-y-6">
+<div class="w-full space-y-6">
 
     <h1 class="sr-only">Dashboard Platform Super Admin</h1>
 
@@ -130,16 +130,16 @@
             </a>
         </x-slot:headerActions>
 
-        <div class="overflow-x-auto">
-            <table class="w-full text-left text-xs">
+        <div class="overflow-x-auto custom-scrollbar">
+            <table class="w-full text-left text-xs min-w-[850px]">
                 <thead class="bg-slate-50/80 text-slate-500 border-b border-slate-200/80 font-extrabold uppercase text-[10px] tracking-wider">
                     <tr>
-                        <th class="py-3.5 px-6">Nama Sekolah & Alamat</th>
-                        <th class="py-3.5 px-4">NPSN</th>
-                        <th class="py-3.5 px-4">Kontak Resmi</th>
-                        <th class="py-3.5 px-4 text-center">Kelas</th>
-                        <th class="py-3.5 px-4 text-center">Mitra DU/DI</th>
-                        <th class="py-3.5 px-6 text-center">Status Tenant</th>
+                        <th class="py-3.5 px-6 min-w-[220px]">Nama Sekolah & Alamat</th>
+                        <th class="py-3.5 px-4 min-w-[110px]">NPSN</th>
+                        <th class="py-3.5 px-4 min-w-[160px]">Kontak Resmi</th>
+                        <th class="py-3.5 px-4 text-center min-w-[80px]">Kelas</th>
+                        <th class="py-3.5 px-4 text-center min-w-[100px]">Mitra DU/DI</th>
+                        <th class="py-3.5 px-6 text-center min-w-[110px]">Status Tenant</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 text-slate-700 font-medium">

@@ -4,7 +4,7 @@
 @section('page_subtitle', 'Dokumentasi resmi kunjungan pembimbingan lapangan dan pencetakan Berita Acara standar Ditjen Vokasi')
 
 @section('content')
-<div class="max-w-7xl mx-auto space-y-6">
+<div class="w-full space-y-6">
 
     <!-- Enterprise Hero Banner -->
     <x-page-header 

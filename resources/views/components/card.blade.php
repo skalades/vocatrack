@@ -29,7 +29,7 @@
         </div>
     @endif
 
-    <div class="{{ $noPadding ? '' : 'p-5' }}">
+    <div class="{{ $noPadding ? '' : 'p-5' }} min-w-0">
         {{ $slot }}
     </div>
 

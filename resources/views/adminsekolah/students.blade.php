@@ -4,7 +4,7 @@
 @section('page_subtitle', 'Kelola basis data siswa dan impor massal dari file CSV atau Excel')
 
 @section('content')
-<div class="max-w-7xl mx-auto space-y-6">
+<div class="w-full space-y-6">
 
     <!-- Enterprise Hero Banner -->
     <x-page-header 
@@ -103,28 +103,28 @@
             </div>
         </div>
 
-        <div class="overflow-x-auto">
-            <table class="w-full text-left text-xs" id="students-table">
+        <div class="overflow-x-auto custom-scrollbar">
+            <table class="w-full text-left text-xs min-w-[940px]" id="students-table">
                 <thead class="bg-slate-50/80 text-slate-500 border-b border-slate-200/80 font-extrabold uppercase text-[10px] tracking-wider">
                     <tr>
-                        <th class="py-3.5 px-6">Identitas Siswa</th>
-                        <th class="py-3.5 px-4">NISN / NIS</th>
-                        <th class="py-3.5 px-4">Kelas & Jurusan</th>
-                        <th class="py-3.5 px-4">Akun Login</th>
-                        <th class="py-3.5 px-6">Status Plotting PKL</th>
-                        <th class="py-3.5 px-4 text-right">Aksi</th>
+                        <th class="py-3.5 px-6 min-w-[210px]">Identitas Siswa</th>
+                        <th class="py-3.5 px-4 min-w-[120px]">NISN / NIS</th>
+                        <th class="py-3.5 px-4 min-w-[140px]">Kelas & Jurusan</th>
+                        <th class="py-3.5 px-4 min-w-[160px]">Akun Login</th>
+                        <th class="py-3.5 px-6 min-w-[140px]">Status Plotting PKL</th>
+                        <th class="py-3.5 px-4 text-right table-sticky-right">Aksi</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 text-slate-700 font-medium" id="students-tbody">
                     @forelse($students as $st)
-                        <tr class="hover:bg-slate-50/70 transition-colors student-row">
-                            <td class="py-3.5 px-6">
+                        <tr class="hover:bg-slate-50/70 transition-colors student-row group">
+                            <td class="py-3.5 px-6 min-w-[210px]">
                                 <div class="flex items-center space-x-3.5">
                                     <div class="w-9 h-9 rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-700 font-black text-xs flex items-center justify-center shrink-0 shadow-xs shadow-indigo-600/10">
                                         {{ substr($st->user->name, 0, 1) }}
                                     </div>
                                     <div class="min-w-0">
-                                        <span class="font-bold text-slate-900 block truncate text-sm student-name">{{ $st->user->name }}</span>
+                                        <span class="font-bold text-slate-900 block truncate text-sm student-name" title="{{ $st->user->name }}">{{ $st->user->name }}</span>
                                         <span class="text-[11px] text-slate-400 font-medium">
                                             {{ $st->user->profile->gender === 'L' ? 'Laki-Laki' : 'Perempuan' }} 
                                             @if($st->user->profile->phone) &bull; {{ $st->user->profile->phone }} @endif
@@ -132,18 +132,18 @@
                                     </div>
                                 </div>
                             </td>
-                            <td class="py-3.5 px-4">
+                            <td class="py-3.5 px-4 min-w-[120px]">
                                 <span class="font-bold text-slate-800 font-mono block student-nisn">{{ $st->nisn }}</span>
                                 <span class="text-[10px] text-slate-400 font-mono block">NIS: {{ $st->nis }}</span>
                             </td>
-                            <td class="py-3.5 px-4">
+                            <td class="py-3.5 px-4 min-w-[140px]">
                                 <span class="font-bold text-slate-900 block student-class">{{ $st->class->name }}</span>
-                                <span class="text-[11px] text-slate-500 font-medium block">{{ $st->class->major->name }}</span>
+                                <span class="text-[11px] text-slate-500 font-medium block truncate" title="{{ $st->class->major->name }}">{{ $st->class->major->name }}</span>
                             </td>
-                            <td class="py-3.5 px-4 font-mono text-[11px] text-slate-600">
-                                {{ $st->user->email }}
+                            <td class="py-3.5 px-4 font-mono text-[11px] text-slate-600 min-w-[160px]">
+                                <span class="block truncate" title="{{ $st->user->email }}">{{ $st->user->email }}</span>
                             </td>
-                            <td class="py-3.5 px-6">
+                            <td class="py-3.5 px-6 min-w-[140px]">
                                 @if($st->activePkl)
                                     <div class="flex flex-col items-start gap-1">
                                         <x-badge variant="success" size="xs">
@@ -159,7 +159,7 @@
                                     </x-badge>
                                 @endif
                             </td>
-                            <td class="py-3.5 px-4 text-right whitespace-nowrap space-x-1.5">
+                            <td class="py-3.5 px-4 text-right whitespace-nowrap space-x-1.5 table-sticky-right">
                                 @if($st->parent_monitoring_url)
                                     <a href="{{ $st->parent_monitoring_url }}" target="_blank" class="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[11px] font-bold border border-indigo-200 transition-colors inline-flex items-center gap-1 cursor-pointer" title="Lihat Portal Monitoring Orang Tua (Tanpa Login)">
                                         <svg class="w-3 h-3 stroke-[2.5]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>

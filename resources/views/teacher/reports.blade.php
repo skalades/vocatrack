@@ -4,7 +4,7 @@
 @section('page_subtitle', 'Unduh dokumen laporan individu lengkap dengan kop dinas resmi sekolah dan lembar pengesahan')
 
 @section('content')
-<div class="max-w-7xl mx-auto space-y-6">
+<div class="w-full space-y-6">
 
     <!-- Enterprise Hero Banner -->
     <x-page-header 

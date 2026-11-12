@@ -4,7 +4,7 @@
 @section('hide_header', true)
 
 @section('content')
-<div class="max-w-7xl mx-auto space-y-6">
+<div class="w-full space-y-6">
 
     <h1 class="sr-only">Dashboard Eksekutif PKL</h1>
 

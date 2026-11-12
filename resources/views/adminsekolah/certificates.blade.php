@@ -4,7 +4,7 @@
 @section('page_subtitle', 'Penerbitan dokumen sertifikat kelulusan resmi berstandar industri dengan validasi QR Code publik')
 
 @section('content')
-<div class="max-w-7xl mx-auto space-y-6">
+<div class="w-full space-y-6">
 
     <!-- Enterprise Hero Banner -->
     <x-page-header 
@@ -112,40 +112,40 @@
             </form>
         </div>
 
-        <div class="overflow-x-auto">
-            <table class="w-full text-left text-xs">
+        <div class="overflow-x-auto custom-scrollbar">
+            <table class="w-full text-left text-xs min-w-[880px]">
                 <thead class="bg-slate-50 text-slate-400 uppercase font-black tracking-wider text-[10px] border-b border-slate-100">
                     <tr>
-                        <th class="px-5 py-3.5">Nomor & Tanggal</th>
-                        <th class="px-5 py-3.5">Nama Siswa</th>
-                        <th class="px-5 py-3.5">Mitra Industri (DU/DI)</th>
-                        <th class="px-5 py-3.5 text-center">Nilai & Predikat</th>
-                        <th class="px-5 py-3.5 text-center">Verifikasi QR</th>
-                        <th class="px-5 py-3.5 text-right">Aksi</th>
+                        <th class="px-5 py-3.5 min-w-[150px]">Nomor & Tanggal</th>
+                        <th class="px-5 py-3.5 min-w-[180px]">Nama Siswa</th>
+                        <th class="px-5 py-3.5 min-w-[180px]">Mitra Industri (DU/DI)</th>
+                        <th class="px-5 py-3.5 text-center min-w-[110px]">Nilai & Predikat</th>
+                        <th class="px-5 py-3.5 text-center min-w-[120px]">Verifikasi QR</th>
+                        <th class="px-5 py-3.5 text-right table-sticky-right">Aksi</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 font-medium text-slate-700">
                     @forelse ($certificates as $cert)
-                        <tr class="hover:bg-slate-50/60 transition-colors">
-                            <td class="px-5 py-4 whitespace-nowrap">
+                        <tr class="hover:bg-slate-50/60 transition-colors group">
+                            <td class="px-5 py-4 whitespace-nowrap min-w-[150px]">
                                 <div class="font-mono font-bold text-slate-900">{{ $cert->certificate_number }}</div>
                                 <div class="text-[11px] text-slate-400 mt-0.5">{{ $cert->issued_date ? $cert->issued_date->translatedFormat('d M Y') : '-' }}</div>
                             </td>
-                            <td class="px-5 py-4">
-                                <div class="font-bold text-slate-900">{{ $cert->studentPkl->student->user->name ?? '-' }}</div>
+                            <td class="px-5 py-4 min-w-[180px]">
+                                <div class="font-bold text-slate-900 truncate" title="{{ $cert->studentPkl->student->user->name ?? '-' }}">{{ $cert->studentPkl->student->user->name ?? '-' }}</div>
                                 <div class="text-[11px] text-slate-400 mt-0.5">{{ $cert->studentPkl->student->class->name ?? '-' }}</div>
                             </td>
-                            <td class="px-5 py-4">
-                                <div class="font-semibold text-slate-800">{{ $cert->studentPkl->company->name ?? '-' }}</div>
-                                <div class="text-[11px] text-slate-400 mt-0.5">{{ $cert->studentPkl->pklPeriod->name ?? '-' }}</div>
+                            <td class="px-5 py-4 min-w-[180px]">
+                                <div class="font-semibold text-slate-800 truncate" title="{{ $cert->studentPkl->company->name ?? '-' }}">{{ $cert->studentPkl->company->name ?? '-' }}</div>
+                                <div class="text-[11px] text-slate-400 mt-0.5 truncate" title="{{ $cert->studentPkl->pklPeriod->name ?? '-' }}">{{ $cert->studentPkl->pklPeriod->name ?? '-' }}</div>
                             </td>
-                            <td class="px-5 py-4 text-center whitespace-nowrap">
+                            <td class="px-5 py-4 text-center whitespace-nowrap min-w-[110px]">
                                 <div class="font-black text-slate-900 text-sm font-mono">{{ number_format($cert->final_score, 1) }}</div>
                                 <span class="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-bold border mt-0.5 {{ $cert->predicate_badge_class }}">
                                     {{ $cert->final_predicate }}
                                 </span>
                             </td>
-                            <td class="px-5 py-4 text-center whitespace-nowrap">
+                            <td class="px-5 py-4 text-center whitespace-nowrap min-w-[120px]">
                                 <a href="{{ $cert->verification_url }}" target="_blank" class="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-600 hover:text-indigo-800 transition-colors">
                                     <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -153,7 +153,7 @@
                                     Portal Publik
                                 </a>
                             </td>
-                            <td class="px-5 py-4 text-right whitespace-nowrap">
+                            <td class="px-5 py-4 text-right whitespace-nowrap table-sticky-right">
                                 <a href="{{ route('adminsekolah.certificates.download', $cert->id) }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200/80 rounded-xl text-xs font-bold transition-all shadow-2xs">
                                     <svg class="w-4 h-4 text-rose-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
