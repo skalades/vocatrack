@@ -7,7 +7,9 @@ use App\Http\Controllers\CertificateVerificationController;
 use App\Http\Controllers\ImpersonationController;
 use App\Http\Controllers\KepsekController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\ParentLinkController;
 use App\Http\Controllers\ParentMonitoringController;
+use App\Http\Controllers\PklMapController;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\SuperAdminController;
 use App\Http\Controllers\SupervisorController;
@@ -122,6 +124,17 @@ Route::middleware(['auth', 'IdentifyTenant', 'role:admin-sekolah'])->prefix('adm
     Route::post('/certificates/generate', [AdminSekolahController::class, 'generateCertificate'])->name('adminsekolah.certificates.generate');
     Route::post('/certificates/batch', [AdminSekolahController::class, 'generateBatchCertificates'])->name('adminsekolah.certificates.batch');
     Route::get('/certificates/{certificate}/download', [AdminSekolahController::class, 'downloadCertificate'])->name('adminsekolah.certificates.download');
+
+    // Link Monitoring Portal Orang Tua (Batch & Export per Jurusan & Rombel)
+    Route::get('/parent-links', [ParentLinkController::class, 'adminIndex'])->name('adminsekolah.parent-links');
+    Route::post('/parent-links/batch-generate', [ParentLinkController::class, 'adminBatchGenerate'])->name('adminsekolah.parent-links.batch-generate');
+    Route::post('/parent-links/batch-toggle', [ParentLinkController::class, 'adminBatchToggle'])->name('adminsekolah.parent-links.batch-toggle');
+    Route::get('/parent-links/export', [ParentLinkController::class, 'adminExport'])->name('adminsekolah.parent-links.export');
+    Route::post('/parent-links/{student}/regenerate', [ParentLinkController::class, 'adminRegenerateSingle'])->name('adminsekolah.parent-links.regenerate');
+    Route::post('/parent-links/{student}/toggle', [ParentLinkController::class, 'adminToggleSingle'])->name('adminsekolah.parent-links.toggle');
+
+    // Peta Interaktif Sebaran Siswa PKL & DU/DI
+    Route::get('/peta-sebaran', [PklMapController::class, 'adminMap'])->name('adminsekolah.map');
 });
 
 // 3. Siswa (Mobile-First) Routes
@@ -179,6 +192,17 @@ Route::middleware(['auth', 'IdentifyTenant', 'role:guru-pembimbing'])->prefix('g
     Route::post('/announcements', [AnnouncementController::class, 'guruStore'])->name('guru.announcements.store');
     Route::put('/announcements/{announcement}', [AnnouncementController::class, 'guruUpdate'])->name('guru.announcements.update');
     Route::delete('/announcements/{announcement}', [AnnouncementController::class, 'guruDestroy'])->name('guru.announcements.destroy');
+
+    // Link Monitoring Portal Orang Tua Siswa Bimbingan (Batch & Export per Jurusan & Rombel)
+    Route::get('/parent-links', [ParentLinkController::class, 'guruIndex'])->name('guru.parent-links');
+    Route::post('/parent-links/batch-generate', [ParentLinkController::class, 'guruBatchGenerate'])->name('guru.parent-links.batch-generate');
+    Route::post('/parent-links/batch-toggle', [ParentLinkController::class, 'guruBatchToggle'])->name('guru.parent-links.batch-toggle');
+    Route::get('/parent-links/export', [ParentLinkController::class, 'guruExport'])->name('guru.parent-links.export');
+    Route::post('/parent-links/{student}/regenerate', [ParentLinkController::class, 'guruRegenerateSingle'])->name('guru.parent-links.regenerate');
+    Route::post('/parent-links/{student}/toggle', [ParentLinkController::class, 'guruToggleSingle'])->name('guru.parent-links.toggle');
+
+    // Peta Interaktif Sebaran Siswa PKL Bimbingan & DU/DI
+    Route::get('/peta-sebaran', [PklMapController::class, 'guruMap'])->name('guru.map');
 });
 
 // 5. Pembimbing DU/DI Routes
@@ -202,4 +226,5 @@ Route::middleware(['auth', 'IdentifyTenant', 'role:kepala-sekolah'])->prefix('ke
     Route::get('/dashboard', [KepsekController::class, 'dashboard'])->name('kepsek.dashboard');
     Route::get('/rekap', [KepsekController::class, 'rekap'])->name('kepsek.rekap');
     Route::get('/rekap/export', [KepsekController::class, 'exportRekap'])->name('kepsek.rekap.export');
+    Route::get('/peta-sebaran', [PklMapController::class, 'kepsekMap'])->name('kepsek.map');
 });

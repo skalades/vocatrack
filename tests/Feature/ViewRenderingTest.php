@@ -53,6 +53,8 @@ class ViewRenderingTest extends TestCase
         $this->actingAs($user)->get(route('adminsekolah.holidays'))->assertStatus(200)->assertSee('Kalender Hari Libur');
         $this->actingAs($user)->get(route('adminsekolah.incidents'))->assertStatus(200)->assertSee('Pusat Monitoring Kendala');
         $this->actingAs($user)->get(route('adminsekolah.certificates'))->assertStatus(200)->assertSee('E-Sertifikat & Transkrip');
+        $this->actingAs($user)->get(route('adminsekolah.parent-links'))->assertStatus(200)->assertSee('Kelola Link Portal Monitoring Orang Tua');
+        $this->actingAs($user)->get(route('adminsekolah.map'))->assertStatus(200)->assertSee('Peta Sebaran Mitra DU/DI');
     }
 
     public function test_student_views_render_successfully(): void
@@ -85,6 +87,8 @@ class ViewRenderingTest extends TestCase
         $this->actingAs($user)->get(route('guru.announcements'))->assertStatus(200)->assertSee('Pengumuman Bimbingan PKL');
         $this->actingAs($user)->get(route('guru.incidents'))->assertStatus(200)->assertSee('Laporan Kendala');
         $this->actingAs($user)->get(route('guru.supervisions'))->assertStatus(200)->assertSee('Supervisi & Berita Acara');
+        $this->actingAs($user)->get(route('guru.parent-links'))->assertStatus(200)->assertSee('Link Monitoring Orang Tua Siswa');
+        $this->actingAs($user)->get(route('guru.map'))->assertStatus(200)->assertSee('Peta Sebaran Siswa Bimbingan PKL');
     }
 
     public function test_dudi_views_render_successfully(): void
@@ -110,6 +114,7 @@ class ViewRenderingTest extends TestCase
 
         $this->actingAs($user)->get(route('kepsek.dashboard'))->assertStatus(200)->assertSee('Dashboard Eksekutif PKL');
         $this->actingAs($user)->get(route('kepsek.rekap'))->assertStatus(200)->assertSee('Rekapitulasi Presensi Matriks Bulanan');
+        $this->actingAs($user)->get(route('kepsek.map'))->assertStatus(200)->assertSee('Peta Sebaran PKL');
     }
 
     public function test_notifications_view_renders_for_users(): void

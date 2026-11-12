@@ -12,6 +12,10 @@
         subtitle="Manajemen identitas siswa, nomor induk (NISN/NIS), penempatan rombel kelas, dan status keaktifan penugasan PKL."
         badge="MANAJEMEN SEKOLAH"
     >
+        <a href="{{ route('adminsekolah.parent-links') }}" class="inline-flex items-center justify-center font-bold rounded-xl transition-all shadow-xs cursor-pointer bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-3 py-1.5 text-xs">
+            <svg class="w-4 h-4 mr-1.5 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+            <span>Link Portal Ortu</span>
+        </a>
         <x-button type="button" variant="secondary" size="sm" onclick="document.getElementById('modal-import-student').classList.remove('hidden')">
             <svg class="w-4 h-4 mr-1.5 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
             <span>Impor Spreadsheet</span>
