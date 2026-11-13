@@ -189,7 +189,7 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                     <label class="block text-xs font-bold text-slate-700 mb-1.5">Harga Sewa (Rp)</label>
-                    <input type="number" name="price" required min="0" step="50000" placeholder="8000000" 
+                    <input type="number" name="price" required min="0" step="any" placeholder="8000000" 
                            class="w-full text-xs px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 font-mono font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-indigo-500/20">
                 </div>
                 <div>
@@ -205,12 +205,12 @@
             <div class="grid grid-cols-2 gap-3">
                 <div>
                     <label class="block text-xs font-bold text-slate-700 mb-1.5">Batas Kuota Siswa</label>
-                    <input type="number" name="max_students" required min="1" placeholder="500" 
+                    <input type="number" name="max_students" required min="1" step="any" placeholder="500" 
                            class="w-full text-xs px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 font-medium text-slate-900 focus:bg-white focus:ring-2 focus:ring-indigo-500/20">
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-slate-700 mb-1.5">Storage Kuota (MB)</label>
-                    <input type="number" name="max_storage_mb" required min="500" step="512" value="20480" 
+                    <input type="number" name="max_storage_mb" required min="100" step="any" value="20480" 
                            class="w-full text-xs px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 font-medium text-slate-900 focus:bg-white focus:ring-2 focus:ring-indigo-500/20">
                 </div>
             </div>
@@ -288,19 +288,19 @@
 
             <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1.5">Harga Sewa (Rp)</label>
-                <input type="number" name="price" id="edit-plan-price" required min="0" step="50000" 
+                <input type="number" name="price" id="edit-plan-price" required min="0" step="any" 
                        class="w-full text-xs px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 font-mono font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-indigo-500/20">
             </div>
 
             <div class="grid grid-cols-2 gap-3">
                 <div>
                     <label class="block text-xs font-bold text-slate-700 mb-1.5">Batas Siswa PKL</label>
-                    <input type="number" name="max_students" id="edit-plan-students" required min="1" 
+                    <input type="number" name="max_students" id="edit-plan-students" required min="1" step="any" 
                            class="w-full text-xs px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 font-medium text-slate-900 focus:bg-white focus:ring-2 focus:ring-indigo-500/20">
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-slate-700 mb-1.5">Storage (MB)</label>
-                    <input type="number" name="max_storage_mb" id="edit-plan-storage" required min="500" step="512" 
+                    <input type="number" name="max_storage_mb" id="edit-plan-storage" required min="100" step="any" 
                            class="w-full text-xs px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 font-medium text-slate-900 focus:bg-white focus:ring-2 focus:ring-indigo-500/20">
                 </div>
             </div>

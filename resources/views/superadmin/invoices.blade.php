@@ -213,7 +213,7 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                     <label class="block text-xs font-bold text-slate-700 mb-1.5">Nominal Tagihan (Rp)</label>
-                    <input type="number" name="amount" required min="1000" step="50000" placeholder="5000000" 
+                    <input type="number" name="amount" required min="0" step="any" placeholder="5000000" 
                            class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 font-mono font-bold text-slate-900">
                 </div>
                 <div>
