@@ -30,6 +30,9 @@ class DatabaseSeeder extends Seeder
 
             // Sekolah 3: SMKN 10 Garut
             Smkn10GarutSeeder::class,
+
+            // SaaS Subscription Plans & Seed Data
+            SubscriptionPlanSeeder::class,
         ]);
     }
 }

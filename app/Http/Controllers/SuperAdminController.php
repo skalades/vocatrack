@@ -295,8 +295,51 @@ class SuperAdminController extends Controller
 
     public function plans()
     {
+        if (SubscriptionPlan::count() === 0) {
+            (new \Database\Seeders\SubscriptionPlanSeeder())->run();
+        }
+
         $plans = SubscriptionPlan::withCount('subscriptions')->get();
         return view('superadmin.plans', compact('plans'));
+    }
+
+    public function storePlan(Request $request)
+    {
+        $request->validate([
+            'code' => ['required', 'string', 'max:50', 'unique:subscription_plans,code'],
+            'name' => ['required', 'string', 'max:100'],
+            'price' => ['required', 'numeric', 'min:0'],
+            'billing_period' => ['required', 'in:monthly,semester,yearly'],
+            'max_students' => ['required', 'integer', 'min:1'],
+            'max_storage_mb' => ['required', 'integer', 'min:500'],
+            'is_popular' => ['nullable', 'boolean'],
+            'is_active' => ['nullable', 'boolean'],
+            'description' => ['nullable', 'string'],
+        ]);
+
+        $features = [
+            'attendance' => true,
+            'journal' => true,
+            'assessment' => true,
+            'certificate' => $request->boolean('feat_certificate', true),
+            'whatsapp_gateway' => $request->boolean('feat_wa', false),
+            'custom_domain' => $request->boolean('feat_domain', false),
+        ];
+
+        SubscriptionPlan::create([
+            'code' => Str::slug($request->code),
+            'name' => $request->name,
+            'price' => $request->price,
+            'billing_period' => $request->billing_period,
+            'max_students' => $request->max_students,
+            'max_storage_mb' => $request->max_storage_mb,
+            'features' => $features,
+            'is_popular' => $request->boolean('is_popular'),
+            'is_active' => $request->boolean('is_active', true),
+            'description' => $request->description,
+        ]);
+
+        return back()->with('success', "Paket sewa baru {$request->name} berhasil ditambahkan.");
     }
 
     public function updatePlan(Request $request, SubscriptionPlan $plan)
@@ -311,17 +354,39 @@ class SuperAdminController extends Controller
             'description' => ['nullable', 'string'],
         ]);
 
+        $features = $plan->features ?? [];
+        if ($request->has('feat_certificate')) {
+            $features['certificate'] = $request->boolean('feat_certificate');
+        }
+        if ($request->has('feat_wa')) {
+            $features['whatsapp_gateway'] = $request->boolean('feat_wa');
+        }
+        if ($request->has('feat_domain')) {
+            $features['custom_domain'] = $request->boolean('feat_domain');
+        }
+
         $plan->update([
             'name' => $request->name,
             'price' => $request->price,
             'max_students' => $request->max_students,
             'max_storage_mb' => $request->max_storage_mb,
+            'features' => $features,
             'is_popular' => $request->boolean('is_popular'),
             'is_active' => $request->boolean('is_active'),
             'description' => $request->description,
         ]);
 
         return back()->with('success', "Paket {$plan->name} berhasil diperbarui.");
+    }
+
+    public function destroyPlan(SubscriptionPlan $plan)
+    {
+        if ($plan->subscriptions()->exists()) {
+            return back()->with('error', "Paket {$plan->name} tidak dapat dihapus karena masih digunakan oleh sekolah mitra.");
+        }
+
+        $plan->delete();
+        return back()->with('success', "Paket {$plan->name} berhasil dihapus.");
     }
 
     public function settings()

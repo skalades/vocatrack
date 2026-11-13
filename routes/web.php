@@ -59,7 +59,9 @@ Route::middleware(['auth', 'role:super-admin'])->prefix('super-admin')->group(fu
 
     // SaaS Plans & Licensing
     Route::get('/plans', [SuperAdminController::class, 'plans'])->name('superadmin.plans');
+    Route::post('/plans', [SuperAdminController::class, 'storePlan'])->name('superadmin.plans.store');
     Route::put('/plans/{plan}', [SuperAdminController::class, 'updatePlan'])->name('superadmin.plans.update');
+    Route::delete('/plans/{plan}', [SuperAdminController::class, 'destroyPlan'])->name('superadmin.plans.destroy');
 
     // Platform Settings & System Logo
     Route::get('/settings', [SuperAdminController::class, 'settings'])->name('superadmin.settings');
