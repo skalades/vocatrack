@@ -99,6 +99,9 @@ class SchoolSubscription extends Model
 
     public function getFormattedPriceAttribute(): string
     {
+        if ($this->price_paid <= 0) {
+            return 'Gratis / Trial';
+        }
         return 'Rp ' . number_format($this->price_paid, 0, ',', '.');
     }
 }

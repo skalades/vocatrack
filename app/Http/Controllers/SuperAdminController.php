@@ -46,9 +46,14 @@ class SuperAdminController extends Controller
             })->count();
         }
 
-        // Schools expiring within 30 days
+        // Schools expiring within 30 days (based on active subscription)
         $thirtyDays = Carbon::today()->addDays(30);
         $expiringSubscriptions = SchoolSubscription::with('school')
+            ->whereIn('id', function ($query) {
+                $query->selectRaw('MAX(id)')
+                    ->from('school_subscriptions')
+                    ->groupBy('school_id');
+            })
             ->where('end_date', '>=', Carbon::today())
             ->where('end_date', '<=', $thirtyDays)
             ->where('status', '!=', 'suspended')
@@ -178,6 +183,7 @@ class SuperAdminController extends Controller
             'price' => ['required', 'numeric', 'min:0'],
             'new_quota' => ['nullable', 'integer', 'min:10'],
             'notes' => ['nullable', 'string', 'max:255'],
+            'plan_id' => ['nullable', 'exists:subscription_plans,id'],
         ]);
 
         $activeSub = $school->activeSubscription();
@@ -186,15 +192,19 @@ class SuperAdminController extends Controller
             $activeSub = $this->subscriptionService->subscribeSchool($school, $defaultPlan);
         }
 
+        $newPlan = $request->plan_id ? SubscriptionPlan::find($request->plan_id) : null;
+
         $this->subscriptionService->extendSubscription(
             $activeSub,
             (int) $request->months,
             (float) $request->price,
             $request->new_quota ? (int) $request->new_quota : null,
-            $request->notes
+            $request->notes,
+            $newPlan
         );
 
-        return back()->with('success', "Masa sewa sekolah {$school->name} berhasil diperpanjang +{$request->months} bulan.");
+        $planNotice = $newPlan ? " dan paket ditingkatkan ke {$newPlan->name}" : "";
+        return back()->with('success', "Masa sewa sekolah {$school->name} berhasil diperpanjang +{$request->months} bulan{$planNotice}.");
     }
 
     public function toggleSchool(School $school)
@@ -381,6 +391,10 @@ class SuperAdminController extends Controller
 
     public function destroyPlan(SubscriptionPlan $plan)
     {
+        if ($plan->code === 'trial-14d') {
+            return back()->with('error', "Paket {$plan->name} adalah paket demo bawaan sistem dan tidak dapat dihapus.");
+        }
+
         if ($plan->subscriptions()->exists()) {
             return back()->with('error', "Paket {$plan->name} tidak dapat dihapus karena masih digunakan oleh sekolah mitra.");
         }

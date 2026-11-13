@@ -408,6 +408,19 @@
         <form id="form-extend-subscription" method="POST" action="" class="space-y-4">
             @csrf
             <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1.5">Pilihan Paket Lisensi (Upgrade / Perpanjang)</label>
+                <select name="plan_id" id="extend-plan-select-dash" class="w-full text-xs px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 font-medium text-slate-900 focus:bg-white focus:ring-2 focus:ring-indigo-500/20">
+                    <option value="">-- Tetap Gunakan Paket Saat Ini --</option>
+                    @foreach($plans as $p)
+                        <option value="{{ $p->id }}" data-price="{{ (int)$p->price }}" data-quota="{{ $p->max_students }}">
+                            {{ $p->name }} ({{ $p->price > 0 ? $p->formatted_price : 'Gratis' }} • {{ $p->max_students }} Siswa)
+                        </option>
+                    @endforeach
+                </select>
+                <span class="text-[10px] text-slate-500 mt-1 block">Pilih paket jika ingin meng-upgrade tenant dari Demo ke Paket Berbayar.</span>
+            </div>
+
+            <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1.5">Durasi Perpanjangan</label>
                 <select name="months" required class="w-full text-xs px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 font-medium text-slate-900 focus:bg-white focus:ring-2 focus:ring-indigo-500/20">
                     <option value="6">1 Semester (6 Bulan)</option>
@@ -420,9 +433,9 @@
 
             <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1.5">Nominal Biaya Sewa (Rp)</label>
-                <input type="number" name="price" required value="6000000" min="0" step="any" 
+                <input type="number" name="price" id="extend-price-input-dash" required value="6000000" min="0" step="any" 
                        class="w-full text-xs px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 font-mono font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-indigo-500/20">
-                <span class="text-[10px] text-slate-500 mt-1 block">Akan otomatis menerbitkan kwitansi / invoice lunas.</span>
+                <span class="text-[10px] text-slate-500 mt-1 block">Akan otomatis menerbitkan kwitansi / invoice lunas jika > 0.</span>
             </div>
 
             <div>
@@ -461,6 +474,24 @@
         quotaInput.value = currentQuota;
         modal.classList.remove('hidden');
     }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const planSelect = document.getElementById('extend-plan-select-dash');
+        const priceInput = document.getElementById('extend-price-input-dash');
+        const quotaInput = document.getElementById('extend-quota-input');
+
+        planSelect?.addEventListener('change', function() {
+            const selected = this.options[this.selectedIndex];
+            if (selected.value) {
+                if (selected.getAttribute('data-price') !== null) {
+                    priceInput.value = selected.getAttribute('data-price');
+                }
+                if (selected.getAttribute('data-quota') !== null) {
+                    quotaInput.value = selected.getAttribute('data-quota');
+                }
+            }
+        });
+    });
 
     // Live Clock updater
     function updateClock() {

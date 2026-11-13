@@ -97,35 +97,32 @@ class SubscriptionPlanSeeder extends Seeder
             SubscriptionPlan::updateOrCreate(['code' => $p['code']], $p);
         }
 
-        // 2. Attach initial subscriptions to existing schools if they don't have one
+        // 2. Attach Demo / Trial subscription to all registered schools
         $subService = app(SubscriptionService::class);
-        $proPlan = SubscriptionPlan::where('code', 'pro-yearly')->first();
-        $starterPlan = SubscriptionPlan::where('code', 'starter-semester')->first();
+        $trialPlan = SubscriptionPlan::where('code', 'trial-14d')->first();
 
-        $smkn1 = School::where('npsn', '20209201')->first() ?? School::first();
-        if ($smkn1 && !$smkn1->activeSubscription()) {
-            $subService->subscribeSchool(
-                $smkn1,
-                $proPlan,
-                Carbon::today()->subMonths(1),
-                150,
-                6000000,
-                'active',
-                'Langganan Tahunan Tahun Ajaran 2026/2027'
-            );
-        }
+        // Seluruh sekolah yang terdaftar saat ini bersifat Paket Demo / Trial Evaluasi (14 Hari)
+        $schools = School::all();
+        foreach ($schools as $school) {
+            $activeSub = $school->activeSubscription();
+            if (!$activeSub || $activeSub->status !== 'trial') {
+                // If there were previous non-trial subscriptions, delete or supersede with demo package
+                $school->subscriptions()->delete();
 
-        $smkn2 = School::where('npsn', '20209203')->first();
-        if ($smkn2 && !$smkn2->activeSubscription()) {
-            $subService->subscribeSchool(
-                $smkn2,
-                $starterPlan,
-                Carbon::today()->subMonths(4),
-                100,
-                2500000,
-                'active',
-                'Langganan Semester Ganjil 2026/2027 (Habis dalam 2 bulan)'
-            );
+                // Allocate demo quota: default 50, but if school already has more registered students, give sufficient trial quota
+                $currentStudents = $school->students_count;
+                $demoQuota = max(50, $currentStudents + 10);
+
+                $subService->subscribeSchool(
+                    $school,
+                    $trialPlan,
+                    Carbon::today()->subDays(2), // 2 days elapsed
+                    $demoQuota,
+                    0,
+                    'trial',
+                    "Paket Demo Evaluasi Sistem (14 Hari) — Tenant {$school->name}"
+                );
+            }
         }
     }
 }
