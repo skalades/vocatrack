@@ -14,6 +14,8 @@ class Smkn1GarutSeeder extends Seeder
      * 3. Guru Pembimbing Produktif dan Pemetaan Jurusan
      * 4. 10 Tempat PKL / DUDI Mitra Industri, GPS, Jam Kerja, Pemetaan Jurusan, dan Pembimbing DUDI
      * 5. Siswa Lengkap, Periode PKL, dan Plotting Penempatan PKL Aktif
+     * 6. Jurnal Harian Kejuruan, Absensi Terkait, dan Approval Bertingkat (DU/DI & Guru)
+     * 7. Penilaian Akhir Komprehensif (Aspek DU/DI & Guru) dan Penerbitan Sertifikat
      */
     public function run(): void
     {
@@ -23,6 +25,8 @@ class Smkn1GarutSeeder extends Seeder
             Smkn1GarutTeacherSeeder::class,
             Smkn1GarutCompanySeeder::class,
             Smkn1GarutStudentAndPlottingSeeder::class,
+            Smkn1GarutJournalSeeder::class,
+            Smkn1GarutAssessmentSeeder::class,
         ]);
     }
 }
