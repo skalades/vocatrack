@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ $title ?? 'VokaTrack Siswa — Portal PKL' }}</title>
-    <link rel="icon" type="image/png" href="{{ asset('images/logo.png') }}">
+    <link rel="icon" type="image/png" href="{{ $systemLogo ?? asset('images/logo.png') }}">
     
     <!-- Google Fonts: Plus Jakarta Sans -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -26,10 +26,10 @@
         <header class="sticky top-0 z-40 flex items-center justify-between px-4 py-3 bg-white/90 backdrop-blur-md border-b border-slate-200/80 shadow-2xs">
             <div class="flex items-center space-x-3">
                 <div class="w-9 h-9 rounded-xl bg-white p-1 flex items-center justify-center shadow-xs border border-slate-200 shrink-0">
-                    <img src="{{ asset('images/logo.png') }}" alt="VokaTrack Logo" class="w-full h-full object-contain">
+                    <img src="{{ $systemLogo ?? asset('images/logo.png') }}" alt="{{ $systemName ?? 'VokaTrack' }} Logo" class="w-full h-full object-contain">
                 </div>
                 <div class="min-w-0">
-                    <h1 class="text-sm font-extrabold text-slate-900 tracking-tight leading-none">VokaTrack</h1>
+                    <h1 class="text-sm font-extrabold text-slate-900 tracking-tight leading-none">{{ $systemName ?? 'VokaTrack' }}</h1>
                     <p class="text-[11px] text-slate-500 truncate max-w-[200px] mt-0.5 font-medium">
                         {{ auth()->user()->school->name ?? 'SMK Indonesia' }}
                     </p>

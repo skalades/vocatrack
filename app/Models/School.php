@@ -60,6 +60,28 @@ class School extends Model
         return $this->hasMany(StudentPkl::class);
     }
 
+    public function subscriptions(): HasMany
+    {
+        return $this->hasMany(SchoolSubscription::class);
+    }
+
+    public function activeSubscription()
+    {
+        return $this->subscriptions()->latest('end_date')->first();
+    }
+
+    public function invoices(): HasMany
+    {
+        return $this->hasMany(Invoice::class);
+    }
+
+    public function getStudentsCountAttribute(): int
+    {
+        return Student::whereHas('class', function ($q) {
+            $q->where('school_id', $this->id);
+        })->count();
+    }
+
     public function getSetting(string $key, $default = null)
     {
         $setting = $this->settings()->where('key', $key)->first();

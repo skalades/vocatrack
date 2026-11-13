@@ -22,6 +22,7 @@ use App\Models\User;
 use App\Services\CertificateService;
 use App\Services\HolidayService;
 use App\Services\IncidentReportService;
+use App\Services\SubscriptionService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -324,6 +325,13 @@ class AdminSekolahController extends Controller
     public function storeStudent(Request $request)
     {
         $schoolId = $this->getSchoolId();
+        $school = School::find($schoolId);
+
+        $quotaCheck = app(SubscriptionService::class)->canAddStudent($school, 1);
+        if (!$quotaCheck['allowed']) {
+            return back()->with('error', $quotaCheck['message'])->withInput();
+        }
+
         $request->validate([
             'class_id' => ['required', Rule::exists('classes', 'id')->where('school_id', $schoolId)],
             'nis' => ['required', 'string', 'max:30'],
@@ -431,6 +439,13 @@ class AdminSekolahController extends Controller
         ]);
 
         $schoolId = $this->getSchoolId();
+        $school = School::find($schoolId);
+
+        $quotaCheck = app(SubscriptionService::class)->canAddStudent($school, count($rows));
+        if (!$quotaCheck['allowed']) {
+            return back()->with('error', $quotaCheck['message']);
+        }
+
         $classId = $request->class_id;
 
         $file = $request->file('file');

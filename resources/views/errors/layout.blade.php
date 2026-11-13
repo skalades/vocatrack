@@ -28,9 +28,9 @@
     <div class="w-full max-w-lg bg-slate-900/80 border border-slate-800/90 rounded-3xl p-8 sm:p-10 text-center shadow-2xl backdrop-blur-xl relative">
         <div class="flex items-center justify-center gap-2.5 mb-6">
             <div class="w-10 h-10 rounded-xl bg-white p-1.5 flex items-center justify-center shadow-md shadow-indigo-600/30 border border-slate-700 shrink-0">
-                <img src="{{ asset('images/logo.png') }}" alt="VokaTrack Logo" class="w-full h-full object-contain">
+                <img src="{{ $systemLogo ?? asset('images/logo.png') }}" alt="{{ $systemName ?? 'VokaTrack' }} Logo" class="w-full h-full object-contain">
             </div>
-            <span class="font-extrabold text-white text-lg tracking-tight">VokaTrack</span>
+            <span class="font-extrabold text-white text-lg tracking-tight">{{ $systemName ?? 'VokaTrack' }}</span>
         </div>
 
         <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-slate-800 bg-slate-950/60 text-xs font-mono font-bold @yield('badge_class', 'text-indigo-400') mb-4">

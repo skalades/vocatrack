@@ -4,8 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', (View::hasSection('page_title') ? View::yieldContent('page_title') . ' — VokaTrack' : ($title ?? 'VokaTrack — Platform PKL SMK Terpadu')))</title>
-    <link rel="icon" type="image/png" href="{{ asset('images/logo.png') }}">
+    <title>@yield('title', (View::hasSection('page_title') ? View::yieldContent('page_title') . ' — ' . ($systemName ?? 'VokaTrack') : ($title ?? ($systemName ?? 'VokaTrack') . ' — Platform PKL SMK Terpadu')))</title>
+    <link rel="icon" type="image/png" href="{{ $systemLogo ?? asset('images/logo.png') }}">
     
     <!-- Google Fonts: Plus Jakarta Sans -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -30,11 +30,11 @@
             <div class="h-16 flex items-center justify-between px-5 bg-slate-950/60 border-b border-slate-800/80">
                 <div class="flex items-center space-x-3">
                     <div class="w-9 h-9 rounded-xl bg-white p-1 flex items-center justify-center shadow-md shadow-indigo-600/20 border border-slate-700/60 shrink-0">
-                        <img src="{{ asset('images/logo.png') }}" alt="VokaTrack Logo" class="w-full h-full object-contain">
+                        <img src="{{ $systemLogo ?? asset('images/logo.png') }}" alt="{{ $systemName ?? 'VokaTrack' }} Logo" class="w-full h-full object-contain">
                     </div>
                     <div>
-                        <span class="text-white font-extrabold text-base tracking-tight leading-none block">VokaTrack</span>
-                        <span class="text-[10px] text-indigo-400 font-bold tracking-wider uppercase block mt-1">Enterprise Cloud</span>
+                        <span class="text-white font-extrabold text-base tracking-tight leading-none block">{{ $systemName ?? 'VokaTrack' }}</span>
+                        <span class="text-[10px] text-indigo-400 font-bold tracking-wider uppercase block mt-1">{{ $systemTagline ?? 'Enterprise Cloud' }}</span>
                     </div>
                 </div>
 
@@ -91,16 +91,28 @@
                 <!-- 1. Super Admin Nav -->
                 @if($role === 'super-admin')
                     <div class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest px-3 pt-2 pb-1.5 flex items-center justify-between">
-                        <span>Super Admin Platform</span>
+                        <span>Super Admin SaaS</span>
                         <span class="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
                     </div>
                     <a href="{{ route('superadmin.dashboard') }}" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs transition-colors {{ request()->routeIs('superadmin.dashboard') ? $activeClass : $inactiveClass }}">
                         <svg class="w-4 h-4 shrink-0 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
-                        <span>Dashboard Platform</span>
+                        <span>Dashboard SaaS</span>
                     </a>
                     <a href="{{ route('superadmin.schools') }}" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs transition-colors {{ request()->routeIs('superadmin.schools*') ? $activeClass : $inactiveClass }}">
                         <svg class="w-4 h-4 shrink-0 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
-                        <span>Manajemen Sekolah</span>
+                        <span>Tenant & Sekolah</span>
+                    </a>
+                    <a href="{{ route('superadmin.plans') }}" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs transition-colors {{ request()->routeIs('superadmin.plans*') ? $activeClass : $inactiveClass }}">
+                        <svg class="w-4 h-4 shrink-0 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                        <span>Paket & Lisensi</span>
+                    </a>
+                    <a href="{{ route('superadmin.invoices') }}" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs transition-colors {{ request()->routeIs('superadmin.invoices*') ? $activeClass : $inactiveClass }}">
+                        <svg class="w-4 h-4 shrink-0 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2zM10 8h4"/></svg>
+                        <span>Tagihan & Invoice</span>
+                    </a>
+                    <a href="{{ route('superadmin.settings') }}" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs transition-colors {{ request()->routeIs('superadmin.settings*') ? $activeClass : $inactiveClass }}">
+                        <svg class="w-4 h-4 shrink-0 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                        <span>Pengaturan & Logo</span>
                     </a>
                 @endif
 
@@ -321,8 +333,8 @@
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
                     </button>
                     <div class="flex items-center space-x-2 lg:hidden">
-                        <img src="{{ asset('images/logo.png') }}" alt="VokaTrack" class="w-5 h-5 object-contain">
-                        <span class="text-xs font-extrabold text-slate-900">VokaTrack</span>
+                        <img src="{{ $systemLogo ?? asset('images/logo.png') }}" alt="{{ $systemName ?? 'VokaTrack' }}" class="w-5 h-5 object-contain">
+                        <span class="text-xs font-extrabold text-slate-900">{{ $systemName ?? 'VokaTrack' }}</span>
                     </div>
                     <div class="hidden lg:flex items-center space-x-2 text-xs font-semibold text-slate-500">
                         <span>{{ auth()->user()->school->name ?? 'VokaTrack Cloud Platform' }}</span>

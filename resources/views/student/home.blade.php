@@ -486,7 +486,7 @@
                 <div class="flex items-center justify-between gap-2 pt-2 border-t border-slate-100 text-[11px] text-slate-500">
                     <div class="flex items-center gap-2 min-w-0">
                         <div class="w-7 h-7 rounded-xl bg-white p-0.5 text-white font-black text-xs flex items-center justify-center shrink-0 shadow-xs border border-slate-200">
-                            <img src="{{ asset('images/logo.png') }}" alt="VokaTrack" class="w-full h-full object-contain">
+                            <img src="{{ $systemLogo ?? asset('images/logo.png') }}" alt="{{ $systemName ?? 'VokaTrack' }}" class="w-full h-full object-contain">
                         </div>
                         <div class="min-w-0">
                             <span id="home-modal-author" class="font-bold text-slate-900 text-xs truncate block max-w-[150px] sm:max-w-[180px]"></span>

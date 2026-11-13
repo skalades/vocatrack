@@ -3,8 +3,8 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Masuk — VokaTrack PKL SMK Enterprise</title>
-    <link rel="icon" type="image/png" href="{{ asset('images/logo.png') }}">
+    <title>Masuk — {{ $systemName ?? 'VokaTrack' }} PKL SMK Enterprise</title>
+    <link rel="icon" type="image/png" href="{{ $systemLogo ?? asset('images/logo.png') }}">
     
     <!-- Google Fonts: Plus Jakarta Sans -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -30,9 +30,9 @@
         <!-- Brand Identity -->
         <div class="text-center mb-6">
             <div class="inline-flex items-center justify-center mb-3">
-                <img src="{{ asset('images/logo.png') }}" alt="VokaTrack Logo" class="h-24 sm:h-28 w-auto object-contain drop-shadow-md transition-transform hover:scale-105 duration-300 animate-float">
+                <img src="{{ $systemLogo ?? asset('images/logo.png') }}" alt="{{ $systemName ?? 'VokaTrack' }} Logo" class="h-24 sm:h-28 w-auto object-contain drop-shadow-md transition-transform hover:scale-105 duration-300 animate-float">
             </div>
-            <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">VokaTrack</h1>
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">{{ $systemName ?? 'VokaTrack' }}</h1>
             <p class="text-xs sm:text-sm text-slate-500 mt-1 font-medium">Sistem Presensi GPS & Jurnal PKL SMK Terintegrasi</p>
         </div>
 

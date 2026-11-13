@@ -41,6 +41,17 @@ class IdentifyTenant
                 ]);
             }
 
+            $subscription = $user->school->activeSubscription();
+            if ($subscription && $subscription->isExpired() && !$subscription->isGracePeriod()) {
+                Auth::logout();
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+
+                return redirect()->route('login')->withErrors([
+                    'email' => 'Masa sewa/lisensi platform sekolah Anda telah berakhir (' . $subscription->end_date->format('d M Y') . '). Silakan hubungi Super Administrator untuk perpanjangan.',
+                ]);
+            }
+
             if (!$user->is_active) {
                 Auth::logout();
                 $request->session()->invalidate();

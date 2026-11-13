@@ -2,8 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Models\PlatformSetting;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class ViewRenderingTest extends TestCase
@@ -32,7 +35,42 @@ class ViewRenderingTest extends TestCase
         }
 
         $this->actingAs($user)->get(route('superadmin.dashboard'))->assertStatus(200)->assertSee('VokaTrack');
-        $this->actingAs($user)->get(route('superadmin.schools'))->assertStatus(200)->assertSee('Daftar Tenant Sekolah');
+        $this->actingAs($user)->get(route('superadmin.schools'))->assertStatus(200)->assertSee('Tenant');
+        $this->actingAs($user)->get(route('superadmin.invoices'))->assertStatus(200)->assertSee('Tagihan & Invoice');
+        $this->actingAs($user)->get(route('superadmin.plans'))->assertStatus(200)->assertSee('Katalog Paket');
+        $this->actingAs($user)->get(route('superadmin.settings'))->assertStatus(200)->assertSee('Logo Utama Sistem');
+    }
+
+    public function test_superadmin_can_update_and_reset_system_logo(): void
+    {
+        Storage::fake('public');
+        $user = User::where('email', 'superadmin@vokatrack.id')->first();
+        if (!$user) {
+            $this->markTestSkipped('Superadmin user not seeded');
+        }
+
+        $fakeLogo = UploadedFile::fake()->image('custom_logo.png', 200, 200);
+
+        // 1. Upload custom logo
+        $response = $this->actingAs($user)->post(route('superadmin.settings.update'), [
+            'platform_name' => 'VokaTrack Pro',
+            'platform_tagline' => 'Cloud Edition',
+            'system_logo' => $fakeLogo,
+        ]);
+
+        $response->assertSessionHas('success');
+        $this->assertNotNull(PlatformSetting::get('system_logo'));
+        $this->assertStringContainsString('storage/branding', PlatformSetting::getLogoUrl());
+
+        // 2. Reset back to default logo
+        $responseReset = $this->actingAs($user)->post(route('superadmin.settings.update'), [
+            'platform_name' => 'VokaTrack',
+            'reset_logo' => 1,
+        ]);
+
+        $responseReset->assertSessionHas('success');
+        $this->assertNull(PlatformSetting::get('system_logo'));
+        $this->assertEquals(asset('images/logo.png'), PlatformSetting::getLogoUrl());
     }
 
     public function test_admin_sekolah_views_render_successfully(): void

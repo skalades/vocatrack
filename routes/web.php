@@ -49,6 +49,21 @@ Route::middleware(['auth', 'role:super-admin'])->prefix('super-admin')->group(fu
     Route::get('/schools', [SuperAdminController::class, 'schools'])->name('superadmin.schools');
     Route::post('/schools', [SuperAdminController::class, 'storeSchool'])->name('superadmin.schools.store');
     Route::post('/schools/{school}/toggle', [SuperAdminController::class, 'toggleSchool'])->name('superadmin.schools.toggle');
+    Route::post('/schools/{school}/extend', [SuperAdminController::class, 'extendSubscription'])->name('superadmin.schools.extend');
+    Route::post('/schools/{school}/impersonate', [SuperAdminController::class, 'impersonateSchool'])->name('superadmin.schools.impersonate');
+
+    // SaaS Invoices & Billing
+    Route::get('/invoices', [SuperAdminController::class, 'invoices'])->name('superadmin.invoices');
+    Route::post('/invoices', [SuperAdminController::class, 'storeInvoice'])->name('superadmin.invoices.store');
+    Route::post('/invoices/{invoice}/verify', [SuperAdminController::class, 'markInvoicePaid'])->name('superadmin.invoices.verify');
+
+    // SaaS Plans & Licensing
+    Route::get('/plans', [SuperAdminController::class, 'plans'])->name('superadmin.plans');
+    Route::put('/plans/{plan}', [SuperAdminController::class, 'updatePlan'])->name('superadmin.plans.update');
+
+    // Platform Settings & System Logo
+    Route::get('/settings', [SuperAdminController::class, 'settings'])->name('superadmin.settings');
+    Route::post('/settings', [SuperAdminController::class, 'updateSettings'])->name('superadmin.settings.update');
 });
 
 // 2. Admin Sekolah Routes
