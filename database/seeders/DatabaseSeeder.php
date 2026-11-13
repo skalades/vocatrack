@@ -10,6 +10,7 @@ class DatabaseSeeder extends Seeder
      * Seed the application's database with modular multi-school seeders:
      * - SMKN 2 GARUT (Pionir Geologi Pertambangan & PSPT)
      * - SMKN 1 GARUT (Pusat Keunggulan Bisnis Manajemen, TI, Farmasi, & Energi Terbarukan)
+     * - SMKN 10 GARUT (Pusat Keunggulan Otomotif, TI, DKV, & Perbankan Syariah)
      */
     public function run(): void
     {
@@ -26,6 +27,9 @@ class DatabaseSeeder extends Seeder
 
             // Sekolah 2: SMKN 1 Garut
             Smkn1GarutSeeder::class,
+
+            // Sekolah 3: SMKN 10 Garut
+            Smkn10GarutSeeder::class,
         ]);
     }
 }
