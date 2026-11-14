@@ -168,6 +168,59 @@ flowchart LR
   - Bar notifikasi mengambang (*sticky impersonation bar*) muncul di bagian atas antarmuka dengan tombol `[Kembali ke Akun Saya]`.
 * **File Service**: [`app/Services/ImpersonationService.php`](file:///c:/Users/skala/OneDrive/Documents/project/pkl/app/Services/ImpersonationService.php)
 
+### [F-SA05] Manajemen Kuota & Monitoring Ruang Disk (Storage Quota Manager)
+* **Tujuan**: Mengukur dan memberlakukan batas pemakaian penyimpanan media (foto selfie absensi, dokumentasi jurnal, scan sertifikat) per sekolah secara riil.
+* **Fitur**:
+  - Tampilan visual persentase penggunaan storage pada tabel tenant.
+  - Penyesuaian batas kuota storage per-sekolah secara instan oleh Super Admin (`POST /super-admin/schools/{school}/storage/quota`) dengan preset cepat (500 MB, 1 GB, 2 GB, 5 GB) dan input manual MB.
+  - Fleksibilitas kuota storage khusus saat pendaftaran sekolah baru dan saat perpanjangan/upgrade paket lisensi.
+  - Tombol rekonsiliasi hitung ulang pemakaian disk per tenant (`POST /super-admin/schools/{school}/storage/recalculate`).
+  - Agregasi kapasitas storage platform global.
+* **File Service**: [`app/Services/StorageQuotaService.php`](file:///c:/Users/skala/OneDrive/Documents/project/pkl/app/Services/StorageQuotaService.php)
+
+### [F-SA06] Pusat Audit Trail & Log Keamanan Forensik
+* **Tujuan**: Merekam jejak mutasi data krusial, event autentikasi, reset kata sandi, dan aksi impersonasi untuk akuntabilitas kepatuhan sistem.
+* **Fitur**:
+  - Tabel `activity_logs` dengan pencatatan `action`, `module`, `ip_address`, `user_agent`, serta JSON diff payload before & after.
+  - Antarmuka inspeksi log lengkap dengan pencarian teks, filter modul, filter tanggal, dan modal detail JSON.
+* **File Service**: [`app/Services/AuditLogService.php`](file:///c:/Users/skala/OneDrive/Documents/project/pkl/app/Services/AuditLogService.php)
+* **Rute**: `GET /super-admin/audit-logs` (`superadmin.audit-logs`).
+
+### [F-SA07] Pusat Cadangan Data & Pemulihan (Disaster Recovery & Offboarding Packager)
+* **Tujuan**: Mengamankan snapshot basis data platform dan menyediakan ekspor arsip data sekolah yang telah selesai masa kontraknya (*Tenant Offboarding*).
+* **Fitur**:
+  - Pembuatan snapshot JSON structured backup basis data instan dan unduh berkas backup.
+  - *Single-Tenant Offboarding Packager*: Otomatis mengemas data siswa, rekap presensi, jurnal harian, mitra DU/DI, dan profil sekolah ke dalam berkas ZIP terenkripsi.
+* **File Service**: [`app/Services/BackupService.php`](file:///c:/Users/skala/OneDrive/Documents/project/pkl/app/Services/BackupService.php)
+* **Rute**: `GET /super-admin/backups` (`superadmin.backups`), `GET /super-admin/schools/{school}/offboard-export`.
+
+### [F-SA08] DevOps Dashboard, Antrean & Live Error Log Viewer
+* **Tujuan**: Pemantauan stabilitas server, penanganan job antrean yang gagal, dan pembacaan log error aplikasi tanpa akses terminal server.
+* **Fitur**:
+  - Monitoring tabel `failed_jobs`, detail exception stack trace, retry job, dan flush queue.
+  - Pembaca log aktif `storage/logs/laravel.log` dengan filter tingkat severity (*ERROR, WARNING, CRITICAL*).
+  - Tombol pintas pembersihan cache konfigurasi, view, route, dan cache aplikasi.
+* **Rute**: `GET /super-admin/system` (`superadmin.system-health`).
+
+### [F-SA09] Manajer Siaran Pengumuman Global (Platform Broadcast Manager)
+* **Tujuan**: Menayangkan pengumuman maklumat penting, pembaruan fitur, atau jadwal libur serentak ke seluruh antarmuka sekolah mitra.
+* **Fitur**:
+  - Penjadwalan tanggal penayangan (*starts_at*, *expires_at*).
+  - Target peran spesifik (*Semua, Admin Sekolah, Guru Pembimbing, Siswa, Pembimbing DU/DI*).
+  - Tipe siaran semantik (*Info, Update, Warning, Emergency*).
+  - Banner dismissible di layout desktop dan mobile siswa dengan penyimpanan preferensi tutup di `localStorage`.
+* **Model**: [`app/Models/PlatformAnnouncement.php`](file:///c:/Users/skala/OneDrive/Documents/project/pkl/app/Models/PlatformAnnouncement.php)
+* **Rute**: `GET /super-admin/broadcasts` (`superadmin.broadcasts`).
+
+### [F-SA10] Pipeline Permohonan Demo & Pendaftaran Mandiri (Onboarding Funnel)
+* **Tujuan**: Menampung pengajuan uji coba demo dari calon sekolah mitra melalui landing page dan menyediakan alur aktivasi instan 1-klik.
+* **Fitur**:
+  - Formulir publik `POST /request-demo` dengan proteksi duplikasi NPSN.
+  - Antarmuka antrean verifikasi Super Admin dengan status *Pending, Approved, Rejected*.
+  - Aksi *1-Click Approve*: Otomatis membuat entitas `School`, akun `admin-sekolah`, `SchoolSettings` default, dan langganan paket trial.
+* **Model**: [`app/Models/SchoolRequest.php`](file:///c:/Users/skala/OneDrive/Documents/project/pkl/app/Models/SchoolRequest.php)
+* **Rute**: `GET /super-admin/school-requests` (`superadmin.school-requests`).
+
 ---
 
 ## 4. Level 2: Fitur Admin Sekolah (School Administrator)
@@ -576,6 +629,15 @@ flowchart TD
   - Tombol Unduh Dokumen Asli: Pihak ketiga dapat mengunduh salinan resmi dokumen PDF ber-KOP dan tanda tangan digital untuk dicocokkan dengan dokumen fisik.
 * **File Controller**: [`app/Http/Controllers/CertificateVerificationController.php`](file:///c:/Users/skala/OneDrive/Documents/project/pkl/app/Http/Controllers/CertificateVerificationController.php)
 * **Rute**: `GET /verify/cert/{uuid}`, `GET /verify/cert/{uuid}/download`.
+
+### [F-PB03] Pembaruan Kata Sandi Mandiri (Universal Self-Service Password Change)
+* **Tujuan**: Memungkinkan seluruh 6 level peran pengguna (`super-admin`, `admin-sekolah`, `kepala-sekolah`, `guru-pembimbing`, `pembimbing-dudi`, `siswa`) mengganti kata sandi akun mereka sendiri secara mandiri tanpa harus meminta reset manual ke administrator.
+* **Fitur & Validasi Keamanan**:
+  - Verifikasi keaslian kata sandi lama via aturan `current_password`.
+  - Penegakan kata sandi baru: minimal 8 karakter (`min:8`), konfirmasi identik (`confirmed`), dan dilarang sama dengan sandi lama (`different:current_password`).
+  - Rekaman jejak audit log keamanan otomatis (`AuditLogService::log`) mencatat mutasi password akun.
+  - Komponen antarmuka universal: `<x-change-password-modal />` pada antarmuka desktop (topbar & sidebar footbar) serta kartu profil khusus pada smartphone siswa.
+* **Rute**: `POST /profile/change-password` (`profile.change-password`).
 
 ---
 

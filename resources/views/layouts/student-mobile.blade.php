@@ -38,6 +38,11 @@
             
             <div class="flex items-center space-x-1.5">
                 <x-notification-center :isMobile="true" />
+                <button type="button" onclick="openChangePasswordModal()" title="Ubah Kata Sandi" class="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors cursor-pointer">
+                    <svg class="w-5 h-5 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+                    </svg>
+                </button>
                 <a href="{{ route('student.announcements') }}" title="Papan Pengumuman" class="relative p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors {{ request()->routeIs('student.announcements*') ? 'text-indigo-600 bg-indigo-50' : '' }}">
                     <svg class="w-5 h-5 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
@@ -93,6 +98,30 @@
 
         <!-- Main Content Area -->
         <main class="flex-1 px-4 py-4 space-y-4 animate-fade-in">
+            @php
+                $activeBroadcasts = \Illuminate\Support\Facades\Schema::hasTable('platform_announcements')
+                    ? \App\Models\PlatformAnnouncement::active()->forRole(auth()->user()?->role)->get()
+                    : collect();
+            @endphp
+            @foreach($activeBroadcasts as $bc)
+                <div id="broadcast-mobile-{{ $bc->id }}" class="p-3.5 rounded-2xl border flex items-start justify-between gap-2 shadow-xs transition-all {{ $bc->type === 'emergency' ? 'bg-rose-50 border-rose-200 text-rose-900' : ($bc->type === 'warning' ? 'bg-amber-50 border-amber-200 text-amber-900' : ($bc->type === 'update' ? 'bg-indigo-50 border-indigo-200 text-indigo-900' : 'bg-blue-50 border-blue-200 text-blue-900')) }}">
+                    <div class="flex items-start gap-2.5">
+                        <div class="w-7 h-7 rounded-xl flex items-center justify-center shrink-0 mt-0.5 {{ $bc->type === 'emergency' ? 'bg-rose-100 text-rose-700' : ($bc->type === 'warning' ? 'bg-amber-100 text-amber-700' : ($bc->type === 'update' ? 'bg-indigo-100 text-indigo-700' : 'bg-blue-100 text-blue-700')) }}">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>
+                        </div>
+                        <div>
+                            <h4 class="text-xs font-bold">{{ $bc->title }}</h4>
+                            <p class="text-[11px] mt-0.5 opacity-90 leading-relaxed">{{ $bc->content }}</p>
+                        </div>
+                    </div>
+                    @if($bc->is_dismissible)
+                        <button type="button" onclick="dismissMobileBroadcast({{ $bc->id }})" class="p-1 rounded-lg hover:bg-black/5 opacity-60">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
+                    @endif
+                </div>
+            @endforeach
+
             @yield('content')
         </main>
 
@@ -159,6 +188,7 @@
     </div>
 
     <x-image-lightbox />
+    <x-change-password-modal />
 
     <script>
         document.addEventListener('keydown', function(e) {
@@ -166,6 +196,23 @@
                 document.querySelectorAll('#checkout-modal, #request-modal, [id^="modal-"]').forEach(m => m.classList.add('hidden'));
             }
         });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('[id^="broadcast-mobile-"]').forEach(function(el) {
+                const id = el.id.replace('broadcast-mobile-', '');
+                if (localStorage.getItem('dismissed_broadcast_' + id) === '1') {
+                    el.style.display = 'none';
+                }
+            });
+        });
+
+        function dismissMobileBroadcast(id) {
+            const el = document.getElementById('broadcast-mobile-' + id);
+            if (el) {
+                el.style.display = 'none';
+                localStorage.setItem('dismissed_broadcast_' + id, '1');
+            }
+        }
     </script>
     @stack('scripts')
 </body>

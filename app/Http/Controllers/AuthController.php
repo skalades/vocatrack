@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Student;
 use App\Models\User;
+use App\Services\AuditLogService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -206,6 +208,38 @@ class AuthController extends Controller
                 'email' => "Terlalu banyak percobaan masuk yang gagal. Silakan coba lagi dalam {$seconds} detik.",
             ]);
         }
+    }
+
+    /**
+     * Memperbarui kata sandi secara mandiri untuk seluruh level user (Superadmin, Admin Sekolah, Kepsek, Guru, DUDI, Siswa).
+     */
+    public function changePassword(Request $request)
+    {
+        $validated = $request->validate([
+            'current_password' => ['required', 'string', 'current_password'],
+            'password' => ['required', 'string', 'min:8', 'confirmed', 'different:current_password'],
+        ], [
+            'current_password.required' => 'Kata sandi saat ini wajib diisi.',
+            'current_password.current_password' => 'Kata sandi saat ini yang Anda masukkan salah.',
+            'password.required' => 'Kata sandi baru wajib diisi.',
+            'password.min' => 'Kata sandi baru minimal harus 8 karakter.',
+            'password.confirmed' => 'Konfirmasi kata sandi baru tidak cocok.',
+            'password.different' => 'Kata sandi baru tidak boleh sama dengan kata sandi saat ini.',
+        ]);
+
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        $user->update([
+            'password' => Hash::make($validated['password']),
+        ]);
+
+        AuditLogService::log(
+            action: 'password_changed_self',
+            module: 'auth',
+            description: "Pengguna {$user->name} ({$user->email} - role: {$user->role}) memperbarui kata sandi akun secara mandiri."
+        );
+
+        return back()->with('success', 'Kata sandi Anda berhasil diperbarui.');
     }
 }
 

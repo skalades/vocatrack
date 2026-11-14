@@ -142,7 +142,8 @@ class SubscriptionService
         ?int $customQuota = null,
         ?float $customPrice = null,
         string $status = 'active',
-        ?string $notes = null
+        ?string $notes = null,
+        ?int $customStorageMb = null
     ): SchoolSubscription {
         $start = $startDate ?? Carbon::today();
         
@@ -159,7 +160,7 @@ class SubscriptionService
             $end = (clone $start)->addMonths($months);
         }
 
-        return DB::transaction(function () use ($school, $plan, $start, $end, $customQuota, $customPrice, $status, $notes) {
+        return DB::transaction(function () use ($school, $plan, $start, $end, $customQuota, $customPrice, $status, $notes, $customStorageMb) {
             $subscription = SchoolSubscription::create([
                 'school_id' => $school->id,
                 'plan_id' => $plan->id,
@@ -168,7 +169,7 @@ class SubscriptionService
                 'end_date' => $end,
                 'price_paid' => $customPrice !== null ? $customPrice : $plan->price,
                 'student_quota' => $customQuota !== null ? $customQuota : $plan->max_students,
-                'storage_quota_mb' => $plan->max_storage_mb,
+                'storage_quota_mb' => $customStorageMb !== null ? $customStorageMb : $plan->max_storage_mb,
                 'status' => $status,
                 'notes' => $notes,
             ]);
@@ -201,7 +202,8 @@ class SubscriptionService
         float $price = 0,
         ?int $newQuota = null,
         ?string $notes = null,
-        ?SubscriptionPlan $newPlan = null
+        ?SubscriptionPlan $newPlan = null,
+        ?int $customStorageMb = null
     ): SchoolSubscription {
         $newEndDate = $subscription->end_date->isPast()
             ? Carbon::today()->addMonths($additionalMonths)
@@ -215,7 +217,9 @@ class SubscriptionService
             'notes' => $notes ? ($subscription->notes . "\n" . $notes) : $subscription->notes,
         ];
 
-        if ($newPlan) {
+        if ($customStorageMb !== null) {
+            $updateData['storage_quota_mb'] = $customStorageMb;
+        } elseif ($newPlan) {
             $updateData['plan_id'] = $newPlan->id;
             $updateData['plan_name'] = $newPlan->name;
             $updateData['storage_quota_mb'] = $newPlan->max_storage_mb;

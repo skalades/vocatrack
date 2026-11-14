@@ -249,4 +249,73 @@ class AuthWorkflowTest extends TestCase
 
         $response->assertRedirect(route('adminsekolah.students'));
     }
+
+    public function test_user_can_change_password_independently(): void
+    {
+        $this->actingAs($this->adminUser);
+
+        $response = $this->post(route('profile.change-password'), [
+            'current_password' => 'AdminSecret123!',
+            'password' => 'NewAdminPass12345!',
+            'password_confirmation' => 'NewAdminPass12345!',
+        ]);
+
+        $response->assertSessionHas('success');
+        $this->assertTrue(\Illuminate\Support\Facades\Hash::check('NewAdminPass12345!', $this->adminUser->fresh()->password));
+
+        $this->assertDatabaseHas('activity_logs', [
+            'action' => 'password_changed_self',
+            'module' => 'auth',
+            'user_id' => $this->adminUser->id,
+        ]);
+    }
+
+    public function test_student_can_change_password_independently(): void
+    {
+        $this->actingAs($this->studentUser);
+
+        $response = $this->post(route('profile.change-password'), [
+            'current_password' => 'SiswaSecret123!',
+            'password' => 'SiswaBaruPass888!',
+            'password_confirmation' => 'SiswaBaruPass888!',
+        ]);
+
+        $response->assertSessionHas('success');
+        $this->assertTrue(\Illuminate\Support\Facades\Hash::check('SiswaBaruPass888!', $this->studentUser->fresh()->password));
+    }
+
+    public function test_change_password_fails_with_invalid_current_password(): void
+    {
+        $this->actingAs($this->studentUser);
+
+        $response = $this->post(route('profile.change-password'), [
+            'current_password' => 'WrongPassword123!',
+            'password' => 'SiswaBaruPass888!',
+            'password_confirmation' => 'SiswaBaruPass888!',
+        ]);
+
+        $response->assertSessionHasErrors('current_password');
+        $this->assertFalse(\Illuminate\Support\Facades\Hash::check('SiswaBaruPass888!', $this->studentUser->fresh()->password));
+    }
+
+    public function test_change_password_fails_when_same_as_current_or_mismatched(): void
+    {
+        $this->actingAs($this->studentUser);
+
+        // Same password as current
+        $response1 = $this->post(route('profile.change-password'), [
+            'current_password' => 'SiswaSecret123!',
+            'password' => 'SiswaSecret123!',
+            'password_confirmation' => 'SiswaSecret123!',
+        ]);
+        $response1->assertSessionHasErrors('password');
+
+        // Mismatched confirmation
+        $response2 = $this->post(route('profile.change-password'), [
+            'current_password' => 'SiswaSecret123!',
+            'password' => 'ValidPassword123!',
+            'password_confirmation' => 'DifferentPassword123!',
+        ]);
+        $response2->assertSessionHasErrors('password');
+    }
 }

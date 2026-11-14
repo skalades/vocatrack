@@ -155,17 +155,42 @@
                                 @endif
                             </td>
 
-                            <!-- Kuota Siswa PKL -->
+                            <!-- Kuota Siswa PKL & Storage Media -->
                             <td class="py-4 px-4">
-                                <div class="space-y-1 max-w-[150px]">
-                                    <div class="flex items-center justify-between text-[11px]">
-                                        <span class="font-bold text-slate-800">{{ $studentsCount }} / {{ $quota }}</span>
-                                        <span class="font-mono text-[10px] {{ $quotaPct >= 90 ? 'text-rose-600 font-bold' : 'text-slate-500' }}">{{ $quotaPct }}%</span>
+                                <div class="space-y-2 max-w-[160px]">
+                                    <!-- 1. Kuota Siswa PKL -->
+                                    <div class="space-y-1">
+                                        <div class="flex items-center justify-between text-[11px]">
+                                            <span class="font-bold text-slate-800">{{ $studentsCount }} / {{ $quota }}</span>
+                                            <span class="font-mono text-[10px] {{ $quotaPct >= 90 ? 'text-rose-600 font-bold' : 'text-slate-500' }}">{{ $quotaPct }}%</span>
+                                        </div>
+                                        <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                                            <div class="h-full rounded-full transition-all {{ $quotaPct >= 90 ? 'bg-rose-500' : ($quotaPct >= 70 ? 'bg-amber-500' : 'bg-indigo-600') }}" style="width: {{ $quotaPct }}%"></div>
+                                        </div>
+                                        <span class="text-[10px] text-slate-400 block truncate">Siswa PKL terdaftar</span>
                                     </div>
-                                    <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                                        <div class="h-full rounded-full transition-all {{ $quotaPct >= 90 ? 'bg-rose-500' : ($quotaPct >= 70 ? 'bg-amber-500' : 'bg-indigo-600') }}" style="width: {{ $quotaPct }}%"></div>
+
+                                    <!-- 2. Kuota Storage Cloud -->
+                                    <div class="pt-1 border-t border-slate-100/80 space-y-1">
+                                        <div class="flex items-center justify-between text-[10px]">
+                                            <span class="font-mono text-slate-700 font-medium">{{ $sch->storage_used_mb }} / {{ $sch->storage_quota_mb }} MB</span>
+                                            <span class="font-mono {{ $sch->storage_usage_percent >= 90 ? 'text-rose-600 font-bold' : 'text-slate-500' }}">{{ $sch->storage_usage_percent }}%</span>
+                                        </div>
+                                        <div class="w-full bg-slate-100 rounded-full h-1 overflow-hidden">
+                                            <div class="h-full rounded-full transition-all {{ $sch->storage_usage_percent >= 90 ? 'bg-rose-500' : ($sch->storage_usage_percent >= 70 ? 'bg-amber-500' : 'bg-teal-500') }}" style="width: {{ $sch->storage_usage_percent }}%"></div>
+                                        </div>
+                                        <div class="flex items-center justify-between text-[9px] text-slate-400">
+                                            <button type="button" onclick="openAdjustStorageModal('{{ $sch->id }}', '{{ addslashes($sch->name) }}', '{{ $sch->storage_quota_mb }}')" class="hover:text-indigo-600 font-bold transition-colors text-indigo-600" title="Ubah Batas Kuota Storage">
+                                                ⚙ Atur Kuota
+                                            </button>
+                                            <form action="{{ route('superadmin.schools.recalculate-storage', $sch->id) }}" method="POST" class="inline">
+                                                @csrf
+                                                <button type="submit" class="hover:text-indigo-600 font-bold transition-colors" title="Hitung Ulang Storage">
+                                                    ↻ Hitung
+                                                </button>
+                                            </form>
+                                        </div>
                                     </div>
-                                    <span class="text-[10px] text-slate-400 block truncate">Siswa PKL terdaftar</span>
                                 </div>
                             </td>
 
@@ -275,6 +300,11 @@
                                             {{ $sch->is_active ? 'Suspend' : 'Aktifkan' }}
                                         </button>
                                     </form>
+
+                                    <!-- 7. Offboarding Archive Export (ZIP) -->
+                                    <a href="{{ route('superadmin.schools.offboard-export', $sch->id) }}" class="p-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold transition-colors inline-block" title="Unduh Arsip Offboarding Sekolah (ZIP)">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                                    </a>
 
                                     <!-- 7. Hapus Tenant Percobaan (Safe Delete) -->
                                     @if($studentsCount == 0)
@@ -435,10 +465,17 @@
                     @endforeach
                 </div>
 
-                <div>
-                    <label class="block text-[11px] font-bold text-slate-700 mb-1">Custom Kuota Siswa (Opsional)</label>
-                    <input type="number" name="custom_quota" placeholder="Biarkan kosong untuk kuota default paket" 
-                           class="w-full text-xs p-2.5 rounded-xl bg-white border border-slate-200 focus:ring-2 focus:ring-indigo-500/20 font-medium text-slate-900">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-700 mb-1">Custom Kuota Siswa (Opsional)</label>
+                        <input type="number" name="custom_quota" placeholder="Default kuota paket" 
+                               class="w-full text-xs p-2.5 rounded-xl bg-white border border-slate-200 focus:ring-2 focus:ring-indigo-500/20 font-medium text-slate-900">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-700 mb-1">Custom Kuota Storage (MB, Opsional)</label>
+                        <input type="number" name="custom_storage_mb" placeholder="Contoh: 2048, 5120" min="100"
+                               class="w-full text-xs p-2.5 rounded-xl bg-white border border-slate-200 focus:ring-2 focus:ring-indigo-500/20 font-medium text-slate-900">
+                    </div>
                 </div>
             </div>
 
@@ -585,6 +622,13 @@
             </div>
 
             <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1.5">Kustom Batas Storage Cloud (MB) (Opsional)</label>
+                <input type="number" name="custom_storage_mb" id="extend-storage-input" min="100" placeholder="Biarkan kosong jika mengikuti paket" 
+                       class="w-full text-xs px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 font-medium text-slate-900 focus:bg-white focus:ring-2 focus:ring-indigo-500/20">
+                <span class="text-[10px] text-slate-500 mt-1 block">Contoh: 1024 MB (1GB), 5120 MB (5GB). Kosongkan untuk default paket.</span>
+            </div>
+
+            <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1.5">Catatan Perpanjangan (Opsional)</label>
                 <input type="text" name="notes" placeholder="Contoh: Perpanjangan TA 2027 via Dana BOS" 
                        class="w-full text-xs px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 font-medium text-slate-900 focus:bg-white focus:ring-2 focus:ring-indigo-500/20">
@@ -638,6 +682,69 @@
     </div>
 </div>
 
+<!-- 6. Modal Atur Kuota Storage Sekolah (Per-Tenant Quota Control) -->
+<div id="modal-adjust-storage" onclick="if(event.target === this) this.classList.add('hidden')" class="hidden fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl border border-slate-100 animate-in zoom-in-95 duration-150 space-y-4">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div class="flex items-center space-x-2.5">
+                <div class="w-8 h-8 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center font-bold text-sm">
+                    ☁
+                </div>
+                <div>
+                    <h3 class="text-sm font-extrabold text-slate-900 tracking-tight">Atur Batas Storage Tenant</h3>
+                    <p class="text-[11px] text-slate-400">Sesuaikan kuota cloud media untuk sekolah ini</p>
+                </div>
+            </div>
+            <button type="button" onclick="document.getElementById('modal-adjust-storage').classList.add('hidden')" class="p-1.5 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+
+        <form id="form-adjust-storage" method="POST" action="" class="space-y-4">
+            @csrf
+            <div class="p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Sekolah Target:</span>
+                <span id="storage-school-name" class="text-sm font-bold text-slate-900 block truncate">-</span>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1.5">Preset Cepat Batas Storage</label>
+                <div class="grid grid-cols-4 gap-1.5">
+                    <button type="button" onclick="setStoragePreset(500)" class="px-2 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-600 transition-colors">500 MB</button>
+                    <button type="button" onclick="setStoragePreset(1024)" class="px-2 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-600 transition-colors">1 GB</button>
+                    <button type="button" onclick="setStoragePreset(2048)" class="px-2 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-600 transition-colors">2 GB</button>
+                    <button type="button" onclick="setStoragePreset(5120)" class="px-2 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-600 transition-colors">5 GB</button>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1.5">Batas Kuota Baru (Megabytes / MB)</label>
+                <div class="relative">
+                    <input type="number" name="storage_quota_mb" id="storage-quota-input" required min="100" max="102400"
+                           class="w-full text-xs font-mono font-bold px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 focus:bg-white focus:ring-2 focus:ring-teal-500/20 pr-12">
+                    <span class="absolute right-3.5 top-2.5 text-xs font-bold text-slate-400">MB</span>
+                </div>
+                <span class="text-[10px] text-slate-400 mt-1 block">Minimal 100 MB. 1024 MB = 1 GB. Berlaku langsung pada upload media siswa/jurnal.</span>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1.5">Alasan / Catatan Penyesuaian (Opsional)</label>
+                <input type="text" name="reason" placeholder="Contoh: Upgrade paket storage add-on per permohonan" 
+                       class="w-full text-xs px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 font-medium text-slate-900 focus:bg-white focus:ring-2 focus:ring-teal-500/20">
+            </div>
+
+            <div class="flex items-center justify-end space-x-2 pt-3 border-t border-slate-100">
+                <x-button type="button" variant="secondary" size="md" onclick="document.getElementById('modal-adjust-storage').classList.add('hidden')">
+                    Batal
+                </x-button>
+                <x-button type="submit" variant="primary" size="md">
+                    Simpan Kuota Baru
+                </x-button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script>
     function openOverviewModal(data) {
         document.getElementById('ov-name').textContent = data.name;
@@ -673,6 +780,19 @@
         document.getElementById('reset-school-name').textContent = schoolName;
         document.getElementById('reset-admin-email').textContent = adminEmail;
         modal.classList.remove('hidden');
+    }
+
+    function openAdjustStorageModal(schoolId, schoolName, currentQuotaMb) {
+        const modal = document.getElementById('modal-adjust-storage');
+        const form = document.getElementById('form-adjust-storage');
+        form.action = `/super-admin/schools/${schoolId}/storage/quota`;
+        document.getElementById('storage-school-name').textContent = schoolName;
+        document.getElementById('storage-quota-input').value = currentQuotaMb || 500;
+        modal.classList.remove('hidden');
+    }
+
+    function setStoragePreset(mb) {
+        document.getElementById('storage-quota-input').value = mb;
     }
 
     function openExtendModal(schoolId, schoolName, currentQuota) {

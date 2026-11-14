@@ -169,7 +169,7 @@ class SuperAdminFunctionalAuditTest extends TestCase
         $response->assertSee('Daftar Tenant Sekolah Mitra');
         $response->assertSee('Trial Evaluasi (14 Hari)');
         $response->assertSee('Gratis / Trial');
-        $response->assertSee('Hanya Paket Demo / Trial');
+        $response->assertSee('Hanya Paket Trial / Demo');
     }
 
     /**
@@ -401,5 +401,227 @@ class SuperAdminFunctionalAuditTest extends TestCase
         $cannotAdd = $subService->canAddStudent($this->school1, 60);
         $this->assertFalse($cannotAdd['allowed']);
         $this->assertStringContainsString('Kuota siswa terlisensi', $cannotAdd['message']);
+    }
+
+    /**
+     * 11. Audit Activity Logs and Audit Trail
+     */
+    public function test_audit_logs_workflow_and_hooks(): void
+    {
+        // Mutate school to trigger audit log
+        $this->actingAs($this->superAdmin)->post(route('superadmin.schools.toggle', $this->school1->id));
+
+        $this->assertDatabaseHas('activity_logs', [
+            'action' => 'school_toggle',
+            'module' => 'schools',
+            'school_id' => $this->school1->id,
+            'user_id' => $this->superAdmin->id,
+        ]);
+
+        $response = $this->actingAs($this->superAdmin)->get(route('superadmin.audit-logs'));
+        $response->assertStatus(200);
+        $response->assertSee('Pusat Audit Trail &amp; Log Keamanan', false);
+        $response->assertSee('SMK Negeri 1 Garut');
+    }
+
+    /**
+     * 12. Audit Storage Recalculation
+     */
+    public function test_storage_quota_calculation_and_recalculation(): void
+    {
+        $response = $this->actingAs($this->superAdmin)->post(route('superadmin.schools.recalculate-storage', $this->school1->id));
+        $response->assertSessionHas('success');
+
+        $this->assertDatabaseHas('activity_logs', [
+            'action' => 'storage_recalculated',
+            'module' => 'system',
+            'school_id' => $this->school1->id,
+        ]);
+    }
+
+    /**
+     * 13. Audit System Health and DevOps Monitoring
+     */
+    public function test_system_health_and_devops_monitoring(): void
+    {
+        // Insert dummy failed job
+        \Illuminate\Support\Facades\DB::table('failed_jobs')->insert([
+            'uuid' => (string) \Illuminate\Support\Str::uuid(),
+            'connection' => 'database',
+            'queue' => 'default',
+            'payload' => '{}',
+            'exception' => 'Test dummy exception message',
+            'failed_at' => now(),
+        ]);
+
+        $jobId = \Illuminate\Support\Facades\DB::table('failed_jobs')->value('id');
+
+        $response = $this->actingAs($this->superAdmin)->get(route('superadmin.system-health'));
+        $response->assertStatus(200);
+        $response->assertSee('DevOps &amp; Diagnostik Server Platform', false);
+        $response->assertSee('Test dummy exception message');
+
+        // Delete failed job
+        $delResponse = $this->actingAs($this->superAdmin)->delete(route('superadmin.system.delete-job', $jobId));
+        $delResponse->assertSessionHas('success');
+        $this->assertDatabaseMissing('failed_jobs', ['id' => $jobId]);
+
+        // Clear cache
+        $cacheResponse = $this->actingAs($this->superAdmin)->post(route('superadmin.system.clear-cache'), ['type' => 'config']);
+        $cacheResponse->assertSessionHas('success');
+    }
+
+    /**
+     * 14. Audit Database Backup and Single-Tenant Offboarding Archive
+     */
+    public function test_backups_and_tenant_offboarding_export(): void
+    {
+        // Access backups page
+        $response = $this->actingAs($this->superAdmin)->get(route('superadmin.backups'));
+        $response->assertStatus(200);
+        $response->assertSee('Pusat Cadangan Data &amp; Pemulihan', false);
+
+        // Create backup
+        $createResponse = $this->actingAs($this->superAdmin)->post(route('superadmin.backups.create'));
+        $createResponse->assertSessionHas('success');
+
+        $this->assertDatabaseHas('activity_logs', [
+            'action' => 'backup_create',
+            'module' => 'system',
+        ]);
+
+        // Offboarding Export
+        $exportResponse = $this->actingAs($this->superAdmin)->get(route('superadmin.schools.offboard-export', $this->school1->id));
+        $exportResponse->assertStatus(200);
+        $exportResponse->assertHeader('content-type', 'application/zip');
+    }
+
+    /**
+     * 15. Audit Platform Announcements (Global Broadcasts)
+     */
+    public function test_platform_broadcasts_crud_and_rendering(): void
+    {
+        $payload = [
+            'title' => 'Pemeliharaan Server Nasional',
+            'content' => 'Server akan mengalami peningkatan performa malam ini.',
+            'type' => 'warning',
+            'target_role' => 'all',
+            'is_dismissible' => 1,
+        ];
+
+        $response = $this->actingAs($this->superAdmin)->post(route('superadmin.broadcasts.store'), $payload);
+        $response->assertSessionHas('success');
+
+        $this->assertDatabaseHas('platform_announcements', [
+            'title' => 'Pemeliharaan Server Nasional',
+            'type' => 'warning',
+            'is_active' => true,
+        ]);
+
+        $announcement = \App\Models\PlatformAnnouncement::first();
+
+        // View broadcasts list
+        $listResponse = $this->actingAs($this->superAdmin)->get(route('superadmin.broadcasts'));
+        $listResponse->assertStatus(200);
+        $listResponse->assertSee('Pemeliharaan Server Nasional');
+
+        // Toggle active
+        $this->actingAs($this->superAdmin)->post(route('superadmin.broadcasts.toggle', $announcement->id));
+        $this->assertFalse($announcement->fresh()->is_active);
+    }
+
+    /**
+     * 16. Audit Public School Request and Onboarding Pipeline
+     */
+    public function test_school_requests_onboarding_pipeline(): void
+    {
+        // 1. Submit public demo request
+        $payload = [
+            'npsn' => '20209999',
+            'school_name' => 'SMK Bina Nusantara Mandiri',
+            'contact_name' => 'Drs. H. Mulyono',
+            'email' => 'mulyono@smkbinanusantara.sch.id',
+            'phone' => '081234567890',
+            'address' => 'Jl. Pendidikan No. 45',
+            'notes' => 'Ingin mencoba sistem PKL online untuk 200 siswa.',
+        ];
+
+        $pubResponse = $this->post(route('public.request-demo'), $payload);
+        $pubResponse->assertSessionHas('success');
+
+        $this->assertDatabaseHas('school_requests', [
+            'npsn' => '20209999',
+            'school_name' => 'SMK Bina Nusantara Mandiri',
+            'status' => 'pending',
+        ]);
+
+        $req = \App\Models\SchoolRequest::first();
+
+        // 2. Superadmin view pipeline
+        $viewResponse = $this->actingAs($this->superAdmin)->get(route('superadmin.school-requests'));
+        $viewResponse->assertStatus(200);
+        $viewResponse->assertSee('SMK Bina Nusantara Mandiri');
+
+        // 3. Superadmin approves and creates tenant
+        $approveResponse = $this->actingAs($this->superAdmin)->post(route('superadmin.school-requests.approve', $req->id), [
+            'plan_id' => $this->trialPlan->id,
+            'custom_quota' => 60,
+        ]);
+        $approveResponse->assertSessionHas('success');
+
+        $this->assertDatabaseHas('schools', [
+            'npsn' => '20209999',
+            'name' => 'SMK Bina Nusantara Mandiri',
+        ]);
+        $this->assertDatabaseHas('users', [
+            'email' => 'mulyono@smkbinanusantara.sch.id',
+            'role' => 'admin-sekolah',
+        ]);
+        $this->assertEquals('approved', $req->fresh()->status);
+    }
+
+    /**
+     * 16. Audit Super Admin Setting Custom Storage Quota Per School
+     */
+    public function test_superadmin_can_adjust_school_storage_quota(): void
+    {
+        $response = $this->actingAs($this->superAdmin)->post(
+            route('superadmin.schools.update-storage-quota', $this->school1->id),
+            [
+                'storage_quota_mb' => 2048,
+                'reason' => 'Upgrade kuota media dokumentasi PKL',
+            ]
+        );
+
+        $response->assertSessionHas('success');
+        $this->assertEquals(2048, $this->school1->fresh()->storage_quota_mb);
+
+        $this->assertDatabaseHas('activity_logs', [
+            'action' => 'storage_quota_updated',
+            'module' => 'schools',
+            'school_id' => $this->school1->id,
+            'user_id' => $this->superAdmin->id,
+        ]);
+    }
+
+    /**
+     * 17. Audit Extending Subscription with Custom Storage Quota
+     */
+    public function test_superadmin_extend_subscription_with_custom_storage(): void
+    {
+        $response = $this->actingAs($this->superAdmin)->post(
+            route('superadmin.schools.extend', $this->school1->id),
+            [
+                'plan_id' => $this->proPlan->id,
+                'months' => 12,
+                'price' => 5000000,
+                'new_quota' => 150,
+                'custom_storage_mb' => 5120,
+            ]
+        );
+
+        $response->assertSessionHas('success');
+        $this->assertEquals(5120, $this->school1->fresh()->storage_quota_mb);
+        $this->assertEquals(150, $this->school1->fresh()->activeSubscription()->student_quota);
     }
 }

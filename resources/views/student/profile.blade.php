@@ -432,7 +432,31 @@
         </div>
     </div>
 
-    <!-- 5. Account & Session Management -->
+    <!-- 5. Keamanan Akun & Ubah Kata Sandi Mandiri -->
+    <div class="p-5 rounded-3xl bg-white border border-slate-200/80 shadow-xs space-y-4">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-2.5">
+                <div class="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-200/80 text-indigo-600 flex items-center justify-center shrink-0">
+                    <svg class="w-5 h-5 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="text-xs font-black uppercase tracking-wider text-slate-900">Keamanan Akun Siswa</h3>
+                    <p class="text-[11px] text-slate-500 font-medium mt-0.5">Ubah kata sandi secara mandiri</p>
+                </div>
+            </div>
+            <button type="button" onclick="openChangePasswordModal()" class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-bold text-xs rounded-xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                <span>Ubah Sandi</span>
+            </button>
+        </div>
+        <p class="text-xs text-slate-600 leading-relaxed">
+            Jaga kerahasiaan kata sandi Anda untuk memastikan data absensi dan catatan jurnal PKL Anda tetap aman dan terlindungi.
+        </p>
+    </div>
+
+    <!-- 6. Account & Session Management -->
     <div class="p-4 rounded-3xl bg-white border border-slate-200/80 shadow-xs space-y-3">
         <form action="{{ route('logout') }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin keluar dari akun Siswa?');">
             @csrf

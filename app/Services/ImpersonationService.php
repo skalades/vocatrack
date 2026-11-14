@@ -60,6 +60,15 @@ class ImpersonationService
 
         Log::warning("[SECURITY AUDIT] User ID {$impersonator->id} ({$impersonator->email}, role: {$impersonator->role}) started impersonating User ID {$target->id} ({$target->email}, role: {$target->role}).");
 
+        AuditLogService::log(
+            'impersonation_start',
+            'security',
+            "Pengguna {$impersonator->name} ({$impersonator->role}) memulai sesi impersonasi akun {$target->name} ({$target->role}).",
+            $target->school,
+            $impersonator,
+            ['target_user_id' => $target->id, 'target_email' => $target->email, 'target_role' => $target->role]
+        );
+
         Auth::login($target);
     }
 
@@ -80,6 +89,14 @@ class ImpersonationService
         session()->forget(['impersonator_id', 'impersonator_original_role', 'impersonator_name']);
 
         Log::info("[SECURITY AUDIT] User ID {$impersonator->id} ({$impersonator->email}) stopped impersonation and returned to administrator session.");
+
+        AuditLogService::log(
+            'impersonation_end',
+            'security',
+            "Pengguna {$impersonator->name} mengakhiri sesi impersonasi dan kembali ke akun administrator.",
+            null,
+            $impersonator
+        );
 
         Auth::login($impersonator);
 

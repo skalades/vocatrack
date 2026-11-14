@@ -90,8 +90,9 @@
 
                 <!-- 1. Super Admin Nav -->
                 @if($role === 'super-admin')
+                    <!-- Section: Operasional SaaS -->
                     <div class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest px-3 pt-2 pb-1.5 flex items-center justify-between">
-                        <span>Super Admin SaaS</span>
+                        <span>Operasional SaaS</span>
                         <span class="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
                     </div>
                     <a href="{{ route('superadmin.dashboard') }}" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs transition-colors {{ request()->routeIs('superadmin.dashboard') ? $activeClass : $inactiveClass }}">
@@ -102,6 +103,10 @@
                         <svg class="w-4 h-4 shrink-0 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
                         <span>Tenant & Sekolah</span>
                     </a>
+                    <a href="{{ route('superadmin.school-requests') }}" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs transition-colors {{ request()->routeIs('superadmin.school-requests*') ? $activeClass : $inactiveClass }}">
+                        <svg class="w-4 h-4 shrink-0 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                        <span>Permohonan Demo</span>
+                    </a>
                     <a href="{{ route('superadmin.plans') }}" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs transition-colors {{ request()->routeIs('superadmin.plans*') ? $activeClass : $inactiveClass }}">
                         <svg class="w-4 h-4 shrink-0 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
                         <span>Paket & Lisensi</span>
@@ -109,6 +114,28 @@
                     <a href="{{ route('superadmin.invoices') }}" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs transition-colors {{ request()->routeIs('superadmin.invoices*') ? $activeClass : $inactiveClass }}">
                         <svg class="w-4 h-4 shrink-0 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2zM10 8h4"/></svg>
                         <span>Tagihan & Invoice</span>
+                    </a>
+
+                    <!-- Section: Platform & Keamanan -->
+                    <div class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest px-3 pt-4 pb-1.5 flex items-center justify-between">
+                        <span>Platform & Keamanan</span>
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                    </div>
+                    <a href="{{ route('superadmin.broadcasts') }}" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs transition-colors {{ request()->routeIs('superadmin.broadcasts*') ? $activeClass : $inactiveClass }}">
+                        <svg class="w-4 h-4 shrink-0 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>
+                        <span>Siaran Pengumuman</span>
+                    </a>
+                    <a href="{{ route('superadmin.audit-logs') }}" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs transition-colors {{ request()->routeIs('superadmin.audit-logs*') ? $activeClass : $inactiveClass }}">
+                        <svg class="w-4 h-4 shrink-0 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                        <span>Audit Trail & Log</span>
+                    </a>
+                    <a href="{{ route('superadmin.backups') }}" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs transition-colors {{ request()->routeIs('superadmin.backups*') ? $activeClass : $inactiveClass }}">
+                        <svg class="w-4 h-4 shrink-0 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"/></svg>
+                        <span>Cadangan Data</span>
+                    </a>
+                    <a href="{{ route('superadmin.system-health') }}" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs transition-colors {{ request()->routeIs('superadmin.system-health*') ? $activeClass : $inactiveClass }}">
+                        <svg class="w-4 h-4 shrink-0 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                        <span>DevOps & Engine</span>
                     </a>
                     <a href="{{ route('superadmin.settings') }}" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs transition-colors {{ request()->routeIs('superadmin.settings*') ? $activeClass : $inactiveClass }}">
                         <svg class="w-4 h-4 shrink-0 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
@@ -291,14 +318,21 @@
                             </span>
                         </div>
                     </div>
-                    <form action="{{ route('logout') }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin keluar dari sistem?');">
-                        @csrf
-                        <button type="submit" title="Keluar dari Sistem" class="p-2 text-slate-400 hover:text-rose-400 rounded-xl hover:bg-slate-800/80 transition-colors cursor-pointer">
+                    <div class="flex items-center gap-1 shrink-0">
+                        <button type="button" onclick="openChangePasswordModal()" title="Ubah Kata Sandi Saya" class="p-2 text-slate-400 hover:text-indigo-400 rounded-xl hover:bg-slate-800/80 transition-colors cursor-pointer">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
                             </svg>
                         </button>
-                    </form>
+                        <form action="{{ route('logout') }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin keluar dari sistem?');">
+                            @csrf
+                            <button type="submit" title="Keluar dari Sistem" class="p-2 text-slate-400 hover:text-rose-400 rounded-xl hover:bg-slate-800/80 transition-colors cursor-pointer">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                                </svg>
+                            </button>
+                        </form>
+                    </div>
                 </div>
             </div>
         </aside>
@@ -360,8 +394,14 @@
                     </div>
                 </div>
 
-                <div class="flex items-center space-x-3">
+                <div class="flex items-center space-x-2 sm:space-x-3">
                     <x-notification-center :isMobile="false" />
+                    <button type="button" onclick="openChangePasswordModal()" class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-indigo-600 hover:bg-slate-100 transition-colors cursor-pointer" title="Ubah Kata Sandi Saya">
+                        <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+                        </svg>
+                        <span class="hidden sm:inline">Ubah Sandi</span>
+                    </button>
                     <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-indigo-50 text-indigo-700 border border-indigo-200 uppercase tracking-wider">
                         {{ strtoupper(str_replace('-', ' ', auth()->user()->role)) }}
                     </span>
@@ -422,6 +462,31 @@
             <!-- Content Area -->
             <main class="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto animate-fade-in">
                 <div class="max-w-[1600px] mx-auto w-full">
+                    <!-- Global Platform Announcements / Broadcasts -->
+                    @php
+                        $activeBroadcasts = \Illuminate\Support\Facades\Schema::hasTable('platform_announcements')
+                            ? \App\Models\PlatformAnnouncement::active()->forRole(auth()->user()?->role)->get()
+                            : collect();
+                    @endphp
+                    @foreach($activeBroadcasts as $bc)
+                        <div id="broadcast-banner-{{ $bc->id }}" class="mb-5 p-4 rounded-2xl border flex items-start justify-between gap-3 shadow-xs transition-all {{ $bc->type === 'emergency' ? 'bg-rose-50 border-rose-200 text-rose-900' : ($bc->type === 'warning' ? 'bg-amber-50 border-amber-200 text-amber-900' : ($bc->type === 'update' ? 'bg-indigo-50 border-indigo-200 text-indigo-900' : 'bg-blue-50 border-blue-200 text-blue-900')) }}">
+                            <div class="flex items-start gap-3">
+                                <div class="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5 {{ $bc->type === 'emergency' ? 'bg-rose-100 text-rose-700' : ($bc->type === 'warning' ? 'bg-amber-100 text-amber-700' : ($bc->type === 'update' ? 'bg-indigo-100 text-indigo-700' : 'bg-blue-100 text-blue-700')) }}">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>
+                                </div>
+                                <div>
+                                    <h4 class="text-xs sm:text-sm font-bold">{{ $bc->title }}</h4>
+                                    <p class="text-xs mt-0.5 opacity-90 leading-relaxed">{{ $bc->content }}</p>
+                                </div>
+                            </div>
+                            @if($bc->is_dismissible)
+                                <button type="button" onclick="dismissBroadcast({{ $bc->id }})" class="p-1 rounded-lg hover:bg-black/5 opacity-60 hover:opacity-100 transition-opacity" title="Tutup pengumuman">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                </button>
+                            @endif
+                        </div>
+                    @endforeach
+
                     @yield('content')
                 </div>
             </main>
@@ -486,9 +551,26 @@
         document.addEventListener('DOMContentLoaded', function() {
             updateGlobalLiveClocks();
             setInterval(updateGlobalLiveClocks, 1000);
+
+            // Hide already dismissed broadcasts
+            document.querySelectorAll('[id^="broadcast-banner-"]').forEach(function(el) {
+                const id = el.id.replace('broadcast-banner-', '');
+                if (localStorage.getItem('dismissed_broadcast_' + id) === '1') {
+                    el.style.display = 'none';
+                }
+            });
         });
+
+        function dismissBroadcast(id) {
+            const el = document.getElementById('broadcast-banner-' + id);
+            if (el) {
+                el.style.display = 'none';
+                localStorage.setItem('dismissed_broadcast_' + id, '1');
+            }
+        }
     </script>
     <x-image-lightbox />
+    <x-change-password-modal />
 
     @stack('scripts')
 </body>

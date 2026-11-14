@@ -41,6 +41,9 @@ Route::middleware(['auth'])->group(function () {
     // Impersonation Routes
     Route::post('/impersonate/leave', [ImpersonationController::class, 'stop'])->name('impersonate.leave');
     Route::post('/impersonate/{user}', [ImpersonationController::class, 'start'])->name('impersonate.start');
+
+    // Self-Service Password Change for All User Levels
+    Route::post('/profile/change-password', [AuthController::class, 'changePassword'])->name('profile.change-password');
 });
 
 // 1. Super Admin Platform Routes
@@ -73,7 +76,43 @@ Route::middleware(['auth', 'role:super-admin'])->prefix('super-admin')->group(fu
     // Platform Settings & System Logo
     Route::get('/settings', [SuperAdminController::class, 'settings'])->name('superadmin.settings');
     Route::post('/settings', [SuperAdminController::class, 'updateSettings'])->name('superadmin.settings.update');
+
+    // Storage Quota Management & Offboarding Archive
+    Route::post('/schools/{school}/storage/recalculate', [SuperAdminController::class, 'recalculateSchoolStorage'])->name('superadmin.schools.recalculate-storage');
+    Route::post('/schools/{school}/storage/quota', [SuperAdminController::class, 'updateSchoolStorageQuota'])->name('superadmin.schools.update-storage-quota');
+    Route::get('/schools/{school}/offboard-export', [SuperAdminController::class, 'exportSchoolArchive'])->name('superadmin.schools.offboard-export');
+
+    // Audit Trail & Activity Logs
+    Route::get('/audit-logs', [SuperAdminController::class, 'auditLogs'])->name('superadmin.audit-logs');
+
+    // DevOps, Queue & System Health
+    Route::get('/system', [SuperAdminController::class, 'systemHealth'])->name('superadmin.system-health');
+    Route::post('/system/retry-job/{id}', [SuperAdminController::class, 'retryFailedJob'])->name('superadmin.system.retry-job');
+    Route::delete('/system/delete-job/{id}', [SuperAdminController::class, 'deleteFailedJob'])->name('superadmin.system.delete-job');
+    Route::post('/system/flush-jobs', [SuperAdminController::class, 'flushFailedJobs'])->name('superadmin.system.flush-jobs');
+    Route::post('/system/clear-cache', [SuperAdminController::class, 'clearSystemCache'])->name('superadmin.system.clear-cache');
+
+    // Database Backups
+    Route::get('/backups', [SuperAdminController::class, 'backups'])->name('superadmin.backups');
+    Route::post('/backups/create', [SuperAdminController::class, 'createBackup'])->name('superadmin.backups.create');
+    Route::get('/backups/download/{filename}', [SuperAdminController::class, 'downloadBackup'])->name('superadmin.backups.download');
+    Route::delete('/backups/delete/{filename}', [SuperAdminController::class, 'deleteBackup'])->name('superadmin.backups.delete');
+
+    // Platform Announcements / Broadcasts
+    Route::get('/broadcasts', [SuperAdminController::class, 'broadcasts'])->name('superadmin.broadcasts');
+    Route::post('/broadcasts', [SuperAdminController::class, 'storeBroadcast'])->name('superadmin.broadcasts.store');
+    Route::put('/broadcasts/{broadcast}', [SuperAdminController::class, 'updateBroadcast'])->name('superadmin.broadcasts.update');
+    Route::post('/broadcasts/{broadcast}/toggle', [SuperAdminController::class, 'toggleBroadcast'])->name('superadmin.broadcasts.toggle');
+    Route::delete('/broadcasts/{broadcast}', [SuperAdminController::class, 'destroyBroadcast'])->name('superadmin.broadcasts.destroy');
+
+    // School Requests (Demo Pipeline & Onboarding)
+    Route::get('/school-requests', [SuperAdminController::class, 'schoolRequests'])->name('superadmin.school-requests');
+    Route::post('/school-requests/{schoolRequest}/approve', [SuperAdminController::class, 'approveSchoolRequest'])->name('superadmin.school-requests.approve');
+    Route::post('/school-requests/{schoolRequest}/reject', [SuperAdminController::class, 'rejectSchoolRequest'])->name('superadmin.school-requests.reject');
 });
+
+// Public Demo Request Route
+Route::post('/request-demo', [SuperAdminController::class, 'storePublicSchoolRequest'])->name('public.request-demo');
 
 // 2. Admin Sekolah Routes
 Route::middleware(['auth', 'IdentifyTenant', 'role:admin-sekolah'])->prefix('admin-sekolah')->group(function () {

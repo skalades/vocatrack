@@ -18,12 +18,19 @@ class School extends Model
         'email',
         'logo_path',
         'stamp_path',
+        'storage_used_bytes',
         'is_active',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
+        'storage_used_bytes' => 'integer',
     ];
+
+    public function activityLogs(): HasMany
+    {
+        return $this->hasMany(ActivityLog::class);
+    }
 
     public function settings(): HasMany
     {
@@ -86,5 +93,21 @@ class School extends Model
     {
         $setting = $this->settings()->where('key', $key)->first();
         return $setting ? $setting->value : $default;
+    }
+
+    public function getStorageUsedMbAttribute(): float
+    {
+        return round(($this->storage_used_bytes ?? 0) / (1024 * 1024), 2);
+    }
+
+    public function getStorageQuotaMbAttribute(): int
+    {
+        return $this->activeSubscription()?->storage_quota_mb ?? 2048;
+    }
+
+    public function getStorageUsagePercentAttribute(): int
+    {
+        $quota = max(1, $this->storage_quota_mb);
+        return min(100, (int) round(($this->storage_used_mb / $quota) * 100));
     }
 }
