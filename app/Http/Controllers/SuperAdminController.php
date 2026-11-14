@@ -12,6 +12,7 @@ use App\Models\SubscriptionPlan;
 use App\Models\User;
 use App\Services\ImpersonationService;
 use App\Services\SubscriptionService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -19,6 +20,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class SuperAdminController extends Controller
 {
@@ -77,14 +79,62 @@ class SuperAdminController extends Controller
         ));
     }
 
-    public function schools()
+    public function schools(Request $request)
     {
-        $schools = School::with(['subscriptions' => function ($q) {
+        $query = School::with([
+            'subscriptions' => function ($q) {
                 $q->latest('end_date');
-            }])
-            ->withCount(['users', 'classes', 'companies'])
-            ->latest()
-            ->paginate(10);
+            },
+            'invoices' => function ($q) {
+                $q->latest()->take(5);
+            },
+            'users' => function ($q) {
+                $q->where('role', 'admin-sekolah');
+            }
+        ])
+        ->withCount(['users', 'classes', 'companies']);
+
+        // 1. Search Query (Server-side scalable search)
+        if ($request->filled('search')) {
+            $search = trim($request->search);
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('npsn', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%")
+                  ->orWhere('phone', 'like', "%{$search}%")
+                  ->orWhere('address', 'like', "%{$search}%");
+            });
+        }
+
+        // 2. Status Filter
+        if ($request->filled('status') && $request->status !== 'all') {
+            if ($request->status === 'inactive') {
+                $query->where('is_active', false);
+            } else {
+                $query->where('is_active', true);
+                if ($request->status === 'trial') {
+                    $query->whereHas('subscriptions', function ($sq) {
+                        $sq->where('status', 'trial');
+                    });
+                } elseif ($request->status === 'active') {
+                    $query->whereHas('subscriptions', function ($sq) {
+                        $sq->where('status', 'active')->where('end_date', '>=', Carbon::today());
+                    });
+                } elseif ($request->status === 'expiring_soon') {
+                    $thirtyDays = Carbon::today()->addDays(30);
+                    $query->whereHas('subscriptions', function ($sq) use ($thirtyDays) {
+                        $sq->where('end_date', '>=', Carbon::today())
+                           ->where('end_date', '<=', $thirtyDays);
+                    });
+                } elseif ($request->status === 'expired') {
+                    $query->whereHas('subscriptions', function ($sq) {
+                        $sq->where('end_date', '<', Carbon::today());
+                    });
+                }
+            }
+        }
+
+        $schools = $query->latest()->paginate(10)->withQueryString();
 
         foreach ($schools as $sch) {
             $sch->students_count = Student::whereHas('class', function ($q) use ($sch) {
@@ -94,7 +144,20 @@ class SuperAdminController extends Controller
 
         $plans = SubscriptionPlan::where('is_active', true)->get();
 
-        return view('superadmin.schools', compact('schools', 'plans'));
+        // Platform-wide accurate KPI counts
+        $totalCount = School::count();
+        $activeCount = School::where('is_active', true)->count();
+        $totalStudents = Student::count();
+        $totalCompanies = \App\Models\Company::count();
+
+        return view('superadmin.schools', compact(
+            'schools', 
+            'plans', 
+            'totalCount', 
+            'activeCount', 
+            'totalStudents', 
+            'totalCompanies'
+        ));
     }
 
     public function storeSchool(Request $request)
@@ -176,6 +239,139 @@ class SuperAdminController extends Controller
         return back()->with('success', "Sekolah {$school->name} dan paket sewa berhasil didaftarkan. Akun admin dibuat dengan password: password");
     }
 
+    public function updateSchool(Request $request, School $school)
+    {
+        $request->validate([
+            'npsn' => ['required', 'string', 'size:8', 'unique:schools,npsn,' . $school->id],
+            'name' => ['required', 'string', 'max:150'],
+            'address' => ['required', 'string'],
+            'phone' => ['required', 'string', 'max:20'],
+            'email' => ['required', 'email', 'max:100'],
+        ]);
+
+        $school->update([
+            'npsn' => $request->npsn,
+            'name' => $request->name,
+            'address' => $request->address,
+            'phone' => $request->phone,
+            'email' => $request->email,
+        ]);
+
+        return back()->with('success', "Data profil sekolah {$school->name} berhasil diperbarui.");
+    }
+
+    public function destroySchool(School $school)
+    {
+        $studentCount = Student::whereHas('class', function ($q) use ($school) {
+            $q->where('school_id', $school->id);
+        })->count();
+
+        if ($studentCount > 0) {
+            return back()->with('error', "Sekolah {$school->name} memiliki {$studentCount} siswa terdaftar. Hapus atau arsipkan data siswa terlebih dahulu sebelum menghapus tenant ini demi keamanan data.");
+        }
+
+        DB::transaction(function () use ($school) {
+            $school->settings()->delete();
+            $school->subscriptions()->delete();
+            $school->invoices()->delete();
+            $school->users()->delete();
+            $school->delete();
+        });
+
+        return back()->with('success', "Tenant sekolah {$school->name} beserta data terkait berhasil dihapus.");
+    }
+
+    public function resetAdminPassword(Request $request, School $school)
+    {
+        $adminUser = User::where('school_id', $school->id)
+            ->where('role', 'admin-sekolah')
+            ->first();
+
+        if (!$adminUser) {
+            return back()->with('error', "Tidak ditemukan akun Admin Sekolah untuk tenant {$school->name}.");
+        }
+
+        $newPassword = $request->input('new_password', 'password');
+        $adminUser->update([
+            'password' => Hash::make($newPassword),
+            'is_active' => true,
+        ]);
+
+        return back()->with('success', "Kata sandi Admin Sekolah ({$adminUser->email}) berhasil direset menjadi: {$newPassword}");
+    }
+
+    public function exportSchools(): StreamedResponse
+    {
+        $schools = School::with(['subscriptions' => function ($q) {
+                $q->latest('end_date');
+            }, 'users' => function ($q) {
+                $q->where('role', 'admin-sekolah');
+            }])
+            ->withCount(['users', 'classes', 'companies'])
+            ->orderBy('name')
+            ->get();
+
+        $headers = [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="rekap-tenant-vokatrack-' . date('Ymd-His') . '.csv"',
+            'Pragma' => 'no-cache',
+            'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
+            'Expires' => '0',
+        ];
+
+        return response()->stream(function () use ($schools) {
+            $handle = fopen('php://output', 'w');
+            // Write UTF-8 BOM for Microsoft Excel compatibility
+            fprintf($handle, chr(0xEF).chr(0xBB).chr(0xBF));
+
+            fputcsv($handle, [
+                'NPSN',
+                'Nama Sekolah',
+                'Email Resmi',
+                'Telepon',
+                'Alamat',
+                'Status Tenant',
+                'Paket Lisensi',
+                'Status Sewa',
+                'Masa Berlaku',
+                'Sisa Hari',
+                'Kuota Siswa',
+                'Siswa Terdaftar',
+                'Jumlah Rombel',
+                'Mitra DU/DI',
+                'Email Admin',
+            ]);
+
+            foreach ($schools as $sch) {
+                $sub = $sch->activeSubscription();
+                $studentsCount = Student::whereHas('class', function ($q) use ($sch) {
+                    $q->where('school_id', $sch->id);
+                })->count();
+                $adminEmail = $sch->users->first()?->email ?? '-';
+
+                fputcsv($handle, [
+                    $sch->npsn,
+                    $sch->name,
+                    $sch->email,
+                    $sch->phone,
+                    $sch->address,
+                    $sch->is_active ? 'Aktif' : 'Nonaktif',
+                    $sub?->plan_name ?? 'Belum Berlangganan',
+                    $sub ? $sub->computed_status : '-',
+                    $sub ? $sub->end_date->format('d/m/Y') : '-',
+                    $sub ? $sub->daysRemaining() : '-',
+                    $sub?->student_quota ?? 0,
+                    $studentsCount,
+                    $sch->classes_count,
+                    $sch->companies_count,
+                    $adminEmail,
+                ]);
+            }
+
+            fclose($handle);
+        }, 200, $headers);
+    }
+
     public function extendSubscription(Request $request, School $school)
     {
         $request->validate([
@@ -255,10 +451,23 @@ class SuperAdminController extends Controller
             });
         }
 
-        $invoices = $query->paginate(15);
+        $invoices = $query->paginate(15)->withQueryString();
         $schools = School::where('is_active', true)->orderBy('name')->get();
 
-        return view('superadmin.invoices', compact('invoices', 'schools'));
+        // Accurate KPI counts for Invoices
+        $totalInvoicesCount = Invoice::count();
+        $paidInvoicesCount = Invoice::where('status', 'paid')->count();
+        $unpaidInvoicesCount = Invoice::where('status', 'unpaid')->count();
+        $totalInvoicedAmount = (float) Invoice::sum('amount');
+
+        return view('superadmin.invoices', compact(
+            'invoices', 
+            'schools', 
+            'totalInvoicesCount', 
+            'paidInvoicesCount', 
+            'unpaidInvoicesCount', 
+            'totalInvoicedAmount'
+        ));
     }
 
     public function storeInvoice(Request $request)
@@ -303,6 +512,44 @@ class SuperAdminController extends Controller
         return back()->with('success', "Invoice {$invoice->invoice_number} berhasil ditandai LUNAS.");
     }
 
+    public function cancelInvoice(Invoice $invoice)
+    {
+        if ($invoice->status === 'paid') {
+            return back()->with('error', "Invoice yang sudah lunas tidak dapat dibatalkan.");
+        }
+
+        $invoice->update(['status' => 'cancelled']);
+        return back()->with('success', "Invoice {$invoice->invoice_number} berhasil dibatalkan.");
+    }
+
+    public function destroyInvoice(Invoice $invoice)
+    {
+        if ($invoice->status === 'paid') {
+            return back()->with('error', "Invoice yang sudah berstatus LUNAS tidak dapat dihapus demi audit finansial.");
+        }
+
+        $number = $invoice->invoice_number;
+        $invoice->delete();
+        return back()->with('success', "Invoice tagihan {$number} berhasil dihapus.");
+    }
+
+    public function downloadInvoicePdf(Invoice $invoice)
+    {
+        $invoice->load(['school', 'subscription']);
+        $platformName = PlatformSetting::get('platform_name', 'VokaTrack');
+        $platformTagline = PlatformSetting::get('platform_tagline', 'Enterprise Cloud');
+        $systemLogoUrl = PlatformSetting::getLogoUrl();
+
+        $pdf = Pdf::loadView('superadmin.invoice_pdf', compact(
+            'invoice',
+            'platformName',
+            'platformTagline',
+            'systemLogoUrl'
+        ))->setPaper('a4', 'portrait');
+
+        return $pdf->download("Invoice-{$invoice->invoice_number}.pdf");
+    }
+
     public function plans()
     {
         if (SubscriptionPlan::count() === 0) {
@@ -310,7 +557,20 @@ class SuperAdminController extends Controller
         }
 
         $plans = SubscriptionPlan::withCount('subscriptions')->get();
-        return view('superadmin.plans', compact('plans'));
+
+        // Accurate KPI metrics for Plans
+        $totalPlans = $plans->count();
+        $activePlans = $plans->where('is_active', true)->count();
+        $totalActiveSchools = SchoolSubscription::whereIn('status', ['active', 'trial', 'expiring_soon'])->distinct('school_id')->count('school_id');
+        $totalCapacityLicensed = SchoolSubscription::sum('student_quota');
+
+        return view('superadmin.plans', compact(
+            'plans',
+            'totalPlans',
+            'activePlans',
+            'totalActiveSchools',
+            'totalCapacityLicensed'
+        ));
     }
 
     public function storePlan(Request $request)
@@ -410,13 +670,31 @@ class SuperAdminController extends Controller
         $platformName = PlatformSetting::get('platform_name', 'VokaTrack');
         $platformTagline = PlatformSetting::get('platform_tagline', 'Enterprise Cloud');
         $appDescription = PlatformSetting::get('app_description', 'Platform PKL SMK Terpadu Berbasis Multi-Tenancy Cloud');
+        $maintenanceActive = (bool) PlatformSetting::get('maintenance_active', false);
+        $maintenanceNotice = PlatformSetting::get('maintenance_notice', '');
+
+        // System Health & Diagnostics
+        $systemHealth = [
+            'php_version' => PHP_VERSION,
+            'laravel_version' => app()->version(),
+            'db_driver' => config('database.default'),
+            'db_name' => config('database.connections.' . config('database.default') . '.database'),
+            'app_env' => app()->environment(),
+            'app_debug' => config('app.debug') ? 'Aktif (Warning)' : 'Nonaktif (Production Safe)',
+            'cache_driver' => config('cache.default'),
+            'session_driver' => config('session.driver'),
+            'storage_writable' => is_writable(storage_path()),
+        ];
 
         return view('superadmin.settings', compact(
             'currentLogoUrl',
             'hasCustomLogo',
             'platformName',
             'platformTagline',
-            'appDescription'
+            'appDescription',
+            'maintenanceActive',
+            'maintenanceNotice',
+            'systemHealth'
         ));
     }
 
@@ -428,11 +706,15 @@ class SuperAdminController extends Controller
             'app_description' => ['nullable', 'string', 'max:255'],
             'system_logo' => ['nullable', 'file', 'image', 'mimes:png,jpg,jpeg,webp,svg', 'max:2048'],
             'reset_logo' => ['nullable', 'boolean'],
+            'maintenance_active' => ['nullable', 'boolean'],
+            'maintenance_notice' => ['nullable', 'string', 'max:500'],
         ]);
 
         PlatformSetting::set('platform_name', $request->platform_name);
         PlatformSetting::set('platform_tagline', $request->platform_tagline ?: 'Enterprise Cloud');
         PlatformSetting::set('app_description', $request->app_description ?: '');
+        PlatformSetting::set('maintenance_active', $request->boolean('maintenance_active') ? '1' : '0');
+        PlatformSetting::set('maintenance_notice', $request->maintenance_notice ?: '');
 
         // Handle Logo Reset
         if ($request->boolean('reset_logo')) {
@@ -455,6 +737,6 @@ class SuperAdminController extends Controller
             PlatformSetting::set('system_logo', $path);
         }
 
-        return back()->with('success', 'Pengaturan branding dan logo sistem berhasil diperbarui.');
+        return back()->with('success', 'Pengaturan branding dan konfigurasi sistem berhasil diperbarui.');
     }
 }

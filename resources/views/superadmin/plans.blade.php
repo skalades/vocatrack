@@ -18,6 +18,53 @@
         </x-button>
     </x-page-header>
 
+    <!-- Top KPI Stat Cards (Seragam & Konsisten UI) -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+        <x-stat-card 
+            title="Total Paket Lisensi" 
+            :value="$totalPlans . ' Paket'" 
+            subtitle="Tiering sewa yang tersedia"
+            color="indigo"
+        >
+            <x-slot:icon>
+                <svg class="w-5 h-5 text-indigo-600 stroke-[1.8]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+            </x-slot:icon>
+        </x-stat-card>
+
+        <x-stat-card 
+            title="Paket Aktif Ditawarkan" 
+            :value="$activePlans . ' Paket'" 
+            subtitle="Dapat dipilih oleh sekolah"
+            color="emerald"
+        >
+            <x-slot:icon>
+                <svg class="w-5 h-5 text-emerald-600 stroke-[1.8]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </x-slot:icon>
+        </x-stat-card>
+
+        <x-stat-card 
+            title="Sekolah Terpasang" 
+            :value="$totalActiveSchools . ' Sekolah'" 
+            subtitle="Memiliki langganan aktif/trial"
+            color="blue"
+        >
+            <x-slot:icon>
+                <svg class="w-5 h-5 text-blue-600 stroke-[1.8]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+            </x-slot:icon>
+        </x-stat-card>
+
+        <x-stat-card 
+            title="Total Kapasitas Terlisensi" 
+            :value="$totalCapacityLicensed . ' Siswa'" 
+            subtitle="Akumulasi kuota paket terpakai"
+            color="teal"
+        >
+            <x-slot:icon>
+                <svg class="w-5 h-5 text-teal-600 stroke-[1.8]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            </x-slot:icon>
+        </x-stat-card>
+    </div>
+
     <!-- Plan Cards Grid -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
         @forelse($plans as $plan)
@@ -36,9 +83,9 @@
                     <div>
                         <div class="flex items-center justify-between gap-2">
                             <h3 class="font-extrabold text-slate-900 text-base">{{ $plan->name }}</h3>
-                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold font-mono {{ $plan->is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500' }}">
+                            <x-badge :variant="$plan->is_active ? 'success' : 'neutral'" size="xs">
                                 {{ $plan->is_active ? 'Aktif' : 'Non-Aktif' }}
-                            </span>
+                            </x-badge>
                         </div>
                         <p class="text-xs text-slate-500 font-medium mt-1 leading-relaxed">{{ $plan->description }}</p>
                     </div>
@@ -123,7 +170,7 @@
                             class="flex-1 py-2.5 px-3 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors text-center">
                         Edit Paket
                     </button>
-                    @if($plan->subscriptions_count == 0)
+                    @if($plan->subscriptions_count == 0 && $plan->code !== 'trial-14d')
                         <form action="{{ route('superadmin.plans.destroy', $plan->id) }}" method="POST" onsubmit="return confirm('Hapus paket sewa ini?')">
                             @csrf
                             @method('DELETE')
@@ -162,7 +209,7 @@
     <div class="bg-white w-full max-w-lg rounded-3xl p-6 sm:p-7 shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-150">
         <div class="flex items-center justify-between pb-3.5 mb-4 border-b border-slate-100">
             <div>
-                <h3 class="text-sm font-extrabold text-slate-900 tracking-tight">Tambah Paket Sewa Baru</h3>
+                <h3 class="text-base font-extrabold text-slate-900 tracking-tight">Tambah Paket Sewa Baru</h3>
                 <p class="text-xs text-slate-500 font-medium">Buat tiering lisensi baru untuk penawaran sewa sekolah</p>
             </div>
             <button type="button" onclick="document.getElementById('modal-create-plan').classList.add('hidden')" class="p-1.5 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition-colors">

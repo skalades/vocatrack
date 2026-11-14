@@ -1,67 +1,26 @@
 @extends('layouts.app')
 
-@section('title', 'Dashboard SaaS Super Admin — VokaTrack')
-@section('hide_header', true)
+@section('page_title', 'Dashboard SaaS Super Admin')
+@section('page_subtitle', 'Pusat kendali multi-tenancy cloud, pemantauan masa sewa, dan pendapatan lisensi berulang')
 
 @section('content')
 <div class="w-full space-y-6 animate-in fade-in duration-300">
 
-    <h1 class="sr-only">Dashboard SaaS Super Admin</h1>
-
-    <!-- Hero Welcome Banner -->
-    <div class="relative overflow-hidden bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-6 sm:p-7 text-white shadow-xl shadow-slate-950/20 border border-slate-800">
-        <div class="absolute -right-10 -bottom-10 w-60 h-60 rounded-full bg-indigo-500/10 blur-3xl pointer-events-none"></div>
-
-        <div class="relative space-y-4">
-            <!-- Top Banner Meta: Badge + Cloud + Live Date & Time -->
-            <div class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-white/10">
-                <div class="flex items-center gap-2 flex-wrap">
-                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 uppercase tracking-wider">
-                        SUPER ADMIN SAAS PLATFORM
-                    </span>
-                    <span class="text-xs text-slate-500">&bull;</span>
-                    <span class="text-xs font-semibold text-slate-300 truncate">VokaTrack Multi-Tenant Engine</span>
-                </div>
-
-                <!-- Live Date & Clock Widget -->
-                <div class="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-2xl bg-white/10 backdrop-blur-md border border-white/15 text-xs text-slate-200 shadow-inner">
-                    <div class="flex items-center gap-1.5 font-semibold text-slate-200">
-                        <svg class="w-3.5 h-3.5 text-indigo-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                        <span id="banner-live-date">{{ \Carbon\Carbon::now()->isoFormat('dddd, D MMMM Y') }}</span>
-                    </div>
-                    <span class="text-white/30">&bull;</span>
-                    <div class="flex items-center gap-1.5 font-mono font-bold text-amber-300">
-                        <svg class="w-3.5 h-3.5 text-amber-300 shrink-0 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                        <span id="banner-live-clock">{{ \Carbon\Carbon::now()->format('H:i:s') }} WIB</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Main Greeting & Action Buttons -->
-            <div class="flex flex-col md:flex-row md:items-center justify-between gap-5">
-                <div class="space-y-1.5 min-w-0">
-                    <h2 class="text-xl sm:text-2xl font-black tracking-tight text-white">
-                        Pusat Kendali Sewa Platform VokaTrack
-                    </h2>
-                    <p class="text-xs sm:text-sm text-slate-300 font-medium max-w-2xl leading-relaxed">
-                        Monitoring performa sewa SaaS, pendapatan berulang bulanan (MRR), masa aktif lisensi, serta alokasi kuota kapasitas sekolah mitra.
-                    </p>
-                </div>
-
-                <!-- Header Quick Actions -->
-                <div class="flex flex-wrap items-center gap-2.5 shrink-0">
-                    <a href="{{ route('superadmin.invoices') }}" class="inline-flex items-center px-4 py-2.5 rounded-xl text-xs font-bold text-slate-200 bg-white/10 hover:bg-white/20 border border-white/20 transition-colors">
-                        <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2zM10 8h4"/></svg>
-                        Kelola Tagihan
-                    </a>
-                    <x-button variant="primary" onclick="window.location.href='{{ route('superadmin.schools') }}'" class="shadow-lg shadow-indigo-600/30">
-                        <svg class="w-4 h-4 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-                        <span>+ Daftarkan Tenant Baru</span>
-                    </x-button>
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- Enterprise Standard Page Header -->
+    <x-page-header 
+        title="Pusat Kendali Sewa Platform VokaTrack" 
+        subtitle="Monitoring performa sewa SaaS, pendapatan berulang bulanan (MRR), masa aktif lisensi, serta alokasi kapasitas sekolah mitra."
+        badge="SUPER ADMIN SAAS"
+    >
+        <a href="{{ route('superadmin.invoices') }}" class="inline-flex items-center px-3.5 py-2 rounded-xl text-xs font-bold text-slate-200 bg-white/10 hover:bg-white/20 border border-white/20 transition-colors shadow-2xs">
+            <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2zM10 8h4"/></svg>
+            Kelola Tagihan
+        </a>
+        <x-button variant="primary" size="md" onclick="window.location.href='{{ route('superadmin.schools') }}'" class="shadow-lg shadow-indigo-600/30">
+            <svg class="w-4 h-4 mr-1.5 stroke-[2.5]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+            <span>+ Daftarkan Tenant Baru</span>
+        </x-button>
+    </x-page-header>
 
     <!-- SaaS Metric KPI Cards -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -138,7 +97,7 @@
                     </p>
                 </div>
             </div>
-            <a href="{{ route('superadmin.schools') }}" class="px-3.5 py-1.5 rounded-xl bg-amber-600 text-white font-bold text-xs hover:bg-amber-700 transition-colors shrink-0 text-center">
+            <a href="{{ route('superadmin.schools', ['status' => 'expiring_soon']) }}" class="px-3.5 py-1.5 rounded-xl bg-amber-600 text-white font-bold text-xs hover:bg-amber-700 transition-colors shrink-0 text-center shadow-xs">
                 Lihat & Perpanjang Sewa
             </a>
         </div>
@@ -245,33 +204,20 @@
                                 @endif
                             </td>
 
-                            <!-- Status Sewa -->
+                            <!-- Status Sewa dengan x-badge Modular -->
                             <td class="py-4 px-4 text-center">
                                 @if(!$sch->is_active)
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
-                                        Nonaktif
-                                    </span>
+                                    <x-badge variant="danger" size="xs">Nonaktif</x-badge>
                                 @elseif($computedStatus === 'trial')
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
-                                        Trial 14 Hari
-                                    </span>
+                                    <x-badge variant="indigo" size="xs">Trial 14 Hari</x-badge>
                                 @elseif($computedStatus === 'expiring_soon')
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 animate-pulse">
-                                        Segera Habis
-                                    </span>
+                                    <x-badge variant="warning" size="xs" :pulse="true">Habis Dekat</x-badge>
                                 @elseif($computedStatus === 'grace_period')
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-50 text-orange-700 border border-orange-200">
-                                        Tenggang 7 Hari
-                                    </span>
+                                    <x-badge variant="warning" size="xs">Tenggang</x-badge>
                                 @elseif($computedStatus === 'expired')
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
-                                        Expired
-                                    </span>
+                                    <x-badge variant="danger" size="xs">Expired</x-badge>
                                 @else
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1 animate-pulse"></span>
-                                        Aktif
-                                    </span>
+                                    <x-badge variant="success" size="xs" :pulse="true">Aktif</x-badge>
                                 @endif
                             </td>
 
@@ -293,8 +239,8 @@
                                         Perpanjang
                                     </button>
 
-                                    <!-- Detail Link -->
-                                    <a href="{{ route('superadmin.schools') }}" class="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors" title="Kelola Sekolah">
+                                    <!-- Kelola Detail Sekolah Link -->
+                                    <a href="{{ route('superadmin.schools', ['search' => $sch->npsn]) }}" class="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors" title="Lihat Detail & Kelola">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                                     </a>
                                 </div>
@@ -302,7 +248,14 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="py-8 text-center text-slate-400">Belum ada data sekolah terdaftar.</td>
+                            <td colspan="6" class="py-12">
+                                <x-empty-state 
+                                    title="Belum Ada Sekolah Terdaftar" 
+                                    description="Daftarkan tenant sekolah baru untuk memulai proses onboarding institusi pendidikan."
+                                    actionLabel="+ Daftarkan Sekolah Sekarang"
+                                    actionUrl="{{ route('superadmin.schools') }}"
+                                />
+                            </td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -327,22 +280,29 @@
 
             <div class="divide-y divide-slate-100">
                 @forelse($recentInvoices as $inv)
-                    <div class="p-4 flex items-center justify-between gap-3 text-xs">
+                    <div class="p-4 flex items-center justify-between gap-3 text-xs hover:bg-slate-50/50 transition-colors">
                         <div class="min-w-0">
                             <span class="font-bold text-slate-900 block truncate">{{ $inv->school->name ?? 'Sekolah' }}</span>
                             <div class="flex items-center gap-2 text-[10px] text-slate-500 mt-0.5 font-mono">
-                                <span>{{ $inv->invoice_number }}</span>
+                                <span class="font-bold text-indigo-700">{{ $inv->invoice_number }}</span>
                                 <span>&bull;</span>
                                 <span>Jatuh Tempo: {{ $inv->due_date->format('d M Y') }}</span>
                             </div>
                         </div>
-                        <div class="text-right shrink-0">
-                            <span class="font-mono font-bold text-slate-900 block">{{ $inv->formatted_amount }}</span>
-                            @if($inv->status === 'paid')
-                                <span class="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700">LUNAS</span>
-                            @else
-                                <span class="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-bold bg-amber-50 text-amber-700">MENUNGGU</span>
-                            @endif
+                        <div class="text-right shrink-0 flex items-center gap-3">
+                            <div>
+                                <span class="font-mono font-bold text-slate-900 block">{{ $inv->formatted_amount }}</span>
+                                @if($inv->status === 'paid')
+                                    <x-badge variant="success" size="xs">Lunas</x-badge>
+                                @elseif($inv->status === 'cancelled')
+                                    <x-badge variant="danger" size="xs">Batal</x-badge>
+                                @else
+                                    <x-badge variant="warning" size="xs">Menunggu</x-badge>
+                                @endif
+                            </div>
+                            <a href="{{ route('superadmin.invoices.pdf', $inv->id) }}" title="Unduh PDF Faktur" class="p-1.5 rounded-lg bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 text-slate-600 transition-colors">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                            </a>
                         </div>
                     </div>
                 @empty
@@ -359,18 +319,18 @@
                     <p class="text-[11px] text-slate-500 font-medium">Struktur harga dan kuota yang ditawarkan ke sekolah</p>
                 </div>
                 <a href="{{ route('superadmin.plans') }}" class="text-xs font-bold text-indigo-600 hover:text-indigo-700">
-                    Atur Paket &rarr;
+                    Atur Semua Paket &rarr;
                 </a>
             </div>
 
             <div class="p-4 space-y-3">
                 @foreach($plans as $plan)
-                    <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between gap-3">
+                    <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between gap-3 hover:bg-white hover:shadow-xs transition-all">
                         <div class="min-w-0">
                             <div class="flex items-center gap-2">
                                 <span class="font-bold text-slate-900 text-xs">{{ $plan->name }}</span>
                                 @if($plan->is_popular)
-                                    <span class="px-1.5 py-0.2 rounded-full text-[9px] font-extrabold bg-indigo-600 text-white uppercase">Terlaris</span>
+                                    <span class="px-1.5 py-0.2 rounded-full text-[9px] font-extrabold bg-indigo-600 text-white uppercase tracking-wider">Terpopuler</span>
                                 @endif
                             </div>
                             <span class="text-[10px] text-slate-500 block mt-0.5">
@@ -454,7 +414,7 @@
                 <x-button type="button" variant="secondary" size="md" onclick="document.getElementById('modal-extend-subscription').classList.add('hidden')">
                     Batal
                 </x-button>
-                <x-button type="submit" variant="primary" size="md" class="bg-emerald-600 hover:bg-emerald-700 text-white">
+                <x-button type="submit" variant="success" size="md">
                     Simpan Perpanjangan
                 </x-button>
             </div>
@@ -492,18 +452,5 @@
             }
         });
     });
-
-    // Live Clock updater
-    function updateClock() {
-        const clockEl = document.getElementById('banner-live-clock');
-        if (clockEl) {
-            const now = new Date();
-            const h = String(now.getHours()).padStart(2, '0');
-            const m = String(now.getMinutes()).padStart(2, '0');
-            const s = String(now.getSeconds()).padStart(2, '0');
-            clockEl.textContent = `${h}:${m}:${s} WIB`;
-        }
-    }
-    setInterval(updateClock, 1000);
 </script>
 @endsection

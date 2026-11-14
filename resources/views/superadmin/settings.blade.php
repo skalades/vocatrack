@@ -1,15 +1,15 @@
 @extends('layouts.app')
 
 @section('page_title', 'Pengaturan Platform & Logo Sistem')
-@section('page_subtitle', 'Kustomisasi logo resmi sistem, identitas branding, dan konfigurasi platform SaaS')
+@section('page_subtitle', 'Kustomisasi logo resmi sistem, identitas branding, siaran pemeliharaan, dan diagnostik server')
 
 @section('content')
 <div class="w-full space-y-6 sm:space-y-8 animate-in fade-in duration-300">
 
     <!-- Enterprise Hero Header -->
     <x-page-header 
-        title="Pengaturan Branding & Logo Sistem" 
-        subtitle="Ubah logo utama sistem yang tampil di sidebar menu, layar login, favicon, serta portal seluruh sekolah."
+        title="Pengaturan Platform & Branding Sistem" 
+        subtitle="Ubah logo utama sistem, identitas nama platform, siaran pemeliharaan global, serta pemantauan kesehatan server."
         badge="PLATFORM BRANDING"
     />
 
@@ -103,6 +103,29 @@
             </div>
         </x-card>
 
+        <!-- 3. Card: Pemberitahuan Sistem Global & Siaran Pemeliharaan -->
+        <x-card>
+            <div class="space-y-4">
+                <div class="pb-3 border-b border-slate-100 flex items-center justify-between">
+                    <div>
+                        <h3 class="text-sm sm:text-base font-extrabold text-slate-900 tracking-tight">Siaran Pengumuman & Mode Pemeliharaan Global</h3>
+                        <p class="text-xs text-slate-500 font-medium">Tampilkan pita pengumuman (banner) di seluruh portal akun (Admin Sekolah, Guru, Siswa, DU/DI).</p>
+                    </div>
+                    <label class="inline-flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" name="maintenance_active" value="1" {{ $maintenanceActive ? 'checked' : '' }} class="rounded text-indigo-600 focus:ring-indigo-500">
+                        <span class="text-xs font-bold text-indigo-900">Aktifkan Banner Siaran</span>
+                    </label>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5">Teks Pesan Siaran Global</label>
+                    <textarea name="maintenance_notice" rows="2" placeholder="Contoh: Pemeliharaan rutin server dijadwalkan pada hari Minggu pukul 00:00 - 04:00 WIB. Sistem mungkin mengalami interupsi sementara." 
+                              class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium text-slate-900 leading-relaxed">{{ old('maintenance_notice', $maintenanceNotice) }}</textarea>
+                    <span class="text-[10px] text-slate-400 mt-1 block">Banner akan otomatis tampil tepat di bawah header atas di seluruh portal tenant saat dicentang aktif.</span>
+                </div>
+            </div>
+        </x-card>
+
         <!-- Submit Action Bar -->
         <div class="flex items-center justify-end gap-3 pt-2">
             <x-button type="button" variant="secondary" size="md" onclick="window.history.back()">
@@ -110,10 +133,63 @@
             </x-button>
             <x-button type="submit" variant="primary" size="md" class="shadow-lg shadow-indigo-600/25">
                 <svg class="w-4 h-4 mr-1.5 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-                Simpan Perubahan Logo & Branding
+                Simpan Perubahan Pengaturan
             </x-button>
         </div>
     </form>
+
+    <!-- 4. Card: System Health & Server Overview (Read-Only Diagnostics) -->
+    <x-card>
+        <div class="space-y-4">
+            <div class="pb-3 border-b border-slate-100 flex items-center justify-between">
+                <div>
+                    <h3 class="text-sm sm:text-base font-extrabold text-slate-900 tracking-tight">Status Kesehatan Server & Diagnostik Sistem</h3>
+                    <p class="text-xs text-slate-500 font-medium">Informasi lingkungan runtime aplikasi untuk kebutuhan pemeliharaan dan audit teknis.</p>
+                </div>
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    Sistem Berjalan Normal
+                </span>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-1">
+                    <span class="text-[10px] text-slate-400 uppercase font-extrabold block">Versi PHP</span>
+                    <span class="font-mono font-bold text-slate-900 block text-xs sm:text-sm">PHP {{ $systemHealth['php_version'] }}</span>
+                </div>
+                <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-1">
+                    <span class="text-[10px] text-slate-400 uppercase font-extrabold block">Versi Framework</span>
+                    <span class="font-mono font-bold text-indigo-700 block text-xs sm:text-sm">Laravel {{ $systemHealth['laravel_version'] }}</span>
+                </div>
+                <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-1">
+                    <span class="text-[10px] text-slate-400 uppercase font-extrabold block">Database Driver</span>
+                    <span class="font-mono font-bold text-slate-900 block text-xs sm:text-sm uppercase">{{ $systemHealth['db_driver'] }}</span>
+                </div>
+                <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-1">
+                    <span class="text-[10px] text-slate-400 uppercase font-extrabold block">Database Name</span>
+                    <span class="font-mono font-bold text-slate-900 block text-xs truncate">{{ $systemHealth['db_name'] }}</span>
+                </div>
+                <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-1">
+                    <span class="text-[10px] text-slate-400 uppercase font-extrabold block">Environment</span>
+                    <span class="font-mono font-bold text-slate-900 block text-xs uppercase">{{ $systemHealth['app_env'] }}</span>
+                </div>
+                <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-1">
+                    <span class="text-[10px] text-slate-400 uppercase font-extrabold block">Cache Driver</span>
+                    <span class="font-mono font-bold text-slate-900 block text-xs uppercase">{{ $systemHealth['cache_driver'] }}</span>
+                </div>
+                <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-1">
+                    <span class="text-[10px] text-slate-400 uppercase font-extrabold block">Session Driver</span>
+                    <span class="font-mono font-bold text-slate-900 block text-xs uppercase">{{ $systemHealth['session_driver'] }}</span>
+                </div>
+                <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-1">
+                    <span class="text-[10px] text-slate-400 uppercase font-extrabold block">Izin Tulis Storage</span>
+                    <span class="font-bold text-emerald-600 block text-xs">
+                        {{ $systemHealth['storage_writable'] ? 'Dapat Ditulis (OK)' : 'Terproteksi / Read-Only' }}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </x-card>
 
 </div>
 

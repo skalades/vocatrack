@@ -325,6 +325,25 @@
                     </form>
                 </div>
             @endif
+
+            <!-- Global Maintenance / Platform Broadcast Alert -->
+            @php
+                $isMaintenanceNoticeActive = (bool) \App\Models\PlatformSetting::get('maintenance_active', false);
+                $maintenanceNoticeText = \App\Models\PlatformSetting::get('maintenance_notice', '');
+            @endphp
+            @if($isMaintenanceNoticeActive && !empty($maintenanceNoticeText))
+                <div class="bg-indigo-950 text-indigo-100 px-4 sm:px-6 py-2.5 text-xs font-semibold flex items-center justify-between border-b border-indigo-800 shadow-sm">
+                    <div class="flex items-center space-x-2.5 min-w-0">
+                        <span class="w-6 h-6 rounded-lg bg-indigo-800/80 text-amber-300 flex items-center justify-center shrink-0">
+                            <svg class="w-3.5 h-3.5 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        </span>
+                        <div class="truncate">
+                            <span class="font-extrabold text-amber-300 mr-1.5 uppercase text-[10px] tracking-wider px-1.5 py-0.5 rounded bg-indigo-900 border border-indigo-700">Pemberitahuan Sistem</span>
+                            <span>{{ $maintenanceNoticeText }}</span>
+                        </div>
+                    </div>
+                </div>
+            @endif
             
             <!-- Top Navigation Bar (Responsive Sticky Header) -->
             <header class="h-14 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-6 lg:px-8 flex items-center justify-between sticky top-0 z-30 shadow-2xs">

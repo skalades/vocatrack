@@ -47,15 +47,22 @@ Route::middleware(['auth'])->group(function () {
 Route::middleware(['auth', 'role:super-admin'])->prefix('super-admin')->group(function () {
     Route::get('/dashboard', [SuperAdminController::class, 'dashboard'])->name('superadmin.dashboard');
     Route::get('/schools', [SuperAdminController::class, 'schools'])->name('superadmin.schools');
+    Route::get('/schools/export', [SuperAdminController::class, 'exportSchools'])->name('superadmin.schools.export');
     Route::post('/schools', [SuperAdminController::class, 'storeSchool'])->name('superadmin.schools.store');
+    Route::put('/schools/{school}', [SuperAdminController::class, 'updateSchool'])->name('superadmin.schools.update');
+    Route::delete('/schools/{school}', [SuperAdminController::class, 'destroySchool'])->name('superadmin.schools.destroy');
     Route::post('/schools/{school}/toggle', [SuperAdminController::class, 'toggleSchool'])->name('superadmin.schools.toggle');
     Route::post('/schools/{school}/extend', [SuperAdminController::class, 'extendSubscription'])->name('superadmin.schools.extend');
     Route::post('/schools/{school}/impersonate', [SuperAdminController::class, 'impersonateSchool'])->name('superadmin.schools.impersonate');
+    Route::post('/schools/{school}/reset-admin-password', [SuperAdminController::class, 'resetAdminPassword'])->name('superadmin.schools.reset-admin-password');
 
     // SaaS Invoices & Billing
     Route::get('/invoices', [SuperAdminController::class, 'invoices'])->name('superadmin.invoices');
     Route::post('/invoices', [SuperAdminController::class, 'storeInvoice'])->name('superadmin.invoices.store');
     Route::post('/invoices/{invoice}/verify', [SuperAdminController::class, 'markInvoicePaid'])->name('superadmin.invoices.verify');
+    Route::post('/invoices/{invoice}/cancel', [SuperAdminController::class, 'cancelInvoice'])->name('superadmin.invoices.cancel');
+    Route::delete('/invoices/{invoice}', [SuperAdminController::class, 'destroyInvoice'])->name('superadmin.invoices.destroy');
+    Route::get('/invoices/{invoice}/pdf', [SuperAdminController::class, 'downloadInvoicePdf'])->name('superadmin.invoices.pdf');
 
     // SaaS Plans & Licensing
     Route::get('/plans', [SuperAdminController::class, 'plans'])->name('superadmin.plans');
