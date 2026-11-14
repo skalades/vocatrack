@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Attendance;
+use App\Models\AttendanceRequest;
 use App\Models\JournalPhoto;
 use App\Models\School;
 use App\Models\Student;
@@ -27,34 +28,34 @@ class StorageQuotaService
         $totalBytes += $this->getFileSizeSafe($disk, $school->logo_path);
         $totalBytes += $this->getFileSizeSafe($disk, $school->stamp_path);
 
-        // 2. Student attendance photos
-        $studentUserIds = User::where('school_id', $school->id)
-            ->where('role', 'siswa')
-            ->pluck('id');
+        // 2. Student attendance photos (directly indexed by school_id)
+        $attendancePhotos = Attendance::where('school_id', $school->id)
+            ->whereNotNull('checkin_photo_path')
+            ->pluck('checkin_photo_path');
 
-        if ($studentUserIds->isNotEmpty()) {
-            $attendancePhotos = Attendance::whereIn('user_id', $studentUserIds)
-                ->whereNotNull('checkin_photo_path')
-                ->pluck('checkin_photo_path');
-
-            foreach ($attendancePhotos as $photo) {
-                $totalBytes += $this->getFileSizeSafe($disk, $photo);
-            }
-
-            // 3. Journal photos
-            $studentIds = Student::whereIn('user_id', $studentUserIds)->pluck('id');
-            if ($studentIds->isNotEmpty()) {
-                $journalPhotos = JournalPhoto::whereHas('journal.studentPkl', function ($q) use ($studentIds) {
-                    $q->whereIn('student_id', $studentIds);
-                })->pluck('photo_path');
-
-                foreach ($journalPhotos as $photo) {
-                    $totalBytes += $this->getFileSizeSafe($disk, $photo);
-                }
-            }
+        foreach ($attendancePhotos as $photo) {
+            $totalBytes += $this->getFileSizeSafe($disk, $photo);
         }
 
-        // 4. Update school storage_used_bytes cache & database safely
+        // 3. Attendance Request attachments (surat izin, bukti sakit, dinas luar)
+        $requestAttachments = AttendanceRequest::where('school_id', $school->id)
+            ->whereNotNull('attachment_path')
+            ->pluck('attachment_path');
+
+        foreach ($requestAttachments as $attachment) {
+            $totalBytes += $this->getFileSizeSafe($disk, $attachment);
+        }
+
+        // 4. Journal photos (via journal school_id)
+        $journalPhotos = JournalPhoto::whereHas('journal', function ($q) use ($school) {
+            $q->where('school_id', $school->id);
+        })->pluck('photo_path');
+
+        foreach ($journalPhotos as $photo) {
+            $totalBytes += $this->getFileSizeSafe($disk, $photo);
+        }
+
+        // 5. Update school storage_used_bytes cache & database safely
         try {
             if (Schema::hasColumn('schools', 'storage_used_bytes')) {
                 $school->update(['storage_used_bytes' => $totalBytes]);
