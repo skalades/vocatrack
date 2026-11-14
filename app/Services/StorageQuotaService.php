@@ -9,6 +9,8 @@ use App\Models\Student;
 use App\Models\User;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 
 class StorageQuotaService
@@ -22,12 +24,8 @@ class StorageQuotaService
         $disk = Storage::disk('public');
 
         // 1. School Logo & Stamp
-        if ($school->logo_path && $disk->exists($school->logo_path)) {
-            $totalBytes += $disk->size($school->logo_path);
-        }
-        if ($school->stamp_path && $disk->exists($school->stamp_path)) {
-            $totalBytes += $disk->size($school->stamp_path);
-        }
+        $totalBytes += $this->getFileSizeSafe($disk, $school->logo_path);
+        $totalBytes += $this->getFileSizeSafe($disk, $school->stamp_path);
 
         // 2. Student attendance photos
         $studentUserIds = User::where('school_id', $school->id)
@@ -40,9 +38,7 @@ class StorageQuotaService
                 ->pluck('checkin_photo_path');
 
             foreach ($attendancePhotos as $photo) {
-                if ($photo && $disk->exists($photo)) {
-                    $totalBytes += $disk->size($photo);
-                }
+                $totalBytes += $this->getFileSizeSafe($disk, $photo);
             }
 
             // 3. Journal photos
@@ -53,18 +49,43 @@ class StorageQuotaService
                 })->pluck('photo_path');
 
                 foreach ($journalPhotos as $photo) {
-                    if ($photo && $disk->exists($photo)) {
-                        $totalBytes += $disk->size($photo);
-                    }
+                    $totalBytes += $this->getFileSizeSafe($disk, $photo);
                 }
             }
         }
 
-        // 4. Update school storage_used_bytes cache & database
-        $school->update(['storage_used_bytes' => $totalBytes]);
+        // 4. Update school storage_used_bytes cache & database safely
+        try {
+            if (Schema::hasColumn('schools', 'storage_used_bytes')) {
+                $school->update(['storage_used_bytes' => $totalBytes]);
+            }
+        } catch (\Throwable $e) {
+            Log::warning("[STORAGE QUOTA] Could not persist storage_used_bytes column for school {$school->id}: " . $e->getMessage());
+        }
+
         Cache::put("school_storage_bytes_{$school->id}", $totalBytes, now()->addHours(6));
 
         return $totalBytes;
+    }
+
+    /**
+     * Safely get file size from disk without crashing on missing or unreadable files.
+     */
+    protected function getFileSizeSafe($disk, ?string $path): int
+    {
+        if (empty($path)) {
+            return 0;
+        }
+
+        try {
+            if ($disk->exists($path)) {
+                return (int) $disk->size($path);
+            }
+        } catch (\Throwable $e) {
+            // Silently skip if file is missing, corrupted, or has permission restriction
+        }
+
+        return 0;
     }
 
     /**

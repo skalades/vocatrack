@@ -78,7 +78,7 @@ Route::middleware(['auth', 'role:super-admin'])->prefix('super-admin')->group(fu
     Route::post('/settings', [SuperAdminController::class, 'updateSettings'])->name('superadmin.settings.update');
 
     // Storage Quota Management & Offboarding Archive
-    Route::post('/schools/{school}/storage/recalculate', [SuperAdminController::class, 'recalculateSchoolStorage'])->name('superadmin.schools.recalculate-storage');
+    Route::match(['get', 'post'], '/schools/{school}/storage/recalculate', [SuperAdminController::class, 'recalculateSchoolStorage'])->name('superadmin.schools.recalculate-storage');
     Route::post('/schools/{school}/storage/quota', [SuperAdminController::class, 'updateSchoolStorageQuota'])->name('superadmin.schools.update-storage-quota');
     Route::get('/schools/{school}/offboard-export', [SuperAdminController::class, 'exportSchoolArchive'])->name('superadmin.schools.offboard-export');
 

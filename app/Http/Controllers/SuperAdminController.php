@@ -914,17 +914,25 @@ class SuperAdminController extends Controller
 
     public function recalculateSchoolStorage(School $school)
     {
-        $bytes = $this->storageQuotaService->calculateSchoolStorage($school);
-        $mb = round($bytes / (1024 * 1024), 2);
+        try {
+            $bytes = $this->storageQuotaService->calculateSchoolStorage($school);
+            $mb = round($bytes / (1024 * 1024), 2);
 
-        AuditLogService::log(
-            'storage_recalculated',
-            'system',
-            "Penggunaan ruang disk tenant {$school->name} dihitung ulang: {$mb} MB.",
-            $school
-        );
+            AuditLogService::log(
+                'storage_recalculated',
+                'system',
+                "Penggunaan ruang disk tenant {$school->name} dihitung ulang: {$mb} MB.",
+                $school
+            );
 
-        return back()->with('success', "Penggunaan ruang disk tenant {$school->name} berhasil diperbarui: {$mb} MB.");
+            return redirect()->route('superadmin.schools')->with('success', "Penggunaan ruang disk tenant {$school->name} berhasil diperbarui: {$mb} MB.");
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error("[STORAGE RECALCULATE ERROR] Failed for school {$school->id}: " . $e->getMessage(), [
+                'exception' => $e,
+            ]);
+
+            return redirect()->route('superadmin.schools')->with('error', "Gagal menghitung ulang storage: " . $e->getMessage());
+        }
     }
 
     public function updateSchoolStorageQuota(Request $request, School $school)

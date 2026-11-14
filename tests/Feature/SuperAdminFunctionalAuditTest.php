@@ -429,8 +429,15 @@ class SuperAdminFunctionalAuditTest extends TestCase
      */
     public function test_storage_quota_calculation_and_recalculation(): void
     {
+        // 1. Via POST form
         $response = $this->actingAs($this->superAdmin)->post(route('superadmin.schools.recalculate-storage', $this->school1->id));
+        $response->assertRedirect(route('superadmin.schools'));
         $response->assertSessionHas('success');
+
+        // 2. Via direct GET URL
+        $getResponse = $this->actingAs($this->superAdmin)->get(route('superadmin.schools.recalculate-storage', $this->school1->id));
+        $getResponse->assertRedirect(route('superadmin.schools'));
+        $getResponse->assertSessionHas('success');
 
         $this->assertDatabaseHas('activity_logs', [
             'action' => 'storage_recalculated',
