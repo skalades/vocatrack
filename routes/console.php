@@ -9,3 +9,4 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('vokatrack:evaluate-absence')->dailyAt('23:55');
+Schedule::command('saas:evaluate-subscriptions')->dailyAt('00:05');

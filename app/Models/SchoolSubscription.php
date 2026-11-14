@@ -51,10 +51,7 @@ class SchoolSubscription extends Model
     public function daysRemaining(): int
     {
         $today = Carbon::today();
-        if ($this->end_date->isPast()) {
-            return -$today->diffInDays($this->end_date);
-        }
-        return $today->diffInDays($this->end_date);
+        return (int) $today->diffInDays($this->end_date, false);
     }
 
     public function isExpired(): bool

@@ -7,6 +7,7 @@ use App\Models\Attendance;
 use App\Models\Certificate;
 use App\Models\Company;
 use App\Models\IncidentReport;
+use App\Models\Invoice;
 use App\Models\Major;
 use App\Models\PklPeriod;
 use App\Models\Profile;
@@ -121,12 +122,20 @@ class AdminSekolahController extends Controller
             }
             $schoolData['logo_path'] = null;
         } elseif ($request->hasFile('school_logo')) {
-            if ($school->logo_path && Storage::disk('public')->exists($school->logo_path)) {
-                Storage::disk('public')->delete($school->logo_path);
-            }
             $file = $request->file('school_logo');
+            $fileSize = $file->getSize();
+            if (!app(\App\Services\StorageQuotaService::class)->canUpload($school, $fileSize)) {
+                return back()->with('error', 'Kapasitas penyimpanan sekolah Anda telah penuh. Tidak dapat mengunggah logo baru.')->withInput();
+            }
+
+            if ($school->logo_path && Storage::disk('public')->exists($school->logo_path)) {
+                $oldSize = Storage::disk('public')->size($school->logo_path);
+                Storage::disk('public')->delete($school->logo_path);
+                app(\App\Services\StorageQuotaService::class)->recordDeletion($school, $oldSize);
+            }
             $filename = 'logo_' . time() . '_' . Str::random(8) . '.' . $file->getClientOriginalExtension();
             $path = $file->storeAs("schools/{$schoolId}/logo", $filename, 'public');
+            app(\App\Services\StorageQuotaService::class)->recordUpload($school, $fileSize);
             $schoolData['logo_path'] = $path;
         }
 
@@ -1428,6 +1437,11 @@ class AdminSekolahController extends Controller
 
     public function generateCertificate(Request $request, CertificateService $certificateService)
     {
+        $school = Auth::user()->school;
+        if ($school && !$school->hasFeature('certificate')) {
+            return back()->with('error', 'Fitur penerbitan E-Sertifikat tidak aktif pada paket langganan sekolah Anda. Silakan tingkatkan paket lisensi ke paket Pro/Enterprise.');
+        }
+
         $schoolId = $this->getSchoolId();
         $validated = $request->validate([
             'student_pkl_id' => ['required', 'exists:student_pkl,id'],
@@ -1441,6 +1455,11 @@ class AdminSekolahController extends Controller
 
     public function generateBatchCertificates(Request $request, CertificateService $certificateService)
     {
+        $school = Auth::user()->school;
+        if ($school && !$school->hasFeature('certificate')) {
+            return back()->with('error', 'Fitur penerbitan E-Sertifikat tidak aktif pada paket langganan sekolah Anda. Silakan tingkatkan paket lisensi ke paket Pro/Enterprise.');
+        }
+
         $schoolId = $this->getSchoolId();
         $periodId = $request->input('pkl_period_id') ? (int) $request->input('pkl_period_id') : null;
 
@@ -1467,5 +1486,64 @@ class AdminSekolahController extends Controller
 
             return back()->with('error', 'Gagal memproses pengunduhan dokumen PDF E-Sertifikat: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Tenant Self-Service Billing & Subscription Portal for School Admin.
+     */
+    public function billing()
+    {
+        $schoolId = $this->getSchoolId();
+        $school = School::with(['subscriptions' => function ($q) {
+            $q->latest('end_date');
+        }])->findOrFail($schoolId);
+
+        $activeSubscription = $school->activeSubscription();
+        $invoices = Invoice::where('school_id', $schoolId)->latest()->paginate(10);
+        $subscriptions = $school->subscriptions()->latest()->get();
+
+        $studentQuota = $activeSubscription?->student_quota ?? 100;
+        $currentStudentsCount = $school->students_count;
+        $quotaUsagePercent = min(100, round(($currentStudentsCount / max(1, $studentQuota)) * 100));
+
+        $storageQuotaMb = $school->storage_quota_mb;
+        $storageUsedMb = $school->storage_used_mb;
+        $storageUsagePercent = $school->storage_usage_percent;
+
+        return view('adminsekolah.billing', compact(
+            'school',
+            'activeSubscription',
+            'invoices',
+            'subscriptions',
+            'studentQuota',
+            'currentStudentsCount',
+            'quotaUsagePercent',
+            'storageQuotaMb',
+            'storageUsedMb',
+            'storageUsagePercent'
+        ));
+    }
+
+    /**
+     * Download Invoice PDF for School Admin.
+     */
+    public function downloadInvoicePdf(Invoice $invoice)
+    {
+        $schoolId = $this->getSchoolId();
+        abort_if($invoice->school_id !== $schoolId, 403, 'Akses ditolak.');
+
+        $invoice->load(['school', 'subscription']);
+        $platformName = \App\Models\PlatformSetting::get('platform_name', 'VokaTrack');
+        $platformTagline = \App\Models\PlatformSetting::get('platform_tagline', 'Enterprise Cloud');
+        $systemLogoUrl = \App\Models\PlatformSetting::getLogoUrl();
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('superadmin.invoice_pdf', compact(
+            'invoice',
+            'platformName',
+            'platformTagline',
+            'systemLogoUrl'
+        ))->setPaper('a4', 'portrait');
+
+        return $pdf->download("Invoice-{$invoice->invoice_number}.pdf");
     }
 }

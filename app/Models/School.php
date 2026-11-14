@@ -77,6 +77,53 @@ class School extends Model
         return $this->subscriptions()->latest('end_date')->first();
     }
 
+    /**
+     * Check if a specific SaaS feature is enabled on the school's active subscription plan.
+     */
+    public function hasFeature(string $feature): bool
+    {
+        $sub = $this->activeSubscription();
+        if (!$sub) {
+            return true; // Backward compatibility for unseeded or manual test schools
+        }
+
+        if ($sub->isExpired() && !$sub->isGracePeriod()) {
+            return false;
+        }
+
+        $plan = $sub->plan;
+        if (!$plan) {
+            return true;
+        }
+
+        $features = $plan->features ?? [];
+        if (!array_key_exists($feature, $features)) {
+            return true;
+        }
+
+        return (bool) $features[$feature];
+    }
+
+    /**
+     * Get array of all features for the school's active plan.
+     */
+    public function getActiveFeaturesAttribute(): array
+    {
+        $sub = $this->activeSubscription();
+        if (!$sub || !$sub->plan) {
+            return [
+                'attendance' => true,
+                'journal' => true,
+                'assessment' => true,
+                'certificate' => true,
+                'whatsapp_gateway' => false,
+                'custom_domain' => false,
+            ];
+        }
+
+        return $sub->plan->features ?? [];
+    }
+
     public function invoices(): HasMany
     {
         return $this->hasMany(Invoice::class);

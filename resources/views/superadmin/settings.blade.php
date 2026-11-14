@@ -126,6 +126,121 @@
             </div>
         </x-card>
 
+        <!-- 4. Card: Konfigurasi Gateway Email (SMTP Global) -->
+        <x-card>
+            <div class="space-y-4">
+                <div class="pb-3 border-b border-slate-100 flex items-center justify-between">
+                    <div>
+                        <h3 class="text-sm sm:text-base font-extrabold text-slate-900 tracking-tight">Konfigurasi Gateway Email (SMTP Platform)</h3>
+                        <p class="text-xs text-slate-500 font-medium">Pengaturan mailer SMTP untuk pengiriman tagihan invoice, notifikasi sewa, dan reset password.</p>
+                    </div>
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold font-mono bg-blue-50 text-blue-700 border border-blue-200">
+                        SMTP Mailer
+                    </span>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">Host SMTP</label>
+                        <input type="text" name="mail_host" value="{{ old('mail_host', $smtpSettings['mail_host'] ?? '') }}" placeholder="smtp.gmail.com / mail.server.com"
+                               class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 font-mono text-slate-900">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">Port SMTP</label>
+                        <input type="number" name="mail_port" value="{{ old('mail_port', $smtpSettings['mail_port'] ?? '587') }}" placeholder="587 / 465"
+                               class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 font-mono text-slate-900">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">Enkripsi Mail</label>
+                        <select name="mail_encryption" class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 font-bold text-slate-900">
+                            <option value="tls" {{ ($smtpSettings['mail_encryption'] ?? '') === 'tls' ? 'selected' : '' }}>TLS (Port 587)</option>
+                            <option value="ssl" {{ ($smtpSettings['mail_encryption'] ?? '') === 'ssl' ? 'selected' : '' }}>SSL (Port 465)</option>
+                            <option value="none" {{ ($smtpSettings['mail_encryption'] ?? '') === 'none' ? 'selected' : '' }}>Tanpa Enkripsi</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">Username / Email Akun SMTP</label>
+                        <input type="text" name="mail_username" value="{{ old('mail_username', $smtpSettings['mail_username'] ?? '') }}" placeholder="noreply@vokatrack.id"
+                               class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 font-mono text-slate-900">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">Password / App Password</label>
+                        <input type="password" name="mail_password" placeholder="••••••••••••"
+                               class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 font-mono text-slate-900">
+                        <span class="text-[10px] text-slate-400 mt-1 block">Kosongkan jika tidak ingin mengubah kata sandi SMTP yang tersimpan</span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">Alamat Pengirim (From Address)</label>
+                        <input type="email" name="mail_from_address" value="{{ old('mail_from_address', $smtpSettings['mail_from_address'] ?? '') }}" placeholder="billing@vokatrack.id"
+                               class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 text-slate-900 font-medium">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">Nama Pengirim (From Name)</label>
+                        <input type="text" name="mail_from_name" value="{{ old('mail_from_name', $smtpSettings['mail_from_name'] ?? '') }}" placeholder="VokaTrack Notification System"
+                               class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 text-slate-900 font-medium">
+                    </div>
+                </div>
+            </div>
+        </x-card>
+
+        <!-- 5. Card: WhatsApp Gateway & Cloud Storage Multi-Tenant -->
+        <x-card>
+            <div class="space-y-4">
+                <div class="pb-3 border-b border-slate-100 flex items-center justify-between">
+                    <div>
+                        <h3 class="text-sm sm:text-base font-extrabold text-slate-900 tracking-tight">Integrasi WhatsApp Gateway & Storage Multi-Tenant</h3>
+                        <p class="text-xs text-slate-500 font-medium">Pengaturan endpoint API WhatsApp bot dan driver penyimpanan media cloud.</p>
+                    </div>
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold font-mono bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        Add-ons & Cloud
+                    </span>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">Penyedia WhatsApp</label>
+                        <select name="wa_provider" class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 font-bold text-slate-900">
+                            <option value="fonnte" {{ ($waSettings['wa_provider'] ?? '') === 'fonnte' ? 'selected' : '' }}>Fonnte API (Indonesia)</option>
+                            <option value="wablas" {{ ($waSettings['wa_provider'] ?? '') === 'wablas' ? 'selected' : '' }}>Wablas Official</option>
+                            <option value="twilio" {{ ($waSettings['wa_provider'] ?? '') === 'twilio' ? 'selected' : '' }}>Twilio WhatsApp</option>
+                        </select>
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">API Endpoint / Token WhatsApp</label>
+                        <input type="password" name="wa_api_token" value="{{ old('wa_api_token', $waSettings['wa_api_token'] ?? '') }}" placeholder="API Token / Key Fonnte/Wablas"
+                               class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 font-mono text-slate-900">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">Driver Storage Berkas</label>
+                        <select name="storage_driver" class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 font-bold text-slate-900">
+                            <option value="public" {{ ($storageSettings['storage_driver'] ?? '') === 'public' ? 'selected' : '' }}>Local Server Public Disk</option>
+                            <option value="s3" {{ ($storageSettings['storage_driver'] ?? '') === 's3' ? 'selected' : '' }}>Amazon AWS S3 Bucket</option>
+                            <option value="r2" {{ ($storageSettings['storage_driver'] ?? '') === 'r2' ? 'selected' : '' }}>Cloudflare R2 Object Storage</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">Nama Bucket S3 / R2</label>
+                        <input type="text" name="s3_bucket" value="{{ old('s3_bucket', $storageSettings['s3_bucket'] ?? '') }}" placeholder="vokatrack-storage-prod"
+                               class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 font-mono text-slate-900">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">Wilayah (Region)</label>
+                        <input type="text" name="s3_region" value="{{ old('s3_region', $storageSettings['s3_region'] ?? 'ap-southeast-1') }}" placeholder="ap-southeast-1"
+                               class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 font-mono text-slate-900">
+                    </div>
+                </div>
+            </div>
+        </x-card>
+
         <!-- Submit Action Bar -->
         <div class="flex items-center justify-end gap-3 pt-2">
             <x-button type="button" variant="secondary" size="md" onclick="window.history.back()">

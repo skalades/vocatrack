@@ -11,7 +11,16 @@ use App\Http\Controllers\ParentLinkController;
 use App\Http\Controllers\ParentMonitoringController;
 use App\Http\Controllers\PklMapController;
 use App\Http\Controllers\StudentController;
-use App\Http\Controllers\SuperAdminController;
+use App\Http\Controllers\SuperAdmin\AuditLogController;
+use App\Http\Controllers\SuperAdmin\BackupController;
+use App\Http\Controllers\SuperAdmin\BroadcastController;
+use App\Http\Controllers\SuperAdmin\DashboardController as SuperAdminDashboardController;
+use App\Http\Controllers\SuperAdmin\InvoiceController;
+use App\Http\Controllers\SuperAdmin\PlanController;
+use App\Http\Controllers\SuperAdmin\SchoolRequestController;
+use App\Http\Controllers\SuperAdmin\SettingController as SuperAdminSettingController;
+use App\Http\Controllers\SuperAdmin\SystemHealthController;
+use App\Http\Controllers\SuperAdmin\TenantController;
 use App\Http\Controllers\SupervisorController;
 use App\Http\Controllers\TeacherController;
 use Illuminate\Support\Facades\Route;
@@ -46,73 +55,77 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/profile/change-password', [AuthController::class, 'changePassword'])->name('profile.change-password');
 });
 
-// 1. Super Admin Platform Routes
+// 1. Super Admin Platform Routes (Modular SaaS Architecture)
 Route::middleware(['auth', 'role:super-admin'])->prefix('super-admin')->group(function () {
-    Route::get('/dashboard', [SuperAdminController::class, 'dashboard'])->name('superadmin.dashboard');
-    Route::get('/schools', [SuperAdminController::class, 'schools'])->name('superadmin.schools');
-    Route::get('/schools/export', [SuperAdminController::class, 'exportSchools'])->name('superadmin.schools.export');
-    Route::post('/schools', [SuperAdminController::class, 'storeSchool'])->name('superadmin.schools.store');
-    Route::put('/schools/{school}', [SuperAdminController::class, 'updateSchool'])->name('superadmin.schools.update');
-    Route::delete('/schools/{school}', [SuperAdminController::class, 'destroySchool'])->name('superadmin.schools.destroy');
-    Route::post('/schools/{school}/toggle', [SuperAdminController::class, 'toggleSchool'])->name('superadmin.schools.toggle');
-    Route::post('/schools/{school}/extend', [SuperAdminController::class, 'extendSubscription'])->name('superadmin.schools.extend');
-    Route::post('/schools/{school}/impersonate', [SuperAdminController::class, 'impersonateSchool'])->name('superadmin.schools.impersonate');
-    Route::post('/schools/{school}/reset-admin-password', [SuperAdminController::class, 'resetAdminPassword'])->name('superadmin.schools.reset-admin-password');
+    // SaaS Dashboard & Metrik
+    Route::get('/dashboard', [SuperAdminDashboardController::class, 'dashboard'])->name('superadmin.dashboard');
+
+    // Tenant & Manajemen Sekolah Multi-Tenancy
+    Route::get('/schools', [TenantController::class, 'schools'])->name('superadmin.schools');
+    Route::get('/schools/export', [TenantController::class, 'exportSchools'])->name('superadmin.schools.export');
+    Route::post('/schools', [TenantController::class, 'storeSchool'])->name('superadmin.schools.store');
+    Route::put('/schools/{school}', [TenantController::class, 'updateSchool'])->name('superadmin.schools.update');
+    Route::delete('/schools/{school}', [TenantController::class, 'destroySchool'])->name('superadmin.schools.destroy');
+    Route::post('/schools/{school}/toggle', [TenantController::class, 'toggleSchool'])->name('superadmin.schools.toggle');
+    Route::post('/schools/{school}/extend', [TenantController::class, 'extendSubscription'])->name('superadmin.schools.extend');
+    Route::post('/schools/{school}/impersonate', [TenantController::class, 'impersonateSchool'])->name('superadmin.schools.impersonate');
+    Route::post('/schools/{school}/reset-admin-password', [TenantController::class, 'resetAdminPassword'])->name('superadmin.schools.reset-admin-password');
+
+    // Storage Quota & Offboarding Export
+    Route::match(['get', 'post'], '/schools/{school}/storage/recalculate', [TenantController::class, 'recalculateSchoolStorage'])->name('superadmin.schools.recalculate-storage');
+    Route::post('/schools/{school}/storage/quota', [TenantController::class, 'updateSchoolStorageQuota'])->name('superadmin.schools.update-storage-quota');
+    Route::get('/schools/{school}/offboard-export', [TenantController::class, 'exportSchoolArchive'])->name('superadmin.schools.offboard-export');
 
     // SaaS Invoices & Billing
-    Route::get('/invoices', [SuperAdminController::class, 'invoices'])->name('superadmin.invoices');
-    Route::post('/invoices', [SuperAdminController::class, 'storeInvoice'])->name('superadmin.invoices.store');
-    Route::post('/invoices/{invoice}/verify', [SuperAdminController::class, 'markInvoicePaid'])->name('superadmin.invoices.verify');
-    Route::post('/invoices/{invoice}/cancel', [SuperAdminController::class, 'cancelInvoice'])->name('superadmin.invoices.cancel');
-    Route::delete('/invoices/{invoice}', [SuperAdminController::class, 'destroyInvoice'])->name('superadmin.invoices.destroy');
-    Route::get('/invoices/{invoice}/pdf', [SuperAdminController::class, 'downloadInvoicePdf'])->name('superadmin.invoices.pdf');
+    Route::get('/invoices', [InvoiceController::class, 'invoices'])->name('superadmin.invoices');
+    Route::post('/invoices', [InvoiceController::class, 'storeInvoice'])->name('superadmin.invoices.store');
+    Route::post('/invoices/{invoice}/verify', [InvoiceController::class, 'markInvoicePaid'])->name('superadmin.invoices.verify');
+    Route::post('/invoices/{invoice}/cancel', [InvoiceController::class, 'cancelInvoice'])->name('superadmin.invoices.cancel');
+    Route::delete('/invoices/{invoice}', [InvoiceController::class, 'destroyInvoice'])->name('superadmin.invoices.destroy');
+    Route::get('/invoices/{invoice}/pdf', [InvoiceController::class, 'downloadInvoicePdf'])->name('superadmin.invoices.pdf');
 
     // SaaS Plans & Licensing
-    Route::get('/plans', [SuperAdminController::class, 'plans'])->name('superadmin.plans');
-    Route::post('/plans', [SuperAdminController::class, 'storePlan'])->name('superadmin.plans.store');
-    Route::put('/plans/{plan}', [SuperAdminController::class, 'updatePlan'])->name('superadmin.plans.update');
-    Route::delete('/plans/{plan}', [SuperAdminController::class, 'destroyPlan'])->name('superadmin.plans.destroy');
+    Route::get('/plans', [PlanController::class, 'plans'])->name('superadmin.plans');
+    Route::post('/plans', [PlanController::class, 'storePlan'])->name('superadmin.plans.store');
+    Route::put('/plans/{plan}', [PlanController::class, 'updatePlan'])->name('superadmin.plans.update');
+    Route::delete('/plans/{plan}', [PlanController::class, 'destroyPlan'])->name('superadmin.plans.destroy');
 
     // Platform Settings & System Logo
-    Route::get('/settings', [SuperAdminController::class, 'settings'])->name('superadmin.settings');
-    Route::post('/settings', [SuperAdminController::class, 'updateSettings'])->name('superadmin.settings.update');
-
-    // Storage Quota Management & Offboarding Archive
-    Route::match(['get', 'post'], '/schools/{school}/storage/recalculate', [SuperAdminController::class, 'recalculateSchoolStorage'])->name('superadmin.schools.recalculate-storage');
-    Route::post('/schools/{school}/storage/quota', [SuperAdminController::class, 'updateSchoolStorageQuota'])->name('superadmin.schools.update-storage-quota');
-    Route::get('/schools/{school}/offboard-export', [SuperAdminController::class, 'exportSchoolArchive'])->name('superadmin.schools.offboard-export');
+    Route::get('/settings', [SuperAdminSettingController::class, 'settings'])->name('superadmin.settings');
+    Route::post('/settings', [SuperAdminSettingController::class, 'updateSettings'])->name('superadmin.settings.update');
 
     // Audit Trail & Activity Logs
-    Route::get('/audit-logs', [SuperAdminController::class, 'auditLogs'])->name('superadmin.audit-logs');
+    Route::get('/audit-logs', [AuditLogController::class, 'auditLogs'])->name('superadmin.audit-logs');
 
     // DevOps, Queue & System Health
-    Route::get('/system', [SuperAdminController::class, 'systemHealth'])->name('superadmin.system-health');
-    Route::post('/system/retry-job/{id}', [SuperAdminController::class, 'retryFailedJob'])->name('superadmin.system.retry-job');
-    Route::delete('/system/delete-job/{id}', [SuperAdminController::class, 'deleteFailedJob'])->name('superadmin.system.delete-job');
-    Route::post('/system/flush-jobs', [SuperAdminController::class, 'flushFailedJobs'])->name('superadmin.system.flush-jobs');
-    Route::post('/system/clear-cache', [SuperAdminController::class, 'clearSystemCache'])->name('superadmin.system.clear-cache');
+    Route::get('/system', [SystemHealthController::class, 'systemHealth'])->name('superadmin.system-health');
+    Route::post('/system/retry-job/{id}', [SystemHealthController::class, 'retryFailedJob'])->name('superadmin.system.retry-job');
+    Route::delete('/system/delete-job/{id}', [SystemHealthController::class, 'deleteFailedJob'])->name('superadmin.system.delete-job');
+    Route::post('/system/flush-jobs', [SystemHealthController::class, 'flushFailedJobs'])->name('superadmin.system.flush-jobs');
+    Route::post('/system/clear-cache', [SystemHealthController::class, 'clearSystemCache'])->name('superadmin.system.clear-cache');
 
-    // Database Backups
-    Route::get('/backups', [SuperAdminController::class, 'backups'])->name('superadmin.backups');
-    Route::post('/backups/create', [SuperAdminController::class, 'createBackup'])->name('superadmin.backups.create');
-    Route::get('/backups/download/{filename}', [SuperAdminController::class, 'downloadBackup'])->name('superadmin.backups.download');
-    Route::delete('/backups/delete/{filename}', [SuperAdminController::class, 'deleteBackup'])->name('superadmin.backups.delete');
+    // Database Backups & Pemulihan (Restore)
+    Route::get('/backups', [BackupController::class, 'backups'])->name('superadmin.backups');
+    Route::post('/backups/create', [BackupController::class, 'createBackup'])->name('superadmin.backups.create');
+    Route::get('/backups/download/{filename}', [BackupController::class, 'downloadBackup'])->name('superadmin.backups.download');
+    Route::delete('/backups/delete/{filename}', [BackupController::class, 'deleteBackup'])->name('superadmin.backups.delete');
+    Route::post('/backups/restore/{filename}', [BackupController::class, 'restoreBackup'])->name('superadmin.backups.restore');
 
     // Platform Announcements / Broadcasts
-    Route::get('/broadcasts', [SuperAdminController::class, 'broadcasts'])->name('superadmin.broadcasts');
-    Route::post('/broadcasts', [SuperAdminController::class, 'storeBroadcast'])->name('superadmin.broadcasts.store');
-    Route::put('/broadcasts/{broadcast}', [SuperAdminController::class, 'updateBroadcast'])->name('superadmin.broadcasts.update');
-    Route::post('/broadcasts/{broadcast}/toggle', [SuperAdminController::class, 'toggleBroadcast'])->name('superadmin.broadcasts.toggle');
-    Route::delete('/broadcasts/{broadcast}', [SuperAdminController::class, 'destroyBroadcast'])->name('superadmin.broadcasts.destroy');
+    Route::get('/broadcasts', [BroadcastController::class, 'broadcasts'])->name('superadmin.broadcasts');
+    Route::post('/broadcasts', [BroadcastController::class, 'storeBroadcast'])->name('superadmin.broadcasts.store');
+    Route::put('/broadcasts/{broadcast}', [BroadcastController::class, 'updateBroadcast'])->name('superadmin.broadcasts.update');
+    Route::post('/broadcasts/{broadcast}/toggle', [BroadcastController::class, 'toggleBroadcast'])->name('superadmin.broadcasts.toggle');
+    Route::delete('/broadcasts/{broadcast}', [BroadcastController::class, 'destroyBroadcast'])->name('superadmin.broadcasts.destroy');
 
     // School Requests (Demo Pipeline & Onboarding)
-    Route::get('/school-requests', [SuperAdminController::class, 'schoolRequests'])->name('superadmin.school-requests');
-    Route::post('/school-requests/{schoolRequest}/approve', [SuperAdminController::class, 'approveSchoolRequest'])->name('superadmin.school-requests.approve');
-    Route::post('/school-requests/{schoolRequest}/reject', [SuperAdminController::class, 'rejectSchoolRequest'])->name('superadmin.school-requests.reject');
+    Route::get('/school-requests', [SchoolRequestController::class, 'schoolRequests'])->name('superadmin.school-requests');
+    Route::post('/school-requests/{schoolRequest}/approve', [SchoolRequestController::class, 'approveSchoolRequest'])->name('superadmin.school-requests.approve');
+    Route::post('/school-requests/{schoolRequest}/reject', [SchoolRequestController::class, 'rejectSchoolRequest'])->name('superadmin.school-requests.reject');
 });
 
 // Public Demo Request Route
-Route::post('/request-demo', [SuperAdminController::class, 'storePublicSchoolRequest'])->name('public.request-demo');
+Route::post('/request-demo', [SchoolRequestController::class, 'storePublicSchoolRequest'])->name('public.request-demo');
 
 // 2. Admin Sekolah Routes
 Route::middleware(['auth', 'IdentifyTenant', 'role:admin-sekolah'])->prefix('admin-sekolah')->group(function () {
@@ -198,6 +211,10 @@ Route::middleware(['auth', 'IdentifyTenant', 'role:admin-sekolah'])->prefix('adm
 
     // Peta Interaktif Sebaran Siswa PKL & DU/DI
     Route::get('/peta-sebaran', [PklMapController::class, 'adminMap'])->name('adminsekolah.map');
+
+    // Portal Billing & Langganan SaaS Tenant
+    Route::get('/billing', [AdminSekolahController::class, 'billing'])->name('adminsekolah.billing');
+    Route::get('/invoices/{invoice}/pdf', [AdminSekolahController::class, 'downloadInvoicePdf'])->name('adminsekolah.invoices.pdf');
 });
 
 // 3. Siswa (Mobile-First) Routes

@@ -14,6 +14,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'IdentifyTenant' => \App\Http\Middleware\IdentifyTenant::class,
             'role' => \App\Http\Middleware\CheckRole::class,
+            'feature' => \App\Http\Middleware\CheckFeatureEntitlement::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

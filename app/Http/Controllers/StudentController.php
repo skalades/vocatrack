@@ -139,8 +139,14 @@ class StudentController extends Controller
                     return back()->withErrors(['photo' => 'Data gambar swafoto rusak atau tidak valid.']);
                 }
 
+                $fileSize = strlen($imageData);
+                if (!app(\App\Services\StorageQuotaService::class)->canUpload($spkl->school, $fileSize)) {
+                    return back()->withErrors(['photo' => 'Kapasitas penyimpanan sekolah Anda telah penuh. Tidak dapat mengunggah foto swafoto. Hubungi admin sekolah.']);
+                }
+
                 $fileName = 'schools/' . $spkl->school_id . '/attendances/' . date('Y') . '/' . Str::random(24) . '.' . $extension;
                 Storage::disk('public')->put($fileName, $imageData);
+                app(\App\Services\StorageQuotaService::class)->recordUpload($spkl->school, $fileSize);
                 $photoPath = $fileName;
             }
         }
@@ -196,10 +202,17 @@ class StudentController extends Controller
 
         $attachmentPath = null;
         if ($request->hasFile('attachment')) {
-            $attachmentPath = $request->file('attachment')->store(
+            $attachmentFile = $request->file('attachment');
+            $fileSize = $attachmentFile->getSize();
+            if (!app(\App\Services\StorageQuotaService::class)->canUpload($spkl->school, $fileSize)) {
+                return back()->withErrors(['attachment' => 'Kapasitas penyimpanan sekolah Anda telah penuh. Tidak dapat mengunggah bukti lampiran. Hubungi admin sekolah.'])->withInput();
+            }
+
+            $attachmentPath = $attachmentFile->store(
                 'schools/' . $spkl->school_id . '/requests/' . date('Y'),
                 'public'
             );
+            app(\App\Services\StorageQuotaService::class)->recordUpload($spkl->school, $fileSize);
         }
 
         return \Illuminate\Support\Facades\DB::transaction(function () use ($spkl, $request, $attachmentPath) {
@@ -361,6 +374,15 @@ class StudentController extends Controller
         }
 
         if ($request->hasFile('photos')) {
+            $totalSize = 0;
+            foreach ($request->file('photos') as $photo) {
+                $totalSize += $photo->getSize();
+            }
+
+            if (!app(\App\Services\StorageQuotaService::class)->canUpload($spkl->school, $totalSize)) {
+                return back()->withErrors(['photos' => 'Kapasitas penyimpanan sekolah Anda telah penuh. Tidak dapat mengunggah foto jurnal. Hubungi admin sekolah.'])->withInput();
+            }
+
             foreach ($request->file('photos') as $photo) {
                 $path = $photo->store('schools/' . $spkl->school_id . '/journals/' . date('Y'), 'public');
                 JournalPhoto::create([
@@ -368,6 +390,7 @@ class StudentController extends Controller
                     'photo_path' => $path,
                 ]);
             }
+            app(\App\Services\StorageQuotaService::class)->recordUpload($spkl->school, $totalSize);
         }
 
         $msg = ($status === 'submitted')

@@ -22,6 +22,26 @@
     <!-- Mobile App Container (Optimized for modern smartphones, centered on desktop) -->
     <div class="w-full max-w-md min-h-screen flex flex-col bg-slate-50/70 border-x-0 sm:border-x border-slate-200/80 shadow-none sm:shadow-2xl relative pb-24">
 
+        <!-- Sticky Impersonation Warning Header for Mobile -->
+        @if(app(\App\Services\ImpersonationService::class)->isImpersonating())
+            <div class="bg-amber-400 text-slate-950 px-3.5 py-2 text-[11px] font-bold flex items-center justify-between sticky top-0 z-50 border-b border-amber-500 shadow-md">
+                <div class="flex items-center space-x-2 min-w-0">
+                    <span class="flex h-2 w-2 relative shrink-0">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-slate-900 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-slate-950"></span>
+                    </span>
+                    <span class="truncate">Mode Impersonasi: <strong>{{ auth()->user()->name }}</strong></span>
+                </div>
+                <form action="{{ route('impersonate.leave') }}" method="POST" class="inline shrink-0 ml-2">
+                    @csrf
+                    <button type="submit" class="px-2.5 py-1 bg-slate-950 text-white rounded-lg hover:bg-slate-800 transition-colors cursor-pointer text-[10px] font-extrabold flex items-center gap-1 shadow-xs">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+                        <span>Kembali</span>
+                    </button>
+                </form>
+            </div>
+        @endif
+
         <!-- Glassmorphic Sticky Header -->
         <header class="sticky top-0 z-40 flex items-center justify-between px-4 py-3 bg-white/90 backdrop-blur-md border-b border-slate-200/80 shadow-2xs">
             <div class="flex items-center space-x-3">

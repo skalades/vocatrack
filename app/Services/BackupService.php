@@ -71,7 +71,14 @@ class BackupService
 
         foreach ($tables as $table) {
             if (DB::getSchemaBuilder()->hasTable($table)) {
-                $backupData['tables'][$table] = DB::table($table)->get()->toArray();
+                $rows = [];
+                // Chunk queries to prevent memory exhaustion on large multi-tenant tables
+                DB::table($table)->orderBy('id')->chunk(500, function ($chunk) use (&$rows) {
+                    foreach ($chunk as $item) {
+                        $rows[] = (array) $item;
+                    }
+                });
+                $backupData['tables'][$table] = $rows;
             }
         }
 
@@ -83,6 +90,59 @@ class BackupService
             'size' => File::size($filePath),
             'size_formatted' => round(File::size($filePath) / 1024, 2) . ' KB',
             'created_at' => Carbon::now(),
+        ];
+    }
+
+    /**
+     * Restore database snapshot from a backup file.
+     */
+    public function restoreDatabaseBackup(string $filename): array
+    {
+        $safeFilename = basename($filename);
+        $filePath = "{$this->backupDir}/{$safeFilename}";
+
+        if (!File::exists($filePath)) {
+            throw new \RuntimeException("Berkas cadangan {$safeFilename} tidak ditemukan.");
+        }
+
+        $raw = File::get($filePath);
+        $backupData = json_decode($raw, true);
+
+        if (!is_array($backupData) || !isset($backupData['tables'])) {
+            throw new \RuntimeException("Format berkas cadangan {$safeFilename} tidak valid.");
+        }
+
+        $driver = DB::getDriverName();
+
+        DB::transaction(function () use ($backupData, $driver) {
+            if ($driver === 'mysql') {
+                DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+            } elseif ($driver === 'sqlite') {
+                DB::statement('PRAGMA foreign_keys = OFF;');
+            }
+
+            foreach ($backupData['tables'] as $table => $rows) {
+                if (DB::getSchemaBuilder()->hasTable($table)) {
+                    DB::table($table)->delete();
+                    if (!empty($rows)) {
+                        foreach (array_chunk($rows, 200) as $batch) {
+                            DB::table($table)->insert($batch);
+                        }
+                    }
+                }
+            }
+
+            if ($driver === 'mysql') {
+                DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+            } elseif ($driver === 'sqlite') {
+                DB::statement('PRAGMA foreign_keys = ON;');
+            }
+        });
+
+        return [
+            'filename' => $safeFilename,
+            'restored_at' => Carbon::now(),
+            'tables_count' => count($backupData['tables']),
         ];
     }
 
