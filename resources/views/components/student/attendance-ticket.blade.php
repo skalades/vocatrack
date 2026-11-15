@@ -48,7 +48,7 @@
                 <div class="flex items-center gap-3">
                     <div class="relative w-16 h-16 rounded-[18px] bg-[#12382F] overflow-hidden shrink-0 flex items-center justify-center border border-slate-200">
                         @if($attendance && $attendance->checkin_photo_path)
-                            <img src="{{ Storage::url($attendance->checkin_photo_path) }}" alt="Selfie" class="w-full h-full object-cover">
+                            <img src="{{ $attendance->checkin_photo_url }}" alt="Selfie" class="w-full h-full object-cover">
                         @else
                             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#C6F26B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>

@@ -1,6 +1,6 @@
 /**
  * VokaTrack Motion Layer — animasi interaktif untuk level Guru & Siswa.
- * Aktif hanya bila <body data-app="teacher|student">. Menghormati prefers-reduced-motion.
+ * Aktif bila <body data-app="teacher|student|admin|industry|school|principal">. Menghormati prefers-reduced-motion.
  *
  * Atribut yang dikenali:
  *   data-reveal            elemen muncul (fade + naik) saat masuk viewport
@@ -219,7 +219,7 @@ export function initPageTransitions() {
 // -----------------------------------------------------------------------------
 document.addEventListener('DOMContentLoaded', () => {
     const app = document.body.dataset.app;
-    if (app !== 'teacher' && app !== 'student') return;
+    if (!['teacher', 'student', 'admin', 'industry', 'school', 'principal'].includes(app)) return;
 
     document.documentElement.classList.add('vt-motion');
     initRipple();

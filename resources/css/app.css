@@ -445,6 +445,18 @@ tbody tr:hover td.table-sticky-right {
     --color-indigo-600: #2E6B4F;
 }
 
+/* Di hero gelap (page-header / banner dashboard), tombol utama menjadi lime */
+.theme-forest .vt-hero {
+    --color-indigo-300: #C6F26B;
+    --color-indigo-400: #C6F26B;
+    --color-indigo-500: #C6F26B;
+    --color-indigo-600: #C6F26B;
+    --color-indigo-700: #B5E855;
+    --color-indigo-800: #A3D845;
+}
+.theme-forest .vt-hero .bg-indigo-600 { color: #0B2B25; font-weight: 800; }
+.theme-forest .vt-hero .bg-indigo-600 svg { color: #0B2B25; }
+
 .theme-forest .focus-ring:focus {
     border-color: #12382F;
     box-shadow: 0 0 0 3px rgba(198, 242, 107, 0.45);

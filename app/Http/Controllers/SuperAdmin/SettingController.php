@@ -20,6 +20,7 @@ class SettingController extends Controller
         $appDescription = PlatformSetting::get('app_description', 'Platform PKL SMK Terpadu Berbasis Multi-Tenancy Cloud');
         $maintenanceActive = (bool) PlatformSetting::get('maintenance_active', false);
         $maintenanceNotice = PlatformSetting::get('maintenance_notice', '');
+        $maintenanceLock = (bool) PlatformSetting::get('maintenance_lock', false);
 
         // SMTP & Integration Settings
         $smtpSettings = [
@@ -29,13 +30,15 @@ class SettingController extends Controller
             'mail_encryption' => PlatformSetting::get('mail_encryption', config('mail.mailers.smtp.encryption', 'tls')),
             'mail_from_address' => PlatformSetting::get('mail_from_address', config('mail.from.address')),
             'mail_from_name' => PlatformSetting::get('mail_from_name', config('mail.from.name', 'VokaTrack Cloud')),
+            'mail_password_set' => PlatformSetting::hasSecret('mail_password'),
         ];
 
         // WhatsApp Gateway Settings
         $waSettings = [
             'wa_provider' => PlatformSetting::get('wa_provider', 'fonnte'),
             'wa_api_endpoint' => PlatformSetting::get('wa_api_endpoint', 'https://api.fonnte.com/send'),
-            'wa_api_token' => PlatformSetting::get('wa_api_token', ''),
+            // Token tidak pernah dikirim balik ke browser; hanya status tersimpan/tidak.
+            'wa_api_token_set' => PlatformSetting::hasSecret('wa_api_token'),
             'wa_sender_phone' => PlatformSetting::get('wa_sender_phone', ''),
         ];
 
@@ -67,6 +70,7 @@ class SettingController extends Controller
             'appDescription',
             'maintenanceActive',
             'maintenanceNotice',
+            'maintenanceLock',
             'smtpSettings',
             'waSettings',
             'storageSettings',
@@ -81,6 +85,7 @@ class SettingController extends Controller
         PlatformSetting::set('app_description', $request->app_description ?: '');
         PlatformSetting::set('maintenance_active', $request->boolean('maintenance_active') ? '1' : '0');
         PlatformSetting::set('maintenance_notice', $request->maintenance_notice ?: '');
+        PlatformSetting::set('maintenance_lock', $request->boolean('maintenance_lock') ? '1' : '0');
 
         // Handle SMTP settings
         if ($request->filled('mail_host')) {
@@ -88,7 +93,7 @@ class SettingController extends Controller
             PlatformSetting::set('mail_port', (string) $request->mail_port);
             PlatformSetting::set('mail_username', $request->mail_username ?: '');
             if ($request->filled('mail_password')) {
-                PlatformSetting::set('mail_password', $request->mail_password);
+                PlatformSetting::setSecret('mail_password', $request->mail_password);
             }
             PlatformSetting::set('mail_encryption', $request->mail_encryption ?: 'tls');
             PlatformSetting::set('mail_from_address', $request->mail_from_address ?: '');
@@ -100,7 +105,7 @@ class SettingController extends Controller
             PlatformSetting::set('wa_provider', $request->wa_provider);
             PlatformSetting::set('wa_api_endpoint', $request->wa_api_endpoint ?: '');
             if ($request->filled('wa_api_token')) {
-                PlatformSetting::set('wa_api_token', $request->wa_api_token);
+                PlatformSetting::setSecret('wa_api_token', $request->wa_api_token);
             }
             PlatformSetting::set('wa_sender_phone', $request->wa_sender_phone ?: '');
         }

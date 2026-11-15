@@ -75,10 +75,10 @@ class BackupController extends Controller
             AuditLogService::log(
                 'backup_restore',
                 'system',
-                "Pemulihan data platform dari snapshot {$safeFilename} ({$res['tables_count']} tabel) berhasil diselesaikan."
+                "Pemulihan data platform dari snapshot {$safeFilename} ({$res['tables_count']} tabel) berhasil diselesaikan. Snapshot pengaman sebelum restore: {$res['safety_snapshot']}."
             );
 
-            return back()->with('success', "Basis data platform berhasil dipulihkan dari snapshot {$safeFilename} ({$res['tables_count']} tabel).");
+            return back()->with('success', "Basis data platform berhasil dipulihkan dari snapshot {$safeFilename} ({$res['tables_count']} tabel). Snapshot pengaman kondisi sebelumnya tersimpan sebagai {$res['safety_snapshot']}.");
         } catch (\Throwable $e) {
             return back()->with('error', "Gagal memulihkan cadangan data: " . $e->getMessage());
         }

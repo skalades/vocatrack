@@ -123,6 +123,14 @@
                               class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium text-slate-900 leading-relaxed">{{ old('maintenance_notice', $maintenanceNotice) }}</textarea>
                     <span class="text-[10px] text-slate-400 mt-1 block">Banner akan otomatis tampil tepat di bawah header atas di seluruh portal tenant saat dicentang aktif.</span>
                 </div>
+
+                <label class="flex items-start gap-2.5 p-3 rounded-2xl bg-rose-50 border border-rose-200 cursor-pointer">
+                    <input type="checkbox" name="maintenance_lock" value="1" {{ !empty($maintenanceLock) ? 'checked' : '' }} class="mt-0.5 rounded text-rose-600 focus:ring-rose-500">
+                    <span>
+                        <span class="block text-xs font-bold text-rose-900">Kunci Mode Pemeliharaan (Read-Only)</span>
+                        <span class="block text-[11px] text-rose-800">Seluruh portal tenant hanya bisa dibaca: presensi, jurnal, dan perubahan data lainnya ditolak sampai kunci dilepas. Sesi impersonasi Super Admin tetap bisa menulis.</span>
+                    </span>
+                </label>
             </div>
         </x-card>
 
@@ -170,7 +178,10 @@
                         <label class="block text-xs font-bold text-slate-700 mb-1.5">Password / App Password</label>
                         <input type="password" name="mail_password" placeholder="••••••••••••"
                                class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 font-mono text-slate-900">
-                        <span class="text-[10px] text-slate-400 mt-1 block">Kosongkan jika tidak ingin mengubah kata sandi SMTP yang tersimpan</span>
+                        <span class="text-[10px] text-slate-400 mt-1 block">
+                            {{ !empty($smtpSettings['mail_password_set']) ? 'Tersimpan terenkripsi.' : 'Belum diatur.' }}
+                            Kosongkan jika tidak ingin mengubah kata sandi SMTP yang tersimpan
+                        </span>
                     </div>
                 </div>
 
@@ -213,9 +224,15 @@
                     </div>
                     <div class="sm:col-span-2">
                         <label class="block text-xs font-bold text-slate-700 mb-1.5">API Endpoint / Token WhatsApp</label>
-                        <input type="password" name="wa_api_token" value="{{ old('wa_api_token', $waSettings['wa_api_token'] ?? '') }}" placeholder="API Token / Key Fonnte/Wablas"
+                        <input type="password" name="wa_api_token" autocomplete="new-password" placeholder="{{ !empty($waSettings['wa_api_token_set']) ? '•••••••• (tersimpan terenkripsi)' : 'API Token / Key Fonnte/Wablas' }}"
                                class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 font-mono text-slate-900">
+                        <span class="text-[10px] text-slate-400 mt-1 block">Kosongkan jika tidak ingin mengubah token yang tersimpan.</span>
                     </div>
+                </div>
+
+                <div class="p-3 rounded-2xl bg-amber-50 border border-amber-200 text-[11px] font-medium text-amber-800">
+                    Konfigurasi WhatsApp Gateway dan driver Storage cloud saat ini hanya disimpan sebagai pra-konfigurasi.
+                    Pengiriman WhatsApp belum terhubung dan media tetap disimpan di server lokal sampai migrasi storage dijalankan.
                 </div>
 
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">

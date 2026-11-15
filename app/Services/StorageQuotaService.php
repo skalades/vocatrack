@@ -35,7 +35,7 @@ class StorageQuotaService
             ->select('id', 'checkin_photo_path')
             ->chunk(250, function ($attendances) use ($disk, &$totalBytes) {
                 foreach ($attendances as $att) {
-                    $totalBytes += $this->getFileSizeSafe($disk, $att->checkin_photo_path);
+                    $totalBytes += $this->sensitiveFileSize($att->checkin_photo_path);
                 }
             });
 
@@ -45,7 +45,7 @@ class StorageQuotaService
             ->select('id', 'attachment_path')
             ->chunk(250, function ($requests) use ($disk, &$totalBytes) {
                 foreach ($requests as $req) {
-                    $totalBytes += $this->getFileSizeSafe($disk, $req->attachment_path);
+                    $totalBytes += $this->sensitiveFileSize($req->attachment_path);
                 }
             });
 
@@ -56,7 +56,7 @@ class StorageQuotaService
         ->select('id', 'photo_path')
         ->chunk(250, function ($photos) use ($disk, &$totalBytes) {
             foreach ($photos as $photo) {
-                $totalBytes += $this->getFileSizeSafe($disk, $photo->photo_path);
+                $totalBytes += $this->sensitiveFileSize($photo->photo_path);
             }
         });
 
@@ -117,6 +117,18 @@ class StorageQuotaService
     /**
      * Safely get file size from disk without crashing on missing or unreadable files.
      */
+    /**
+     * Ukuran berkas pribadi siswa (disk privat, fallback disk lama sebelum migrasi).
+     */
+    protected function sensitiveFileSize(?string $path): int
+    {
+        try {
+            return app(SecureFileService::class)->size($path);
+        } catch (Throwable $e) {
+            return 0;
+        }
+    }
+
     protected function getFileSizeSafe($disk, ?string $path): int
     {
         if (empty($path)) {

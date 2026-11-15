@@ -307,11 +307,12 @@
                                     </a>
 
                                     <!-- 7. Hapus Tenant Percobaan (Safe Delete) -->
-                                    @if($studentsCount == 0)
-                                        <form action="{{ route('superadmin.schools.destroy', $sch->id) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menghapus tenant sekolah {{ addslashes($sch->name) }} ini secara permanen?')">
+                                    @if($studentsCount == 0 && !$sch->is_active)
+                                        <form action="{{ route('superadmin.schools.destroy', $sch->id) }}" method="POST" data-npsn="{{ $sch->npsn }}" onsubmit="return confirmDestroySchool(this)">
                                             @csrf
                                             @method('DELETE')
-                                            <button type="submit" class="p-1.5 rounded-lg bg-slate-50 hover:bg-rose-50 text-slate-400 hover:text-rose-600 border border-slate-200 text-xs font-bold transition-colors" title="Hapus Tenant">
+                                            <input type="hidden" name="confirm_npsn" value="">
+                                            <button type="submit" class="p-1.5 rounded-lg bg-slate-50 hover:bg-rose-50 text-slate-400 hover:text-rose-600 border border-slate-200 text-xs font-bold transition-colors" title="Hapus Tenant Permanen (ketik NPSN untuk konfirmasi)">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                                             </button>
                                         </form>
@@ -477,6 +478,7 @@
                                class="w-full text-xs p-2.5 rounded-xl bg-white border border-slate-200 focus:ring-2 focus:ring-indigo-500/20 font-medium text-slate-900">
                     </div>
                 </div>
+                <div class="mt-3"><x-superadmin.payment-fields /></div>
             </div>
 
             <!-- Akun Administrator -->
@@ -612,8 +614,10 @@
                 <label class="block text-xs font-bold text-slate-700 mb-1.5">Nominal Biaya Sewa (Rp)</label>
                 <input type="number" name="price" id="extend-price-input" required value="6000000" min="0" step="any" 
                        class="w-full text-xs px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 font-mono font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-indigo-500/20">
-                <span class="text-[10px] text-slate-500 mt-1 block">Akan otomatis menerbitkan kwitansi / invoice lunas jika > 0.</span>
+                <span class="text-[10px] text-slate-500 mt-1 block">Invoice diterbitkan otomatis bila nominal > 0.</span>
             </div>
+
+            <x-superadmin.payment-fields />
 
             <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1.5">Penyesuaian Kuota Siswa (Opsional)</label>
@@ -665,9 +669,9 @@
 
             <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1">Kata Sandi Baru</label>
-                <input type="text" name="new_password" required value="password" 
+                <input type="text" name="new_password" minlength="8" maxlength="100" autocomplete="off" placeholder="Kosongkan untuk dibuatkan otomatis"
                        class="w-full text-xs px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 font-mono font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-indigo-500/20">
-                <span class="text-[10px] text-slate-400 mt-1 block">Default: <code>password</code></span>
+                <span class="text-[10px] text-slate-400 mt-1 block">Minimal 8 karakter. Admin wajib menggantinya saat login berikutnya.</span>
             </div>
 
             <div class="flex items-center justify-end space-x-2 pt-2">
@@ -793,6 +797,18 @@
 
     function setStoragePreset(mb) {
         document.getElementById('storage-quota-input').value = mb;
+    }
+
+    function confirmDestroySchool(form) {
+        const npsn = form.dataset.npsn;
+        const typed = prompt('Penghapusan tenant bersifat PERMANEN dan tidak dapat dibatalkan.\nKetik NPSN sekolah (' + npsn + ') untuk konfirmasi:');
+        if (typed === null) return false;
+        if (typed.trim() !== npsn) {
+            alert('NPSN tidak cocok. Penghapusan dibatalkan.');
+            return false;
+        }
+        form.querySelector('input[name="confirm_npsn"]').value = typed.trim();
+        return true;
     }
 
     function openExtendModal(schoolId, schoolName, currentQuota) {

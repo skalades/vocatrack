@@ -13,6 +13,7 @@ use App\Services\AnnouncementService;
 use App\Services\AttendanceService;
 use App\Services\CertificateService;
 use App\Services\IncidentReportService;
+use App\Services\SecureFileService;
 use App\Services\StorageQuotaService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -237,13 +238,21 @@ class StudentController extends Controller
                     return back()->withErrors(['photo' => 'Data gambar swafoto rusak atau tidak valid.']);
                 }
 
+                // Verifikasi isi berkas benar-benar gambar (jangan percaya prefix data URI dari klien).
+                $realMimeMap = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
+                $imageInfo = @getimagesizefromstring($imageData);
+                if ($imageInfo === false || !isset($realMimeMap[$imageInfo['mime'] ?? ''])) {
+                    return back()->withErrors(['photo' => 'Data gambar swafoto rusak atau tidak valid.']);
+                }
+                $extension = $realMimeMap[$imageInfo['mime']];
+
                 $fileSize = strlen($imageData);
                 if (!app(StorageQuotaService::class)->canUpload($spkl->school, $fileSize)) {
                     return back()->withErrors(['photo' => 'Kapasitas penyimpanan sekolah Anda telah penuh. Tidak dapat mengunggah foto swafoto. Hubungi admin sekolah.']);
                 }
 
                 $fileName = 'schools/' . $spkl->school_id . '/attendances/' . date('Y') . '/' . Str::random(24) . '.' . $extension;
-                Storage::disk('public')->put($fileName, $imageData);
+                app(SecureFileService::class)->putContents($fileName, $imageData);
                 app(StorageQuotaService::class)->recordUpload($spkl->school, $fileSize);
                 $photoPath = $fileName;
             }
@@ -269,6 +278,12 @@ class StudentController extends Controller
             }
             return back()->with('success', "Check-in berhasil tercatat! Status kehadiran: {$statusText}.");
         } catch (ValidationException $e) {
+            // Check-in ditolak: hapus selfie yang sudah terunggah dan kembalikan kuotanya.
+            if ($photoPath) {
+                app(SecureFileService::class)->delete($photoPath);
+                app(StorageQuotaService::class)->recordDeletion($spkl->school, $fileSize ?? 0);
+            }
+
             if ($request->wantsJson()) {
                 return response()->json([
                     'message' => $e->getMessage(),
@@ -328,10 +343,7 @@ class StudentController extends Controller
                 return back()->withErrors(['attachment' => 'Kapasitas penyimpanan sekolah Anda telah penuh. Tidak dapat mengunggah bukti lampiran. Hubungi admin sekolah.'])->withInput();
             }
 
-            $attachmentPath = $attachmentFile->store(
-                'schools/' . $spkl->school_id . '/requests/' . date('Y'),
-                'public'
-            );
+            $attachmentPath = app(SecureFileService::class)->storeUploadedFile($attachmentFile, 'schools/' . $spkl->school_id . '/requests/' . date('Y'));
             app(StorageQuotaService::class)->recordUpload($spkl->school, $fileSize);
         }
 
@@ -548,7 +560,7 @@ class StudentController extends Controller
             }
 
             foreach ($request->file('photos') as $photo) {
-                $path = $photo->store('schools/' . $spkl->school_id . '/journals/' . date('Y'), 'public');
+                $path = app(SecureFileService::class)->storeUploadedFile($photo, 'schools/' . $spkl->school_id . '/journals/' . date('Y'));
                 JournalPhoto::create([
                     'journal_id' => $journal->id,
                     'photo_path' => $path,
@@ -595,15 +607,22 @@ class StudentController extends Controller
             abort(403, 'Hanya jurnal berstatus draft yang dapat dihapus.');
         }
 
-        DB::transaction(function () use ($journal) {
+        $freedBytes = 0;
+        DB::transaction(function () use ($journal, &$freedBytes) {
+            $files = app(SecureFileService::class);
             foreach ($journal->photos as $photo) {
                 if ($photo->photo_path) {
-                    Storage::disk('public')->delete($photo->photo_path);
+                    $freedBytes += $files->size($photo->photo_path);
+                    $files->delete($photo->photo_path);
                 }
                 $photo->delete();
             }
             $journal->delete();
         });
+
+        if ($freedBytes > 0 && $journal->school) {
+            app(StorageQuotaService::class)->recordDeletion($journal->school, $freedBytes);
+        }
 
         return redirect()->route('student.journals')->with('success', 'Draft jurnal berhasil dihapus.');
     }

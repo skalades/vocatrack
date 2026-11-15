@@ -8,56 +8,104 @@
 
     <h1 class="sr-only">Dashboard Pembimbing Industri DU/DI</h1>
 
-    <!-- Hero Welcome Banner -->
-    <div class="relative overflow-hidden bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-6 sm:p-7 text-white shadow-xl shadow-slate-950/20 border border-slate-800">
-        <div class="absolute -right-10 -bottom-10 w-60 h-60 rounded-full bg-indigo-500/10 blur-3xl pointer-events-none"></div>
+    @php
+        $internCount = $studentPkls->count();
+        $presentCount = $todayAttendances->count();
+        $presencePct = $internCount > 0 ? min(100, (int) round($presentCount / $internCount * 100)) : 0;
+        $pendingTotal = $pendingRequests + $pendingJournals;
+        $ringCirc = round(2 * M_PI * 52, 2);
+    @endphp
 
-        <div class="relative space-y-4">
-            <!-- Top Banner Meta: Badge + Company + Live Date & Time -->
-            <div class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-white/10">
-                <div class="flex items-center gap-2 flex-wrap">
-                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 uppercase tracking-wider">
-                        PEMBIMBING INDUSTRI DU/DI
-                    </span>
-                    <span class="text-xs text-slate-500">&bull;</span>
-                    <span class="text-xs font-semibold text-slate-300 truncate">{{ $company->name }}</span>
+    {{-- ===================== HERO (tema forest, senada portal siswa & guru) ===================== --}}
+    <section data-reveal data-spotlight class="vt-hero relative overflow-hidden bg-[#0B2B25] rounded-[28px] text-white shadow-xl shadow-[#0B2B25]/20">
+        <div class="absolute -right-24 -top-24 w-96 h-96 rounded-full border border-white/[0.07] pointer-events-none"></div>
+        <div class="absolute -right-6 -top-6 w-60 h-60 rounded-full border border-white/[0.07] pointer-events-none"></div>
+        <div class="absolute -left-16 -bottom-24 w-72 h-72 rounded-full bg-[#C6F26B]/10 blur-3xl pointer-events-none"></div>
+
+        <div class="relative grid grid-cols-1 xl:grid-cols-12 gap-6 p-6 sm:p-7">
+            <div class="xl:col-span-8 space-y-5 min-w-0">
+                <div class="flex flex-wrap items-center gap-2">
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-[#C6F26B] text-[#0B2B25] uppercase tracking-wider">Pembimbing Industri</span>
+                    <span class="text-xs font-semibold text-[#A9C2B9] truncate">{{ $company->name }}</span>
                 </div>
 
-                <!-- Live Date & Clock Widget -->
-                <div class="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-2xl bg-white/10 backdrop-blur-md border border-white/15 text-xs text-slate-200 shadow-inner">
-                    <div class="flex items-center gap-1.5 font-semibold text-slate-200">
-                        <svg class="w-3.5 h-3.5 text-indigo-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                        <span id="banner-live-date">{{ \Carbon\Carbon::now()->isoFormat('dddd, D MMMM Y') }}</span>
-                    </div>
-                    <span class="text-white/30">&bull;</span>
-                    <div class="flex items-center gap-1.5 font-mono font-bold text-amber-300">
-                        <svg class="w-3.5 h-3.5 text-amber-300 shrink-0 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                        <span id="banner-live-clock">{{ \Carbon\Carbon::now()->format('H:i:s') }} WIB</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Main Greeting & Action Buttons -->
-            <div class="flex flex-col md:flex-row md:items-center justify-between gap-5">
-                <div class="space-y-1.5 min-w-0">
-                    <h2 class="text-xl sm:text-2xl font-black tracking-tight text-white">
-                        Selamat Datang, {{ auth()->user()->name }}
-                    </h2>
-                    <p class="text-xs sm:text-sm text-slate-300 font-medium max-w-2xl leading-relaxed">
-                        Pantau kehadiran harian, validasi foto selfie check-in GPS, dan tinjau log kegiatan siswa magang di {{ $company->name }}.
+                <div class="space-y-1.5">
+                    <h2 class="font-display text-2xl sm:text-[28px] font-bold tracking-tight leading-tight">Halo, {{ auth()->user()->name }}</h2>
+                    <p class="text-sm text-[#A9C2B9] font-medium max-w-2xl leading-relaxed">
+                        Anda mendampingi <strong class="text-white">{{ $internCount }} siswa magang</strong> di {{ $company->name }}.
+                        @if($pendingTotal > 0)
+                            Ada <strong class="text-[#C6F26B]">{{ $pendingTotal }} hal</strong> yang menunggu persetujuan Anda.
+                        @else
+                            Semua pengajuan &amp; jurnal sudah ditinjau — kerja bagus.
+                        @endif
                     </p>
                 </div>
 
-                <!-- Header Quick Actions -->
-                <div class="flex flex-wrap items-center gap-2.5 shrink-0">
-                    <x-button type="button" variant="primary" size="sm" onclick="window.location.href='{{ route('dudi.attendances') }}'">
-                        <svg class="w-4 h-4 mr-1.5 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <div class="rounded-2xl bg-white/[0.06] border border-white/10 p-4 space-y-2.5">
+                    <div class="flex flex-wrap items-baseline justify-between gap-2 text-xs">
+                        <span class="font-bold text-white">Presensi hari ini</span>
+                        <span class="text-[#A9C2B9] font-medium" id="banner-live-date">{{ \Carbon\Carbon::now()->isoFormat('dddd, D MMMM Y') }}</span>
+                    </div>
+                    <div class="h-2 rounded-full bg-white/10 overflow-hidden">
+                        <div data-grow-x class="h-full rounded-full bg-[#C6F26B]" style="width: {{ $presencePct }}%"></div>
+                    </div>
+                    <div class="flex items-center justify-between text-[11px] text-[#A9C2B9] font-semibold">
+                        <span><span data-counter class="font-space text-white">{{ $presentCount }}</span> dari {{ $internCount }} siswa sudah presensi</span>
+                        <span class="font-space text-[#C6F26B]" id="banner-live-clock">{{ \Carbon\Carbon::now()->format('H:i:s') }} WIB</span>
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2.5">
+                    <a href="{{ route('dudi.attendances') }}" data-ripple class="group inline-flex items-center gap-2 pl-4 pr-1.5 py-1.5 rounded-full bg-[#C6F26B] hover:bg-[#b5e855] text-[#0B2B25] text-xs font-extrabold shadow-md shadow-black/20 transition-all hover:-translate-y-0.5">
                         <span>Validasi Presensi</span>
-                    </x-button>
+                        <span class="w-7 h-7 rounded-full bg-[#0B2B25] text-[#C6F26B] flex items-center justify-center group-hover:translate-x-0.5 transition-transform">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M13 6l6 6-6 6"/></svg>
+                        </span>
+                    </a>
+                    <a href="{{ route('dudi.journals') }}" data-ripple class="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-white/[0.08] hover:bg-white/[0.14] border border-white/15 text-white text-xs font-bold transition-colors">
+                        <span>Review Jurnal</span>
+                        @if($pendingJournals > 0)
+                            <span class="min-w-5 h-5 px-1.5 rounded-full bg-[#C6F26B] text-[#0B2B25] text-[10px] font-extrabold flex items-center justify-center">{{ $pendingJournals }}</span>
+                        @endif
+                    </a>
+                    <a href="{{ route('dudi.requests') }}" data-ripple class="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-white/[0.08] hover:bg-white/[0.14] border border-white/15 text-white text-xs font-bold transition-colors">
+                        <span>Dinas Luar &amp; WFH</span>
+                        @if($pendingRequests > 0)
+                            <span class="min-w-5 h-5 px-1.5 rounded-full bg-[#C6F26B] text-[#0B2B25] text-[10px] font-extrabold flex items-center justify-center">{{ $pendingRequests }}</span>
+                        @endif
+                    </a>
+                </div>
+            </div>
+
+            {{-- Ring kehadiran --}}
+            <div class="xl:col-span-4 flex xl:justify-end items-center">
+                <div class="w-full xl:w-auto rounded-3xl bg-white/[0.06] border border-white/10 p-5 flex items-center gap-5">
+                    <div class="relative w-28 h-28 shrink-0">
+                        <svg class="w-28 h-28 -rotate-90" viewBox="0 0 120 120">
+                            <circle cx="60" cy="60" r="52" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="10"/>
+                            <circle data-ring cx="60" cy="60" r="52" fill="none" stroke="#C6F26B" stroke-width="10" stroke-linecap="round"
+                                    stroke-dasharray="{{ $ringCirc }}"
+                                    stroke-dashoffset="{{ round($ringCirc * (1 - $presencePct / 100), 2) }}"/>
+                        </svg>
+                        <div class="absolute inset-0 flex flex-col items-center justify-center">
+                            <span class="font-space text-2xl font-bold leading-none"><span data-counter>{{ $presencePct }}</span>%</span>
+                            <span class="text-[10px] text-[#A9C2B9] font-semibold mt-1">hadir</span>
+                        </div>
+                    </div>
+                    <div class="space-y-2 text-xs min-w-0">
+                        <div>
+                            <p class="text-[#A9C2B9] font-semibold">Siswa magang</p>
+                            <p class="font-space text-lg font-bold text-white leading-tight">{{ $internCount }}</p>
+                        </div>
+                        <div>
+                            <p class="text-[#A9C2B9] font-semibold">Menunggu Anda</p>
+                            <p class="font-space text-lg font-bold leading-tight {{ $pendingTotal > 0 ? 'text-[#C6F26B]' : 'text-white' }}">{{ $pendingTotal }}</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
+    </section>
 
     <!-- Stat Metric Cards -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

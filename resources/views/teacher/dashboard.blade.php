@@ -336,8 +336,8 @@
                                         </td>
                                         <td class="px-5 py-3 text-right">
                                             @if($att && $att->checkin_photo_path)
-                                                <button type="button" onclick="openImageLightbox('{{ asset('storage/' . $att->checkin_photo_path) }}', 'Selfie masuk: {{ addslashes($sp->student->user->name) }}')" class="inline-block cursor-zoom-in" title="Lihat selfie">
-                                                    <img src="{{ asset('storage/' . $att->checkin_photo_path) }}" alt="Selfie {{ $sp->student->user->name }}" class="w-9 h-9 rounded-xl object-cover border border-slate-200 hover:scale-110 transition-transform">
+                                                <button type="button" onclick="openImageLightbox('{{ $att->checkin_photo_url }}', 'Selfie masuk: {{ addslashes($sp->student->user->name) }}')" class="inline-block cursor-zoom-in" title="Lihat selfie">
+                                                    <img src="{{ $att->checkin_photo_url }}" alt="Selfie {{ $sp->student->user->name }}" class="w-9 h-9 rounded-xl object-cover border border-slate-200 hover:scale-110 transition-transform">
                                                 </button>
                                             @else
                                                 <span class="text-slate-300">—</span>

@@ -46,11 +46,22 @@ class ImpersonationService
      */
     public function startImpersonation(User $impersonator, User $target): void
     {
+        // Impersonasi bertingkat akan menimpa identitas operator asli di sesi,
+        // sehingga tombol "Kembali" dan hak akses staf platform hilang.
+        if ($this->isImpersonating()) {
+            throw ValidationException::withMessages([
+                'impersonate' => 'Akhiri sesi impersonasi yang sedang berjalan terlebih dahulu sebelum masuk sebagai pengguna lain.'
+            ]);
+        }
+
         if (!$this->canImpersonate($impersonator, $target)) {
             throw ValidationException::withMessages([
                 'impersonate' => 'Akses ditolak: Anda tidak memiliki wewenang meng-impersonate pengguna ini.'
             ]);
         }
+
+        // ID sesi baru setiap pergantian identitas (cegah session fixation); data sesi tetap dibawa.
+        session()->regenerate();
 
         session([
             'impersonator_id' => $impersonator->id,
@@ -98,6 +109,7 @@ class ImpersonationService
             $impersonator
         );
 
+        session()->regenerate();
         Auth::login($impersonator);
 
         return $impersonator;

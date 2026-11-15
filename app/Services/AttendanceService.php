@@ -117,9 +117,16 @@ class AttendanceService
                 throw ValidationException::withMessages(['checkout' => 'Check-out baru dapat dilakukan mulai pukul ' . substr($workHours['checkout_start'], 0, 5) . ' WIB.']);
             }
 
+            // Jangan timpa catatan check-in (alasan luar radius & flag Fake GPS) — itu bukti audit.
+            $notes = $attendance->checkout_notes;
+            $studentNote = trim((string) ($data['checkout_notes'] ?? ''));
+            if ($studentNote !== '') {
+                $notes = ($notes ? $notes . ' | ' : '') . 'Catatan Pulang: ' . $studentNote;
+            }
+
             $attendance->update([
                 'checkout_time' => $now->toTimeString(),
-                'checkout_notes' => $data['checkout_notes'] ?? null,
+                'checkout_notes' => $notes,
             ]);
 
             return $attendance;

@@ -200,8 +200,8 @@
                                 @if($sj->photos->isNotEmpty())
                                     <div class="flex items-center gap-2 pt-1">
                                         @foreach($sj->photos as $ph)
-                                            <a href="{{ asset('storage/' . $ph->photo_path) }}" target="_blank" class="w-14 h-14 rounded-lg overflow-hidden border border-slate-200 shadow-2xs hover:scale-105 transition-transform block shrink-0">
-                                                <img src="{{ asset('storage/' . $ph->photo_path) }}" class="w-full h-full object-cover" alt="Foto Kerja">
+                                            <a href="{{ $ph->photo_url }}" target="_blank" class="w-14 h-14 rounded-lg overflow-hidden border border-slate-200 shadow-2xs hover:scale-105 transition-transform block shrink-0">
+                                                <img src="{{ $ph->photo_url }}" class="w-full h-full object-cover" alt="Foto Kerja">
                                             </a>
                                         @endforeach
                                     </div>
@@ -276,8 +276,8 @@
                                 @if($pj->photos->isNotEmpty())
                                     <div class="flex items-center gap-2 overflow-x-auto pt-1">
                                         @foreach($pj->photos as $ph)
-                                            <a href="{{ asset('storage/' . $ph->photo_path) }}" target="_blank" class="w-16 h-16 rounded-xl overflow-hidden border border-slate-200 shadow-2xs hover:scale-105 transition-transform block shrink-0">
-                                                <img src="{{ asset('storage/' . $ph->photo_path) }}" class="w-full h-full object-cover" alt="Foto Dokumentasi">
+                                            <a href="{{ $ph->photo_url }}" target="_blank" class="w-16 h-16 rounded-xl overflow-hidden border border-slate-200 shadow-2xs hover:scale-105 transition-transform block shrink-0">
+                                                <img src="{{ $ph->photo_url }}" class="w-full h-full object-cover" alt="Foto Dokumentasi">
                                             </a>
                                         @endforeach
                                     </div>
@@ -493,8 +493,8 @@
                         <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Foto Dokumentasi Kerja ({{ $j->photos->count() }}):</label>
                         <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
                             @foreach($j->photos as $ph)
-                                <a href="{{ asset('storage/' . $ph->photo_path) }}" target="_blank" class="group relative rounded-2xl overflow-hidden border border-slate-200 shadow-2xs block aspect-video">
-                                    <img src="{{ asset('storage/' . $ph->photo_path) }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" alt="Dokumentasi">
+                                <a href="{{ $ph->photo_url }}" target="_blank" class="group relative rounded-2xl overflow-hidden border border-slate-200 shadow-2xs block aspect-video">
+                                    <img src="{{ $ph->photo_url }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" alt="Dokumentasi">
                                     <div class="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold">
                                         Perbesar
                                     </div>

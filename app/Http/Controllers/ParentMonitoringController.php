@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\AuditLogService;
 use App\Services\ParentMonitoringService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -22,11 +23,12 @@ class ParentMonitoringController extends Controller
             ], 404);
         }
 
-        if (!$student->is_parent_portal_active) {
+        $blockReason = $service->portalBlockReason($student);
+        if ($blockReason !== null) {
             return response()->view('public.parent-monitor', [
                 'status' => 'disabled',
                 'student' => $student,
-                'message' => 'Akses portal monitoring untuk siswa ini sedang dinonaktifkan sementara oleh pihak sekolah.',
+                'message' => $blockReason,
             ], 403);
         }
 
@@ -50,7 +52,16 @@ class ParentMonitoringController extends Controller
             abort(403, 'Anda tidak memiliki hak akses untuk memperbarui tautan ini.');
         }
 
-        $newToken = $service->regenerateToken($student);
+        $service->regenerateToken($student);
+
+        // Siswa dapat memutus akses orang tua dengan membuat ulang tautan; catat agar
+        // sekolah dapat menelusuri dan menerbitkan ulang tautan bila disalahgunakan.
+        AuditLogService::log(
+            action: 'parent_token_regenerated_by_student',
+            module: 'parent_portal',
+            description: "Siswa {$user->name} membuat ulang tautan portal monitoring orang tua (tautan lama dinonaktifkan).",
+            after: ['student_id' => $student->id],
+        );
 
         return redirect()->route('student.profile')->with('success', 'Tautan monitoring orang tua berhasil diperbarui! Tautan lama kini sudah tidak dapat diakses.');
     }

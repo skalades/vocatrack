@@ -293,8 +293,8 @@
                                     @if($journal->photos->isNotEmpty())
                                         <div class="flex items-center gap-2 pt-1 overflow-x-auto">
                                             @foreach($journal->photos as $photo)
-                                                <a href="{{ asset('storage/' . $photo->photo_path) }}" target="_blank" class="shrink-0 w-12 h-12 rounded-xl overflow-hidden border border-slate-700 bg-slate-800 hover:opacity-80 transition-opacity">
-                                                    <img src="{{ asset('storage/' . $photo->photo_path) }}" alt="Foto Kegiatan" class="w-full h-full object-cover">
+                                                <a href="{{ $photo->parentUrl($student->parent_token) }}" target="_blank" class="shrink-0 w-12 h-12 rounded-xl overflow-hidden border border-slate-700 bg-slate-800 hover:opacity-80 transition-opacity">
+                                                    <img src="{{ $photo->parentUrl($student->parent_token) }}" alt="Foto Kegiatan" class="w-full h-full object-cover">
                                                 </a>
                                             @endforeach
                                         </div>

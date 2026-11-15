@@ -17,9 +17,10 @@ class UpdatePlatformSettingRequest extends FormRequest
             'platform_name' => ['required', 'string', 'max:60'],
             'platform_tagline' => ['nullable', 'string', 'max:100'],
             'app_description' => ['nullable', 'string', 'max:255'],
-            'system_logo' => ['nullable', 'file', 'image', 'mimes:png,jpg,jpeg,webp,svg', 'max:2048'],
+            'system_logo' => ['nullable', 'file', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
             'reset_logo' => ['nullable', 'boolean'],
             'maintenance_active' => ['nullable', 'boolean'],
+            'maintenance_lock' => ['nullable', 'boolean'],
             'maintenance_notice' => ['nullable', 'string', 'max:500'],
             // SMTP Integrations
             'mail_host' => ['nullable', 'string', 'max:150'],

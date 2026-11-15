@@ -26,9 +26,7 @@ class IncidentReportService
     {
         $attachmentPath = null;
         if ($file) {
-            $fileName = 'schools/' . $spkl->school_id . '/incidents/' . date('Y') . '/' . Str::random(24) . '.' . $file->getClientOriginalExtension();
-            Storage::disk('public')->put($fileName, file_get_contents($file));
-            $attachmentPath = $fileName;
+            $attachmentPath = app(SecureFileService::class)->storeUploadedFile($file, 'schools/' . $spkl->school_id . '/incidents/' . date('Y'));
         }
 
         $report = IncidentReport::create([

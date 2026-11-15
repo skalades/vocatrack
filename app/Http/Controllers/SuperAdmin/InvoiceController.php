@@ -80,14 +80,21 @@ class InvoiceController extends Controller
 
     public function markInvoicePaid(Invoice $invoice)
     {
+        if ($invoice->status !== 'unpaid') {
+            $label = $invoice->status === 'paid' ? 'sudah LUNAS' : 'sudah dibatalkan';
+            return back()->with('error', "Invoice {$invoice->invoice_number} {$label} dan tidak dapat diverifikasi ulang.");
+        }
+
         $invoice->update([
             'status' => 'paid',
             'paid_at' => Carbon::now(),
         ]);
 
-        // If subscription is linked and was expired, mark subscription active
-        if ($invoice->subscription && $invoice->subscription->status === 'expired') {
-            $invoice->subscription->update(['status' => 'active']);
+        // Pulihkan status langganan yang sempat ditandai expired hanya bila masa berlakunya
+        // memang masih berjalan; pelunasan tidak memperpanjang tanggal berakhir secara diam-diam.
+        $subscription = $invoice->subscription;
+        if ($subscription && $subscription->status === 'expired' && !$subscription->end_date->isPast()) {
+            $subscription->update(['status' => 'active']);
         }
 
         AuditLogService::log(

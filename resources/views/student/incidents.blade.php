@@ -122,7 +122,7 @@
                     <!-- Attachment if present -->
                     @if($incident->attachment_path)
                         <div class="pt-1">
-                            <a href="{{ Storage::disk('public')->url($incident->attachment_path) }}" target="_blank" 
+                            <a href="{{ $incident->attachment_url }}" target="_blank" 
                                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs font-bold text-slate-700 transition-colors">
                                 <svg class="w-3.5 h-3.5 text-slate-500 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
                                 <span>Lihat Lampiran Foto Bukti</span>

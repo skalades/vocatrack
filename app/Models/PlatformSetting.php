@@ -3,7 +3,9 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
@@ -50,6 +52,42 @@ class PlatformSetting extends Model
         Cache::forget("platform_system_logo_url");
 
         return $setting;
+    }
+
+    /**
+     * Simpan nilai rahasia (password SMTP, token API) dalam bentuk terenkripsi APP_KEY.
+     */
+    public static function setSecret(string $key, string $value, string $group = 'secret'): static
+    {
+        return static::set($key, Crypt::encryptString($value), $group);
+    }
+
+    /**
+     * Baca nilai rahasia. Nilai lama yang masih polos (sebelum enkripsi) tetap dikembalikan
+     * apa adanya agar tidak memutus konfigurasi yang sudah ada.
+     */
+    public static function getSecret(string $key, ?string $default = null): ?string
+    {
+        $raw = static::get($key);
+        if ($raw === null || $raw === '') {
+            return $default;
+        }
+
+        try {
+            return Crypt::decryptString($raw);
+        } catch (DecryptException) {
+            return $raw;
+        }
+    }
+
+    /**
+     * Apakah sebuah rahasia sudah tersimpan (tanpa membuka nilainya).
+     */
+    public static function hasSecret(string $key): bool
+    {
+        $raw = static::get($key);
+
+        return $raw !== null && $raw !== '';
     }
 
     /**

@@ -12,6 +12,7 @@ use App\Models\SubscriptionPlan;
 use App\Models\User;
 use App\Services\AuditLogService;
 use App\Services\SubscriptionService;
+use App\Services\TenantProvisioningService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -59,8 +60,12 @@ class SchoolRequestController extends Controller
         ));
     }
 
-    public function approveSchoolRequest(ApproveSchoolRequest $request, SchoolRequest $schoolRequest)
+    public function approveSchoolRequest(ApproveSchoolRequest $request, SchoolRequest $schoolRequest, TenantProvisioningService $provisioning)
     {
+        if ($schoolRequest->status !== 'pending') {
+            return back()->with('error', "Permohonan {$schoolRequest->school_name} sudah diproses sebelumnya.");
+        }
+
         if (School::where('npsn', $schoolRequest->npsn)->exists()) {
             return back()->with('error', "Sekolah dengan NPSN {$schoolRequest->npsn} sudah terdaftar di sistem.");
         }
@@ -69,53 +74,22 @@ class SchoolRequestController extends Controller
             return back()->with('error', "Email kontak {$schoolRequest->email} sudah digunakan oleh akun lain.");
         }
 
-        $school = DB::transaction(function () use ($schoolRequest, $request) {
-            $school = School::create([
-                'npsn' => $schoolRequest->npsn,
-                'name' => $schoolRequest->school_name,
-                'address' => $schoolRequest->address ?: '-',
-                'phone' => $schoolRequest->phone,
-                'email' => $schoolRequest->email,
-                'is_active' => true,
-            ]);
-
-            // Default School Settings
-            $defaultSettings = [
-                'checkin_start' => '06:00:00',
-                'checkin_late' => '08:00:00',
-                'checkin_alfa' => '11:00:00',
-                'checkout_start' => '16:00:00',
-                'journal_backdate_limit' => '3',
-                'weight_dudi' => '60',
-                'weight_guru' => '40',
-                'kop_header_line1' => 'PEMERINTAH PROVINSI',
-                'kop_header_line2' => 'DINAS PENDIDIKAN',
-                'kop_header_line3' => strtoupper($school->name),
-                'kepsek_name' => 'Kepala Sekolah',
-                'kepsek_nip' => '-',
-            ];
-
-            foreach ($defaultSettings as $k => $v) {
-                SchoolSetting::create([
-                    'school_id' => $school->id,
-                    'key' => $k,
-                    'value' => $v,
-                ]);
-            }
-
-            // Create School Admin User
-            User::create([
-                'school_id' => $school->id,
-                'name' => $schoolRequest->contact_name,
-                'email' => $schoolRequest->email,
-                'password' => Hash::make('password'),
-                'role' => 'admin-sekolah',
-                'is_active' => true,
-            ]);
+        [$school, $temporaryPassword] = DB::transaction(function () use ($schoolRequest, $request, $provisioning) {
+            [$school, , $temporaryPassword] = $provisioning->provision(
+                [
+                    'npsn' => $schoolRequest->npsn,
+                    'name' => $schoolRequest->school_name,
+                    'address' => $schoolRequest->address ?: '-',
+                    'phone' => $schoolRequest->phone,
+                    'email' => $schoolRequest->email,
+                ],
+                $schoolRequest->contact_name,
+                $schoolRequest->email
+            );
 
             // Subscribe School
             $plan = SubscriptionPlan::findOrFail($request->plan_id);
-            $customQuota = $request->custom_quota ?: null;
+            $customQuota = $request->custom_quota ? (int) $request->custom_quota : null;
             $status = $plan->price > 0 ? 'active' : 'trial';
 
             $this->subscriptionService->subscribeSchool(
@@ -125,7 +99,11 @@ class SchoolRequestController extends Controller
                 $customQuota,
                 null,
                 $status,
-                "Aktivasi via Permohonan Demo Onboarding ({$plan->name})"
+                "Aktivasi via Permohonan Demo Onboarding ({$plan->name})",
+                null,
+                true,
+                $request->input('payment_status', 'paid'),
+                $request->payment_method
             );
 
             // Mark Request as approved
@@ -136,7 +114,7 @@ class SchoolRequestController extends Controller
                 'reviewed_at' => Carbon::now(),
             ]);
 
-            return $school;
+            return [$school, $temporaryPassword];
         });
 
         AuditLogService::log(
@@ -146,7 +124,13 @@ class SchoolRequestController extends Controller
             $school
         );
 
-        return back()->with('success', "Permohonan disetujui! Tenant {$school->name} berhasil dibuat. Akun Admin ({$schoolRequest->email}) siap digunakan dengan password default: password");
+        return back()
+            ->with('success', "Permohonan disetujui! Tenant {$school->name} berhasil dibuat.")
+            ->with('temporary_credential', [
+                'email' => $schoolRequest->email,
+                'password' => $temporaryPassword,
+                'context' => "Admin Sekolah {$school->name}",
+            ]);
     }
 
     public function rejectSchoolRequest(RejectSchoolRequest $request, SchoolRequest $schoolRequest)

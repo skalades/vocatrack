@@ -434,10 +434,9 @@ class SuperAdminFunctionalAuditTest extends TestCase
         $response->assertRedirect(route('superadmin.schools'));
         $response->assertSessionHas('success');
 
-        // 2. Via direct GET URL
+        // 2. GET langsung ditolak: aksi pengubah data wajib lewat POST ber-CSRF
         $getResponse = $this->actingAs($this->superAdmin)->get(route('superadmin.schools.recalculate-storage', $this->school1->id));
-        $getResponse->assertRedirect(route('superadmin.schools'));
-        $getResponse->assertSessionHas('success');
+        $getResponse->assertStatus(405);
 
         $this->assertDatabaseHas('activity_logs', [
             'action' => 'storage_recalculated',

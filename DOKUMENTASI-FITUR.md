@@ -151,7 +151,7 @@ flowchart LR
     - `journal_backdate_limit` = `3` hari.
     - `weight_dudi` = `60%`, `weight_guru` = `40%`.
     - Kop surat default: Header Baris 1, Baris 2, Baris 3, nama & NIP kepala sekolah.
-  - Otomatis membuat akun user dengan role `admin-sekolah` ber-password default `password`.
+  - Otomatis membuat akun user dengan role `admin-sekolah` berkata sandi sementara acak (12 karakter) yang ditampilkan sekali ke Super Admin; admin wajib menggantinya saat login pertama (`users.must_change_password`).
 * **Rute**: `POST /super-admin/schools` (`superadmin.schools.store`).
 
 ### [F-SA03] Toggle Status Aktivasi Sekolah

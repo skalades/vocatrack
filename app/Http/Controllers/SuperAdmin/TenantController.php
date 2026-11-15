@@ -18,11 +18,13 @@ use App\Services\BackupService;
 use App\Services\ImpersonationService;
 use App\Services\StorageQuotaService;
 use App\Services\SubscriptionService;
+use App\Services\TenantProvisioningService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class TenantController extends Controller
@@ -116,55 +118,18 @@ class TenantController extends Controller
         ));
     }
 
-    public function storeSchool(StoreSchoolRequest $request)
+    public function storeSchool(StoreSchoolRequest $request, TenantProvisioningService $provisioning)
     {
-        $school = DB::transaction(function () use ($request) {
-            $school = School::create([
-                'npsn' => $request->npsn,
-                'name' => $request->name,
-                'address' => $request->address,
-                'phone' => $request->phone,
-                'email' => $request->email,
-                'is_active' => true,
-            ]);
-
-            // Default School Settings
-            $defaultSettings = [
-                'checkin_start' => '06:00:00',
-                'checkin_late' => '08:00:00',
-                'checkin_alfa' => '11:00:00',
-                'checkout_start' => '16:00:00',
-                'journal_backdate_limit' => '3',
-                'weight_dudi' => '60',
-                'weight_guru' => '40',
-                'kop_header_line1' => 'PEMERINTAH PROVINSI',
-                'kop_header_line2' => 'DINAS PENDIDIKAN',
-                'kop_header_line3' => strtoupper($school->name),
-                'kepsek_name' => 'Kepala Sekolah',
-                'kepsek_nip' => '-',
-            ];
-
-            foreach ($defaultSettings as $k => $v) {
-                SchoolSetting::create([
-                    'school_id' => $school->id,
-                    'key' => $k,
-                    'value' => $v,
-                ]);
-            }
-
-            // Auto-create initial School Admin
-            User::create([
-                'school_id' => $school->id,
-                'name' => $request->admin_name,
-                'email' => $request->admin_email,
-                'password' => Hash::make('password'),
-                'role' => 'admin-sekolah',
-                'is_active' => true,
-            ]);
+        [$school, $temporaryPassword] = DB::transaction(function () use ($request, $provisioning) {
+            [$school, , $temporaryPassword] = $provisioning->provision(
+                $request->only(['npsn', 'name', 'address', 'phone', 'email']),
+                $request->admin_name,
+                $request->admin_email
+            );
 
             // Activate Subscription Plan
             $plan = SubscriptionPlan::findOrFail($request->plan_id);
-            $customQuota = $request->custom_quota ?: null;
+            $customQuota = $request->custom_quota ? (int) $request->custom_quota : null;
             $customStorageMb = $request->custom_storage_mb ? (int) $request->custom_storage_mb : null;
             $status = $plan->price > 0 ? 'active' : 'trial';
 
@@ -176,10 +141,13 @@ class TenantController extends Controller
                 null,
                 $status,
                 "Aktivasi awal tenant sekolah ({$plan->name})",
-                $customStorageMb
+                $customStorageMb,
+                true,
+                $request->input('payment_status', 'paid'),
+                $request->payment_method
             );
 
-            return $school;
+            return [$school, $temporaryPassword];
         });
 
         AuditLogService::log(
@@ -192,7 +160,13 @@ class TenantController extends Controller
             ['npsn' => $school->npsn, 'name' => $school->name, 'plan_id' => $request->plan_id]
         );
 
-        return back()->with('success', "Sekolah {$school->name} dan paket sewa berhasil didaftarkan. Akun admin dibuat dengan password: password");
+        return back()
+            ->with('success', "Sekolah {$school->name} dan paket sewa berhasil didaftarkan.")
+            ->with('temporary_credential', [
+                'email' => $request->admin_email,
+                'password' => $temporaryPassword,
+                'context' => "Admin Sekolah {$school->name}",
+            ]);
     }
 
     public function updateSchool(UpdateSchoolRequest $request, School $school)
@@ -220,8 +194,16 @@ class TenantController extends Controller
         return back()->with('success', "Data profil sekolah {$school->name} berhasil diperbarui.");
     }
 
-    public function destroySchool(School $school)
+    public function destroySchool(Request $request, School $school)
     {
+        if ($school->is_active) {
+            return back()->with('error', "Nonaktifkan tenant {$school->name} terlebih dahulu sebelum menghapusnya secara permanen.");
+        }
+
+        if (trim((string) $request->input('confirm_npsn')) !== (string) $school->npsn) {
+            return back()->with('error', "Konfirmasi gagal: ketik NPSN {$school->npsn} dengan benar untuk menghapus tenant ini.");
+        }
+
         $studentCount = Student::whereHas('class', function ($q) use ($school) {
             $q->where('school_id', $school->id);
         })->count();
@@ -232,19 +214,58 @@ class TenantController extends Controller
 
         $schoolName = $school->name;
         $schoolNpsn = $school->npsn;
+        $schoolId = $school->id;
+        $brandingFiles = array_filter([$school->logo_path, $school->stamp_path]);
 
         DB::transaction(function () use ($school) {
-            $school->settings()->delete();
-            $school->subscriptions()->delete();
-            $school->invoices()->delete();
-            $school->users()->delete();
+            // Hapus eksplisit dari tabel anak ke induk agar tidak bergantung pada urutan
+            // cascade DB (classes.major_id & student_pkl.company_id bersifat RESTRICT).
+            $schema = DB::getSchemaBuilder();
+            $majorIds = DB::table('majors')->where('school_id', $school->id)->pluck('id');
+            $companyIds = DB::table('companies')->where('school_id', $school->id)->pluck('id');
+
+            if ($majorIds->isNotEmpty()) {
+                foreach (['major_teacher', 'company_major'] as $pivot) {
+                    if ($schema->hasTable($pivot)) {
+                        DB::table($pivot)->whereIn('major_id', $majorIds)->delete();
+                    }
+                }
+            }
+            if ($companyIds->isNotEmpty()) {
+                if ($schema->hasTable('company_major')) {
+                    DB::table('company_major')->whereIn('company_id', $companyIds)->delete();
+                }
+                if ($schema->hasTable('supervisors')) {
+                    DB::table('supervisors')->whereIn('company_id', $companyIds)->delete();
+                }
+            }
+
+            foreach (array_reverse(BackupService::BACKUP_TABLES) as $table) {
+                // Log audit & riwayat permohonan dipertahankan (FK nullOnDelete).
+                if (in_array($table, ['schools', 'activity_logs', 'school_requests'], true)) {
+                    continue;
+                }
+                if ($schema->hasTable($table) && $schema->hasColumn($table, 'school_id')) {
+                    DB::table($table)->where('school_id', $school->id)->delete();
+                }
+            }
+
             $school->delete();
         });
+
+        foreach ($brandingFiles as $path) {
+            if (Storage::disk('public')->exists($path)) {
+                Storage::disk('public')->delete($path);
+            }
+        }
+        Storage::disk('local')->deleteDirectory("schools/{$schoolId}");
+        Storage::disk('public')->deleteDirectory("schools/{$schoolId}");
+        Cache::forget("school_storage_bytes_{$schoolId}");
 
         AuditLogService::log(
             'school_delete',
             'schools',
-            "Tenant sekolah {$schoolName} (NPSN: {$schoolNpsn}) dihapus oleh Super Admin.",
+            "Tenant sekolah {$schoolName} (NPSN: {$schoolNpsn}) dihapus permanen oleh Super Admin.",
             null,
             null,
             ['school_name' => $schoolName, 'npsn' => $schoolNpsn]
@@ -255,19 +276,33 @@ class TenantController extends Controller
 
     public function resetAdminPassword(Request $request, School $school)
     {
+        $validated = $request->validate([
+            'new_password' => ['nullable', 'string', 'min:8', 'max:100'],
+        ], [
+            'new_password.min' => 'Kata sandi baru minimal 8 karakter. Kosongkan untuk dibuatkan otomatis.',
+        ]);
+
         $adminUser = User::where('school_id', $school->id)
             ->where('role', 'admin-sekolah')
+            ->orderBy('id')
             ->first();
 
         if (!$adminUser) {
             return back()->with('error', "Tidak ditemukan akun Admin Sekolah untuk tenant {$school->name}.");
         }
 
-        $newPassword = $request->input('new_password', 'password');
+        $newPassword = $validated['new_password'] ?? TenantProvisioningService::generateTemporaryPassword();
+
         $adminUser->update([
-            'password' => Hash::make($newPassword),
+            'password' => $newPassword,
             'is_active' => true,
+            'must_change_password' => true,
         ]);
+
+        // Putus seluruh sesi aktif akun tersebut agar kata sandi lama tidak bisa dipakai lagi.
+        if (config('session.driver') === 'database') {
+            DB::table(config('session.table', 'sessions'))->where('user_id', $adminUser->id)->delete();
+        }
 
         AuditLogService::log(
             'password_reset',
@@ -276,7 +311,13 @@ class TenantController extends Controller
             $school
         );
 
-        return back()->with('success', "Kata sandi Admin Sekolah ({$adminUser->email}) berhasil direset menjadi: {$newPassword}");
+        return back()
+            ->with('success', "Kata sandi Admin Sekolah ({$adminUser->email}) berhasil direset. Pengguna wajib menggantinya saat login berikutnya.")
+            ->with('temporary_credential', [
+                'email' => $adminUser->email,
+                'password' => $newPassword,
+                'context' => "Admin Sekolah {$school->name}",
+            ]);
     }
 
     public function exportSchools(): StreamedResponse
@@ -352,13 +393,28 @@ class TenantController extends Controller
 
     public function extendSubscription(ExtendSubscriptionRequest $request, School $school)
     {
+        $newPlan = $request->plan_id ? SubscriptionPlan::find($request->plan_id) : null;
+
         $activeSub = $school->activeSubscription();
         if (!$activeSub) {
-            $defaultPlan = SubscriptionPlan::where('code', 'pro-yearly')->first() ?? SubscriptionPlan::first();
-            $activeSub = $this->subscriptionService->subscribeSchool($school, $defaultPlan);
+            // Kerangka langganan tanpa invoice yang berakhir hari ini, sehingga perpanjangan
+            // di bawah menjadi satu-satunya tagihan (mencegah tagihan ganda).
+            $basePlan = $newPlan
+                ?? SubscriptionPlan::where('code', 'pro-yearly')->first()
+                ?? SubscriptionPlan::firstOrFail();
+            $activeSub = $this->subscriptionService->subscribeSchool(
+                $school,
+                $basePlan,
+                Carbon::today(),
+                null,
+                0,
+                'active',
+                'Langganan dibuat saat perpanjangan oleh Super Admin',
+                null,
+                false
+            );
+            $activeSub->update(['end_date' => Carbon::today()]);
         }
-
-        $newPlan = $request->plan_id ? SubscriptionPlan::find($request->plan_id) : null;
 
         $this->subscriptionService->extendSubscription(
             $activeSub,
@@ -367,7 +423,9 @@ class TenantController extends Controller
             $request->new_quota ? (int) $request->new_quota : null,
             $request->notes,
             $newPlan,
-            $request->custom_storage_mb ? (int) $request->custom_storage_mb : null
+            $request->custom_storage_mb ? (int) $request->custom_storage_mb : null,
+            $request->input('payment_status', 'paid'),
+            $request->payment_method
         );
 
         $planNotice = $newPlan ? " dan paket ditingkatkan ke {$newPlan->name}" : "";

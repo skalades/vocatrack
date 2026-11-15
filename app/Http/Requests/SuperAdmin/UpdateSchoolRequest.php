@@ -16,7 +16,7 @@ class UpdateSchoolRequest extends FormRequest
         $schoolId = $this->route('school')?->id ?? $this->route('school');
 
         return [
-            'npsn' => ['required', 'string', 'size:8', 'unique:schools,npsn,' . $schoolId],
+            'npsn' => ['required', 'digits:8', 'unique:schools,npsn,' . $schoolId],
             'name' => ['required', 'string', 'max:150'],
             'address' => ['required', 'string'],
             'phone' => ['required', 'string', 'max:20'],

@@ -115,7 +115,7 @@
                                 'checkinTime' => $a->checkin_time ? substr($a->checkin_time, 0, 5) : null,
                                 'checkoutTime' => $a->checkout_time ? substr($a->checkout_time, 0, 5) : null,
                                 'status' => $a->status,
-                                'photoUrl' => $a->checkin_photo_path ? asset('storage/' . $a->checkin_photo_path) : null,
+                                'photoUrl' => $a->checkin_photo_path ? $a->checkin_photo_url : null,
                                 'isWithinRadius' => $a->is_within_radius,
                                 'studentLat' => $a->checkin_lat ? (float) $a->checkin_lat : null,
                                 'studentLng' => $a->checkin_lng ? (float) $a->checkin_lng : null,
@@ -143,10 +143,10 @@
                             <td class="py-3.5 px-4 text-center whitespace-nowrap">
                                 @if($a->checkin_photo_path)
                                     <button type="button" 
-                                            onclick="openImageLightbox('{{ asset('storage/' . $a->checkin_photo_path) }}')" 
+                                            onclick="openImageLightbox('{{ $a->checkin_photo_url }}')" 
                                             class="inline-block group cursor-pointer relative" 
                                             title="Klik untuk melihat foto selfie resolusi tinggi">
-                                        <img src="{{ asset('storage/' . $a->checkin_photo_path) }}" 
+                                        <img src="{{ $a->checkin_photo_url }}" 
                                              class="w-11 h-11 rounded-xl object-cover border border-slate-200 shadow-2xs group-hover:scale-110 group-hover:border-indigo-400 transition-all" 
                                              alt="Selfie Siswa">
                                         <span class="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow-xs">

@@ -9,29 +9,31 @@
     <h1 class="sr-only">Dashboard Admin Sekolah</h1>
 
     <!-- Hero Welcome Banner -->
-    <div class="relative overflow-hidden bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-6 sm:p-7 text-white shadow-xl shadow-slate-950/20 border border-slate-800">
-        <div class="absolute -right-10 -bottom-10 w-60 h-60 rounded-full bg-indigo-500/10 blur-3xl pointer-events-none"></div>
+    <div data-reveal data-spotlight class="vt-hero relative overflow-hidden bg-[#0B2B25] rounded-[28px] p-6 sm:p-7 text-white shadow-xl shadow-[#0B2B25]/20">
+        <div class="absolute -right-24 -top-24 w-96 h-96 rounded-full border border-white/[0.07] pointer-events-none"></div>
+        <div class="absolute -right-6 -top-6 w-60 h-60 rounded-full border border-white/[0.07] pointer-events-none"></div>
+        <div class="absolute -left-16 -bottom-24 w-72 h-72 rounded-full bg-[#C6F26B]/10 blur-3xl pointer-events-none"></div>
 
         <div class="relative space-y-4">
             <!-- Top Banner Meta: Badge + School + Live Date & Time -->
             <div class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-white/10">
                 <div class="flex items-center gap-2 flex-wrap">
-                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 uppercase tracking-wider">
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-[#C6F26B] text-[#0B2B25] uppercase tracking-wider">
                         ADMIN SEKOLAH
                     </span>
-                    <span class="text-xs text-slate-500">&bull;</span>
-                    <span class="text-xs font-semibold text-slate-300 truncate">{{ auth()->user()->school->name ?? 'SMK Terpadu' }}</span>
+                    <span class="text-xs text-white/30">&bull;</span>
+                    <span class="text-xs font-semibold text-[#A9C2B9] truncate">{{ auth()->user()->school->name ?? 'SMK Terpadu' }}</span>
                 </div>
 
                 <!-- Live Date & Clock Widget -->
-                <div class="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-2xl bg-white/10 backdrop-blur-md border border-white/15 text-xs text-slate-200 shadow-inner">
+                <div class="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-2xl bg-white/[0.06] border border-white/10 text-xs text-white/80">
                     <div class="flex items-center gap-1.5 font-semibold text-slate-200">
-                        <svg class="w-3.5 h-3.5 text-indigo-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                        <svg class="w-3.5 h-3.5 text-[#C6F26B] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                         <span id="banner-live-date">{{ \Carbon\Carbon::now()->isoFormat('dddd, D MMMM Y') }}</span>
                     </div>
                     <span class="text-white/30">&bull;</span>
-                    <div class="flex items-center gap-1.5 font-mono font-bold text-amber-300">
-                        <svg class="w-3.5 h-3.5 text-amber-300 shrink-0 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <div class="flex items-center gap-1.5 font-mono font-bold text-[#C6F26B]">
+                        <svg class="w-3.5 h-3.5 text-[#C6F26B] shrink-0 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                         <span id="banner-live-clock">{{ \Carbon\Carbon::now()->format('H:i:s') }} WIB</span>
                     </div>
                 </div>
@@ -40,10 +42,10 @@
             <!-- Main Greeting & Action Buttons -->
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-5">
                 <div class="space-y-1.5 min-w-0">
-                    <h2 class="text-xl sm:text-2xl font-black tracking-tight text-white">
-                        Selamat Datang, {{ auth()->user()->name }}
+                    <h2 class="font-display text-2xl sm:text-[28px] font-bold tracking-tight leading-tight text-white">
+                        Halo, {{ auth()->user()->name }}
                     </h2>
-                    <p class="text-xs sm:text-sm text-slate-300 font-medium max-w-2xl leading-relaxed">
+                    <p class="text-xs sm:text-sm text-[#A9C2B9] font-medium max-w-2xl leading-relaxed">
                         Selamat datang di panel kontrol operasional PKL. Pantau presensi harian, plotting penugasan siswa, dan kemitraan industri.
                     </p>
                 </div>

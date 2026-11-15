@@ -29,6 +29,16 @@ class IncidentReport extends Model
         'resolved_at' => 'datetime',
     ];
 
+    /**
+     * URL terproteksi untuk lampiran laporan kendala (disajikan dari disk privat).
+     */
+    public function getAttachmentUrlAttribute(): ?string
+    {
+        return $this->attachment_path
+            ? route('secure.file', ['type' => 'kendala', 'id' => $this->id])
+            : null;
+    }
+
     public function studentPkl(): BelongsTo
     {
         return $this->belongsTo(StudentPkl::class);

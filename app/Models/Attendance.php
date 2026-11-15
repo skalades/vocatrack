@@ -36,6 +36,16 @@ class Attendance extends Model
         'checkin_lng' => 'float',
     ];
 
+    /**
+     * URL terproteksi untuk selfie presensi (disajikan dari disk privat).
+     */
+    public function getCheckinPhotoUrlAttribute(): ?string
+    {
+        return $this->checkin_photo_path
+            ? route('secure.file', ['type' => 'presensi', 'id' => $this->id])
+            : null;
+    }
+
     public function studentPkl(): BelongsTo
     {
         return $this->belongsTo(StudentPkl::class);

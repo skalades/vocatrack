@@ -34,6 +34,46 @@ class ParentMonitoringService
     }
 
     /**
+     * Alasan portal orang tua tidak boleh diakses untuk siswa ini, atau null jika boleh.
+     * Portal publik wajib mengikuti status akun, sekolah, dan lisensi yang sama dengan
+     * area login (lihat middleware IdentifyTenant).
+     */
+    public function portalBlockReason(Student $student): ?string
+    {
+        if (!$student->is_parent_portal_active) {
+            return 'Akses portal monitoring untuk siswa ini sedang dinonaktifkan sementara oleh pihak sekolah.';
+        }
+
+        $user = $student->user;
+        $school = $user?->school;
+
+        if (!$user || !$school || !$school->is_active) {
+            return 'Portal monitoring tidak tersedia karena layanan sekolah sedang dinonaktifkan. Silakan hubungi pihak sekolah.';
+        }
+
+        if (!$user->is_active) {
+            return 'Portal monitoring tidak tersedia karena akun siswa sedang dinonaktifkan. Silakan hubungi pihak sekolah.';
+        }
+
+        $subscription = $school->activeSubscription();
+        if ($subscription && $subscription->isExpired() && !$subscription->isGracePeriod()) {
+            return 'Portal monitoring tidak tersedia karena masa layanan sekolah telah berakhir. Silakan hubungi pihak sekolah.';
+        }
+
+        return null;
+    }
+
+    /**
+     * Cari siswa berdasarkan token yang portalnya saat ini boleh diakses, atau null.
+     */
+    public function findAccessibleStudentByToken(string $token): ?Student
+    {
+        $student = $this->findStudentByToken($token);
+
+        return ($student && $this->portalBlockReason($student) === null) ? $student : null;
+    }
+
+    /**
      * Dapatkan ringkasan komprehensif aktivitas PKL siswa untuk portal orang tua.
      */
     public function getMonitoringData(Student $student): array

@@ -1,5 +1,9 @@
 @php
-    $isForestTheme = auth()->check() && auth()->user()->role === 'guru-pembimbing';
+    // Tema forest (senada portal siswa) untuk seluruh level staf
+    $forestRoles = ['guru-pembimbing' => 'teacher', 'super-admin' => 'admin', 'pembimbing-dudi' => 'industry', 'admin-sekolah' => 'school', 'kepala-sekolah' => 'principal'];
+    $currentRole = auth()->check() ? auth()->user()->role : null;
+    $isForestTheme = isset($forestRoles[$currentRole]);
+    $appKey = $forestRoles[$currentRole] ?? 'staff';
 @endphp
 <!DOCTYPE html>
 <html lang="id" class="h-full bg-slate-50 {{ $isForestTheme ? 'theme-forest' : '' }}">
@@ -20,7 +24,7 @@
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
     </style>
 </head>
-<body data-app="{{ $isForestTheme ? 'teacher' : 'staff' }}" class="h-full antialiased text-slate-800 bg-slate-50 {{ $isForestTheme ? 'selection:bg-[#C6F26B] selection:text-[#0B2B25]' : 'selection:bg-indigo-600 selection:text-white' }}">
+<body data-app="{{ $appKey }}" class="h-full antialiased text-slate-800 bg-slate-50 {{ $isForestTheme ? 'selection:bg-[#C6F26B] selection:text-[#0B2B25]' : 'selection:bg-indigo-600 selection:text-white' }}">
     <div class="min-h-full flex flex-col lg:flex-row">
 
         <!-- Mobile Drawer Backdrop -->
@@ -62,12 +66,12 @@
             @elseif(auth()->user()->supervisor && auth()->user()->supervisor->company)
                 <div class="px-5 py-3.5 bg-slate-900/60 border-b border-slate-800/70 flex items-center space-x-3">
                     <div class="relative flex items-center justify-center w-2.5 h-2.5 shrink-0">
-                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
-                        <span class="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                     </div>
                     <div class="min-w-0 flex-1">
                         <p class="text-xs font-bold text-slate-100 truncate">{{ auth()->user()->supervisor->company->name }}</p>
-                        <p class="text-[10px] text-cyan-400 font-mono tracking-tight uppercase">Mitra Industri DU/DI</p>
+                        <p class="text-[10px] text-indigo-400 font-mono tracking-tight uppercase">Mitra Industri DU/DI</p>
                     </div>
                 </div>
             @elseif(auth()->user()->role === 'super-admin')
@@ -270,7 +274,7 @@
                 @if($role === 'pembimbing-dudi')
                     <div class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest px-3 pt-2 pb-1.5 flex items-center justify-between">
                         <span>Mentor Industri DU/DI</span>
-                        <span class="w-1.5 h-1.5 rounded-full bg-cyan-500"></span>
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                     </div>
                     <a href="{{ route('dudi.dashboard') }}" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs transition-colors {{ request()->routeIs('dudi.dashboard') ? $activeClass : $inactiveClass }}">
                         <svg class="w-4 h-4 shrink-0 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
@@ -432,6 +436,21 @@
                         <button type="button" onclick="document.getElementById('flash-success').remove()" class="text-emerald-700 hover:text-emerald-900 p-1 rounded-lg hover:bg-emerald-100/50">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                         </button>
+                    </div>
+                @endif
+
+                @if(is_array(session('temporary_credential')) && auth()->user()?->hasRole('super-admin'))
+                    @php
+                        $tmpCred = session('temporary_credential');
+                    @endphp
+                    <div id="flash-credential" class="mt-3 p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-950 text-xs shadow-2xs space-y-2">
+                        <div class="font-bold">Kredensial sementara {{ $tmpCred['context'] ?? '' }} — hanya ditampilkan sekali</div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <span>Email: <code class="font-mono font-bold">{{ $tmpCred['email'] ?? '-' }}</code></span>
+                            <span>Kata sandi: <code id="flash-credential-password" class="font-mono font-bold px-1.5 py-0.5 rounded bg-white border border-amber-200">{{ $tmpCred['password'] ?? '' }}</code></span>
+                            <button type="button" onclick="navigator.clipboard?.writeText(document.getElementById('flash-credential-password').textContent.trim()); this.textContent='Tersalin';" class="px-2 py-1 rounded-lg bg-amber-100 hover:bg-amber-200 font-bold">Salin</button>
+                        </div>
+                        <p class="text-[11px] text-amber-800">Sampaikan lewat kanal aman. Pengguna wajib mengganti kata sandi ini saat login pertama.</p>
                     </div>
                 @endif
 

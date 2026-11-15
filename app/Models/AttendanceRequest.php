@@ -33,6 +33,16 @@ class AttendanceRequest extends Model
         'reviewed_at' => 'datetime',
     ];
 
+    /**
+     * URL terproteksi untuk lampiran permohonan (disajikan dari disk privat).
+     */
+    public function getAttachmentUrlAttribute(): ?string
+    {
+        return $this->attachment_path
+            ? route('secure.file', ['type' => 'permohonan', 'id' => $this->id])
+            : null;
+    }
+
     public function studentPkl(): BelongsTo
     {
         return $this->belongsTo(StudentPkl::class);

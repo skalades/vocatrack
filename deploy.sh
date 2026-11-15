@@ -26,6 +26,8 @@ fi
 
 echo "🗄️  [5/7] Menjalankan Migrasi Database..."
 php artisan migrate --force
+# Pindahkan berkas pribadi siswa lama dari disk publik ke disk privat (idempoten)
+php artisan vokatrack:migrate-private-files
 
 echo "⚡ [6/7] Mengoptimalkan Cache Laravel (Config, Route, View, Event)..."
 php artisan optimize:clear

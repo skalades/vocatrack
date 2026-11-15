@@ -116,7 +116,7 @@
                 <div class="flex items-center gap-2.5 pt-1">
                     <div id="photo-preview-box" class="relative w-[60px] h-[60px] rounded-[16px] bg-[#12382F] overflow-hidden shrink-0 flex items-center justify-center border border-slate-200">
                         @if($todayJournal && $todayJournal->photos->isNotEmpty())
-                            <img src="{{ Storage::url($todayJournal->photos->first()->photo_path) }}" alt="Bukti" class="w-full h-full object-cover">
+                            <img src="{{ $todayJournal->photos->first()->photo_url }}" alt="Bukti" class="w-full h-full object-cover">
                         @else
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#C6F26B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
@@ -190,7 +190,7 @@
                         },
                         'reviewer_name' => $journal->approvals->first()?->approver?->name ?? 'Pembimbing',
                         'reviewer_notes' => $journal->approvals->first()?->notes,
-                        'photos' => $journal->photos->map(fn($p) => asset('storage/' . $p->photo_path))->toArray(),
+                        'photos' => $journal->photos->map(fn($p) => $p->photo_url)->toArray(),
                         'is_editable' => in_array($journal->status, ['draft', 'revision']),
                     ];
                 @endphp

@@ -20,6 +20,8 @@ class ExtendSubscriptionRequest extends FormRequest
             'custom_storage_mb' => ['nullable', 'integer', 'min:100'],
             'notes' => ['nullable', 'string', 'max:255'],
             'plan_id' => ['nullable', 'exists:subscription_plans,id'],
+            'payment_status' => ['nullable', 'in:paid,unpaid'],
+            'payment_method' => ['nullable', 'string', 'max:100'],
         ];
     }
 }

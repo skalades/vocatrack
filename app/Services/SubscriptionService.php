@@ -52,8 +52,8 @@ class SubscriptionService
             }
         }
 
-        // Total lifetime revenue collected
-        $totalRevenue = (float) SchoolSubscription::sum('price_paid');
+        // Total lifetime revenue collected (hanya invoice yang benar-benar lunas)
+        $totalRevenue = (float) Invoice::where('status', 'paid')->sum('amount');
 
         // Active students registered across platform
         $totalStudents = Student::count();
@@ -143,7 +143,10 @@ class SubscriptionService
         ?float $customPrice = null,
         string $status = 'active',
         ?string $notes = null,
-        ?int $customStorageMb = null
+        ?int $customStorageMb = null,
+        bool $createInvoice = true,
+        string $paymentStatus = 'paid',
+        ?string $paymentMethod = null
     ): SchoolSubscription {
         $start = $startDate ?? Carbon::today();
         
@@ -160,7 +163,7 @@ class SubscriptionService
             $end = (clone $start)->addMonths($months);
         }
 
-        return DB::transaction(function () use ($school, $plan, $start, $end, $customQuota, $customPrice, $status, $notes, $customStorageMb) {
+        return DB::transaction(function () use ($school, $plan, $start, $end, $customQuota, $customPrice, $status, $notes, $customStorageMb, $createInvoice, $paymentStatus, $paymentMethod) {
             $subscription = SchoolSubscription::create([
                 'school_id' => $school->id,
                 'plan_id' => $plan->id,
@@ -174,20 +177,19 @@ class SubscriptionService
                 'notes' => $notes,
             ]);
 
-            // Create initial invoice
-            $invoiceNumber = 'INV-' . date('Ym') . '-' . strtoupper(Str::random(5));
-            Invoice::create([
-                'invoice_number' => $invoiceNumber,
-                'school_id' => $school->id,
-                'subscription_id' => $subscription->id,
-                'title' => "Biaya Sewa {$plan->name} ({$school->name})",
-                'amount' => $subscription->price_paid,
-                'due_date' => Carbon::today()->addDays(14),
-                'status' => 'paid',
-                'payment_method' => $subscription->price_paid > 0 ? 'Transfer Bank / APBD BOS' : 'Trial Evaluasi',
-                'paid_at' => Carbon::now(),
-                'notes' => 'Aktivasi lisensi sewa via Super Administrator',
-            ]);
+            if ($createInvoice) {
+                $amount = (float) $subscription->price_paid;
+                $this->createInvoice(
+                    $subscription,
+                    "Biaya Sewa {$plan->name} ({$school->name})",
+                    $amount,
+                    // Paket gratis/trial tidak memiliki tagihan yang perlu ditunggu.
+                    $amount > 0 ? $paymentStatus : 'paid',
+                    $amount > 0 ? $paymentMethod : 'Trial Evaluasi',
+                    14,
+                    'Aktivasi lisensi sewa via Super Administrator'
+                );
+            }
 
             return $subscription;
         });
@@ -203,7 +205,9 @@ class SubscriptionService
         ?int $newQuota = null,
         ?string $notes = null,
         ?SubscriptionPlan $newPlan = null,
-        ?int $customStorageMb = null
+        ?int $customStorageMb = null,
+        string $paymentStatus = 'paid',
+        ?string $paymentMethod = null
     ): SchoolSubscription {
         $newEndDate = $subscription->end_date->isPast()
             ? Carbon::today()->addMonths($additionalMonths)
@@ -213,36 +217,63 @@ class SubscriptionService
             'end_date' => $newEndDate,
             'status' => 'active',
             'price_paid' => $subscription->price_paid + $price,
-            'student_quota' => $newQuota ?? $subscription->student_quota,
-            'notes' => $notes ? ($subscription->notes . "\n" . $notes) : $subscription->notes,
+            'student_quota' => $newQuota ?? ($newPlan ? $newPlan->max_students : $subscription->student_quota),
+            'notes' => $notes ? trim($subscription->notes . "\n" . $notes) : $subscription->notes,
         ];
 
-        if ($customStorageMb !== null) {
-            $updateData['storage_quota_mb'] = $customStorageMb;
-        } elseif ($newPlan) {
+        // Upgrade paket dan kuota storage kustom diproses independen:
+        // kuota kustom hanya menimpa batas storage bawaan paket baru.
+        if ($newPlan) {
             $updateData['plan_id'] = $newPlan->id;
             $updateData['plan_name'] = $newPlan->name;
             $updateData['storage_quota_mb'] = $newPlan->max_storage_mb;
+        }
+        if ($customStorageMb !== null) {
+            $updateData['storage_quota_mb'] = $customStorageMb;
         }
 
         $subscription->update($updateData);
 
         if ($price > 0) {
-            $invoiceNumber = 'INV-' . date('Ym') . '-' . strtoupper(Str::random(5));
-            Invoice::create([
-                'invoice_number' => $invoiceNumber,
-                'school_id' => $subscription->school_id,
-                'subscription_id' => $subscription->id,
-                'title' => "Perpanjangan Sewa {$subscription->plan_name} (+{$additionalMonths} Bulan)",
-                'amount' => $price,
-                'due_date' => Carbon::today()->addDays(7),
-                'status' => 'paid',
-                'payment_method' => 'Transfer Bank BNI / Mandiri',
-                'paid_at' => Carbon::now(),
-                'notes' => "Perpanjangan sewa hingga " . $newEndDate->format('d M Y'),
-            ]);
+            $this->createInvoice(
+                $subscription,
+                "Perpanjangan Sewa {$subscription->plan_name} (+{$additionalMonths} Bulan)",
+                $price,
+                $paymentStatus,
+                $paymentMethod,
+                7,
+                'Perpanjangan sewa hingga ' . $newEndDate->format('d M Y')
+            );
         }
 
         return $subscription;
+    }
+
+    /**
+     * Terbitkan invoice langganan. Status 'paid' hanya bila pembayaran memang sudah diterima.
+     */
+    protected function createInvoice(
+        SchoolSubscription $subscription,
+        string $title,
+        float $amount,
+        string $paymentStatus,
+        ?string $paymentMethod,
+        int $dueInDays,
+        string $notes
+    ): Invoice {
+        $isPaid = $paymentStatus === 'paid';
+
+        return Invoice::create([
+            'invoice_number' => 'INV-' . date('Ym') . '-' . strtoupper(Str::random(5)),
+            'school_id' => $subscription->school_id,
+            'subscription_id' => $subscription->id,
+            'title' => $title,
+            'amount' => $amount,
+            'due_date' => Carbon::today()->addDays($dueInDays),
+            'status' => $isPaid ? 'paid' : 'unpaid',
+            'payment_method' => $isPaid ? ($paymentMethod ?: 'Pembayaran manual (dicatat Super Admin)') : $paymentMethod,
+            'paid_at' => $isPaid ? Carbon::now() : null,
+            'notes' => $notes,
+        ]);
     }
 }

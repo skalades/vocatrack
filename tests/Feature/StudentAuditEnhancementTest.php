@@ -168,7 +168,7 @@ class StudentAuditEnhancementTest extends TestCase
             'latitude' => -6.300000,
             'longitude' => 106.900000,
             'is_within_radius' => false,
-            'photo' => 'data:image/jpeg;base64,' . base64_encode('fake-photo-binary'),
+            'photo' => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
             'reason' => '',
         ]);
         $responseFail->assertStatus(422);
@@ -179,7 +179,7 @@ class StudentAuditEnhancementTest extends TestCase
             'latitude' => -6.300000,
             'longitude' => 106.900000,
             'is_within_radius' => false,
-            'photo' => 'data:image/jpeg;base64,' . base64_encode('fake-photo-binary'),
+            'photo' => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
             'reason' => 'Tugas dinas luar di lokasi proyek klien',
         ]);
         $responseSuccess->assertStatus(200);

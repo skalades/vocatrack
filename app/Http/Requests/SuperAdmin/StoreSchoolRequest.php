@@ -14,7 +14,7 @@ class StoreSchoolRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'npsn' => ['required', 'string', 'size:8', 'unique:schools,npsn'],
+            'npsn' => ['required', 'digits:8', 'unique:schools,npsn'],
             'name' => ['required', 'string', 'max:150'],
             'address' => ['required', 'string'],
             'phone' => ['required', 'string', 'max:20'],
@@ -23,6 +23,8 @@ class StoreSchoolRequest extends FormRequest
             'admin_email' => ['required', 'email', 'unique:users,email'],
             'plan_id' => ['required', 'exists:subscription_plans,id'],
             'custom_quota' => ['nullable', 'integer', 'min:10'],
+            'payment_status' => ['nullable', 'in:paid,unpaid'],
+            'payment_method' => ['nullable', 'string', 'max:100'],
             'custom_storage_mb' => ['nullable', 'integer', 'min:100'],
         ];
     }

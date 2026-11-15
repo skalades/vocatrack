@@ -10,6 +10,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ParentLinkController;
 use App\Http\Controllers\ParentMonitoringController;
 use App\Http\Controllers\PklMapController;
+use App\Http\Controllers\SecureFileController;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\SuperAdmin\AuditLogController;
 use App\Http\Controllers\SuperAdmin\BackupController;
@@ -40,6 +41,13 @@ Route::get('/verify/cert/{uuid}/download', [CertificateVerificationController::c
 
 // Guest Public Parent Monitoring Portal (No Login Required)
 Route::get('/pantau/{token}', [ParentMonitoringController::class, 'show'])->middleware('throttle:60,1')->name('parent.monitor');
+Route::get('/pantau/{token}/foto/{photo}', [SecureFileController::class, 'parentJournalPhoto'])->middleware('throttle:120,1')->whereNumber('photo')->name('parent.monitor.photo');
+
+// Berkas pribadi siswa (selfie, foto jurnal, lampiran) — disajikan dari disk privat dengan cek hak akses
+Route::middleware(['auth', 'IdentifyTenant'])->get('/berkas/{type}/{id}', [SecureFileController::class, 'show'])
+    ->whereIn('type', array_keys(\App\Services\SecureFileService::TYPES))
+    ->whereNumber('id')
+    ->name('secure.file');
 
 // Shared Authenticated Notification Routes
 Route::middleware(['auth'])->group(function () {
@@ -72,7 +80,7 @@ Route::middleware(['auth', 'role:super-admin'])->prefix('super-admin')->group(fu
     Route::post('/schools/{school}/reset-admin-password', [TenantController::class, 'resetAdminPassword'])->name('superadmin.schools.reset-admin-password');
 
     // Storage Quota & Offboarding Export
-    Route::match(['get', 'post'], '/schools/{school}/storage/recalculate', [TenantController::class, 'recalculateSchoolStorage'])->name('superadmin.schools.recalculate-storage');
+    Route::post('/schools/{school}/storage/recalculate', [TenantController::class, 'recalculateSchoolStorage'])->name('superadmin.schools.recalculate-storage');
     Route::post('/schools/{school}/storage/quota', [TenantController::class, 'updateSchoolStorageQuota'])->name('superadmin.schools.update-storage-quota');
     Route::get('/schools/{school}/offboard-export', [TenantController::class, 'exportSchoolArchive'])->name('superadmin.schools.offboard-export');
 
@@ -235,7 +243,7 @@ Route::middleware(['auth', 'IdentifyTenant', 'role:siswa'])->prefix('siswa')->gr
     Route::get('/profil', [StudentController::class, 'profile'])->name('student.profile');
     Route::get('/kendala', [StudentController::class, 'incidents'])->name('student.incidents');
     Route::post('/kendala/{report}/followup', [StudentController::class, 'followupIncident'])->name('student.incident.followup');
-    Route::post('/parent-token/regenerate', [ParentMonitoringController::class, 'regenerate'])->name('student.parent-token.regenerate');
+    Route::post('/parent-token/regenerate', [ParentMonitoringController::class, 'regenerate'])->middleware('throttle:3,1440')->name('student.parent-token.regenerate');
     Route::get('/sertifikat/download', [StudentController::class, 'downloadCertificate'])->name('student.certificate.download');
 
     // Pengumuman Siswa

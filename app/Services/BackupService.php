@@ -12,9 +12,12 @@ use App\Models\Student;
 use App\Models\StudentPkl;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use ZipArchive;
 
 class BackupService
@@ -30,59 +33,128 @@ class BackupService
     }
 
     /**
-     * Create a structured snapshot backup of key platform tables.
+     * Seluruh tabel domain yang dicadangkan, diurutkan sesuai dependensi foreign key
+     * (induk lebih dulu). Restore menghapus data dengan urutan terbalik lalu mengisi
+     * ulang dengan urutan ini, sehingga tetap aman walau pemeriksaan FK tidak bisa
+     * dimatikan (mis. PostgreSQL tanpa hak superuser).
      */
-    public function createDatabaseBackup(): array
+    public const BACKUP_TABLES = [
+        'schools',
+        'school_settings',
+        'subscription_plans',
+        'school_subscriptions',
+        'invoices',
+        'platform_settings',
+        'users',
+        'profiles',
+        'majors',
+        'classes',
+        'students',
+        'teachers',
+        'major_teacher',
+        'companies',
+        'company_major',
+        'supervisors',
+        'pkl_periods',
+        'student_pkl',
+        'attendances',
+        'attendance_requests',
+        'journals',
+        'journal_photos',
+        'journal_approvals',
+        'assessments',
+        'announcements',
+        'school_holidays',
+        'incident_reports',
+        'incident_followups',
+        'supervision_visits',
+        'certificates',
+        'notifications',
+        'activity_logs',
+        'platform_announcements',
+        'school_requests',
+    ];
+
+    /**
+     * Tabel infrastruktur/ephemeral yang sengaja tidak dicadangkan.
+     */
+    public const EXCLUDED_TABLES = [
+        'migrations',
+        'cache',
+        'cache_locks',
+        'jobs',
+        'job_batches',
+        'failed_jobs',
+        'sessions',
+        'password_reset_tokens',
+    ];
+
+    /**
+     * Tabel yang tetap dicadangkan tetapi TIDAK ditimpa saat restore.
+     */
+    public const PRESERVED_ON_RESTORE = [
+        'activity_logs',
+    ];
+
+    public const FORMAT_NAME = 'vokatrack-backup';
+    public const FORMAT_VERSION = 2;
+    public const FILE_EXTENSION = 'vtbak';
+
+    protected const CHUNK_SIZE = 500;
+
+    /**
+     * Buat snapshot terenkripsi seluruh tabel domain.
+     *
+     * Format berkas (.vtbak): baris pertama berisi header JSON polos, setiap baris
+     * berikutnya adalah satu chunk {t: tabel, r: baris[]} yang dienkripsi dengan APP_KEY.
+     * Ditulis secara streaming sehingga tidak menampung seluruh database di memori.
+     */
+    public function createDatabaseBackup(string $prefix = 'backup_vokatrack'): array
     {
         $timestamp = Carbon::now()->format('Ymd_His');
-        $filename = "backup_vokatrack_{$timestamp}.json";
+        $filename = "{$prefix}_{$timestamp}_" . Str::lower(Str::random(6)) . '.' . self::FILE_EXTENSION;
         $filePath = "{$this->backupDir}/{$filename}";
 
-        $tables = [
-            'schools',
-            'school_settings',
-            'subscription_plans',
-            'school_subscriptions',
-            'invoices',
-            'users',
-            'profiles',
-            'majors',
-            'school_classes',
-            'students',
-            'teachers',
-            'companies',
-            'supervisors',
-            'pkl_periods',
-            'student_pkl',
-            'attendances',
-            'journals',
-            'assessments',
-            'platform_settings',
-            'platform_announcements',
-            'activity_logs',
-        ];
+        $schema = DB::getSchemaBuilder();
+        $tables = array_values(array_filter(self::BACKUP_TABLES, fn ($t) => $schema->hasTable($t)));
 
-        $backupData = [
-            'app' => 'VokaTrack Cloud',
-            'version' => '1.3.0',
-            'created_at' => Carbon::now()->toIso8601String(),
-            'tables' => [],
-        ];
-
-        foreach ($tables as $table) {
-            if (DB::getSchemaBuilder()->hasTable($table)) {
-                $rows = [];
-                // Chunk queries to prevent memory exhaustion on large multi-tenant tables
-                DB::table($table)->orderBy('id')->chunk(500, function ($chunk) use (&$rows) {
-                    foreach ($chunk as $item) {
-                        $rows[] = (array) $item;
-                    }
-                });
-                $backupData['tables'][$table] = $rows;
-            }
+        $handle = fopen($filePath, 'wb');
+        if ($handle === false) {
+            throw new \RuntimeException("Tidak dapat menulis berkas cadangan {$filename}.");
         }
 
-        File::put($filePath, json_encode($backupData, JSON_PRETTY_PRINT));
+        $rowCounts = [];
+
+        try {
+            $header = [
+                'format' => self::FORMAT_NAME,
+                'version' => self::FORMAT_VERSION,
+                'app' => 'VokaTrack Cloud',
+                'created_at' => Carbon::now()->toIso8601String(),
+                'driver' => DB::getDriverName(),
+                'encrypted' => true,
+                'key_fingerprint' => $this->keyFingerprint(),
+                'tables' => $tables,
+            ];
+            fwrite($handle, json_encode($header) . "\n");
+
+            foreach ($tables as $table) {
+                $rowCounts[$table] = 0;
+                DB::table($table)->orderBy('id')->chunk(self::CHUNK_SIZE, function ($chunk) use ($handle, $table, &$rowCounts) {
+                    $rows = $chunk->map(fn ($item) => (array) $item)->all();
+                    $rowCounts[$table] += count($rows);
+                    $payload = json_encode(['t' => $table, 'r' => $rows], JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_SUBSTITUTE);
+                    fwrite($handle, Crypt::encryptString($payload) . "\n");
+                });
+            }
+        } catch (\Throwable $e) {
+            fclose($handle);
+            File::delete($filePath);
+            throw $e;
+        }
+
+        fclose($handle);
+        @chmod($filePath, 0600);
 
         return [
             'filename' => $filename,
@@ -90,11 +162,16 @@ class BackupService
             'size' => File::size($filePath),
             'size_formatted' => round(File::size($filePath) / 1024, 2) . ' KB',
             'created_at' => Carbon::now(),
+            'tables_count' => count($tables),
+            'row_counts' => $rowCounts,
         ];
     }
 
     /**
-     * Restore database snapshot from a backup file.
+     * Pulihkan database dari berkas cadangan (.vtbak terenkripsi, atau .json format lama).
+     *
+     * Berkas divalidasi penuh terlebih dahulu, lalu snapshot pengaman otomatis dibuat
+     * sehingga restore yang keliru masih dapat dibatalkan.
      */
     public function restoreDatabaseBackup(string $filename): array
     {
@@ -105,45 +182,238 @@ class BackupService
             throw new \RuntimeException("Berkas cadangan {$safeFilename} tidak ditemukan.");
         }
 
-        $raw = File::get($filePath);
-        $backupData = json_decode($raw, true);
-
-        if (!is_array($backupData) || !isset($backupData['tables'])) {
-            throw new \RuntimeException("Format berkas cadangan {$safeFilename} tidak valid.");
+        $extension = strtolower(pathinfo($safeFilename, PATHINFO_EXTENSION));
+        if (!in_array($extension, [self::FILE_EXTENSION, 'json'], true)) {
+            throw new \RuntimeException("Berkas {$safeFilename} bukan snapshot database yang dapat dipulihkan.");
         }
 
-        $driver = DB::getDriverName();
+        // Validasi penuh (dekripsi + parsing) sebelum menyentuh data apa pun.
+        $tablesInBackup = $extension === self::FILE_EXTENSION
+            ? $this->validateEncryptedBackup($filePath, $safeFilename)
+            : array_keys($this->readLegacyBackup($filePath, $safeFilename));
 
-        DB::transaction(function () use ($backupData, $driver) {
-            if ($driver === 'mysql') {
-                DB::statement('SET FOREIGN_KEY_CHECKS=0;');
-            } elseif ($driver === 'sqlite') {
-                DB::statement('PRAGMA foreign_keys = OFF;');
-            }
+        $safetySnapshot = $this->createDatabaseBackup('pre_restore_safety');
 
-            foreach ($backupData['tables'] as $table => $rows) {
-                if (DB::getSchemaBuilder()->hasTable($table)) {
+        $schema = DB::getSchemaBuilder();
+        $tablesInBackup = array_values(array_filter($tablesInBackup, fn ($t) => $schema->hasTable($t)));
+
+        // Urutkan sesuai dependensi FK; tabel tak dikenal (dari backup lama) di akhir.
+        $ordered = array_values(array_unique(array_merge(
+            array_values(array_intersect(self::BACKUP_TABLES, $tablesInBackup)),
+            array_values(array_diff($tablesInBackup, self::BACKUP_TABLES))
+        )));
+
+        // Jejak audit tidak pernah ditimpa: log setelah snapshot (termasuk aksi restore ini)
+        // harus tetap utuh untuk kebutuhan forensik.
+        $ordered = array_values(array_diff($ordered, self::PRESERVED_ON_RESTORE));
+
+        // Akun super admin saat ini dipertahankan agar restore tidak mengunci operator
+        // (mis. kata sandi kembali ke versi lama atau akun hilang dari snapshot).
+        $preservedSuperAdmins = in_array('users', $ordered, true)
+            ? DB::table('users')->where('role', 'super-admin')->get()->map(fn ($row) => (array) $row)->all()
+            : [];
+
+        $this->withForeignKeyChecksDisabled(function () use ($ordered, $extension, $filePath, $safeFilename, $preservedSuperAdmins) {
+            DB::transaction(function () use ($ordered, $extension, $filePath, $safeFilename, $preservedSuperAdmins) {
+                foreach (array_reverse($ordered) as $table) {
                     DB::table($table)->delete();
-                    if (!empty($rows)) {
-                        foreach (array_chunk($rows, 200) as $batch) {
-                            DB::table($table)->insert($batch);
-                        }
+                }
+
+                $columnCache = [];
+                $insert = function (string $table, array $rows) use ($ordered, &$columnCache) {
+                    if (empty($rows) || !in_array($table, $ordered, true)) {
+                        return;
+                    }
+                    // Abaikan kolom yang sudah tidak ada di skema saat ini.
+                    $columns = $columnCache[$table] ??= array_flip(Schema::getColumnListing($table));
+                    $rows = array_map(fn ($row) => array_intersect_key((array) $row, $columns), $rows);
+                    foreach (array_chunk($rows, 200) as $batch) {
+                        DB::table($table)->insert($batch);
+                    }
+                };
+
+                if ($extension === self::FILE_EXTENSION) {
+                    $this->eachEncryptedChunk($filePath, $safeFilename, fn (string $table, array $rows) => $insert($table, $rows));
+                } else {
+                    $legacy = $this->readLegacyBackup($filePath, $safeFilename);
+                    foreach ($ordered as $table) {
+                        $insert($table, $legacy[$table] ?? []);
                     }
                 }
-            }
 
-            if ($driver === 'mysql') {
-                DB::statement('SET FOREIGN_KEY_CHECKS=1;');
-            } elseif ($driver === 'sqlite') {
-                DB::statement('PRAGMA foreign_keys = ON;');
-            }
+                if (!empty($preservedSuperAdmins)) {
+                    DB::table('users')->where('role', 'super-admin')->delete();
+                    foreach ($preservedSuperAdmins as $row) {
+                        DB::table('users')
+                            ->where('id', $row['id'])
+                            ->orWhere('email', $row['email'])
+                            ->delete();
+                        DB::table('users')->insert($row);
+                    }
+                }
+
+                $this->resetPostgresSequences($ordered);
+            });
         });
 
         return [
             'filename' => $safeFilename,
             'restored_at' => Carbon::now(),
-            'tables_count' => count($backupData['tables']),
+            'tables_count' => count($ordered),
+            'safety_snapshot' => $safetySnapshot['filename'],
         ];
+    }
+
+    /**
+     * Sidik jari pendek APP_KEY untuk mendeteksi ketidakcocokan kunci saat restore.
+     */
+    protected function keyFingerprint(): string
+    {
+        return substr(hash('sha256', (string) config('app.key')), 0, 16);
+    }
+
+    /**
+     * Validasi header serta seluruh chunk terenkripsi. Mengembalikan daftar tabel.
+     */
+    protected function validateEncryptedBackup(string $filePath, string $safeFilename): array
+    {
+        $header = $this->readEncryptedHeader($filePath, $safeFilename);
+        $this->eachEncryptedChunk($filePath, $safeFilename, function () {});
+
+        return $header['tables'];
+    }
+
+    protected function readEncryptedHeader(string $filePath, string $safeFilename): array
+    {
+        $handle = fopen($filePath, 'rb');
+        $line = $handle ? fgets($handle) : false;
+        if ($handle) {
+            fclose($handle);
+        }
+
+        $header = $line !== false ? json_decode($line, true) : null;
+        if (!is_array($header) || ($header['format'] ?? null) !== self::FORMAT_NAME || !isset($header['tables']) || !is_array($header['tables'])) {
+            throw new \RuntimeException("Format berkas cadangan {$safeFilename} tidak valid.");
+        }
+
+        if (($header['key_fingerprint'] ?? null) !== $this->keyFingerprint()) {
+            throw new \RuntimeException("Berkas cadangan {$safeFilename} dienkripsi dengan APP_KEY yang berbeda dan tidak dapat dipulihkan di server ini.");
+        }
+
+        return $header;
+    }
+
+    /**
+     * Iterasi setiap chunk terenkripsi secara streaming: $callback(string $table, array $rows).
+     */
+    protected function eachEncryptedChunk(string $filePath, string $safeFilename, callable $callback): void
+    {
+        $header = $this->readEncryptedHeader($filePath, $safeFilename);
+        $allowedTables = array_flip($header['tables']);
+
+        $handle = fopen($filePath, 'rb');
+        fgets($handle); // lewati header
+
+        try {
+            $lineNo = 1;
+            while (($line = fgets($handle)) !== false) {
+                $lineNo++;
+                $line = trim($line);
+                if ($line === '') {
+                    continue;
+                }
+
+                try {
+                    $chunk = json_decode(Crypt::decryptString($line), true, 512, JSON_THROW_ON_ERROR);
+                } catch (\Throwable $e) {
+                    throw new \RuntimeException("Berkas cadangan {$safeFilename} rusak pada baris {$lineNo}.");
+                }
+
+                if (!isset($chunk['t'], $chunk['r']) || !is_array($chunk['r']) || !isset($allowedTables[$chunk['t']])) {
+                    throw new \RuntimeException("Berkas cadangan {$safeFilename} memuat data tidak valid pada baris {$lineNo}.");
+                }
+
+                $callback($chunk['t'], $chunk['r']);
+            }
+        } finally {
+            fclose($handle);
+        }
+    }
+
+    /**
+     * Baca berkas cadangan format lama (.json polos, v1). Mengembalikan [tabel => baris[]].
+     */
+    protected function readLegacyBackup(string $filePath, string $safeFilename): array
+    {
+        $backupData = json_decode(File::get($filePath), true);
+
+        if (!is_array($backupData) || !isset($backupData['tables']) || !is_array($backupData['tables'])) {
+            throw new \RuntimeException("Format berkas cadangan {$safeFilename} tidak valid.");
+        }
+
+        $tables = $backupData['tables'];
+
+        // Backup v1 memakai nama tabel keliru "school_classes" (tabel sebenarnya "classes").
+        if (isset($tables['school_classes']) && !isset($tables['classes'])) {
+            $tables['classes'] = $tables['school_classes'];
+        }
+        unset($tables['school_classes']);
+
+        foreach (self::EXCLUDED_TABLES as $excluded) {
+            unset($tables[$excluded]);
+        }
+
+        return $tables;
+    }
+
+    /**
+     * Matikan pemeriksaan foreign key selama callback (MySQL & SQLite). Dijalankan di luar
+     * transaksi karena PRAGMA SQLite diabaikan di dalam transaksi. PostgreSQL mengandalkan
+     * urutan hapus/isi berdasarkan dependensi.
+     */
+    protected function withForeignKeyChecksDisabled(callable $callback): void
+    {
+        $driver = DB::getDriverName();
+        $isMysql = in_array($driver, ['mysql', 'mariadb'], true);
+
+        if ($isMysql) {
+            DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        } elseif ($driver === 'sqlite') {
+            DB::statement('PRAGMA foreign_keys = OFF;');
+        }
+
+        try {
+            $callback();
+        } finally {
+            if ($isMysql) {
+                DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+            } elseif ($driver === 'sqlite') {
+                DB::statement('PRAGMA foreign_keys = ON;');
+            }
+        }
+    }
+
+    /**
+     * Setelah insert dengan ID eksplisit, sequence PostgreSQL disetel ulang agar insert
+     * berikutnya tidak bentrok dengan primary key.
+     */
+    protected function resetPostgresSequences(array $tables): void
+    {
+        if (DB::getDriverName() !== 'pgsql') {
+            return;
+        }
+
+        foreach ($tables as $table) {
+            $sequence = DB::selectOne('SELECT pg_get_serial_sequence(?, ?) AS seq', [$table, 'id'])?->seq;
+            if (!$sequence) {
+                continue;
+            }
+            $quoted = '"' . str_replace('"', '""', $table) . '"';
+            DB::statement(
+                "SELECT setval(?, COALESCE((SELECT MAX(id) FROM {$quoted}), 1), (SELECT MAX(id) FROM {$quoted}) IS NOT NULL)",
+                [$sequence]
+            );
+        }
     }
 
     /**
@@ -155,7 +425,7 @@ class BackupService
         $backups = [];
 
         foreach ($files as $file) {
-            if ($file->getExtension() === 'json' || $file->getExtension() === 'sql' || $file->getExtension() === 'zip') {
+            if (in_array($file->getExtension(), [self::FILE_EXTENSION, 'json', 'sql', 'zip'], true)) {
                 $backups[] = [
                     'filename' => $file->getFilename(),
                     'size' => $file->getSize(),

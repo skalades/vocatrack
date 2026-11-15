@@ -288,6 +288,7 @@ class SaaSEnhancementsAndAuditFixTest extends TestCase
 
         // Clean up backup file
         $backupService->deleteBackup($backup['filename']);
+        $backupService->deleteBackup($result['safety_snapshot']);
     }
 
     public function test_saas_evaluate_subscriptions_artisan_command(): void

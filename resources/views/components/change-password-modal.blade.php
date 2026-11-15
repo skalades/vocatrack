@@ -19,6 +19,12 @@
             </button>
         </div>
 
+        @if(!empty($forcePasswordChange))
+            <div class="p-3 rounded-2xl bg-amber-50 border border-amber-200 text-[11px] font-semibold text-amber-800">
+                Akun Anda masih memakai kata sandi sementara dari administrator. Demi keamanan, ganti kata sandi sekarang sebelum melanjutkan.
+            </div>
+        @endif
+
         <!-- Form Ubah Password -->
         <form method="POST" action="{{ route('profile.change-password') }}" class="space-y-4">
             @csrf
@@ -92,7 +98,14 @@
         }
     }
 
+    const CHANGE_PASSWORD_FORCED = @json(!empty($forcePasswordChange));
+
+    if (CHANGE_PASSWORD_FORCED) {
+        document.addEventListener('DOMContentLoaded', openChangePasswordModal);
+    }
+
     function closeChangePasswordModal() {
+        if (CHANGE_PASSWORD_FORCED) return;
         const modal = document.getElementById('modal-change-password');
         if (modal) {
             modal.classList.add('hidden');
