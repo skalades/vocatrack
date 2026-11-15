@@ -14,6 +14,7 @@ use App\Models\SupervisionVisit;
 use App\Services\AnnouncementService;
 use App\Services\AssessmentService;
 use App\Services\AttendanceService;
+use App\Services\HolidayService;
 use App\Services\IncidentReportService;
 use App\Services\JournalService;
 use App\Services\SupervisionService;
@@ -36,39 +37,219 @@ class TeacherController extends Controller
         return $teacher;
     }
 
-    public function dashboard(AnnouncementService $announcementService)
+    public function dashboard(AnnouncementService $announcementService, AttendanceService $attendanceService, HolidayService $holidayService)
     {
         $teacher = $this->getTeacher();
+        $user = Auth::user();
+        $now = Carbon::now();
+        $today = Carbon::today();
+        $todayString = $today->toDateString();
+
         $studentPkls = StudentPkl::where('teacher_id', $teacher->id)
-            ->with(['student.user', 'student.class.major', 'company', 'supervisor.user', 'assessment'])
-            ->withCount([
-                'attendances',
-                'journals as approved_journals_count' => fn($q) => $q->where('status', 'approved')
-            ])
+            ->with(['student.user', 'student.class.major', 'company', 'supervisor.user', 'assessment', 'pklPeriod'])
             ->get();
-            
-        $totalStudents = $studentPkls->count();
-        $totalCompanies = $studentPkls->pluck('company_id')->unique()->count();
 
-        $today = Carbon::today()->toDateString();
         $spklIds = $studentPkls->pluck('id');
+        $totalStudents = $studentPkls->count();
+        $companies = $studentPkls->pluck('company')->filter()->unique('id')->values();
+        $totalCompanies = $companies->count();
 
+        // ---------- Periode PKL aktif & progres waktu ----------
+        $activePeriod = $studentPkls->pluck('pklPeriod')->filter()->unique('id')
+            ->sortByDesc(fn ($p) => $p->is_active)->first();
+        $periodProgress = null;
+        if ($activePeriod && $activePeriod->start_date && $activePeriod->end_date) {
+            $totalDays = max(1, $activePeriod->start_date->diffInDays($activePeriod->end_date) + 1);
+            $elapsed = $today->lt($activePeriod->start_date) ? 0
+                : min($totalDays, $activePeriod->start_date->diffInDays($today) + 1);
+            $periodProgress = [
+                'name' => $activePeriod->name,
+                'start' => $activePeriod->start_date,
+                'end' => $activePeriod->end_date,
+                'day' => $elapsed,
+                'total' => $totalDays,
+                'percent' => (int) round($elapsed / $totalDays * 100),
+                'remaining' => max(0, $totalDays - $elapsed),
+            ];
+        }
+
+        // ---------- Presensi hari ini (status per siswa) ----------
         $todayAttendances = Attendance::whereIn('student_pkl_id', $spklIds)
-            ->where('date', $today)
+            ->whereDate('date', $todayString)
             ->get()
             ->keyBy('student_pkl_id');
 
-        $todayPresentCount = $todayAttendances->whereIn('status', ['hadir', 'terlambat', 'dinas_luar', 'luar_kantor'])->count();
-        $todayLateCount = $todayAttendances->where('status', 'terlambat')->count();
+        $todayApprovedRequests = AttendanceRequest::whereIn('student_pkl_id', $spklIds)
+            ->whereIn('status', ['pending', 'approved'])
+            ->whereDate('start_date', '<=', $todayString)
+            ->whereDate('end_date', '>=', $todayString)
+            ->get()
+            ->groupBy('student_pkl_id');
 
+        $isSchoolHoliday = $user->school_id ? $holidayService->isHoliday($user->school_id, $today) : false;
+        $workHoursCache = [];
+        $todayRows = collect();
+
+        foreach ($studentPkls as $sp) {
+            $att = $todayAttendances->get($sp->id);
+            $company = $sp->company;
+            $isWorkDay = true;
+            $hours = null;
+            if ($company) {
+                $isWorkDay = in_array($company->work_days, ['6_days', '6_hari'], true)
+                    ? $today->dayOfWeekIso <= 6
+                    : $today->dayOfWeekIso <= 5;
+                $hours = $workHoursCache[$company->id] ??= $attendanceService->resolveWorkHours($company, $sp->school_id);
+            }
+
+            $state = 'belum';
+            if ($att) {
+                $state = $att->status;
+            } elseif ($isSchoolHoliday) {
+                $state = 'libur';
+            } elseif (!$isWorkDay) {
+                $state = 'libur_dudi';
+            } elseif ($req = optional($todayApprovedRequests->get($sp->id))->first()) {
+                $state = $req->status === 'approved' ? $req->type : 'pengajuan';
+            } elseif ($hours && $now->format('H:i:s') > ($hours['checkin_late'] ?? '08:00:00')) {
+                $state = 'belum_telat';
+            }
+
+            $todayRows->push([
+                'spkl' => $sp,
+                'attendance' => $att,
+                'state' => $state,
+                'hours' => $hours,
+                'flagged' => $att && ($att->is_mock_detected || $att->is_within_radius === false),
+            ]);
+        }
+
+        $presentStates = ['hadir', 'terlambat', 'dinas_luar', 'luar_kantor'];
+        $todaySummary = [
+            'hadir' => $todayRows->where('state', 'hadir')->count(),
+            'terlambat' => $todayRows->where('state', 'terlambat')->count(),
+            'tugas' => $todayRows->whereIn('state', ['dinas_luar', 'luar_kantor'])->count(),
+            'izin_sakit' => $todayRows->whereIn('state', ['izin', 'sakit', 'pengajuan'])->count(),
+            'alfa' => $todayRows->where('state', 'alfa')->count(),
+            'belum' => $todayRows->whereIn('state', ['belum', 'belum_telat'])->count(),
+            'belum_telat' => $todayRows->where('state', 'belum_telat')->count(),
+            'libur' => $todayRows->whereIn('state', ['libur', 'libur_dudi'])->count(),
+        ];
+        $todayPresentCount = $todayRows->whereIn('state', $presentStates)->count();
+        $todayLateCount = $todaySummary['terlambat'];
+        $expectedToday = max(0, $totalStudents - $todaySummary['libur']);
+        $checkedOutCount = $todayAttendances->whereNotNull('checkout_time')->count();
+
+        // Urutkan: yang perlu perhatian di atas
+        $stateOrder = ['belum_telat' => 0, 'alfa' => 1, 'pengajuan' => 2, 'terlambat' => 3, 'belum' => 4];
+        $todayRows = $todayRows->sortBy(fn ($r) => ($r['flagged'] ? -1 : ($stateOrder[$r['state']] ?? 5)))->values();
+
+        // ---------- Peringatan lokasi (7 hari terakhir) ----------
+        $flaggedAttendances = Attendance::whereIn('student_pkl_id', $spklIds)
+            ->whereDate('date', '>=', $today->copy()->subDays(6)->toDateString())
+            ->where(fn ($q) => $q->where('is_mock_detected', true)->orWhere('is_within_radius', false))
+            ->with(['studentPkl.student.user', 'studentPkl.company'])
+            ->orderByDesc('date')
+            ->take(5)
+            ->get();
+        $flaggedTodayCount = $todayRows->where('flagged', true)->count();
+
+        // ---------- Tren kehadiran 7 hari ----------
+        $trendRaw = Attendance::whereIn('student_pkl_id', $spklIds)
+            ->whereDate('date', '>=', $today->copy()->subDays(6)->toDateString())
+            ->selectRaw('DATE(date) as d, status, COUNT(*) as c')
+            ->groupBy('d', 'status')
+            ->get()
+            ->groupBy('d');
+        $attendanceTrend = collect(range(6, 0))->map(function ($i) use ($today, $trendRaw) {
+            $date = $today->copy()->subDays($i);
+            $rows = $trendRaw->get($date->toDateString(), collect());
+            $sum = fn (array $st) => (int) $rows->whereIn('status', $st)->sum('c');
+            return [
+                'date' => $date,
+                'hadir' => $sum(['hadir', 'dinas_luar', 'luar_kantor']),
+                'terlambat' => $sum(['terlambat']),
+                'izin' => $sum(['izin', 'sakit']),
+                'alfa' => $sum(['alfa']),
+            ];
+        });
+
+        // ---------- Statistik per siswa (selama periode) ----------
+        $attStats = Attendance::whereIn('student_pkl_id', $spklIds)
+            ->selectRaw('student_pkl_id, status, COUNT(*) as c')
+            ->groupBy('student_pkl_id', 'status')
+            ->get()
+            ->groupBy('student_pkl_id');
+        $journalStats = Journal::whereIn('student_pkl_id', $spklIds)
+            ->selectRaw('student_pkl_id, status, COUNT(*) as c, MAX(date) as last_date')
+            ->groupBy('student_pkl_id', 'status')
+            ->get()
+            ->groupBy('student_pkl_id');
+        $lastCheckins = Attendance::whereIn('student_pkl_id', $spklIds)
+            ->whereNotNull('checkin_time')
+            ->selectRaw('student_pkl_id, MAX(date) as last_date')
+            ->groupBy('student_pkl_id')
+            ->pluck('last_date', 'student_pkl_id');
+        $openIncidentsBySpkl = IncidentReport::whereIn('student_pkl_id', $spklIds)
+            ->whereIn('status', ['submitted', 'in_progress'])
+            ->selectRaw('student_pkl_id, COUNT(*) as c')
+            ->groupBy('student_pkl_id')
+            ->pluck('c', 'student_pkl_id');
+
+        $studentInsights = $studentPkls->map(function ($sp) use ($attStats, $journalStats, $lastCheckins, $openIncidentsBySpkl, $presentStates, $today, $todayRows) {
+            $att = $attStats->get($sp->id, collect());
+            $jr = $journalStats->get($sp->id, collect());
+            $attCount = fn (array $st) => (int) $att->whereIn('status', $st)->sum('c');
+            $jrCount = fn (array $st) => (int) $jr->whereIn('status', $st)->sum('c');
+
+            $totalAtt = (int) $att->sum('c');
+            $present = $attCount($presentStates);
+            $lastJournal = $jr->max('last_date');
+            $daysSinceJournal = $lastJournal ? Carbon::parse($lastJournal)->diffInDays($today) : null;
+            $journalTotal = $jrCount(['draft', 'submitted', 'review_guru', 'revision', 'approved']);
+            $assessment = $sp->assessment;
+
+            $warnings = [];
+            if ($attCount(['alfa']) >= 3) $warnings[] = $attCount(['alfa']) . 'x alfa';
+            if ($journalTotal === 0) $warnings[] = 'belum ada jurnal';
+            elseif ($daysSinceJournal !== null && $daysSinceJournal > 3) $warnings[] = 'jurnal ' . $daysSinceJournal . ' hari kosong';
+            if ($openIncidentsBySpkl->get($sp->id)) $warnings[] = 'kendala terbuka';
+
+            return [
+                'spkl' => $sp,
+                'today' => $todayRows->firstWhere('spkl.id', $sp->id),
+                'attendance_rate' => $totalAtt > 0 ? (int) round($present / $totalAtt * 100) : null,
+                'present' => $present,
+                'late' => $attCount(['terlambat']),
+                'leave' => $attCount(['izin', 'sakit']),
+                'alfa' => $attCount(['alfa']),
+                'last_checkin' => $lastCheckins->get($sp->id) ? Carbon::parse($lastCheckins->get($sp->id)) : null,
+                'journal_total' => $journalTotal,
+                'journal_approved' => $jrCount(['approved']),
+                'journal_review_guru' => $jrCount(['review_guru']),
+                'journal_at_dudi' => $jrCount(['submitted']),
+                'journal_revision' => $jrCount(['revision']),
+                'days_since_journal' => $daysSinceJournal,
+                'teacher_scored' => $assessment && $assessment->score_teacher_report !== null,
+                'dudi_scored' => $assessment && $assessment->score_dudi_technical !== null,
+                'final_score' => $assessment?->final_score,
+                'open_incidents' => (int) $openIncidentsBySpkl->get($sp->id, 0),
+                'warnings' => $warnings,
+            ];
+        })->sortByDesc(fn ($s) => count($s['warnings']))->values();
+
+        $ratedStudents = $studentInsights->whereNotNull('attendance_rate');
+        $avgAttendanceRate = $ratedStudents->count() ? (int) round($ratedStudents->avg('attendance_rate')) : null;
+        $studentsNeedAttention = $studentInsights->filter(fn ($s) => count($s['warnings']) > 0)->count();
+
+        // ---------- Antrean verifikasi ----------
         $pendingRequestsList = AttendanceRequest::whereIn('student_pkl_id', $spklIds)
             ->whereIn('type', ['izin', 'sakit'])
             ->where('status', 'pending')
             ->with(['studentPkl.student.user', 'studentPkl.company'])
-            ->latest()
-            ->take(3)
+            ->oldest()
+            ->take(4)
             ->get();
-
         $pendingRequests = AttendanceRequest::whereIn('student_pkl_id', $spklIds)
             ->whereIn('type', ['izin', 'sakit'])
             ->where('status', 'pending')
@@ -77,27 +258,110 @@ class TeacherController extends Controller
         $pendingJournalsList = Journal::whereIn('student_pkl_id', $spklIds)
             ->where('status', 'review_guru')
             ->with(['studentPkl.student.user', 'studentPkl.company'])
-            ->latest('date')
-            ->take(3)
+            ->oldest('date')
+            ->take(4)
             ->get();
-
         $pendingJournals = Journal::whereIn('student_pkl_id', $spklIds)
             ->where('status', 'review_guru')
             ->count();
 
-        $recentAnnouncements = $announcementService->getLatestForUser(Auth::user(), 4);
+        // Jurnal tertahan di DU/DI > 2 hari (perlu didorong ke pembimbing industri)
+        $stuckAtDudi = Journal::whereIn('student_pkl_id', $spklIds)
+            ->where('status', 'submitted')
+            ->where('updated_at', '<', $now->copy()->subDays(2))
+            ->with(['studentPkl.company', 'studentPkl.supervisor.user'])
+            ->get()
+            ->groupBy(fn ($j) => $j->studentPkl->company_id)
+            ->map(fn ($group) => [
+                'company' => $group->first()->studentPkl->company,
+                'supervisor' => $group->first()->studentPkl->supervisor?->user?->name,
+                'count' => $group->count(),
+                'oldest' => $group->min('date'),
+            ])
+            ->values();
+
+        // ---------- Kendala & SOS ----------
+        $openIncidents = IncidentReport::whereIn('student_pkl_id', $spklIds)
+            ->whereIn('status', ['submitted', 'in_progress'])
+            ->with(['studentPkl.student.user', 'studentPkl.company'])
+            ->orderByRaw("CASE WHEN urgency = 'critical' THEN 1 WHEN urgency = 'high' THEN 2 WHEN urgency = 'medium' THEN 3 ELSE 4 END")
+            ->latest()
+            ->take(4)
+            ->get();
+        $openIncidentsCount = IncidentReport::whereIn('student_pkl_id', $spklIds)
+            ->whereIn('status', ['submitted', 'in_progress'])
+            ->count();
+        $criticalIncidentsCount = IncidentReport::whereIn('student_pkl_id', $spklIds)
+            ->whereIn('status', ['submitted', 'in_progress'])
+            ->where('urgency', 'critical')
+            ->count();
+
+        // ---------- Supervisi per DU/DI ----------
+        $supervisionStages = [
+            'penyerahan' => 'Penyerahan',
+            'monitoring_1' => 'Monitoring 1',
+            'monitoring_2' => 'Monitoring 2',
+            'penjemputan' => 'Penjemputan',
+        ];
+        $visitsByCompany = SupervisionVisit::where('teacher_id', $teacher->id)
+            ->whereIn('company_id', $companies->pluck('id'))
+            ->get(['company_id', 'stage', 'visit_date'])
+            ->groupBy('company_id');
+        $supervisionProgress = $companies->map(function ($company) use ($visitsByCompany, $supervisionStages, $studentPkls) {
+            $visits = $visitsByCompany->get($company->id, collect());
+            $done = $visits->pluck('stage')->unique();
+            $doneCount = collect(array_keys($supervisionStages))->filter(fn ($s) => $done->contains($s))->count();
+            return [
+                'company' => $company,
+                'students' => $studentPkls->where('company_id', $company->id)->count(),
+                'done' => $done,
+                'done_count' => $doneCount,
+                'last_visit' => $visits->max('visit_date'),
+                'next_stage' => collect($supervisionStages)->first(fn ($label, $key) => !$done->contains($key)),
+            ];
+        })->sortBy('done_count')->values();
+        $supervisionDone = $supervisionProgress->sum('done_count');
+        $supervisionTarget = $supervisionProgress->count() * count($supervisionStages);
+
+        // ---------- Penilaian ----------
+        $teacherScoredCount = $studentInsights->where('teacher_scored', true)->count();
+        $finalScores = $studentInsights->pluck('final_score')->filter();
+        $avgFinalScore = $finalScores->count() ? round($finalScores->avg(), 1) : null;
+
+        $recentAnnouncements = $announcementService->getLatestForUser($user, 3);
 
         return view('teacher.dashboard', compact(
             'teacher',
             'totalStudents',
             'totalCompanies',
-            'todayAttendances',
+            'periodProgress',
+            'isSchoolHoliday',
+            'todayRows',
+            'todaySummary',
             'todayPresentCount',
             'todayLateCount',
+            'expectedToday',
+            'checkedOutCount',
+            'flaggedAttendances',
+            'flaggedTodayCount',
+            'attendanceTrend',
+            'studentInsights',
+            'avgAttendanceRate',
+            'studentsNeedAttention',
             'pendingRequests',
             'pendingRequestsList',
             'pendingJournals',
             'pendingJournalsList',
+            'stuckAtDudi',
+            'openIncidents',
+            'openIncidentsCount',
+            'criticalIncidentsCount',
+            'supervisionStages',
+            'supervisionProgress',
+            'supervisionDone',
+            'supervisionTarget',
+            'teacherScoredCount',
+            'avgFinalScore',
             'studentPkls',
             'recentAnnouncements'
         ));

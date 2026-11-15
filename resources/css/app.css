@@ -403,3 +403,57 @@ tbody tr:hover td.table-sticky-right {
     background-image: linear-gradient(90deg, rgba(255,255,255,0) 0, rgba(255,255,255,0.7) 50%, rgba(255,255,255,0) 100%);
     animation: shimmerSweep 1.6s infinite;
 }
+
+/* ==========================================================================
+   THEME: FOREST (Guru Pembimbing) — senada dengan aplikasi siswa
+   Memetakan ulang palet indigo & slate ke hijau hutan + lime, hanya
+   berlaku di dalam elemen ber-kelas .theme-forest (role guru-pembimbing).
+   ========================================================================== */
+.theme-forest {
+    /* Aksen utama: indigo -> forest/lime */
+    --color-indigo-50: #EEF6DF;
+    --color-indigo-100: #E1EFC6;
+    --color-indigo-200: #CDE4A3;
+    --color-indigo-300: #C6F26B;
+    --color-indigo-400: #B5E855;
+    --color-indigo-500: #2E6B4F;
+    --color-indigo-600: #12382F;
+    --color-indigo-700: #0B2B25;
+    --color-indigo-800: #082520;
+    --color-indigo-900: #071E1A;
+    --color-indigo-950: #05140F;
+
+    /* Netral: slate -> abu kehijauan (selaras cream-bg siswa) */
+    --color-slate-50: #F1F4EC;
+    --color-slate-100: #E7ECE2;
+    --color-slate-200: #D7DFD3;
+    --color-slate-300: #B9C6BD;
+    --color-slate-400: #8B9F95;
+    --color-slate-500: #647A70;
+    --color-slate-600: #4A5E55;
+    --color-slate-700: #34473F;
+    --color-slate-800: #1F3530;
+    --color-slate-900: #10211D;
+    --color-slate-950: #071E1A;
+}
+
+/* Di sidebar gelap, aksen indigo menjadi lime agar tetap kontras */
+.theme-forest #sidebar-menu {
+    --color-indigo-300: #C6F26B;
+    --color-indigo-400: #C6F26B;
+    --color-indigo-500: #3F8A66;
+    --color-indigo-600: #2E6B4F;
+}
+
+.theme-forest .focus-ring:focus {
+    border-color: #12382F;
+    box-shadow: 0 0 0 3px rgba(198, 242, 107, 0.45);
+}
+
+.theme-forest .stat-counter,
+.theme-forest .font-display {
+    font-family: 'Space Grotesk', system-ui, sans-serif;
+    letter-spacing: -0.02em;
+}
+
+.theme-forest ::-webkit-scrollbar-thumb { background: #B9C6BD; }

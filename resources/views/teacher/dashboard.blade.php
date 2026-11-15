@@ -3,489 +3,719 @@
 @section('title', 'Dashboard Guru Pembimbing — VokaTrack')
 @section('hide_header', true)
 
-@section('content')
-<div class="w-full space-y-6">
+@php
+    $stateMeta = [
+        'hadir'       => ['label' => 'Hadir',            'pill' => 'bg-emerald-50 text-emerald-700 border-emerald-200', 'dot' => 'bg-emerald-500'],
+        'terlambat'   => ['label' => 'Terlambat',        'pill' => 'bg-amber-50 text-amber-700 border-amber-200',       'dot' => 'bg-amber-500'],
+        'dinas_luar'  => ['label' => 'Dinas Luar',       'pill' => 'bg-teal-50 text-teal-700 border-teal-200',          'dot' => 'bg-teal-500'],
+        'luar_kantor' => ['label' => 'Luar Kantor',      'pill' => 'bg-teal-50 text-teal-700 border-teal-200',          'dot' => 'bg-teal-500'],
+        'izin'        => ['label' => 'Izin',             'pill' => 'bg-sky-50 text-sky-700 border-sky-200',             'dot' => 'bg-sky-500'],
+        'sakit'       => ['label' => 'Sakit',            'pill' => 'bg-purple-50 text-purple-700 border-purple-200',    'dot' => 'bg-purple-500'],
+        'pengajuan'   => ['label' => 'Ajukan Izin',      'pill' => 'bg-sky-50 text-sky-700 border-sky-200',             'dot' => 'bg-sky-400'],
+        'alfa'        => ['label' => 'Alfa',             'pill' => 'bg-rose-50 text-rose-700 border-rose-200',          'dot' => 'bg-rose-500'],
+        'belum'       => ['label' => 'Belum Presensi',   'pill' => 'bg-slate-100 text-slate-600 border-slate-200',      'dot' => 'bg-slate-400'],
+        'belum_telat' => ['label' => 'Belum · Lewat Jam','pill' => 'bg-orange-50 text-orange-700 border-orange-200',    'dot' => 'bg-orange-500'],
+        'libur'       => ['label' => 'Libur Sekolah',    'pill' => 'bg-slate-50 text-slate-500 border-slate-200',       'dot' => 'bg-slate-300'],
+        'libur_dudi'  => ['label' => 'Libur DU/DI',      'pill' => 'bg-slate-50 text-slate-500 border-slate-200',       'dot' => 'bg-slate-300'],
+    ];
+    $urgencyMeta = [
+        'critical' => ['label' => 'SOS',    'pill' => 'bg-[#B42318] text-white'],
+        'high'     => ['label' => 'Tinggi', 'pill' => 'bg-rose-100 text-rose-700'],
+        'medium'   => ['label' => 'Sedang', 'pill' => 'bg-amber-100 text-amber-700'],
+        'low'      => ['label' => 'Rendah', 'pill' => 'bg-slate-100 text-slate-600'],
+    ];
+    $initials = fn ($name) => collect(explode(' ', trim($name)))->filter()->take(2)->map(fn ($w) => mb_strtoupper(mb_substr($w, 0, 1)))->implode('');
+    $fmtTime = fn ($t) => $t ? \Carbon\Carbon::parse($t)->format('H.i') : null;
+    $verifTotal = $pendingRequests + $pendingJournals;
+    $attendancePct = $expectedToday > 0 ? (int) round($todayPresentCount / $expectedToday * 100) : 0;
+    $trendMax = max(1, $totalStudents);
+    $chevron = '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>';
+@endphp
 
+@section('content')
+<div class="w-full space-y-5">
     <h1 class="sr-only">Dashboard Guru Pembimbing</h1>
 
-    <!-- Hero Welcome Banner -->
-    <div class="relative overflow-hidden bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-6 sm:p-7 text-white shadow-xl shadow-slate-950/20 border border-slate-800">
-        <div class="absolute -right-10 -bottom-10 w-60 h-60 rounded-full bg-indigo-500/10 blur-3xl pointer-events-none"></div>
+    {{-- ===================== HERO ===================== --}}
+    <section class="relative overflow-hidden bg-[#0B2B25] rounded-[28px] text-white shadow-xl shadow-[#0B2B25]/20">
+        <div class="absolute -right-24 -top-24 w-96 h-96 rounded-full border border-white/[0.07] pointer-events-none"></div>
+        <div class="absolute -right-6 -top-6 w-60 h-60 rounded-full border border-white/[0.07] pointer-events-none"></div>
+        <div class="absolute -left-16 -bottom-24 w-72 h-72 rounded-full bg-[#C6F26B]/10 blur-3xl pointer-events-none"></div>
 
-        <div class="relative space-y-4">
-            <!-- Top Banner Meta: Badge + School + Live Date & Time -->
-            <div class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-white/10">
-                <div class="flex items-center gap-2 flex-wrap">
-                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 uppercase tracking-wider">
-                        GURU PEMBIMBING
-                    </span>
-                    <span class="text-xs text-slate-500">&bull;</span>
-                    <span class="text-xs font-semibold text-slate-300 truncate">{{ auth()->user()->school->name ?? 'SMK Terpadu' }}</span>
+        <div class="relative grid grid-cols-1 lg:grid-cols-12 gap-6 p-6 sm:p-7">
+            <div class="lg:col-span-8 space-y-5 min-w-0">
+                <div class="flex flex-wrap items-center gap-2">
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-[#C6F26B] text-[#0B2B25] uppercase tracking-wider">Guru Pembimbing</span>
+                    <span class="text-xs font-semibold text-[#A9C2B9] truncate">{{ auth()->user()->school->name ?? 'SMK' }}</span>
+                    @if($teacher->nip)
+                        <span class="text-[11px] text-white/40 font-mono">NIP {{ $teacher->nip }}</span>
+                    @endif
                 </div>
 
-                <!-- Live Date & Clock Widget -->
-                <div class="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-2xl bg-white/10 backdrop-blur-md border border-white/15 text-xs text-slate-200 shadow-inner">
-                    <div class="flex items-center gap-1.5 font-semibold text-slate-200">
-                        <svg class="w-3.5 h-3.5 text-indigo-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                        <span id="banner-live-date">{{ \Carbon\Carbon::now()->isoFormat('dddd, D MMMM Y') }}</span>
-                    </div>
-                    <span class="text-white/30">&bull;</span>
-                    <div class="flex items-center gap-1.5 font-mono font-bold text-amber-300">
-                        <svg class="w-3.5 h-3.5 text-amber-300 shrink-0 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                        <span id="banner-live-clock">{{ \Carbon\Carbon::now()->format('H:i:s') }} WIB</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Main Greeting & Action Buttons -->
-            <div class="flex flex-col md:flex-row md:items-center justify-between gap-5">
-                <div class="space-y-1.5 min-w-0">
-                    <h2 class="text-xl sm:text-2xl font-black tracking-tight text-white">
-                        Selamat Datang, {{ auth()->user()->name }}
-                    </h2>
-                    <p class="text-xs sm:text-sm text-slate-300 font-medium max-w-2xl leading-relaxed">
-                        Pantau real-time absensi harian, tinjau jurnal kegiatan harian, dan evaluasi capaian kompetensi <strong class="text-white">{{ $totalStudents }} siswa binaan</strong> Anda di mitra industri.
+                <div class="space-y-1.5">
+                    <h2 class="font-display text-2xl sm:text-[28px] font-bold tracking-tight leading-tight">Halo, {{ auth()->user()->name }}</h2>
+                    <p class="text-sm text-[#A9C2B9] font-medium max-w-2xl leading-relaxed">
+                        Anda membimbing <strong class="text-white">{{ $totalStudents }} siswa</strong> di <strong class="text-white">{{ $totalCompanies }} DU/DI</strong>.
+                        @if($verifTotal > 0 || $openIncidentsCount > 0)
+                            Ada <strong class="text-[#C6F26B]">{{ $verifTotal + $openIncidentsCount }} hal</strong> yang menunggu tindakan Anda hari ini.
+                        @else
+                            Semua verifikasi sudah tuntas — kerja bagus.
+                        @endif
                     </p>
                 </div>
 
-                <!-- Header Quick Actions -->
-                <div class="flex flex-wrap items-center gap-2.5 shrink-0">
-                    <x-button type="button" variant="primary" size="sm" onclick="window.location.href='{{ route('guru.monitoring') }}'">
-                        <svg class="w-4 h-4 mr-1.5 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                @if($periodProgress)
+                    <div class="rounded-2xl bg-white/[0.06] border border-white/10 p-4 space-y-2.5">
+                        <div class="flex flex-wrap items-baseline justify-between gap-2 text-xs">
+                            <span class="font-bold text-white">{{ $periodProgress['name'] }}</span>
+                            <span class="text-[#A9C2B9] font-medium">
+                                {{ $periodProgress['start']->isoFormat('D MMM') }} – {{ $periodProgress['end']->isoFormat('D MMM Y') }}
+                            </span>
+                        </div>
+                        <div class="h-2 rounded-full bg-white/10 overflow-hidden">
+                            <div class="h-full rounded-full bg-[#C6F26B]" style="width: {{ $periodProgress['percent'] }}%"></div>
+                        </div>
+                        <div class="flex items-center justify-between text-[11px] text-[#A9C2B9] font-semibold">
+                            <span>Hari ke-<span class="font-space text-white">{{ $periodProgress['day'] }}</span> dari {{ $periodProgress['total'] }}</span>
+                            <span>Sisa <span class="font-space text-[#C6F26B]">{{ $periodProgress['remaining'] }}</span> hari</span>
+                        </div>
+                    </div>
+                @endif
+
+                <div class="flex flex-wrap items-center gap-2.5">
+                    <a href="{{ route('guru.monitoring', ['date' => now()->toDateString()]) }}" class="group inline-flex items-center gap-2 pl-4 pr-1.5 py-1.5 rounded-full bg-[#C6F26B] hover:bg-[#b5e855] text-[#0B2B25] text-xs font-extrabold shadow-md shadow-black/20 transition-all hover:-translate-y-0.5">
                         <span>Monitoring Absensi</span>
-                    </x-button>
-                    <x-button type="button" variant="secondary" size="sm" onclick="window.location.href='{{ route('guru.announcements') }}'">
-                        <svg class="w-4 h-4 mr-1.5 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>
-                        <span>Pengumuman</span>
-                    </x-button>
+                        <span class="w-7 h-7 rounded-full bg-[#0B2B25] text-[#C6F26B] flex items-center justify-center group-hover:translate-x-0.5 transition-transform">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M13 6l6 6-6 6"/></svg>
+                        </span>
+                    </a>
+                    <a href="{{ route('guru.journals') }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 text-xs font-bold transition-colors">
+                        Review Jurnal
+                        @if($pendingJournals > 0)<span class="px-1.5 rounded-full bg-[#C6F26B] text-[#0B2B25] font-space text-[11px]">{{ $pendingJournals }}</span>@endif
+                    </a>
+                    <a href="{{ route('guru.announcements') }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 text-xs font-bold transition-colors">
+                        Buat Pengumuman
+                    </a>
                 </div>
             </div>
-        </div>
-    </div>
 
-    <!-- Stat Metric Cards -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        
-        <x-stat-card 
-            title="Siswa Binaan" 
-            :value="$totalStudents" 
-            :subtitle="$totalCompanies . ' Mitra Industri DU/DI'"
-            color="indigo"
-        >
-            <x-slot:icon>
-                <svg class="w-6 h-6 stroke-[1.8]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
-                </svg>
-            </x-slot:icon>
-        </x-stat-card>
-
-        <x-stat-card 
-            title="Presensi Masuk Hari Ini" 
-            :value="$todayPresentCount . ' / ' . $totalStudents" 
-            :subtitle="$todayLateCount > 0 ? $todayLateCount . ' Siswa Terlambat' : ($todayPresentCount > 0 ? 'Semua Tepat Waktu' : 'Belum Ada yang Absen')"
-            :color="$todayPresentCount > 0 ? 'emerald' : 'indigo'"
-            :badge="$totalStudents > 0 && $todayPresentCount === $totalStudents ? '100% Hadir' : null"
-            :badgeVariant="'success'"
-        >
-            <x-slot:icon>
-                <svg class="w-6 h-6 stroke-[1.8]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                </svg>
-            </x-slot:icon>
-        </x-stat-card>
-
-        <x-stat-card 
-            title="Permohonan Izin / Sakit" 
-            :value="$pendingRequests" 
-            subtitle="Menunggu verifikasi guru"
-            :color="$pendingRequests > 0 ? 'amber' : 'indigo'"
-            :badge="$pendingRequests > 0 ? 'Perlu Tindakan' : 'Tuntas'"
-            :badgeVariant="$pendingRequests > 0 ? 'warning' : 'neutral'"
-        >
-            <x-slot:icon>
-                <svg class="w-6 h-6 stroke-[1.8]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                </svg>
-            </x-slot:icon>
-        </x-stat-card>
-
-        <x-stat-card 
-            title="Review Jurnal Tingkat 2" 
-            :value="$pendingJournals" 
-            subtitle="Lolos verifikasi industri"
-            :color="$pendingJournals > 0 ? 'blue' : 'indigo'"
-            :badge="$pendingJournals > 0 ? 'Review Guru' : 'Tuntas'"
-            :badgeVariant="$pendingJournals > 0 ? 'info' : 'neutral'"
-        >
-            <x-slot:icon>
-                <svg class="w-6 h-6 stroke-[1.8]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
-                </svg>
-            </x-slot:icon>
-        </x-stat-card>
-
-    </div>
-
-    <!-- Main Asymmetric Dashboard Grid -->
-    <div class="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
-        
-        <!-- Left Column: Attendance Monitor & Mentored Students (8 Cols) -->
-        <div class="xl:col-span-8 space-y-6">
-
-            <!-- Real-time Attendance Tracker for Today -->
-            <x-card 
-                title="Presensi Siswa Hari Ini" 
-                :subtitle="\Carbon\Carbon::today()->isoFormat('dddd, D MMMM Y')"
-                noPadding
-            >
-                <x-slot:headerActions>
-                    <a href="{{ route('guru.monitoring') }}" class="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1 transition-colors">
-                        <span>Semua Log Presensi</span>
-                        <svg class="w-3.5 h-3.5 stroke-[2.5]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
-                    </a>
-                </x-slot:headerActions>
-
-                @if($studentPkls->isEmpty())
-                    <div class="p-8 text-center">
-                        <x-empty-state 
-                            title="Belum Ada Siswa Binaan" 
-                            description="Anda belum memiliki siswa yang diplot untuk dibimbing."
-                        />
-                    </div>
-                @else
-                    <div class="divide-y divide-slate-100">
-                        @foreach($studentPkls as $sp)
-                            @php
-                                $att = $todayAttendances->get($sp->id);
-                            @endphp
-                            <div class="p-4 sm:p-4.5 flex items-center justify-between gap-4 hover:bg-slate-50/70 transition-colors">
-                                <div class="flex items-center space-x-3.5 min-w-0">
-                                    <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-50 to-indigo-100/70 border border-indigo-200/80 text-indigo-700 font-extrabold text-sm flex items-center justify-center shrink-0 shadow-2xs">
-                                        {{ substr($sp->student->user->name, 0, 1) }}
-                                    </div>
-                                    <div class="min-w-0">
-                                        <div class="flex items-center gap-2">
-                                            <span class="font-bold text-slate-900 text-xs sm:text-sm truncate">{{ $sp->student->user->name }}</span>
-                                            <span class="text-[10px] text-slate-400 font-medium hidden sm:inline">&bull; {{ $sp->student->class->name }}</span>
-                                        </div>
-                                        <div class="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium truncate mt-0.5">
-                                            <svg class="w-3.5 h-3.5 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
-                                            <span class="truncate font-semibold text-slate-600">{{ $sp->company->name }}</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Attendance Status Badge & Check-in Photo -->
-                                <div class="flex items-center gap-3 shrink-0">
-                                    @if($att)
-                                        @if($att->photo_in_path)
-                                            <div class="relative group/selfie cursor-zoom-in" onclick="openImageLightbox('{{ asset('storage/' . $att->photo_in_path) }}', 'Check-in: {{ $sp->student->user->name }}')" title="Lihat Foto Selfie Check-in">
-                                                <img src="{{ asset('storage/' . $att->photo_in_path) }}" alt="Check-in Photo" class="w-8 h-8 rounded-xl object-cover border border-slate-200 shadow-2xs group-hover/selfie:scale-110 transition-transform">
-                                                <span class="absolute -bottom-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white"></span>
-                                            </div>
-                                        @endif
-
-                                        <div class="text-right">
-                                            <x-badge :variant="$att->status_badge_variant ?? ($att->status === 'hadir' ? 'success' : ($att->status === 'terlambat' ? 'warning' : 'info'))" size="xs">
-                                                {{ strtoupper(str_replace('_', ' ', $att->status)) }}
-                                            </x-badge>
-                                            @if($att->time_in)
-                                                <span class="text-[10px] text-slate-400 block font-mono font-medium mt-0.5">
-                                                    {{ \Carbon\Carbon::parse($att->time_in)->format('H:i') }} WIB
-                                                </span>
-                                            @endif
-                                        </div>
-                                    @else
-                                        <div class="text-right">
-                                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500 border border-slate-200">
-                                                Belum Presensi
-                                            </span>
-                                            <span class="text-[9px] text-slate-400 block mt-0.5">Menunggu rekam</span>
-                                        </div>
-                                    @endif
-
-                                    <a href="{{ route('guru.monitoring', ['date' => \Carbon\Carbon::today()->toDateString()]) }}" class="p-1.5 rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors" title="Lihat Presensi">
-                                        <svg class="w-4 h-4 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
-                                    </a>
-                                </div>
-                            </div>
-                        @endforeach
-                    </div>
-                @endif
-            </x-card>
-
-            <!-- Mentored Students Cards -->
-            <x-card 
-                title="Daftar Siswa Bimbingan Aktif" 
-                :subtitle="$totalStudents . ' Siswa Dimonitor dan Dinilai Selama Masa PKL'"
-            >
-                <x-slot:headerActions>
-                    <a href="{{ route('guru.reports') }}" class="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1 transition-colors">
-                        <span>Ekspor Laporan PDF</span>
-                        <svg class="w-3.5 h-3.5 stroke-[2.5]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
-                    </a>
-                </x-slot:headerActions>
-
-                @if($studentPkls->isEmpty())
-                    <x-empty-state 
-                        title="Belum Ada Siswa Binaan" 
-                        description="Hubungi Admin Sekolah untuk melakukan plotting penugasan siswa ke bimbingan Anda."
-                    />
-                @else
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        @foreach($studentPkls as $sp)
-                            <div class="rounded-2xl bg-white border border-slate-200/90 shadow-2xs hover:shadow-md hover:border-indigo-300 transition-all p-4.5 flex flex-col justify-between group">
-                                
-                                <div class="space-y-3">
-                                    <!-- Student Header -->
-                                    <div class="flex items-start justify-between gap-3">
-                                        <div class="flex items-center space-x-3 min-w-0">
-                                            <div class="w-11 h-11 rounded-2xl bg-indigo-600 text-white font-black text-sm flex items-center justify-center shrink-0 shadow-xs shadow-indigo-600/30">
-                                                {{ substr($sp->student->user->name, 0, 1) }}
-                                            </div>
-                                            <div class="min-w-0">
-                                                <h4 class="font-bold text-slate-900 text-sm truncate group-hover:text-indigo-600 transition-colors">
-                                                    {{ $sp->student->user->name }}
-                                                </h4>
-                                                <p class="text-[11px] text-slate-500 font-medium truncate mt-0.5">
-                                                    {{ $sp->student->class->name }} &bull; NISN: <span class="font-mono text-slate-600">{{ $sp->student->nisn }}</span>
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <x-badge variant="success" size="xs">
-                                            Aktif PKL
-                                        </x-badge>
-                                    </div>
-
-                                    <!-- Company & Placement Box -->
-                                    <div class="p-3 rounded-xl bg-slate-50/80 border border-slate-100 flex items-center justify-between gap-2 text-xs">
-                                        <div class="min-w-0 flex items-center space-x-2">
-                                            <svg class="w-4 h-4 text-indigo-600 shrink-0 stroke-[1.8]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
-                                            <div class="min-w-0">
-                                                <span class="font-bold text-slate-900 block truncate">{{ $sp->company->name }}</span>
-                                                <span class="text-[10px] text-slate-400 block truncate">Pembimbing: {{ $sp->supervisor->user->name ?? 'Belum Ditentukan' }}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Micro Metrics Row -->
-                                    <div class="grid grid-cols-3 gap-2 text-center pt-0.5">
-                                        <div class="p-2 rounded-xl bg-slate-50 border border-slate-100">
-                                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-tight block">Presensi</span>
-                                            <span class="text-xs font-black text-slate-800 mt-0.5 block">{{ $sp->attendances_count }} Hari</span>
-                                        </div>
-                                        <div class="p-2 rounded-xl bg-slate-50 border border-slate-100">
-                                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-tight block">Jurnal</span>
-                                            <span class="text-xs font-black text-indigo-700 mt-0.5 block">{{ $sp->approved_journals_count }} Disetujui</span>
-                                        </div>
-                                        <div class="p-2 rounded-xl bg-slate-50 border border-slate-100">
-                                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-tight block">Nilai PKL</span>
-                                            <span class="text-xs font-black {{ $sp->assessment ? 'text-emerald-700' : 'text-slate-400' }} mt-0.5 block">
-                                                {{ $sp->assessment ? number_format($sp->assessment->final_score, 1) : 'Belum' }}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Card Action Footer -->
-                                <div class="pt-3.5 mt-3.5 border-t border-slate-100 flex items-center justify-between gap-2">
-                                    <div class="flex items-center gap-1.5 flex-wrap">
-                                        <a href="{{ route('guru.monitoring') }}" class="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200/80 text-slate-700 font-bold text-[11px] transition-colors" title="Lihat Catatan Absensi">
-                                            Absensi
-                                        </a>
-                                        <a href="{{ route('guru.journals') }}" class="px-2.5 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-[11px] transition-colors" title="Review Jurnal">
-                                            Jurnal
-                                        </a>
-                                        <a href="{{ route('guru.assessments') }}" class="px-2.5 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold text-[11px] transition-colors" title="Input Penilaian">
-                                            Nilai
-                                        </a>
-                                    </div>
-
-                                    <a href="{{ route('guru.reports.download', $sp->id) }}" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 text-rose-600 font-bold text-[11px] shadow-2xs transition-colors shrink-0" title="Unduh Lembar Laporan PDF">
-                                        <svg class="w-3.5 h-3.5 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                                        <span>PDF</span>
-                                    </a>
-                                </div>
-
-                            </div>
-                        @endforeach
-                    </div>
-                @endif
-            </x-card>
-
-        </div>
-
-        <!-- Right Column: Action Center & Announcements Feed (4 Cols) -->
-        <div class="xl:col-span-4 space-y-6">
-
-            <!-- Tindakan Perlu Diproses (Action Center) -->
-            <x-card 
-                title="Tindakan Perlu Diproses" 
-                subtitle="Verifikasi permohonan dan persetujuan jurnal"
-                noPadding
-            >
-                @if($pendingRequests === 0 && $pendingJournals === 0)
-                    <div class="p-6 text-center">
-                        <div class="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-3">
-                            <svg class="w-6 h-6 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            {{-- Ringkasan hari ini --}}
+            <div class="lg:col-span-4 flex flex-col justify-between gap-4 rounded-3xl bg-white/[0.06] border border-white/10 p-5">
+                <div class="flex items-center justify-between text-[11px] font-semibold text-[#A9C2B9]">
+                    <span id="banner-live-date">{{ now()->isoFormat('dddd, D MMMM Y') }}</span>
+                    <span class="font-space font-bold text-[#C6F26B]" id="banner-live-clock">{{ now()->format('H:i:s') }} WIB</span>
+                </div>
+                <div class="flex items-center gap-5">
+                    <div class="relative w-24 h-24 shrink-0">
+                        <svg class="w-24 h-24 -rotate-90" viewBox="0 0 36 36">
+                            <circle cx="18" cy="18" r="15.5" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="3.2"/>
+                            <circle cx="18" cy="18" r="15.5" fill="none" stroke="#C6F26B" stroke-width="3.2" stroke-linecap="round"
+                                    stroke-dasharray="{{ round(97.4 * $attendancePct / 100, 1) }} 97.4"/>
+                        </svg>
+                        <div class="absolute inset-0 flex flex-col items-center justify-center">
+                            <span class="font-space text-xl font-bold leading-none">{{ $attendancePct }}%</span>
+                            <span class="text-[9px] text-[#A9C2B9] font-bold uppercase mt-0.5">Hadir</span>
                         </div>
-                        <h4 class="text-xs font-extrabold text-slate-800">Semua Tugas Selesai</h4>
-                        <p class="text-[11px] text-slate-500 font-medium mt-1 leading-relaxed">
-                            Tidak ada permohonan izin atau review jurnal yang menunggu verifikasi Anda saat ini.
+                    </div>
+                    <div class="min-w-0 space-y-1">
+                        <p class="text-[11px] font-bold uppercase tracking-wider text-[#A9C2B9]">Presensi hari ini</p>
+                        <p class="font-space text-4xl font-bold leading-none">{{ $todayPresentCount }}<span class="text-white/40 text-2xl">/{{ $expectedToday }}</span></p>
+                        <p class="text-[11px] text-[#A9C2B9] font-medium">
+                            @if($isSchoolHoliday) Hari libur sekolah
+                            @elseif($expectedToday === 0) Tidak ada jadwal kerja hari ini
+                            @else {{ $todaySummary['belum'] }} belum · {{ $checkedOutCount }} sudah pulang
+                            @endif
                         </p>
                     </div>
-                @else
-                    <div class="divide-y divide-slate-100">
-                        <!-- Pending Requests -->
-                        @if($pendingRequestsList->count() > 0)
-                            <div class="p-4 bg-amber-50/40">
-                                <div class="flex items-center justify-between mb-2.5">
-                                    <div class="flex items-center gap-1.5">
-                                        <span class="w-2 h-2 rounded-full bg-amber-500"></span>
-                                        <span class="text-[11px] font-extrabold text-amber-900 uppercase tracking-wider">Permohonan Izin / Sakit ({{ $pendingRequests }})</span>
-                                    </div>
-                                    <a href="{{ route('guru.requests') }}" class="text-[11px] font-bold text-amber-700 hover:text-amber-800 underline">Proses</a>
-                                </div>
-                                <div class="space-y-2">
-                                    @foreach($pendingRequestsList as $pr)
-                                        <div class="p-2.5 rounded-xl bg-white border border-amber-200/80 shadow-2xs flex items-center justify-between gap-2">
-                                            <div class="min-w-0">
-                                                <span class="text-xs font-bold text-slate-900 block truncate">{{ $pr->studentPkl->student->user->name }}</span>
-                                                <span class="text-[10px] text-slate-500 block truncate capitalize">{{ $pr->type }} &bull; {{ \Carbon\Carbon::parse($pr->start_date)->format('d M') }}</span>
-                                            </div>
-                                            <a href="{{ route('guru.requests') }}" class="px-2 py-1 rounded-lg bg-amber-100 text-amber-800 font-bold text-[10px] hover:bg-amber-200 transition-colors shrink-0">
-                                                Verifikasi
-                                            </a>
-                                        </div>
-                                    @endforeach
-                                </div>
-                            </div>
-                        @endif
-
-                        <!-- Pending Journals -->
-                        @if($pendingJournalsList->count() > 0)
-                            <div class="p-4 bg-blue-50/40">
-                                <div class="flex items-center justify-between mb-2.5">
-                                    <div class="flex items-center gap-1.5">
-                                        <span class="w-2 h-2 rounded-full bg-blue-500"></span>
-                                        <span class="text-[11px] font-extrabold text-blue-900 uppercase tracking-wider">Review Jurnal Siswa ({{ $pendingJournals }})</span>
-                                    </div>
-                                    <a href="{{ route('guru.journals') }}" class="text-[11px] font-bold text-blue-700 hover:text-blue-800 underline">Review</a>
-                                </div>
-                                <div class="space-y-2">
-                                    @foreach($pendingJournalsList as $pj)
-                                        <div class="p-2.5 rounded-xl bg-white border border-blue-200/80 shadow-2xs flex items-center justify-between gap-2">
-                                            <div class="min-w-0">
-                                                <span class="text-xs font-bold text-slate-900 block truncate">{{ $pj->studentPkl->student->user->name }}</span>
-                                                <span class="text-[10px] text-slate-500 block truncate">{{ Str::limit($pj->activity_description, 35) }}</span>
-                                            </div>
-                                            <a href="{{ route('guru.journals') }}" class="px-2 py-1 rounded-lg bg-blue-100 text-blue-800 font-bold text-[10px] hover:bg-blue-200 transition-colors shrink-0">
-                                                Tinjau
-                                            </a>
-                                        </div>
-                                    @endforeach
-                                </div>
-                            </div>
-                        @endif
-                    </div>
-                @endif
-            </x-card>
-
-            <!-- Pengumuman Bimbingan (Clean Feed) -->
-            <x-card 
-                title="Pengumuman Bimbingan" 
-                subtitle="Siaran informasi aktif untuk siswa PKL"
-                noPadding
-            >
-                <x-slot:headerActions>
-                    <a href="{{ route('guru.announcements') }}" class="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1 transition-colors">
-                        <span>Kelola</span>
-                        <svg class="w-3.5 h-3.5 stroke-[2.5]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
-                    </a>
-                </x-slot:headerActions>
-
-                @if(isset($recentAnnouncements) && $recentAnnouncements->count() > 0)
-                    <div class="divide-y divide-slate-100">
-                        @foreach($recentAnnouncements as $ann)
-                            <div onclick="openDashboardAnnouncementModal({{ json_encode($ann) }})" class="p-4 hover:bg-slate-50/80 transition-colors cursor-pointer group">
-                                <div class="flex items-start gap-3 justify-between">
-                                    <div class="min-w-0 flex-1">
-                                        <div class="flex items-center gap-1.5 mb-1.5 flex-wrap">
-                                            <x-badge :variant="$ann->category_badge_variant" size="xs">
-                                                {{ strtoupper($ann->category_label) }}
-                                            </x-badge>
-                                            @if($ann->is_pinned)
-                                                <span class="inline-flex items-center gap-1 text-[9px] font-extrabold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-full border border-amber-200/80">
-                                                    <svg class="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg>
-                                                    Pinned
-                                                </span>
-                                            @endif
-                                        </div>
-                                        <h4 class="text-xs font-bold text-slate-900 group-hover:text-indigo-600 transition-colors line-clamp-2 leading-snug">
-                                            {{ $ann->title }}
-                                        </h4>
-                                        <p class="text-[11px] text-slate-500 line-clamp-2 mt-1 leading-relaxed font-medium">
-                                            {{ Str::limit(strip_tags($ann->content), 80) }}
-                                        </p>
-                                        <div class="pt-2 mt-2 flex items-center justify-between text-[10px] text-slate-400">
-                                            <span class="font-semibold text-slate-600 truncate max-w-[120px]">{{ $ann->author->name ?? 'Sekolah' }}</span>
-                                            <span>{{ $ann->published_at ? $ann->published_at->diffForHumans() : $ann->created_at->diffForHumans() }}</span>
-                                        </div>
-                                    </div>
-
-                                    @if($ann->image_path)
-                                        <div class="w-14 h-14 rounded-xl bg-slate-100 border border-slate-200/80 overflow-hidden shrink-0 shadow-2xs group/thumb cursor-zoom-in" onclick="event.stopPropagation(); openImageLightbox('{{ $ann->image_url }}', '{{ $ann->title }}')" title="Perbesar gambar">
-                                            <img src="{{ $ann->image_url }}" alt="{{ $ann->title }}" class="w-full h-full object-cover group-hover/thumb:scale-105 transition-transform">
-                                        </div>
-                                    @endif
-                                </div>
-                            </div>
-                        @endforeach
-                    </div>
-                @else
-                    <div class="p-6 text-center text-slate-400 text-xs">
-                        Belum ada siaran pengumuman aktif.
-                        <div class="mt-2">
-                            <a href="{{ route('guru.announcements') }}" class="font-bold text-indigo-600 hover:underline">Tulis pengumuman baru</a>
+                </div>
+                <div class="grid grid-cols-4 gap-1.5 text-center">
+                    @foreach([['Tepat', $todaySummary['hadir'], 'text-[#C6F26B]'], ['Telat', $todaySummary['terlambat'], 'text-amber-300'], ['Izin/Skt', $todaySummary['izin_sakit'], 'text-sky-300'], ['Alfa', $todaySummary['alfa'], 'text-rose-300']] as [$lbl, $val, $cls])
+                        <div class="rounded-xl bg-white/[0.06] py-2">
+                            <span class="font-space text-base font-bold {{ $cls }} block leading-none">{{ $val }}</span>
+                            <span class="text-[9px] text-[#A9C2B9] font-bold uppercase">{{ $lbl }}</span>
                         </div>
-                    </div>
-                @endif
-            </x-card>
-
-            <!-- Quick Links & Resources -->
-            <div class="rounded-2xl bg-indigo-50/60 border border-indigo-100/90 p-4.5 space-y-3">
-                <span class="text-[11px] font-extrabold text-indigo-950 uppercase tracking-wider block">
-                    Pintasan Cepat Pembimbing
-                </span>
-                <div class="space-y-1.5">
-                    <a href="{{ route('guru.assessments') }}" class="flex items-center justify-between p-2.5 rounded-xl bg-white hover:bg-indigo-50 border border-indigo-100/80 text-xs font-bold text-slate-800 transition-colors shadow-2xs">
-                        <span class="flex items-center gap-2">
-                            <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
-                            <span>Instrumen Penilaian Siswa</span>
-                        </span>
-                        <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                    </a>
-                    <a href="{{ route('guru.reports') }}" class="flex items-center justify-between p-2.5 rounded-xl bg-white hover:bg-indigo-50 border border-indigo-100/80 text-xs font-bold text-slate-800 transition-colors shadow-2xs">
-                        <span class="flex items-center gap-2">
-                            <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                            <span>Rekap & Unduh Dokumen PDF</span>
-                        </span>
-                        <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                    </a>
-                    <a href="{{ route('guru.monitoring') }}" class="flex items-center justify-between p-2.5 rounded-xl bg-white hover:bg-indigo-50 border border-indigo-100/80 text-xs font-bold text-slate-800 transition-colors shadow-2xs">
-                        <span class="flex items-center gap-2">
-                            <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                            <span>Filter Arsip Presensi Siswa</span>
-                        </span>
-                        <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                    </a>
+                    @endforeach
                 </div>
             </div>
+        </div>
+    </section>
 
+    {{-- ===================== ALERTS ===================== --}}
+    @if($criticalIncidentsCount > 0 || $flaggedTodayCount > 0 || $todaySummary['belum_telat'] > 0)
+        <section class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            @if($criticalIncidentsCount > 0)
+                <a href="{{ route('guru.incidents', ['urgency' => 'critical']) }}" class="relative overflow-hidden flex items-center gap-3.5 p-4 rounded-2xl bg-[#B42318] text-white shadow-lg shadow-[#B42318]/25 hover:-translate-y-0.5 transition-transform">
+                    <span class="relative w-11 h-11 rounded-full bg-white text-[#B42318] font-space font-extrabold text-xs flex items-center justify-center shrink-0">
+                        <span class="absolute inset-0 rounded-full bg-white/60 animate-sos-pulse"></span><span class="relative">SOS</span>
+                    </span>
+                    <div class="min-w-0">
+                        <p class="text-sm font-extrabold">{{ $criticalIncidentsCount }} laporan darurat terbuka</p>
+                        <p class="text-[11px] text-white/80 font-medium">Segera tindak lanjuti dan catat kronologinya.</p>
+                    </div>
+                </a>
+            @endif
+            @if($flaggedTodayCount > 0)
+                <a href="{{ route('guru.monitoring', ['date' => now()->toDateString()]) }}" class="flex items-center gap-3.5 p-4 rounded-2xl bg-[#2A0A08] text-white hover:-translate-y-0.5 transition-transform">
+                    <span class="w-11 h-11 rounded-full bg-rose-500/20 text-rose-300 flex items-center justify-center shrink-0">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21s-7-6.2-7-11a7 7 0 1114 0c0 4.8-7 11-7 11z"/><path stroke-linecap="round" d="M4 4l16 16"/></svg>
+                    </span>
+                    <div class="min-w-0">
+                        <p class="text-sm font-extrabold">{{ $flaggedTodayCount }} presensi lokasi janggal</p>
+                        <p class="text-[11px] text-rose-200/80 font-medium">Fake GPS atau di luar radius DU/DI hari ini.</p>
+                    </div>
+                </a>
+            @endif
+            @if($todaySummary['belum_telat'] > 0)
+                <a href="#presensi-hari-ini" class="flex items-center gap-3.5 p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 hover:-translate-y-0.5 transition-transform">
+                    <span class="w-11 h-11 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    </span>
+                    <div class="min-w-0">
+                        <p class="text-sm font-extrabold">{{ $todaySummary['belum_telat'] }} siswa belum presensi</p>
+                        <p class="text-[11px] text-amber-800/80 font-medium">Sudah melewati batas jam masuk DU/DI.</p>
+                    </div>
+                </a>
+            @endif
+        </section>
+    @endif
+
+    {{-- ===================== KPI ===================== --}}
+    <section class="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
+        {{-- Verifikasi --}}
+        <a href="{{ $pendingJournals >= $pendingRequests ? route('guru.journals') : route('guru.requests') }}" class="group bg-white rounded-3xl p-5 border border-slate-200/70 hover:border-[#0B2B25]/30 hover:shadow-lg transition-all">
+            <div class="flex items-start justify-between">
+                <p class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Menunggu Verifikasi</p>
+                <span class="w-9 h-9 rounded-xl {{ $verifTotal ? 'bg-[#C6F26B] text-[#0B2B25]' : 'bg-slate-100 text-slate-400' }} flex items-center justify-center">
+                    <svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4M7 4h10a2 2 0 012 2v14l-7-3-7 3V6a2 2 0 012-2z"/></svg>
+                </span>
+            </div>
+            <p class="font-space text-4xl font-bold text-slate-900 mt-2 leading-none">{{ $verifTotal }}</p>
+            <div class="flex flex-wrap gap-1.5 mt-3 text-[11px] font-bold">
+                <span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">{{ $pendingJournals }} jurnal</span>
+                <span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">{{ $pendingRequests }} izin/sakit</span>
+            </div>
+        </a>
+
+        {{-- Kendala --}}
+        <a href="{{ route('guru.incidents') }}" class="group bg-white rounded-3xl p-5 border {{ $criticalIncidentsCount ? 'border-rose-300 ring-2 ring-rose-100' : 'border-slate-200/70' }} hover:shadow-lg transition-all">
+            <div class="flex items-start justify-between">
+                <p class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Kendala & SOS</p>
+                <span class="w-9 h-9 rounded-xl {{ $openIncidentsCount ? 'bg-rose-50 text-rose-600' : 'bg-slate-100 text-slate-400' }} flex items-center justify-center">
+                    <svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3m0 3h.01M10.3 3.9L2.4 18a2 2 0 001.7 3h15.8a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/></svg>
+                </span>
+            </div>
+            <p class="font-space text-4xl font-bold {{ $openIncidentsCount ? 'text-rose-600' : 'text-slate-900' }} mt-2 leading-none">{{ $openIncidentsCount }}</p>
+            <p class="text-[11px] font-semibold text-slate-500 mt-3">
+                {{ $openIncidentsCount ? 'laporan terbuka' . ($criticalIncidentsCount ? ' · ' . $criticalIncidentsCount . ' darurat' : '') : 'Tidak ada laporan terbuka' }}
+            </p>
+        </a>
+
+        {{-- Kehadiran periode --}}
+        <a href="{{ route('guru.monitoring') }}" class="group bg-white rounded-3xl p-5 border border-slate-200/70 hover:border-[#0B2B25]/30 hover:shadow-lg transition-all">
+            <div class="flex items-start justify-between">
+                <p class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Rata-rata Kehadiran</p>
+                <span class="w-9 h-9 rounded-xl bg-slate-100 text-[#0B2B25] flex items-center justify-center">
+                    <svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 17l6-6 4 4 8-8M14 7h7v7"/></svg>
+                </span>
+            </div>
+            <p class="font-space text-4xl font-bold text-slate-900 mt-2 leading-none">{{ $avgAttendanceRate !== null ? $avgAttendanceRate . '%' : '—' }}</p>
+            <p class="text-[11px] font-semibold mt-3 {{ $studentsNeedAttention ? 'text-orange-600' : 'text-slate-500' }}">
+                {{ $studentsNeedAttention ? $studentsNeedAttention . ' siswa perlu perhatian' : 'Selama periode PKL berjalan' }}
+            </p>
+        </a>
+
+        {{-- Penilaian --}}
+        <a href="{{ route('guru.assessments') }}" class="group bg-white rounded-3xl p-5 border border-slate-200/70 hover:border-[#0B2B25]/30 hover:shadow-lg transition-all">
+            <div class="flex items-start justify-between">
+                <p class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Nilai Guru Terisi</p>
+                <span class="w-9 h-9 rounded-xl bg-slate-100 text-[#0B2B25] flex items-center justify-center">
+                    <svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11.5 3.5l2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.6-4.8 2.6.9-5.4-3.9-3.8 5.4-.8z"/></svg>
+                </span>
+            </div>
+            <p class="font-space text-4xl font-bold text-slate-900 mt-2 leading-none">{{ $teacherScoredCount }}<span class="text-slate-300 text-2xl">/{{ $totalStudents }}</span></p>
+            <p class="text-[11px] font-semibold text-slate-500 mt-3">
+                {{ $avgFinalScore !== null ? 'Rata-rata nilai akhir ' . $avgFinalScore : 'Belum ada nilai akhir' }}
+            </p>
+        </a>
+    </section>
+
+    {{-- ===================== MAIN GRID ===================== --}}
+    <div class="grid grid-cols-1 xl:grid-cols-12 gap-5 items-start">
+
+        {{-- ---------- LEFT ---------- --}}
+        <div class="xl:col-span-8 space-y-5 min-w-0">
+
+            {{-- Presensi hari ini --}}
+            <section id="presensi-hari-ini" class="bg-white rounded-3xl border border-slate-200/70 overflow-hidden">
+                <div class="px-5 pt-5 pb-4 flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                        <h3 class="text-base font-extrabold text-slate-900 tracking-tight">Presensi Hari Ini</h3>
+                        <p class="text-xs text-slate-500 font-medium mt-0.5">{{ now()->isoFormat('dddd, D MMMM Y') }} · diurutkan dari yang perlu perhatian</p>
+                    </div>
+                    <a href="{{ route('guru.monitoring', ['date' => now()->toDateString()]) }}" class="inline-flex items-center gap-1 text-xs font-bold text-[#12382F] hover:underline">Detail & foto {!! $chevron !!}</a>
+                </div>
+
+                <div class="px-5 pb-4 flex flex-wrap gap-1.5">
+                    @foreach([['hadir', 'Hadir', $todaySummary['hadir']], ['terlambat', 'Terlambat', $todaySummary['terlambat']], ['dinas_luar', 'Dinas/WFH', $todaySummary['tugas']], ['izin', 'Izin/Sakit', $todaySummary['izin_sakit']], ['alfa', 'Alfa', $todaySummary['alfa']], ['belum', 'Belum', $todaySummary['belum']], ['libur', 'Libur', $todaySummary['libur']]] as [$k, $lbl, $val])
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-bold {{ $val ? $stateMeta[$k]['pill'] : 'bg-white text-slate-400 border-slate-200' }}">
+                            <span class="w-1.5 h-1.5 rounded-full {{ $val ? $stateMeta[$k]['dot'] : 'bg-slate-300' }}"></span>{{ $lbl }} <span class="font-space">{{ $val }}</span>
+                        </span>
+                    @endforeach
+                </div>
+
+                @if($todayRows->isEmpty())
+                    <div class="p-8 border-t border-slate-100">
+                        <x-empty-state title="Belum Ada Siswa Binaan" description="Hubungi Admin Sekolah untuk plotting siswa ke bimbingan Anda." />
+                    </div>
+                @else
+                    <div class="overflow-x-auto border-t border-slate-100">
+                        <table class="w-full text-xs min-w-[680px]">
+                            <thead>
+                                <tr class="text-[10px] uppercase tracking-wider text-slate-400 font-bold text-left bg-slate-50/60">
+                                    <th class="px-5 py-2.5">Siswa</th>
+                                    <th class="px-3 py-2.5">Status</th>
+                                    <th class="px-3 py-2.5">Masuk</th>
+                                    <th class="px-3 py-2.5">Pulang</th>
+                                    <th class="px-3 py-2.5">Lokasi</th>
+                                    <th class="px-5 py-2.5 text-right">Selfie</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                @foreach($todayRows as $row)
+                                    @php
+                                        $sp = $row['spkl']; $att = $row['attendance']; $meta = $stateMeta[$row['state']] ?? $stateMeta['belum'];
+                                        $jamMasuk = $row['hours']['checkin_late'] ?? null;
+                                    @endphp
+                                    <tr class="{{ $row['flagged'] ? 'bg-rose-50/50' : 'hover:bg-slate-50/60' }} transition-colors">
+                                        <td class="px-5 py-3">
+                                            <div class="flex items-center gap-3 min-w-0">
+                                                <span class="w-9 h-9 rounded-full bg-[#C6F26B] text-[#0B2B25] font-extrabold text-[11px] flex items-center justify-center shrink-0">{{ $initials($sp->student->user->name) }}</span>
+                                                <div class="min-w-0">
+                                                    <p class="font-bold text-slate-900 truncate">{{ $sp->student->user->name }} <span class="text-slate-400 font-medium">· {{ $sp->student->class->name ?? '-' }}</span></p>
+                                                    <p class="text-[11px] text-slate-500 truncate">{{ $sp->company->name ?? 'Belum ada DU/DI' }}</p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="px-3 py-3">
+                                            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[10px] font-bold whitespace-nowrap {{ $meta['pill'] }}">
+                                                <span class="w-1.5 h-1.5 rounded-full {{ $meta['dot'] }}"></span>{{ $meta['label'] }}
+                                            </span>
+                                        </td>
+                                        <td class="px-3 py-3 whitespace-nowrap">
+                                            @if($att && $att->checkin_time)
+                                                <span class="font-space font-bold text-slate-900">{{ $fmtTime($att->checkin_time) }}</span>
+                                            @else
+                                                <span class="text-slate-300">—</span>
+                                                @if($jamMasuk && in_array($row['state'], ['belum', 'belum_telat']))
+                                                    <span class="block text-[10px] text-slate-400">batas {{ substr($jamMasuk, 0, 5) }}</span>
+                                                @endif
+                                            @endif
+                                        </td>
+                                        <td class="px-3 py-3 whitespace-nowrap">
+                                            @if($att && $att->checkout_time)
+                                                <span class="font-space font-bold text-slate-900">{{ $fmtTime($att->checkout_time) }}</span>
+                                            @else
+                                                <span class="text-slate-300">—</span>
+                                            @endif
+                                        </td>
+                                        <td class="px-3 py-3">
+                                            @if($att && $att->is_mock_detected)
+                                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#B42318] text-white text-[10px] font-bold">Fake GPS</span>
+                                            @elseif($att && $att->is_within_radius === false)
+                                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 text-[10px] font-bold">Luar radius</span>
+                                            @elseif($att && $att->is_within_radius === true)
+                                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold">Dalam area</span>
+                                            @elseif($att && $att->checkin_time)
+                                                <span class="text-[10px] text-slate-400 font-semibold">GPS nonaktif</span>
+                                            @else
+                                                <span class="text-slate-300">—</span>
+                                            @endif
+                                            @if($att && $att->accuracy_meters)
+                                                <span class="block text-[10px] text-slate-400 mt-0.5">±{{ $att->accuracy_meters }} m</span>
+                                            @endif
+                                        </td>
+                                        <td class="px-5 py-3 text-right">
+                                            @if($att && $att->checkin_photo_path)
+                                                <button type="button" onclick="openImageLightbox('{{ asset('storage/' . $att->checkin_photo_path) }}', 'Selfie masuk: {{ addslashes($sp->student->user->name) }}')" class="inline-block cursor-zoom-in" title="Lihat selfie">
+                                                    <img src="{{ asset('storage/' . $att->checkin_photo_path) }}" alt="Selfie {{ $sp->student->user->name }}" class="w-9 h-9 rounded-xl object-cover border border-slate-200 hover:scale-110 transition-transform">
+                                                </button>
+                                            @else
+                                                <span class="text-slate-300">—</span>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @endif
+            </section>
+
+            {{-- Tren 7 hari --}}
+            <section class="bg-white rounded-3xl border border-slate-200/70 p-5">
+                <div class="flex flex-wrap items-start justify-between gap-3 mb-5">
+                    <div>
+                        <h3 class="text-base font-extrabold text-slate-900 tracking-tight">Tren Kehadiran 7 Hari</h3>
+                        <p class="text-xs text-slate-500 font-medium mt-0.5">Jumlah siswa per status presensi harian</p>
+                    </div>
+                    <div class="flex flex-wrap gap-3 text-[11px] font-semibold text-slate-500">
+                        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm bg-[#12382F]"></span>Hadir</span>
+                        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm bg-amber-400"></span>Terlambat</span>
+                        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm bg-sky-400"></span>Izin/Sakit</span>
+                        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm bg-rose-500"></span>Alfa</span>
+                    </div>
+                </div>
+                <div class="grid grid-cols-7 gap-2 sm:gap-4 items-end h-44">
+                    @foreach($attendanceTrend as $day)
+                        @php $sum = $day['hadir'] + $day['terlambat'] + $day['izin'] + $day['alfa']; $isToday = $day['date']->isToday(); @endphp
+                        <div class="h-full flex flex-col items-center justify-end gap-2 group" title="{{ $day['date']->isoFormat('dddd, D MMM') }}: {{ $day['hadir'] }} hadir, {{ $day['terlambat'] }} terlambat, {{ $day['izin'] }} izin/sakit, {{ $day['alfa'] }} alfa">
+                            <span class="font-space text-[11px] font-bold {{ $sum ? 'text-slate-700' : 'text-slate-300' }}">{{ $sum ?: '–' }}</span>
+                            <div class="w-full max-w-[44px] flex-1 flex flex-col-reverse rounded-xl overflow-hidden bg-slate-50 {{ $isToday ? 'ring-2 ring-[#C6F26B] ring-offset-2' : '' }}">
+                                @foreach([['hadir', 'bg-[#12382F]'], ['terlambat', 'bg-amber-400'], ['izin', 'bg-sky-400'], ['alfa', 'bg-rose-500']] as [$k, $cls])
+                                    @if($day[$k] > 0)
+                                        <div class="{{ $cls }} w-full" style="height: {{ round($day[$k] / $trendMax * 100, 1) }}%"></div>
+                                    @endif
+                                @endforeach
+                            </div>
+                            <span class="text-[10px] font-bold {{ $isToday ? 'text-[#0B2B25]' : 'text-slate-400' }} uppercase">{{ $isToday ? 'Hari ini' : $day['date']->isoFormat('ddd D') }}</span>
+                        </div>
+                    @endforeach
+                </div>
+            </section>
+
+            {{-- Siswa bimbingan --}}
+            <section class="bg-white rounded-3xl border border-slate-200/70 p-5">
+                <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
+                    <div>
+                        <h3 class="text-base font-extrabold text-slate-900 tracking-tight">Perkembangan Siswa Bimbingan</h3>
+                        <p class="text-xs text-slate-500 font-medium mt-0.5">Kehadiran, jurnal, dan penilaian selama periode PKL</p>
+                    </div>
+                    <a href="{{ route('guru.reports') }}" class="inline-flex items-center gap-1 text-xs font-bold text-[#12382F] hover:underline">Laporan PDF {!! $chevron !!}</a>
+                </div>
+
+                @if($studentInsights->isEmpty())
+                    <x-empty-state title="Belum Ada Siswa Binaan" description="Hubungi Admin Sekolah untuk plotting siswa ke bimbingan Anda." />
+                @else
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        @foreach($studentInsights as $s)
+                            @php
+                                $sp = $s['spkl'];
+                                $rate = $s['attendance_rate'];
+                                $rateColor = $rate === null ? 'bg-slate-200' : ($rate >= 90 ? 'bg-[#12382F]' : ($rate >= 75 ? 'bg-amber-400' : 'bg-rose-500'));
+                                $jPct = $s['journal_total'] ? round($s['journal_approved'] / $s['journal_total'] * 100) : 0;
+                                $todayMeta = $stateMeta[$s['today']['state'] ?? 'belum'] ?? $stateMeta['belum'];
+                            @endphp
+                            <article class="rounded-[22px] border {{ count($s['warnings']) ? 'border-orange-200 bg-orange-50/30' : 'border-slate-200/80 bg-white' }} p-4 space-y-4">
+                                {{-- header --}}
+                                <div class="flex items-start justify-between gap-3">
+                                    <div class="flex items-center gap-3 min-w-0">
+                                        <span class="w-11 h-11 rounded-full bg-[#0B2B25] text-[#C6F26B] font-extrabold text-xs flex items-center justify-center shrink-0">{{ $initials($sp->student->user->name) }}</span>
+                                        <div class="min-w-0">
+                                            <p class="font-extrabold text-slate-900 text-sm truncate">{{ $sp->student->user->name }}</p>
+                                            <p class="text-[11px] text-slate-500 truncate">{{ $sp->student->class->name ?? '-' }} · NISN <span class="font-mono">{{ $sp->student->nisn }}</span></p>
+                                        </div>
+                                    </div>
+                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[10px] font-bold whitespace-nowrap {{ $todayMeta['pill'] }}">
+                                        <span class="w-1.5 h-1.5 rounded-full {{ $todayMeta['dot'] }}"></span>{{ $todayMeta['label'] }}
+                                    </span>
+                                </div>
+
+                                {{-- DU/DI --}}
+                                <div class="flex items-center gap-2.5 p-3 rounded-2xl bg-slate-50 text-xs">
+                                    <svg class="w-4 h-4 text-[#12382F] shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 21h18M5 21V7l7-4 7 4v14M9 9h1m4 0h1m-6 4h1m4 0h1m-6 4h1m4 0h1"/></svg>
+                                    <div class="min-w-0">
+                                        <p class="font-bold text-slate-800 truncate">{{ $sp->company->name ?? 'Belum ditempatkan' }}</p>
+                                        <p class="text-[10px] text-slate-500 truncate">Pembimbing DU/DI: {{ $sp->supervisor->user->name ?? 'Belum ditentukan' }}</p>
+                                    </div>
+                                </div>
+
+                                {{-- Kehadiran --}}
+                                <div class="space-y-1.5">
+                                    <div class="flex items-center justify-between text-[11px] font-bold">
+                                        <span class="text-slate-500 uppercase tracking-wider">Kehadiran</span>
+                                        <span class="font-space text-slate-900 text-sm">{{ $rate !== null ? $rate . '%' : '—' }}</span>
+                                    </div>
+                                    <div class="h-1.5 rounded-full bg-slate-100 overflow-hidden"><div class="h-full rounded-full {{ $rateColor }}" style="width: {{ $rate ?? 0 }}%"></div></div>
+                                    <div class="flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] font-semibold text-slate-500">
+                                        <span><span class="font-space text-slate-800">{{ $s['present'] }}</span> hadir</span>
+                                        <span><span class="font-space text-amber-600">{{ $s['late'] }}</span> telat</span>
+                                        <span><span class="font-space text-sky-600">{{ $s['leave'] }}</span> izin/sakit</span>
+                                        <span><span class="font-space text-rose-600">{{ $s['alfa'] }}</span> alfa</span>
+                                        <span class="ml-auto">Terakhir masuk: {{ $s['last_checkin'] ? $s['last_checkin']->isoFormat('D MMM') : '—' }}</span>
+                                    </div>
+                                </div>
+
+                                {{-- Jurnal --}}
+                                <div class="space-y-1.5">
+                                    <div class="flex items-center justify-between text-[11px] font-bold">
+                                        <span class="text-slate-500 uppercase tracking-wider">Jurnal disetujui</span>
+                                        <span class="font-space text-slate-900 text-sm">{{ $s['journal_approved'] }}<span class="text-slate-300">/{{ $s['journal_total'] }}</span></span>
+                                    </div>
+                                    <div class="h-1.5 rounded-full bg-slate-100 overflow-hidden"><div class="h-full rounded-full bg-[#C6F26B]" style="width: {{ $jPct }}%"></div></div>
+                                    <div class="flex flex-wrap gap-1.5 text-[10px] font-bold">
+                                        @if($s['journal_review_guru'])<a href="{{ route('guru.journals') }}" class="px-2 py-0.5 rounded-full bg-[#0B2B25] text-[#C6F26B]">{{ $s['journal_review_guru'] }} menunggu Anda</a>@endif
+                                        @if($s['journal_at_dudi'])<span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">{{ $s['journal_at_dudi'] }} di DU/DI</span>@endif
+                                        @if($s['journal_revision'])<span class="px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">{{ $s['journal_revision'] }} revisi</span>@endif
+                                        <span class="px-2 py-0.5 rounded-full {{ ($s['days_since_journal'] ?? 99) > 3 ? 'bg-orange-50 text-orange-700' : 'bg-slate-50 text-slate-500' }}">
+                                            {{ $s['days_since_journal'] === null ? 'Belum pernah isi' : ($s['days_since_journal'] === 0 ? 'Isi hari ini' : 'Terakhir ' . $s['days_since_journal'] . ' hari lalu') }}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {{-- Penilaian --}}
+                                <div class="grid grid-cols-3 gap-2 text-center">
+                                    <div class="rounded-xl py-2 {{ $s['dudi_scored'] ? 'bg-emerald-50' : 'bg-slate-50' }}">
+                                        <span class="text-[9px] font-bold uppercase text-slate-500 block">Nilai DU/DI</span>
+                                        <span class="text-[11px] font-extrabold {{ $s['dudi_scored'] ? 'text-emerald-700' : 'text-slate-400' }}">{{ $s['dudi_scored'] ? 'Terisi' : 'Belum' }}</span>
+                                    </div>
+                                    <div class="rounded-xl py-2 {{ $s['teacher_scored'] ? 'bg-emerald-50' : 'bg-slate-50' }}">
+                                        <span class="text-[9px] font-bold uppercase text-slate-500 block">Nilai Guru</span>
+                                        <span class="text-[11px] font-extrabold {{ $s['teacher_scored'] ? 'text-emerald-700' : 'text-slate-400' }}">{{ $s['teacher_scored'] ? 'Terisi' : 'Belum' }}</span>
+                                    </div>
+                                    <div class="rounded-xl py-2 {{ $s['final_score'] ? 'bg-[#0B2B25] text-white' : 'bg-slate-50' }}">
+                                        <span class="text-[9px] font-bold uppercase {{ $s['final_score'] ? 'text-[#A9C2B9]' : 'text-slate-500' }} block">Nilai Akhir</span>
+                                        <span class="font-space text-sm font-bold {{ $s['final_score'] ? 'text-[#C6F26B]' : 'text-slate-400' }}">{{ $s['final_score'] ? number_format($s['final_score'], 1) : '—' }}</span>
+                                    </div>
+                                </div>
+
+                                @if(count($s['warnings']))
+                                    <div class="flex flex-wrap items-center gap-1.5">
+                                        <svg class="w-3.5 h-3.5 text-orange-600" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3m0 3h.01M10.3 3.9L2.4 18a2 2 0 001.7 3h15.8a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/></svg>
+                                        @foreach($s['warnings'] as $w)
+                                            <span class="px-2 py-0.5 rounded-full bg-orange-100 text-orange-800 text-[10px] font-bold">{{ $w }}</span>
+                                        @endforeach
+                                    </div>
+                                @endif
+
+                                {{-- aksi --}}
+                                <div class="flex items-center gap-1.5 pt-3 border-t border-slate-100">
+                                    <a href="{{ route('guru.monitoring') }}" class="px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[11px] transition-colors">Absensi</a>
+                                    <a href="{{ route('guru.journals', ['student_pkl_id' => $sp->id]) }}" class="px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[11px] transition-colors">Jurnal</a>
+                                    <a href="{{ route('guru.assessments') }}" class="px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[11px] transition-colors">Nilai</a>
+                                    <a href="{{ route('guru.reports.download', $sp->id) }}" class="ml-auto inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-[#0B2B25] hover:bg-[#12382F] text-[#C6F26B] font-bold text-[11px] transition-colors" title="Unduh buku laporan PDF">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v12m0 0l-4-4m4 4l4-4M5 20h14"/></svg>PDF
+                                    </a>
+                                </div>
+                            </article>
+                        @endforeach
+                    </div>
+                @endif
+            </section>
         </div>
 
-    </div>
+        {{-- ---------- RIGHT ---------- --}}
+        <aside class="xl:col-span-4 space-y-5 min-w-0">
 
+            {{-- Antrean tindakan --}}
+            <section class="bg-[#0B2B25] text-white rounded-3xl p-5 space-y-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-base font-extrabold tracking-tight">Antrean Tindakan</h3>
+                        <p class="text-[11px] text-[#A9C2B9] font-medium mt-0.5">Diurutkan dari yang paling lama menunggu</p>
+                    </div>
+                    <span class="font-space text-2xl font-bold text-[#C6F26B]">{{ $verifTotal }}</span>
+                </div>
+
+                @if($verifTotal === 0)
+                    <div class="rounded-2xl bg-white/[0.06] p-5 text-center">
+                        <span class="w-10 h-10 rounded-full bg-[#C6F26B] text-[#0B2B25] flex items-center justify-center mx-auto mb-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                        </span>
+                        <p class="text-xs font-bold">Semua sudah diverifikasi</p>
+                        <p class="text-[11px] text-[#A9C2B9] mt-0.5">Tidak ada izin/sakit atau jurnal yang menunggu.</p>
+                    </div>
+                @else
+                    @if($pendingJournalsList->isNotEmpty())
+                        <div class="space-y-2">
+                            <div class="flex items-center justify-between text-[11px] font-bold">
+                                <span class="uppercase tracking-wider text-[#A9C2B9]">Jurnal tingkat 2 · {{ $pendingJournals }}</span>
+                                <a href="{{ route('guru.journals') }}" class="text-[#C6F26B] hover:underline">Review semua</a>
+                            </div>
+                            @foreach($pendingJournalsList as $pj)
+                                <a href="{{ route('guru.journals', ['student_pkl_id' => $pj->student_pkl_id]) }}" class="flex items-center gap-3 p-3 rounded-2xl bg-white/[0.06] hover:bg-white/[0.12] transition-colors">
+                                    <span class="w-10 shrink-0 text-center leading-none">
+                                        <span class="font-space text-base font-bold block">{{ $pj->date->format('d') }}</span>
+                                        <span class="text-[9px] uppercase text-[#A9C2B9] font-bold">{{ $pj->date->isoFormat('MMM') }}</span>
+                                    </span>
+                                    <span class="min-w-0 flex-1">
+                                        <span class="text-xs font-bold block truncate">{{ $pj->studentPkl->student->user->name }}</span>
+                                        <span class="text-[10px] text-[#A9C2B9] block truncate">{{ Str::limit($pj->activity_description ?? '', 48) }}</span>
+                                    </span>
+                                    <span class="text-[10px] font-bold text-white/50 shrink-0">{{ $pj->date->diffForHumans(null, true) }}</span>
+                                </a>
+                            @endforeach
+                        </div>
+                    @endif
+
+                    @if($pendingRequestsList->isNotEmpty())
+                        <div class="space-y-2">
+                            <div class="flex items-center justify-between text-[11px] font-bold">
+                                <span class="uppercase tracking-wider text-[#A9C2B9]">Izin & sakit · {{ $pendingRequests }}</span>
+                                <a href="{{ route('guru.requests') }}" class="text-[#C6F26B] hover:underline">Proses</a>
+                            </div>
+                            @foreach($pendingRequestsList as $pr)
+                                <a href="{{ route('guru.requests') }}" class="flex items-center gap-3 p-3 rounded-2xl bg-white/[0.06] hover:bg-white/[0.12] transition-colors">
+                                    <span class="px-2 py-1 rounded-lg text-[10px] font-extrabold uppercase shrink-0 {{ $pr->type === 'sakit' ? 'bg-purple-400/20 text-purple-200' : 'bg-sky-400/20 text-sky-200' }}">{{ $pr->type }}</span>
+                                    <span class="min-w-0 flex-1">
+                                        <span class="text-xs font-bold block truncate">{{ $pr->studentPkl->student->user->name }}</span>
+                                        <span class="text-[10px] text-[#A9C2B9] block truncate">
+                                            {{ $pr->start_date->isoFormat('D MMM') }}{{ $pr->end_date && !$pr->end_date->eq($pr->start_date) ? ' – ' . $pr->end_date->isoFormat('D MMM') : '' }}
+                                            · {{ Str::limit($pr->reason ?? '', 30) }}
+                                        </span>
+                                    </span>
+                                    @if($pr->attachment_path)
+                                        <svg class="w-3.5 h-3.5 text-white/50 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-label="Ada lampiran"><path stroke-linecap="round" stroke-linejoin="round" d="M15.2 7l-6.6 6.6a2 2 0 102.8 2.8l6.6-6.6a4 4 0 10-5.7-5.7l-6.6 6.6a6 6 0 108.5 8.5L21 12.5"/></svg>
+                                    @endif
+                                </a>
+                            @endforeach
+                        </div>
+                    @endif
+                @endif
+            </section>
+
+            {{-- Kendala & SOS --}}
+            <section class="bg-white rounded-3xl border {{ $criticalIncidentsCount ? 'border-rose-300' : 'border-slate-200/70' }} p-5 space-y-3">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-base font-extrabold text-slate-900 tracking-tight">Kendala & SOS Siswa</h3>
+                        <p class="text-[11px] text-slate-500 font-medium mt-0.5">{{ $openIncidentsCount }} laporan belum selesai</p>
+                    </div>
+                    <a href="{{ route('guru.incidents') }}" class="inline-flex items-center gap-1 text-xs font-bold text-[#12382F] hover:underline">Semua {!! $chevron !!}</a>
+                </div>
+                @forelse($openIncidents as $inc)
+                    @php $u = $urgencyMeta[$inc->urgency] ?? $urgencyMeta['low']; @endphp
+                    <a href="{{ route('guru.incidents') }}" class="block p-3 rounded-2xl {{ $inc->urgency === 'critical' ? 'bg-rose-50 border border-rose-200' : 'bg-slate-50 hover:bg-slate-100' }} transition-colors">
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="px-1.5 py-0.5 rounded-md text-[9px] font-extrabold uppercase {{ $u['pill'] }}">{{ $u['label'] }}</span>
+                            <span class="text-[10px] font-bold text-slate-500">{{ $inc->status === 'in_progress' ? 'Sedang ditindak' : 'Baru masuk' }}</span>
+                            <span class="ml-auto text-[10px] text-slate-400">{{ $inc->created_at->diffForHumans() }}</span>
+                        </div>
+                        <p class="text-xs font-bold text-slate-900 truncate">{{ $inc->subject }}</p>
+                        <p class="text-[11px] text-slate-500 truncate">{{ $inc->studentPkl->student->user->name }} · {{ $inc->studentPkl->company->name ?? '-' }}</p>
+                    </a>
+                @empty
+                    <div class="flex items-center gap-3 p-3 rounded-2xl bg-slate-50">
+                        <span class="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                        </span>
+                        <p class="text-[11px] text-slate-500 font-medium">Tidak ada kendala terbuka dari siswa bimbingan Anda.</p>
+                    </div>
+                @endforelse
+            </section>
+
+            {{-- Peringatan lokasi --}}
+            @if($flaggedAttendances->isNotEmpty())
+                <section class="bg-white rounded-3xl border border-slate-200/70 p-5 space-y-3">
+                    <div>
+                        <h3 class="text-base font-extrabold text-slate-900 tracking-tight">Peringatan Lokasi</h3>
+                        <p class="text-[11px] text-slate-500 font-medium mt-0.5">Fake GPS / luar radius dalam 7 hari terakhir</p>
+                    </div>
+                    @foreach($flaggedAttendances as $fa)
+                        <a href="{{ route('guru.monitoring', ['date' => $fa->date->toDateString()]) }}" class="flex items-center gap-3 p-2.5 rounded-2xl hover:bg-slate-50 transition-colors">
+                            <span class="w-9 h-9 rounded-full {{ $fa->is_mock_detected ? 'bg-[#B42318] text-white' : 'bg-rose-100 text-rose-700' }} flex items-center justify-center shrink-0">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21s-7-6.2-7-11a7 7 0 1114 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
+                            </span>
+                            <span class="min-w-0 flex-1">
+                                <span class="text-xs font-bold text-slate-900 block truncate">{{ $fa->studentPkl->student->user->name }}</span>
+                                <span class="text-[10px] text-slate-500 block truncate">{{ $fa->is_mock_detected ? 'Fake GPS terdeteksi' : 'Di luar radius' }} · {{ $fa->studentPkl->company->name ?? '-' }}</span>
+                            </span>
+                            <span class="text-[10px] font-bold text-slate-400 shrink-0">{{ $fa->date->isoFormat('D MMM') }}</span>
+                        </a>
+                    @endforeach
+                </section>
+            @endif
+
+            {{-- Jurnal tertahan di DU/DI --}}
+            @if($stuckAtDudi->isNotEmpty())
+                <section class="bg-amber-50 rounded-3xl border border-amber-200 p-5 space-y-3">
+                    <div>
+                        <h3 class="text-base font-extrabold text-amber-950 tracking-tight">Jurnal Tertahan di DU/DI</h3>
+                        <p class="text-[11px] text-amber-800/80 font-medium mt-0.5">Belum diverifikasi pembimbing industri lebih dari 2 hari. Ingatkan mereka saat kunjungan atau lewat telepon.</p>
+                    </div>
+                    @foreach($stuckAtDudi as $st)
+                        <div class="flex items-center gap-3 p-3 rounded-2xl bg-white border border-amber-200/70">
+                            <span class="font-space text-lg font-bold text-amber-700 w-8 text-center shrink-0">{{ $st['count'] }}</span>
+                            <span class="min-w-0 flex-1">
+                                <span class="text-xs font-bold text-slate-900 block truncate">{{ $st['company']->name ?? '-' }}</span>
+                                <span class="text-[10px] text-slate-500 block truncate">{{ $st['supervisor'] ?? 'Pembimbing belum ditentukan' }}{{ $st['company']?->phone ? ' · ' . $st['company']->phone : '' }}</span>
+                            </span>
+                            <span class="text-[10px] font-bold text-amber-700 shrink-0">sejak {{ \Carbon\Carbon::parse($st['oldest'])->isoFormat('D MMM') }}</span>
+                        </div>
+                    @endforeach
+                </section>
+            @endif
+
+            {{-- Supervisi --}}
+            <section class="bg-white rounded-3xl border border-slate-200/70 p-5 space-y-4">
+                <div class="flex items-start justify-between gap-3">
+                    <div>
+                        <h3 class="text-base font-extrabold text-slate-900 tracking-tight">Kunjungan Supervisi</h3>
+                        <p class="text-[11px] text-slate-500 font-medium mt-0.5">Tahapan kunjungan per DU/DI</p>
+                    </div>
+                    <span class="font-space text-sm font-bold text-slate-900 whitespace-nowrap">{{ $supervisionDone }}<span class="text-slate-300">/{{ $supervisionTarget }}</span></span>
+                </div>
+                @forelse($supervisionProgress as $sv)
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between gap-2">
+                            <p class="text-xs font-bold text-slate-900 truncate">{{ $sv['company']->name }}</p>
+                            <span class="text-[10px] font-semibold text-slate-400 shrink-0">{{ $sv['students'] }} siswa</span>
+                        </div>
+                        <div class="grid grid-cols-4 gap-1">
+                            @foreach($supervisionStages as $key => $label)
+                                @php $done = $sv['done']->contains($key); @endphp
+                                <div class="space-y-1" title="{{ $label }}{{ $done ? ' — selesai' : ' — belum' }}">
+                                    <div class="h-1.5 rounded-full {{ $done ? 'bg-[#12382F]' : 'bg-slate-100' }}"></div>
+                                    <span class="block text-[9px] font-bold {{ $done ? 'text-[#12382F]' : 'text-slate-400' }} truncate">{{ $label }}</span>
+                                </div>
+                            @endforeach
+                        </div>
+                        <p class="text-[10px] text-slate-500">
+                            @if($sv['next_stage'])
+                                Berikutnya: <span class="font-bold text-slate-700">{{ $sv['next_stage'] }}</span>
+                            @else
+                                <span class="font-bold text-emerald-700">Semua tahap selesai</span>
+                            @endif
+                            @if($sv['last_visit']) · terakhir {{ \Carbon\Carbon::parse($sv['last_visit'])->isoFormat('D MMM') }} @endif
+                        </p>
+                    </div>
+                @empty
+                    <p class="text-[11px] text-slate-500">Belum ada DU/DI binaan.</p>
+                @endforelse
+                <a href="{{ route('guru.supervisions') }}" class="flex items-center justify-center gap-1.5 w-full py-2.5 rounded-full bg-[#C6F26B] hover:bg-[#b5e855] text-[#0B2B25] text-xs font-extrabold transition-colors">
+                    Catat Kunjungan & Berita Acara
+                </a>
+            </section>
+
+            {{-- Pengumuman --}}
+            <section class="bg-white rounded-3xl border border-slate-200/70 p-5 space-y-3">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-base font-extrabold text-slate-900 tracking-tight">Pengumuman</h3>
+                    <a href="{{ route('guru.announcements') }}" class="inline-flex items-center gap-1 text-xs font-bold text-[#12382F] hover:underline">Kelola {!! $chevron !!}</a>
+                </div>
+                @forelse($recentAnnouncements as $ann)
+                    <button type="button" onclick='openDashboardAnnouncementModal(@json($ann))' class="w-full text-left flex items-start gap-3 p-2.5 -mx-1 rounded-2xl hover:bg-slate-50 transition-colors">
+                        @if($ann->image_path)
+                            <img src="{{ $ann->image_url }}" alt="" class="w-11 h-11 rounded-xl object-cover border border-slate-200 shrink-0">
+                        @else
+                            <span class="w-11 h-11 rounded-xl bg-slate-100 text-[#12382F] flex items-center justify-center shrink-0">
+                                <svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5.9v13.3a1.8 1.8 0 01-3.4.6l-2.2-6.1M18 13a3 3 0 100-6M5.4 13.7A4 4 0 017 6h1.8c4.1 0 7.6-1.2 9.2-3v14c-1.5-1.8-5.1-3-9.2-3H7a4 4 0 01-1.6-.3z"/></svg>
+                            </span>
+                        @endif
+                        <span class="min-w-0 flex-1">
+                            <span class="flex items-center gap-1.5">
+                                <span class="text-[9px] font-extrabold uppercase text-[#12382F] tracking-wider">{{ $ann->category_label }}</span>
+                                @if($ann->is_pinned)<span class="text-[9px] font-bold text-amber-700">· Disematkan</span>@endif
+                            </span>
+                            <span class="text-xs font-bold text-slate-900 block line-clamp-1">{{ $ann->title }}</span>
+                            <span class="text-[10px] text-slate-400 block">{{ $ann->author->name ?? 'Sekolah' }} · {{ ($ann->published_at ?? $ann->created_at)->diffForHumans() }}</span>
+                        </span>
+                    </button>
+                @empty
+                    <p class="text-[11px] text-slate-500">Belum ada pengumuman aktif. <a href="{{ route('guru.announcements') }}" class="font-bold text-[#12382F] hover:underline">Tulis pengumuman</a></p>
+                @endforelse
+            </section>
+        </aside>
+    </div>
 </div>
 
 <!-- Modal Detail Pengumuman Dashboard -->

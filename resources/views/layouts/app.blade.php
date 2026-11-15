@@ -1,5 +1,8 @@
+@php
+    $isForestTheme = auth()->check() && auth()->user()->role === 'guru-pembimbing';
+@endphp
 <!DOCTYPE html>
-<html lang="id" class="h-full bg-slate-50">
+<html lang="id" class="h-full bg-slate-50 {{ $isForestTheme ? 'theme-forest' : '' }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -10,21 +13,21 @@
     <!-- Google Fonts: Plus Jakarta Sans -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
     
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
     </style>
 </head>
-<body class="h-full antialiased text-slate-800 bg-slate-50 selection:bg-indigo-600 selection:text-white">
+<body class="h-full antialiased text-slate-800 bg-slate-50 {{ $isForestTheme ? 'selection:bg-[#C6F26B] selection:text-[#0B2B25]' : 'selection:bg-indigo-600 selection:text-white' }}">
     <div class="min-h-full flex flex-col lg:flex-row">
 
         <!-- Mobile Drawer Backdrop -->
         <div id="mobile-sidebar-backdrop" onclick="toggleMobileSidebar()" class="fixed inset-0 z-40 bg-slate-950/60 backdrop-blur-xs hidden lg:hidden opacity-0 transition-opacity duration-300"></div>
 
         <!-- Sidebar Navigation -->
-        <aside id="sidebar-menu" class="fixed inset-y-0 left-0 z-50 w-72 lg:w-64 bg-[#090D16] text-slate-300 flex-shrink-0 flex flex-col border-r border-slate-800/80 -translate-x-full lg:translate-x-0 lg:sticky lg:top-0 lg:h-screen transition-transform duration-300 ease-out">
+        <aside id="sidebar-menu" class="fixed inset-y-0 left-0 z-50 w-72 lg:w-64 {{ $isForestTheme ? 'bg-[#0B2B25]' : 'bg-[#090D16]' }} text-slate-300 flex-shrink-0 flex flex-col border-r border-slate-800/80 -translate-x-full lg:translate-x-0 lg:sticky lg:top-0 lg:h-screen transition-transform duration-300 ease-out">
             
             <!-- Sidebar Header / Brand -->
             <div class="h-16 flex items-center justify-between px-5 bg-slate-950/60 border-b border-slate-800/80">
@@ -86,6 +89,10 @@
                     $role = auth()->user()->role;
                     $activeClass = 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white font-bold shadow-md shadow-indigo-600/30 border-l-4 border-indigo-400';
                     $inactiveClass = 'text-slate-300 hover:text-white hover:bg-slate-800/70 transition-all duration-150 group font-semibold';
+                    if ($isForestTheme) {
+                        $activeClass = 'bg-[#C6F26B] text-[#0B2B25] font-extrabold shadow-md shadow-black/20';
+                        $inactiveClass = 'text-[#A9C2B9] hover:text-white hover:bg-white/10 transition-all duration-150 group font-semibold';
+                    }
                 @endphp
 
                 <!-- 1. Super Admin Nav -->
