@@ -28,7 +28,74 @@
         @keyframes lpPulse { 0% { transform: scale(.3); opacity: .9 } 100% { transform: scale(1.15); opacity: 0 } }
         .js .reveal { opacity: 0; transform: translateY(18px); transition: opacity .6s cubic-bezier(.16,1,.3,1), transform .7s cubic-bezier(.16,1,.3,1); }
         .js .reveal.in { opacity: 1; transform: none; }
-        @media (prefers-reduced-motion: reduce) { .ring-pulse { animation: none; } .js .reveal { opacity: 1; transform: none; transition: none; } }
+        .reveal-stagger > * { transition-delay: calc(var(--i, 0) * 60ms); }
+        .js .reveal-stagger > * { opacity: 0; transform: translateY(14px); transition: opacity .6s cubic-bezier(.16,1,.3,1), transform .7s cubic-bezier(.16,1,.3,1); transition-delay: calc(var(--i, 0) * 60ms); }
+        .js .reveal-stagger.in > * { opacity: 1; transform: none; }
+
+        /* ---------- Hero: animasi masuk ---------- */
+        .hero-in { animation: lpUp .9s cubic-bezier(.16,1,.3,1) both; animation-delay: var(--d, 0ms); }
+        @keyframes lpUp { from { opacity: 0; transform: translateY(22px); } to { opacity: 1; transform: none; } }
+        .hero-word { display: inline-block; animation: lpWord .9s cubic-bezier(.16,1,.3,1) both; animation-delay: var(--d, 0ms); }
+        @keyframes lpWord { from { opacity: 0; transform: translateY(.45em); filter: blur(6px); } to { opacity: 1; transform: none; filter: none; } }
+        .hero-highlight { background: linear-gradient(transparent 62%, rgba(198,242,107,.75) 62%, rgba(198,242,107,.75) 92%, transparent 92%) no-repeat 0 0 / 0% 100%; animation: lpMark .9s cubic-bezier(.65,0,.35,1) 1.1s forwards; }
+        @keyframes lpMark { to { background-size: 100% 100%; } }
+        .dot-ping { position: relative; }
+        .dot-ping::after { content: ''; position: absolute; inset: 0; border-radius: 9999px; background: inherit; animation: lpPing 1.8s cubic-bezier(0,0,.2,1) infinite; }
+        @keyframes lpPing { 75%, 100% { transform: scale(2.6); opacity: 0; } }
+        .btn-shine { position: relative; overflow: hidden; }
+        .btn-shine::after { content: ''; position: absolute; top: 0; bottom: 0; left: -60%; width: 40%; background: linear-gradient(100deg, transparent, rgba(198,242,107,.35), transparent); transform: skewX(-20deg); animation: lpShine 4.5s ease-in-out 2s infinite; }
+        @keyframes lpShine { 0%, 70% { left: -60%; } 100% { left: 130%; } }
+
+        /* ---------- Mockup ponsel ---------- */
+        .phone-in { animation: lpPhoneIn 1.2s cubic-bezier(.16,1,.3,1) .25s both; }
+        @keyframes lpPhoneIn { from { opacity: 0; transform: translateY(60px) rotate(6deg) scale(.94); } to { opacity: 1; transform: none; } }
+        .phone-float { animation: lpFloat 6s ease-in-out 1.5s infinite; }
+        @keyframes lpFloat { 0%, 100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-12px) rotate(-.6deg); } }
+        .blob-drift { animation: lpBlob 9s ease-in-out infinite alternate; }
+        @keyframes lpBlob { from { transform: translate(0, 0) scale(1); } to { transform: translate(-40px, 30px) scale(1.15); } }
+        .float-chip { animation: lpChip 5s ease-in-out infinite; animation-delay: var(--d, 0s); }
+        @keyframes lpChip { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+
+        .mk-pop { animation: lpPop .7s cubic-bezier(.34,1.56,.64,1) both; animation-delay: var(--d, 0ms); }
+        @keyframes lpPop { from { opacity: 0; transform: translateY(16px) scale(.96); } to { opacity: 1; transform: none; } }
+        .mk-blink { animation: lpBlink 1s steps(1) infinite; }
+        @keyframes lpBlink { 50% { opacity: .15; } }
+        .mk-fence { animation: lpDash 1.6s linear infinite; }
+        @keyframes lpDash { to { stroke-dashoffset: -26; } }
+        .mk-radar, .mk-halo { transform-box: fill-box; transform-origin: center; }
+        .mk-radar { animation: lpRadar 3s cubic-bezier(.2,.6,.3,1) infinite; }
+        .mk-radar.delay { animation-delay: 1.5s; }
+        @keyframes lpRadar { from { transform: scale(.15); opacity: .9; } to { transform: scale(1); opacity: 0; } }
+        .mk-halo { animation: lpHalo 2s ease-out infinite; }
+        @keyframes lpHalo { from { transform: scale(1); opacity: .55; } to { transform: scale(3.2); opacity: 0; } }
+        .mk-ring { animation: lpRing 1.6s cubic-bezier(.65,0,.35,1) 1.4s both; }
+        @keyframes lpRing { from { stroke-dashoffset: 138; } to { stroke-dashoffset: 11; } }
+        .mk-bar { animation: lpBar 1.6s cubic-bezier(.65,0,.35,1) 1.5s both; }
+        @keyframes lpBar { from { width: 0; } to { width: 90%; } }
+        .mk-line { transform-origin: left; animation: lpLine .8s cubic-bezier(.65,0,.35,1) 1.2s both; }
+        @keyframes lpLine { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+        .mk-nudge { animation: lpNudge 2.2s ease-in-out 2s infinite; }
+        @keyframes lpNudge { 0%, 60%, 100% { transform: translateX(0); } 30% { transform: translateX(5px); } }
+        .mk-sos { animation: lpSos 2s ease-out infinite; }
+        @keyframes lpSos { 0% { box-shadow: 0 0 0 0 rgba(200,38,26,.55); } 70%, 100% { box-shadow: 0 0 0 14px rgba(200,38,26,0); } }
+        .mk-bell { transform-origin: 50% 10%; animation: lpBell 4s ease-in-out 2.5s infinite; }
+        @keyframes lpBell { 0%, 8%, 100% { transform: rotate(0); } 2% { transform: rotate(14deg); } 4% { transform: rotate(-12deg); } 6% { transform: rotate(6deg); } }
+
+        /* ---------- Kartu ---------- */
+        .card-lift, .js .reveal.card-lift, .js .reveal-stagger > .card-lift { transition: opacity .6s cubic-bezier(.16,1,.3,1), transform .6s cubic-bezier(.16,1,.3,1), box-shadow .35s, border-color .2s; }
+        .card-lift:hover, .js .reveal.in.card-lift:hover, .js .reveal-stagger.in > .card-lift:hover { transform: translateY(-4px); box-shadow: 0 18px 40px -18px rgba(11,43,37,.35); transition-delay: 0s !important; }
+        .card-lift .card-icon { transition: transform .45s cubic-bezier(.34,1.56,.64,1); }
+        .card-lift:hover .card-icon { transform: rotate(-8deg) scale(1.1); }
+
+        @media (prefers-reduced-motion: reduce) {
+            .ring-pulse { animation: none; }
+            .js .reveal, .js .reveal-stagger > * { opacity: 1; transform: none; transition: none; }
+            .hero-in, .hero-word, .phone-in, .phone-float, .blob-drift, .float-chip, .mk-pop, .mk-blink, .mk-fence,
+            .mk-radar, .mk-halo, .mk-ring, .mk-bar, .mk-line, .mk-nudge, .mk-sos, .mk-bell, .dot-ping::after, .btn-shine::after { animation: none !important; }
+            .mk-radar, .mk-halo { opacity: 0; }
+            .hero-highlight { animation: none; background-size: 100% 100%; }
+            .card-lift, .card-lift:hover, .card-lift:hover .card-icon { transform: none; }
+        }
     </style>
     <script>document.documentElement.classList.add('js');</script>
 </head>
@@ -60,30 +127,51 @@
     {{-- ================= HERO ================= --}}
     <section class="max-w-6xl mx-auto px-4 sm:px-6 pt-12 sm:pt-20 pb-16 grid lg:grid-cols-2 gap-12 items-center">
         <div class="space-y-6">
-            <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-[#0B2B25]/10 text-xs font-bold text-[#2E6B4F]">
-                <span class="w-1.5 h-1.5 rounded-full bg-[#7BB33A]"></span> Untuk SMK, guru pembimbing, dan DU/DI
+            <span class="hero-in inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-[#0B2B25]/10 text-xs font-bold text-[#2E6B4F]">
+                <span class="dot-ping w-1.5 h-1.5 rounded-full bg-[#7BB33A]"></span> Untuk SMK, guru pembimbing, dan DU/DI
             </span>
             <h1 class="font-space text-4xl sm:text-5xl lg:text-[3.4rem] font-bold leading-[1.05]">
-                PKL siswa terpantau rapi, dari hari pertama sampai sertifikat.
+                @foreach(explode(' ', 'PKL siswa terpantau rapi, dari hari pertama sampai sertifikat.') as $w => $word)
+                    <span class="hero-word {{ $word === 'rapi,' ? 'hero-highlight' : '' }}" style="--d: {{ 120 + $w * 55 }}ms">{{ $word }}</span>
+                @endforeach
             </h1>
-            <p class="text-base sm:text-lg text-[#0B2B25]/70 leading-relaxed max-w-xl">
+            <p class="hero-in text-base sm:text-lg text-[#0B2B25]/70 leading-relaxed max-w-xl" style="--d: 650ms">
                 Siswa presensi dengan selfie dan lokasi, menulis jurnal harian, lalu pembimbing industri dan guru memverifikasinya. Sekolah melihat semuanya dari satu dasbor, tanpa rekap manual.
             </p>
-            <div class="flex flex-col sm:flex-row gap-3">
-                <a href="#demo" class="inline-flex justify-center items-center px-6 py-3.5 rounded-2xl text-sm font-extrabold bg-[#0B2B25] text-[#C6F26B] hover:bg-[#123d34] shadow-lg shadow-[#0B2B25]/20">
+            <div class="hero-in flex flex-col sm:flex-row gap-3" style="--d: 780ms">
+                <a href="#demo" class="btn-shine inline-flex justify-center items-center px-6 py-3.5 rounded-2xl text-sm font-extrabold bg-[#0B2B25] text-[#C6F26B] hover:bg-[#123d34] shadow-lg shadow-[#0B2B25]/20">
                     Coba gratis {{ \App\Services\SubscriptionService::TRIAL_DAYS }} hari
                 </a>
                 <a href="{{ $showPricing ? '#harga' : '#fitur' }}" class="inline-flex justify-center items-center px-6 py-3.5 rounded-2xl text-sm font-bold bg-white border border-[#0B2B25]/15 hover:border-[#0B2B25]/30">
                     {{ $showPricing ? 'Lihat paket harga' : 'Lihat fitur' }}
                 </a>
             </div>
-            <p class="text-xs text-[#0B2B25]/55">Tanpa kartu kredit. Akun admin sekolah dibuat oleh tim kami setelah permohonan disetujui.</p>
+            <p class="hero-in text-xs text-[#0B2B25]/55" style="--d: 900ms">Tanpa kartu kredit. Akun admin sekolah dibuat oleh tim kami setelah permohonan disetujui.</p>
         </div>
 
         {{-- Mockup ponsel siswa --}}
         <div class="relative flex justify-center lg:justify-end" aria-hidden="true">
-            <div class="absolute -top-6 right-6 sm:right-16 w-64 h-64 rounded-full bg-[#C6F26B]/30 blur-3xl"></div>
-            @include('public.partials.student-phone-mockup')
+            <div class="blob-drift absolute -top-6 right-6 sm:right-16 w-64 h-64 rounded-full bg-[#C6F26B]/30 blur-3xl"></div>
+            <div class="phone-in relative">
+                <div class="phone-float">
+                    @include('public.partials.student-phone-mockup')
+                </div>
+                {{-- Chip mengambang di sekitar ponsel --}}
+                <div class="hidden sm:block absolute -left-16 top-44 hero-in" style="--d: 1500ms">
+                    <div class="float-chip flex items-center gap-2 rounded-2xl bg-white/95 border border-[#0B2B25]/10 shadow-xl shadow-[#0B2B25]/10 px-3 py-2">
+                        <span class="w-7 h-7 rounded-full bg-[#C6F26B] text-[#0B2B25] flex items-center justify-center text-xs font-extrabold">✓</span>
+                        <span class="text-[11px] leading-tight"><span class="block font-extrabold">Presensi tercatat</span><span class="text-[#0B2B25]/55">07.12 · 38 m dari lokasi</span></span>
+                    </div>
+                </div>
+                <div class="hidden sm:block absolute -right-8 bottom-40 hero-in" style="--d: 1800ms">
+                    <div class="float-chip flex items-center gap-2 rounded-2xl bg-[#0B2B25] text-white shadow-xl shadow-[#0B2B25]/25 px-3 py-2" style="--d: 1.2s">
+                        <span class="w-7 h-7 rounded-full bg-white/10 text-[#C6F26B] flex items-center justify-center">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                        </span>
+                        <span class="text-[11px] leading-tight"><span class="block font-extrabold">Jurnal disetujui</span><span class="text-[#A9C2B9]">oleh pembimbing DU/DI</span></span>
+                    </div>
+                </div>
+            </div>
         </div>
     </section>
 
@@ -91,9 +179,9 @@
     <section class="border-y border-[#0B2B25]/10 bg-white/60">
         <div class="max-w-6xl mx-auto px-4 sm:px-6 py-8">
             <p class="text-center text-xs font-bold uppercase tracking-widest text-[#0B2B25]/50 mb-5">Satu platform, setiap pihak punya tampilan sendiri</p>
-            <ul class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-center">
+            <ul class="reveal-stagger grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-center">
                 @foreach(['Siswa PKL' => 'Presensi & jurnal dari ponsel', 'Guru Pembimbing' => 'Verifikasi & supervisi', 'Pembimbing DU/DI' => 'Setujui jurnal & menilai', 'Admin Sekolah' => 'Plotting & master data', 'Kepala Sekolah' => 'Laporan eksekutif', 'Orang Tua' => 'Pantau lewat tautan aman'] as $role => $desc)
-                    <li class="rounded-2xl bg-white border border-[#0B2B25]/10 px-3 py-4">
+                    <li class="card-lift rounded-2xl bg-white border border-[#0B2B25]/10 px-3 py-4" style="--i: {{ $loop->index }}">
                         <div class="text-sm font-extrabold">{{ $role }}</div>
                         <div class="text-[11px] text-[#0B2B25]/55 mt-1">{{ $desc }}</div>
                     </li>
@@ -120,8 +208,8 @@
         @endphp
         <div class="mt-12 grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             @foreach($features as $i => [$title, $desc, $icon])
-                <article class="reveal rounded-3xl bg-white border border-[#0B2B25]/10 p-6 hover:border-[#0B2B25]/25 transition-colors" style="transition-delay: {{ ($i % 3) * 70 }}ms">
-                    <div class="w-11 h-11 rounded-2xl bg-[#0B2B25] text-[#C6F26B] flex items-center justify-center">
+                <article class="reveal rounded-3xl bg-white border border-[#0B2B25]/10 p-6 hover:border-[#0B2B25]/25 card-lift" style="transition-delay: {{ ($i % 3) * 70 }}ms">
+                    <div class="card-icon w-11 h-11 rounded-2xl bg-[#0B2B25] text-[#C6F26B] flex items-center justify-center">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ $icon }}"/></svg>
                     </div>
                     <h3 class="mt-4 text-base font-extrabold">{{ $title }}</h3>
@@ -346,7 +434,7 @@
 <script>
     (function () {
         // Animasi muncul saat di-scroll (konten tetap terlihat bila JS mati / reduced motion).
-        const items = document.querySelectorAll('.reveal');
+        const items = document.querySelectorAll('.reveal, .reveal-stagger');
         const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         if (reduce || !('IntersectionObserver' in window)) {
             items.forEach((el) => el.classList.add('in'));
