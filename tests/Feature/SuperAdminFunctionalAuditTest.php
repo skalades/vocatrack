@@ -153,10 +153,11 @@ class SuperAdminFunctionalAuditTest extends TestCase
 
         $response = $this->actingAs($this->superAdmin)->get(route('superadmin.dashboard'));
         $response->assertStatus(200);
-        $response->assertSee('Pusat Kendali Sewa Platform');
-        $response->assertSee('2 Masa Trial');
-        $response->assertSee('Trial 14 Hari');
-        $response->assertSee('Pemberitahuan Masa Sewa Menjelang Berakhir');
+        $response->assertSee('Ringkasan Platform');
+        $response->assertSee('2 sedang trial');
+        $response->assertSee('Sekolah Perlu Perhatian');
+        // Trial masih 12 hari lagi (> 7 hari), jadi belum masuk daftar perhatian.
+        $response->assertSee('Tidak ada sekolah yang mendekati akhir masa sewa.');
     }
 
     /**
@@ -166,10 +167,15 @@ class SuperAdminFunctionalAuditTest extends TestCase
     {
         $response = $this->actingAs($this->superAdmin)->get(route('superadmin.schools'));
         $response->assertStatus(200);
-        $response->assertSee('Daftar Tenant Sekolah Mitra');
+        $response->assertSee('Tenant Sekolah');
         $response->assertSee('Trial Evaluasi (14 Hari)');
-        $response->assertSee('Gratis / Trial');
-        $response->assertSee('Hanya Paket Trial / Demo');
+        $response->assertSee('Gratis');
+
+        // Filter tahap: kedua sekolah sedang trial, tidak ada yang aktif berbayar.
+        $this->actingAs($this->superAdmin)->get(route('superadmin.schools', ['stage' => 'trial']))
+            ->assertOk()->assertSee('SMK Negeri 2 Garut');
+        $this->actingAs($this->superAdmin)->get(route('superadmin.schools', ['stage' => 'active']))
+            ->assertOk()->assertDontSee('SMK Negeri 2 Garut');
     }
 
     /**
@@ -293,7 +299,7 @@ class SuperAdminFunctionalAuditTest extends TestCase
         // 1. View invoices page
         $this->actingAs($this->superAdmin)->get(route('superadmin.invoices'))
             ->assertStatus(200)
-            ->assertSee('Tagihan & Invoice', false);
+            ->assertSee('Tagihan');
 
         // 2. Create manual invoice
         $response = $this->actingAs($this->superAdmin)->post(route('superadmin.invoices.store'), [
@@ -430,8 +436,10 @@ class SuperAdminFunctionalAuditTest extends TestCase
     public function test_storage_quota_calculation_and_recalculation(): void
     {
         // 1. Via POST form
-        $response = $this->actingAs($this->superAdmin)->post(route('superadmin.schools.recalculate-storage', $this->school1->id));
-        $response->assertRedirect(route('superadmin.schools'));
+        $response = $this->actingAs($this->superAdmin)
+            ->from(route('superadmin.schools.show', $this->school1))
+            ->post(route('superadmin.schools.recalculate-storage', $this->school1->id));
+        $response->assertRedirect(route('superadmin.schools.show', $this->school1));
         $response->assertSessionHas('success');
 
         // 2. GET langsung ditolak: aksi pengubah data wajib lewat POST ber-CSRF

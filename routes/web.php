@@ -5,6 +5,7 @@ use App\Http\Controllers\AnnouncementController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CertificateVerificationController;
 use App\Http\Controllers\ImpersonationController;
+use App\Http\Controllers\LandingController;
 use App\Http\Controllers\KepsekController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ParentLinkController;
@@ -27,9 +28,7 @@ use App\Http\Controllers\TeacherController;
 use Illuminate\Support\Facades\Route;
 
 // Guest Routes
-Route::get('/', function () {
-    return redirect()->route('login');
-});
+Route::get('/', [LandingController::class, 'index'])->name('landing');
 
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [AuthController::class, 'login'])->name('login.post');
@@ -71,6 +70,7 @@ Route::middleware(['auth', 'role:super-admin'])->prefix('super-admin')->group(fu
     // Tenant & Manajemen Sekolah Multi-Tenancy
     Route::get('/schools', [TenantController::class, 'schools'])->name('superadmin.schools');
     Route::get('/schools/export', [TenantController::class, 'exportSchools'])->name('superadmin.schools.export');
+    Route::get('/schools/{school}', [TenantController::class, 'show'])->whereNumber('school')->name('superadmin.schools.show');
     Route::post('/schools', [TenantController::class, 'storeSchool'])->name('superadmin.schools.store');
     Route::put('/schools/{school}', [TenantController::class, 'updateSchool'])->name('superadmin.schools.update');
     Route::delete('/schools/{school}', [TenantController::class, 'destroySchool'])->name('superadmin.schools.destroy');
@@ -133,7 +133,7 @@ Route::middleware(['auth', 'role:super-admin'])->prefix('super-admin')->group(fu
 });
 
 // Public Demo Request Route
-Route::post('/request-demo', [SchoolRequestController::class, 'storePublicSchoolRequest'])->name('public.request-demo');
+Route::post('/request-demo', [SchoolRequestController::class, 'storePublicSchoolRequest'])->middleware('throttle:5,10')->name('public.request-demo');
 
 // 2. Admin Sekolah Routes
 Route::middleware(['auth', 'IdentifyTenant', 'role:admin-sekolah'])->prefix('admin-sekolah')->group(function () {

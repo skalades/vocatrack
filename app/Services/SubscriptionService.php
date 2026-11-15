@@ -9,86 +9,65 @@ use App\Models\Student;
 use App\Models\SubscriptionPlan;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 
 class SubscriptionService
 {
+    public const TRIAL_DAYS = 14;
+
     /**
-     * Get SaaS operational & revenue metrics for the Superadmin dashboard.
+     * Metrik operasional & pendapatan untuk dashboard Super Admin.
+     * Seluruh perhitungan memakai satu kali eager load (tanpa query per sekolah).
      */
     public function getSaaSMetrics(): array
     {
-        $today = Carbon::today();
-        $thirtyDaysFromNow = Carbon::today()->addDays(30);
+        $lifecycle = app(TenantLifecycleService::class);
+        $noticeLimit = Carbon::today()->addDays(TenantLifecycleService::RENEWAL_NOTICE_DAYS);
 
-        $totalSchools = School::count();
-        $activeSchools = School::where('is_active', true)->count();
+        $schools = School::with('subscriptions')->get();
+        $stageCounts = array_fill_keys(array_keys(TenantLifecycleService::STAGES), 0);
 
-        // Calculate metrics per tenant based on their active subscription
-        $schools = School::with(['subscriptions' => function ($q) {
-            $q->latest('end_date');
-        }])->get();
-
-        $activeTenants = 0;
-        $trialTenants = 0;
         $expiringSoon = 0;
         $totalQuotaLicensed = 0;
+        $mrrEstimate = 0.0;
 
-        foreach ($schools as $sch) {
-            $sub = $sch->activeSubscription();
-            if ($sub) {
-                $computed = $sub->computed_status;
-                if ($computed === 'trial') {
-                    $trialTenants++;
-                } elseif ($computed === 'active' || $computed === 'expiring_soon' || $computed === 'grace_period') {
-                    $activeTenants++;
-                }
+        foreach ($schools as $school) {
+            $sub = $school->activeSubscription();
+            $stage = $lifecycle->stage($school, $sub);
+            $stageCounts[$stage]++;
 
-                if (!$sub->end_date->isPast() && $sub->end_date->lte($thirtyDaysFromNow)) {
-                    $expiringSoon++;
-                }
+            if (!$sub) {
+                continue;
+            }
 
-                $totalQuotaLicensed += $sub->student_quota;
+            if (!$sub->end_date->isPast() && $sub->end_date->lte($noticeLimit)) {
+                $expiringSoon++;
+            }
+            $totalQuotaLicensed += $sub->student_quota;
+
+            // MRR = harga periode berjalan dibagi panjang periodenya (bulan).
+            if (in_array($stage, ['active', 'expiring', 'grace'], true) && (float) $sub->price_paid > 0) {
+                $months = max(1, (int) round($sub->start_date->diffInMonths($sub->end_date)));
+                $mrrEstimate += (float) $sub->price_paid / $months;
             }
         }
 
-        // Total lifetime revenue collected (hanya invoice yang benar-benar lunas)
-        $totalRevenue = (float) Invoice::where('status', 'paid')->sum('amount');
-
-        // Active students registered across platform
         $totalStudents = Student::count();
-
-        // Calculate Monthly Recurring Revenue estimate from active paying subscriptions
-        $mrrEstimate = 0;
-        $arrEstimate = 0;
-        foreach ($schools as $sch) {
-            $sub = $sch->activeSubscription();
-            if ($sub && in_array($sub->computed_status, ['active', 'expiring_soon', 'grace_period'], true)) {
-                $price = (float) $sub->price_paid;
-                if ($price > 0) {
-                    $arrEstimate += $price;
-                    $mrrEstimate += ($price / 12);
-                }
-            }
-        }
-
-        // Invoices summary
-        $pendingInvoicesCount = Invoice::where('status', 'unpaid')
-            ->orWhere('status', 'pending_verification')
-            ->count();
+        $openStatuses = ['unpaid', 'pending_verification'];
 
         return [
-            'total_schools' => $totalSchools,
-            'active_schools' => $activeSchools,
-            'active_tenants' => $activeTenants,
-            'trial_tenants' => $trialTenants,
+            'total_schools' => $schools->count(),
+            'active_schools' => $schools->where('is_active', true)->count(),
+            'active_tenants' => $stageCounts['active'] + $stageCounts['expiring'] + $stageCounts['grace'],
+            'trial_tenants' => $stageCounts['trial'],
             'expiring_soon' => $expiringSoon,
+            'stage_counts' => $stageCounts,
             'total_students' => $totalStudents,
             'total_quota_licensed' => max($totalQuotaLicensed, $totalStudents),
-            'total_revenue' => $totalRevenue,
+            'total_revenue' => (float) Invoice::where('status', 'paid')->sum('amount'),
+            'outstanding_amount' => (float) Invoice::whereIn('status', $openStatuses)->sum('amount'),
             'mrr_estimate' => round($mrrEstimate),
-            'arr_estimate' => round($arrEstimate),
-            'pending_invoices_count' => $pendingInvoicesCount,
+            'arr_estimate' => round($mrrEstimate * 12),
+            'pending_invoices_count' => Invoice::whereIn('status', $openStatuses)->count(),
         ];
     }
 
@@ -133,7 +112,9 @@ class SubscriptionService
     }
 
     /**
-     * Assign or renew a subscription for a school.
+     * Buat periode langganan secara langsung (onboarding / seeder / data uji).
+     * Bila $createInvoice, invoice aktivasi ikut diterbitkan dan ditandai sudah diterapkan.
+     * Untuk paket berbayar yang belum dibayar gunakan onboard().
      */
     public function subscribeSchool(
         School $school,
@@ -149,21 +130,10 @@ class SubscriptionService
         ?string $paymentMethod = null
     ): SchoolSubscription {
         $start = $startDate ?? Carbon::today();
-        
-        // If it's a 14-day trial package or status is trial, end in 14 days
-        if ($plan->code === 'trial-14d' || ($status === 'trial' && Str::contains($plan->name, '14'))) {
-            $end = (clone $start)->addDays(14);
-        } else {
-            $months = match ($plan->billing_period) {
-                'monthly' => 1,
-                'semester' => 6,
-                'yearly' => 12,
-                default => 12,
-            };
-            $end = (clone $start)->addMonths($months);
-        }
+        $isTrial = $status === 'trial' || $plan->code === 'trial-14d';
+        $end = $isTrial ? $start->copy()->addDays(self::TRIAL_DAYS) : $start->copy()->addMonths($plan->periodMonths());
 
-        return DB::transaction(function () use ($school, $plan, $start, $end, $customQuota, $customPrice, $status, $notes, $customStorageMb, $createInvoice, $paymentStatus, $paymentMethod) {
+        return DB::transaction(function () use ($school, $plan, $start, $end, $customQuota, $customPrice, $status, $notes, $customStorageMb, $createInvoice, $paymentStatus, $paymentMethod, $isTrial) {
             $subscription = SchoolSubscription::create([
                 'school_id' => $school->id,
                 'plan_id' => $plan->id,
@@ -173,22 +143,33 @@ class SubscriptionService
                 'price_paid' => $customPrice !== null ? $customPrice : $plan->price,
                 'student_quota' => $customQuota !== null ? $customQuota : $plan->max_students,
                 'storage_quota_mb' => $customStorageMb !== null ? $customStorageMb : $plan->max_storage_mb,
-                'status' => $status,
+                'status' => $isTrial ? 'trial' : $status,
                 'notes' => $notes,
             ]);
 
             if ($createInvoice) {
                 $amount = (float) $subscription->price_paid;
-                $this->createInvoice(
-                    $subscription,
-                    "Biaya Sewa {$plan->name} ({$school->name})",
-                    $amount,
-                    // Paket gratis/trial tidak memiliki tagihan yang perlu ditunggu.
-                    $amount > 0 ? $paymentStatus : 'paid',
-                    $amount > 0 ? $paymentMethod : 'Trial Evaluasi',
-                    14,
-                    'Aktivasi lisensi sewa via Super Administrator'
-                );
+                $isPaid = $amount <= 0 || $paymentStatus === 'paid';
+
+                Invoice::create([
+                    'invoice_number' => app(TenantLifecycleService::class)->nextInvoiceNumber(),
+                    'school_id' => $school->id,
+                    'subscription_id' => $subscription->id,
+                    'type' => 'activation',
+                    'plan_id' => $plan->id,
+                    'period_months' => $isTrial ? null : $plan->periodMonths(),
+                    'title' => "Biaya Sewa {$plan->name} ({$school->name})",
+                    'amount' => $amount,
+                    'due_date' => Carbon::today()->addDays(14),
+                    'status' => $isPaid ? 'paid' : 'unpaid',
+                    'payment_method' => $amount <= 0
+                        ? 'Trial Evaluasi'
+                        : ($isPaid ? ($paymentMethod ?: 'Pembayaran manual (dicatat Super Admin)') : $paymentMethod),
+                    'paid_at' => $isPaid ? Carbon::now() : null,
+                    // Periode sudah dibuat langsung di atas; invoice tidak boleh menerapkannya lagi.
+                    'applied_at' => Carbon::now(),
+                    'notes' => 'Aktivasi lisensi sewa via Super Administrator',
+                ]);
             }
 
             return $subscription;
@@ -196,7 +177,50 @@ class SubscriptionService
     }
 
     /**
-     * Extend an existing subscription.
+     * Onboarding sekolah baru. Paket gratis/trial atau paket berbayar yang sudah lunas langsung
+     * aktif; paket berbayar yang belum lunas diberi masa trial 14 hari plus tagihan aktivasi
+     * yang otomatis mengaktifkan paket begitu dilunasi.
+     */
+    public function onboard(
+        School $school,
+        SubscriptionPlan $plan,
+        bool $paid,
+        ?string $paymentMethod = null,
+        ?int $customQuota = null,
+        ?int $customStorageMb = null,
+        ?string $notes = null
+    ): SchoolSubscription {
+        if ($plan->isTrialPlan() || $paid) {
+            return $this->subscribeSchool(
+                $school, $plan, Carbon::today(), $customQuota, null,
+                $plan->isTrialPlan() ? 'trial' : 'active',
+                $notes, $customStorageMb, true, 'paid', $paymentMethod
+            );
+        }
+
+        return DB::transaction(function () use ($school, $plan, $paymentMethod, $customQuota, $customStorageMb, $notes) {
+            $trial = $this->subscribeSchool(
+                $school, $plan, Carbon::today(), $customQuota, 0, 'trial',
+                trim(($notes ? $notes . ' — ' : '') . 'Trial sambil menunggu pembayaran aktivasi'),
+                $customStorageMb, false
+            );
+
+            $months = $plan->periodMonths();
+            $invoice = app(TenantLifecycleService::class)->issueInvoice(
+                $school, 'activation', "Aktivasi {$plan->name} ({$months} Bulan)", (float) $plan->price,
+                $plan, $months, $customQuota, $customStorageMb, null, self::TRIAL_DAYS
+            );
+            if ($paymentMethod) {
+                $invoice->update(['payment_method' => $paymentMethod]);
+            }
+
+            return $trial;
+        });
+    }
+
+    /**
+     * Perpanjang / upgrade langganan (kompatibilitas pemanggil lama).
+     * Bila dibayar, periode baru langsung aktif; bila belum, hanya tagihan yang terbit.
      */
     public function extendSubscription(
         SchoolSubscription $subscription,
@@ -209,71 +233,20 @@ class SubscriptionService
         string $paymentStatus = 'paid',
         ?string $paymentMethod = null
     ): SchoolSubscription {
-        $newEndDate = $subscription->end_date->isPast()
-            ? Carbon::today()->addMonths($additionalMonths)
-            : $subscription->end_date->copy()->addMonths($additionalMonths);
+        $plan = $newPlan ?? $subscription->plan ?? SubscriptionPlan::firstOrFail();
 
-        $updateData = [
-            'end_date' => $newEndDate,
-            'status' => 'active',
-            'price_paid' => $subscription->price_paid + $price,
-            'student_quota' => $newQuota ?? ($newPlan ? $newPlan->max_students : $subscription->student_quota),
-            'notes' => $notes ? trim($subscription->notes . "\n" . $notes) : $subscription->notes,
-        ];
+        $result = app(TenantLifecycleService::class)->renew(
+            $subscription->school,
+            $plan,
+            $additionalMonths,
+            $price,
+            $paymentStatus === 'paid',
+            $paymentMethod,
+            $newQuota,
+            $customStorageMb,
+            $notes
+        );
 
-        // Upgrade paket dan kuota storage kustom diproses independen:
-        // kuota kustom hanya menimpa batas storage bawaan paket baru.
-        if ($newPlan) {
-            $updateData['plan_id'] = $newPlan->id;
-            $updateData['plan_name'] = $newPlan->name;
-            $updateData['storage_quota_mb'] = $newPlan->max_storage_mb;
-        }
-        if ($customStorageMb !== null) {
-            $updateData['storage_quota_mb'] = $customStorageMb;
-        }
-
-        $subscription->update($updateData);
-
-        if ($price > 0) {
-            $this->createInvoice(
-                $subscription,
-                "Perpanjangan Sewa {$subscription->plan_name} (+{$additionalMonths} Bulan)",
-                $price,
-                $paymentStatus,
-                $paymentMethod,
-                7,
-                'Perpanjangan sewa hingga ' . $newEndDate->format('d M Y')
-            );
-        }
-
-        return $subscription;
-    }
-
-    /**
-     * Terbitkan invoice langganan. Status 'paid' hanya bila pembayaran memang sudah diterima.
-     */
-    protected function createInvoice(
-        SchoolSubscription $subscription,
-        string $title,
-        float $amount,
-        string $paymentStatus,
-        ?string $paymentMethod,
-        int $dueInDays,
-        string $notes
-    ): Invoice {
-        $isPaid = $paymentStatus === 'paid';
-
-        return Invoice::create([
-            'invoice_number' => 'INV-' . date('Ym') . '-' . strtoupper(Str::random(5)),
-            'school_id' => $subscription->school_id,
-            'subscription_id' => $subscription->id,
-            'title' => $title,
-            'amount' => $amount,
-            'due_date' => Carbon::today()->addDays($dueInDays),
-            'status' => $isPaid ? 'paid' : 'unpaid',
-            'payment_method' => $isPaid ? ($paymentMethod ?: 'Pembayaran manual (dicatat Super Admin)') : $paymentMethod,
-            'paid_at' => $isPaid ? Carbon::now() : null,
-            'notes' => $notes,
-        ]);
+        return $result['period'] ?? $subscription;
     }
 }

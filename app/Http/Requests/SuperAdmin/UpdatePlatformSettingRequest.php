@@ -35,6 +35,7 @@ class UpdatePlatformSettingRequest extends FormRequest
             'wa_api_endpoint' => ['nullable', 'string', 'max:200'],
             'wa_api_token' => ['nullable', 'string', 'max:255'],
             'wa_sender_phone' => ['nullable', 'string', 'max:25'],
+            'demo_whatsapp_number' => ['nullable', 'string', 'regex:/^(\+?62|0)8[0-9]{7,12}$/'],
             // Cloud Storage Settings
             'storage_driver' => ['nullable', 'string', 'in:public,s3,r2'],
             's3_bucket' => ['nullable', 'string', 'max:100'],

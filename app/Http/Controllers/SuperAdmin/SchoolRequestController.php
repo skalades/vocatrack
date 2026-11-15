@@ -5,14 +5,16 @@ namespace App\Http\Controllers\SuperAdmin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\SuperAdmin\ApproveSchoolRequest;
 use App\Http\Requests\SuperAdmin\RejectSchoolRequest;
+use App\Models\PlatformSetting;
 use App\Models\School;
 use App\Models\SchoolRequest;
-use App\Models\SchoolSetting;
 use App\Models\SubscriptionPlan;
 use App\Models\User;
 use App\Services\AuditLogService;
 use App\Services\SubscriptionService;
+use App\Notifications\DemoRequestSubmittedNotification;
 use App\Services\TenantProvisioningService;
+use Illuminate\Support\Facades\Notification;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -21,6 +23,9 @@ use Illuminate\Support\Facades\Hash;
 
 class SchoolRequestController extends Controller
 {
+    /** Nomor WhatsApp bawaan penerima permohonan demo dari landing page. */
+    public const DEFAULT_DEMO_WHATSAPP = '082187093648';
+
     public function __construct(
         protected SubscriptionService $subscriptionService
     ) {}
@@ -87,23 +92,14 @@ class SchoolRequestController extends Controller
                 $schoolRequest->email
             );
 
-            // Subscribe School
-            $plan = SubscriptionPlan::findOrFail($request->plan_id);
-            $customQuota = $request->custom_quota ? (int) $request->custom_quota : null;
-            $status = $plan->price > 0 ? 'active' : 'trial';
-
-            $this->subscriptionService->subscribeSchool(
+            $this->subscriptionService->onboard(
                 $school,
-                $plan,
-                Carbon::today(),
-                $customQuota,
+                SubscriptionPlan::findOrFail($request->plan_id),
+                $request->input('payment_status', 'paid') === 'paid',
+                $request->payment_method,
+                $request->custom_quota ? (int) $request->custom_quota : null,
                 null,
-                $status,
-                "Aktivasi via Permohonan Demo Onboarding ({$plan->name})",
-                null,
-                true,
-                $request->input('payment_status', 'paid'),
-                $request->payment_method
+                'Aktivasi via permohonan demo'
             );
 
             // Mark Request as approved
@@ -153,9 +149,17 @@ class SchoolRequestController extends Controller
 
     public function storePublicSchoolRequest(Request $request)
     {
+        $demoUrl = route('landing') . '#demo';
+        $success = 'Terima kasih! Permohonan demo berhasil dikirim. Tim VokaTrack akan menghubungi Anda melalui kontak yang terdaftar.';
+
+        // Honeypot anti-bot: kolom tersembunyi yang tidak pernah diisi manusia.
+        if ($request->filled('website')) {
+            return redirect($demoUrl)->with('success', $success);
+        }
+
         $validated = $request->validate([
             'school_name' => ['required', 'string', 'max:150'],
-            'npsn' => ['required', 'string', 'size:8'],
+            'npsn' => ['required', 'digits:8'],
             'contact_name' => ['required', 'string', 'max:100'],
             'email' => ['required', 'email', 'max:100'],
             'phone' => ['required', 'string', 'max:20'],
@@ -164,7 +168,7 @@ class SchoolRequestController extends Controller
         ]);
 
         if (School::where('npsn', $request->npsn)->exists()) {
-            return back()->withErrors(['npsn' => 'Sekolah dengan NPSN ini telah terdaftar di sistem kami.'])->withInput();
+            return redirect($demoUrl)->withErrors(['npsn' => 'Sekolah dengan NPSN ini telah terdaftar di sistem kami.'])->withInput();
         }
 
         $pendingExist = SchoolRequest::where('npsn', $request->npsn)
@@ -172,10 +176,10 @@ class SchoolRequestController extends Controller
             ->exists();
 
         if ($pendingExist) {
-            return back()->withErrors(['npsn' => 'Permohonan untuk NPSN ini sedang dalam proses review oleh tim kami.'])->withInput();
+            return redirect($demoUrl)->withErrors(['npsn' => 'Permohonan untuk NPSN ini sedang dalam proses review oleh tim kami.'])->withInput();
         }
 
-        SchoolRequest::create([
+        $schoolRequest = SchoolRequest::create([
             'school_name' => $validated['school_name'],
             'npsn' => $validated['npsn'],
             'contact_name' => $validated['contact_name'],
@@ -192,6 +196,49 @@ class SchoolRequestController extends Controller
             "Permohonan demo/uji coba baru diajukan oleh {$validated['school_name']} (NPSN: {$validated['npsn']})."
         );
 
-        return back()->with('success', 'Terima kasih! Permohonan demo sistem berhasil dikirim. Tim VokaTrack akan segera menghubungi Anda melalui kontak yang terdaftar.');
+        // Masuk ke inbox (lonceng notifikasi) seluruh Super Admin aktif.
+        Notification::send(
+            User::where('role', 'super-admin')->where('is_active', true)->get(),
+            new DemoRequestSubmittedNotification($schoolRequest)
+        );
+
+        // Permohonan tetap tercatat di panel Super Admin, lalu pemohon diteruskan ke WhatsApp
+        // tim VokaTrack dengan pesan yang sudah terisi.
+        return redirect($demoUrl)
+            ->with('success', 'Permohonan tercatat. Lanjutkan ke WhatsApp untuk mengirim detailnya ke tim VokaTrack.')
+            ->with('demo_whatsapp_url', self::whatsappUrl($validated));
+    }
+
+    /**
+     * Nomor WhatsApp penerima permohonan demo (dapat diubah di Pengaturan Platform).
+     */
+    public static function demoWhatsappNumber(): string
+    {
+        return (string) PlatformSetting::get('demo_whatsapp_number', self::DEFAULT_DEMO_WHATSAPP);
+    }
+
+    /**
+     * Tautan wa.me berisi ringkasan permohonan. Nomor lokal 08xx dinormalisasi ke format 628xx.
+     */
+    public static function whatsappUrl(array $data): string
+    {
+        $digits = preg_replace('/\D+/', '', self::demoWhatsappNumber());
+        if (str_starts_with($digits, '0')) {
+            $digits = '62' . substr($digits, 1);
+        }
+
+        $lines = array_filter([
+            'Halo tim VokaTrack, saya ingin mengajukan demo.',
+            '',
+            'Sekolah: ' . $data['school_name'],
+            'NPSN: ' . $data['npsn'],
+            'Penanggung jawab: ' . $data['contact_name'],
+            'WhatsApp: ' . $data['phone'],
+            'Email: ' . $data['email'],
+            !empty($data['estimated_students']) ? 'Perkiraan siswa PKL: ' . $data['estimated_students'] : null,
+            !empty($data['notes']) ? 'Catatan: ' . $data['notes'] : null,
+        ], fn ($line) => $line !== null);
+
+        return 'https://wa.me/' . $digits . '?text=' . rawurlencode(implode("\n", $lines));
     }
 }

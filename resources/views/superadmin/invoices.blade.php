@@ -109,9 +109,14 @@
                             <td class="py-4 px-6">
                                 <span class="font-mono font-bold text-indigo-950 block text-xs">{{ $inv->invoice_number }}</span>
                                 <span class="text-[11px] text-slate-500 block truncate mt-0.5 max-w-xs">{{ $inv->title }}</span>
+                                <span class="inline-block mt-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600">{{ $inv->type_label }}</span>
                             </td>
                             <td class="py-4 px-4">
-                                <span class="font-bold text-slate-900 block text-xs">{{ $inv->school->name ?? 'Sekolah Tidak Ditemukan' }}</span>
+                                @if($inv->school)
+                                    <a href="{{ route('superadmin.schools.show', [$inv->school, 'tab' => 'tagihan']) }}" class="font-bold text-slate-900 hover:text-emerald-700 block text-xs">{{ $inv->school->name }}</a>
+                                @else
+                                    <span class="font-bold text-slate-900 block text-xs">Sekolah Tidak Ditemukan</span>
+                                @endif
                                 <span class="text-[10px] text-slate-500 font-mono block">NPSN: {{ $inv->school->npsn ?? '-' }}</span>
                             </td>
                             <td class="py-4 px-4">

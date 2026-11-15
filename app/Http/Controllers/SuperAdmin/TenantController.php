@@ -7,9 +7,8 @@ use App\Http\Requests\SuperAdmin\AdjustStorageQuotaRequest;
 use App\Http\Requests\SuperAdmin\ExtendSubscriptionRequest;
 use App\Http\Requests\SuperAdmin\StoreSchoolRequest;
 use App\Http\Requests\SuperAdmin\UpdateSchoolRequest;
+use App\Models\ActivityLog;
 use App\Models\School;
-use App\Models\SchoolSetting;
-use App\Models\SchoolSubscription;
 use App\Models\Student;
 use App\Models\SubscriptionPlan;
 use App\Models\User;
@@ -18,9 +17,11 @@ use App\Services\BackupService;
 use App\Services\ImpersonationService;
 use App\Services\StorageQuotaService;
 use App\Services\SubscriptionService;
+use App\Services\TenantLifecycleService;
 use App\Services\TenantProvisioningService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -35,87 +36,113 @@ class TenantController extends Controller
         protected BackupService $backupService
     ) {}
 
-    public function schools(Request $request)
+    /**
+     * Daftar sekolah dikelompokkan per tahap siklus hidup.
+     */
+    public function schools(Request $request, TenantLifecycleService $lifecycle)
     {
-        $query = School::with([
-            'subscriptions' => function ($q) {
-                $q->latest('end_date');
-            },
-            'invoices' => function ($q) {
-                $q->latest()->take(5);
-            },
-            'users' => function ($q) {
-                $q->where('role', 'admin-sekolah');
-            }
-        ])
-        ->withCount(['users', 'classes', 'companies']);
+        $query = School::with(['subscriptions'])
+            ->withCount(['invoices as open_invoices_count' => fn ($q) => $q->whereIn('status', ['unpaid', 'pending_verification'])]);
 
-        // 1. Search Query
         if ($request->filled('search')) {
             $search = trim($request->search);
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
                   ->orWhere('npsn', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%")
-                  ->orWhere('phone', 'like', "%{$search}%")
-                  ->orWhere('address', 'like', "%{$search}%");
+                  ->orWhere('email', 'like', "%{$search}%");
             });
         }
 
-        // 2. Status Filter
-        if ($request->filled('status') && $request->status !== 'all') {
-            if ($request->status === 'inactive') {
-                $query->where('is_active', false);
-            } else {
-                $query->where('is_active', true);
-                if ($request->status === 'trial') {
-                    $query->whereHas('subscriptions', function ($sq) {
-                        $sq->where('status', 'trial');
-                    });
-                } elseif ($request->status === 'active') {
-                    $query->whereHas('subscriptions', function ($sq) {
-                        $sq->where('status', 'active')->where('end_date', '>=', Carbon::today());
-                    });
-                } elseif ($request->status === 'expiring_soon') {
-                    $thirtyDays = Carbon::today()->addDays(30);
-                    $query->whereHas('subscriptions', function ($sq) use ($thirtyDays) {
-                        $sq->where('end_date', '>=', Carbon::today())
-                           ->where('end_date', '<=', $thirtyDays);
-                    });
-                } elseif ($request->status === 'expired') {
-                    $query->whereHas('subscriptions', function ($sq) {
-                        $sq->where('end_date', '<', Carbon::today());
-                    });
-                }
-            }
+        $all = $query->orderBy('name')->get();
+        $stages = $lifecycle->stagesFor($all);
+
+        $stageCounts = array_fill_keys(array_keys(TenantLifecycleService::STAGES), 0);
+        foreach ($stages as $stage) {
+            $stageCounts[$stage]++;
         }
 
-        $schools = $query->latest()->paginate(10)->withQueryString();
-
-        foreach ($schools as $sch) {
-            $sch->students_count = Student::whereHas('class', function ($q) use ($sch) {
-                $q->where('school_id', $sch->id);
-            })->count();
+        // Kompatibilitas filter lama (?status=...) dipetakan ke tahap baru.
+        $legacy = ['inactive' => 'suspended', 'expiring_soon' => 'expiring'];
+        $stageFilter = $request->query('stage', $legacy[$request->query('status')] ?? $request->query('status'));
+        if ($stageFilter === 'attention') {
+            $filtered = $all->filter(fn ($s) => in_array($stages[$s->id], ['expiring', 'grace', 'expired'], true) || $s->open_invoices_count > 0);
+        } elseif ($stageFilter && isset(TenantLifecycleService::STAGES[$stageFilter])) {
+            $filtered = $all->filter(fn ($s) => $stages[$s->id] === $stageFilter);
+        } else {
+            $stageFilter = 'all';
+            $filtered = $all;
         }
 
-        $plans = SubscriptionPlan::where('is_active', true)->get();
+        $perPage = 15;
+        $page = max(1, (int) $request->query('page', 1));
+        $schools = new LengthAwarePaginator(
+            $filtered->slice(($page - 1) * $perPage, $perPage)->values(),
+            $filtered->count(),
+            $perPage,
+            $page,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
 
-        // Platform-wide accurate KPI counts
-        $totalCount = School::count();
-        $activeCount = School::where('is_active', true)->count();
-        $totalStudents = Student::count();
-        $totalCompanies = \App\Models\Company::count();
-        $platformStorage = $this->storageQuotaService->getPlatformStorageStats();
+        // Jumlah siswa per sekolah dalam satu query agregat.
+        $studentCounts = DB::table('students')
+            ->join('classes', 'students.class_id', '=', 'classes.id')
+            ->whereIn('classes.school_id', $schools->pluck('id'))
+            ->selectRaw('classes.school_id, COUNT(*) as total')
+            ->groupBy('classes.school_id')
+            ->pluck('total', 'school_id');
+
+        $plans = SubscriptionPlan::where('is_active', true)->orderBy('price')->get();
+        $attentionCount = $all->filter(fn ($s) => in_array($stages[$s->id], ['expiring', 'grace', 'expired'], true) || $s->open_invoices_count > 0)->count();
 
         return view('superadmin.schools', compact(
-            'schools', 
-            'plans', 
-            'totalCount', 
-            'activeCount', 
-            'totalStudents', 
-            'totalCompanies',
-            'platformStorage'
-        ));
+            'schools', 'stages', 'stageCounts', 'stageFilter', 'studentCounts', 'plans', 'attentionCount'
+        ) + ['totalCount' => $all->count()]);
+    }
+
+    /**
+     * Halaman Detail Sekolah: pusat kendali satu tenant sepanjang siklus hidupnya.
+     */
+    public function show(Request $request, School $school, TenantLifecycleService $lifecycle)
+    {
+        $tabs = ['ringkasan', 'langganan', 'tagihan', 'pengguna', 'aktivitas', 'pengaturan'];
+        $tab = in_array($request->query('tab'), $tabs, true) ? $request->query('tab') : 'ringkasan';
+
+        $school->load(['subscriptions' => fn ($q) => $q->with('plan')->orderByDesc('end_date')->orderByDesc('id')]);
+        $subscription = $school->activeSubscription();
+        $stage = $lifecycle->stage($school, $subscription);
+
+        $openInvoice = $school->invoices()
+            ->whereIn('status', ['unpaid', 'pending_verification'])
+            ->orderByRaw("CASE WHEN type IN ('activation','renewal','upgrade') THEN 0 ELSE 1 END")
+            ->orderBy('due_date')
+            ->first();
+
+        $studentsCount = Student::whereHas('class', fn ($q) => $q->where('school_id', $school->id))->count();
+        $roleCounts = User::where('school_id', $school->id)
+            ->selectRaw('role, COUNT(*) as total')
+            ->groupBy('role')
+            ->pluck('total', 'role');
+
+        $data = compact('school', 'subscription', 'stage', 'openInvoice', 'studentsCount', 'roleCounts', 'tab');
+        $data['stageMeta'] = TenantLifecycleService::stageMeta($stage);
+        $data['classesCount'] = $school->classes()->count();
+        $data['companiesCount'] = $school->companies()->count();
+        $data['storageUsedMb'] = round(((int) $school->storage_used_bytes) / (1024 * 1024), 1);
+        $data['plans'] = SubscriptionPlan::where('is_active', true)->orderBy('price')->get();
+
+        if ($tab === 'tagihan') {
+            $data['invoices'] = $school->invoices()->with('plan')->latest()->paginate(15)->withQueryString();
+        }
+        if ($tab === 'pengguna') {
+            $data['managers'] = User::where('school_id', $school->id)
+                ->whereIn('role', ['admin-sekolah', 'kepala-sekolah'])
+                ->orderBy('role')->orderBy('name')->get();
+        }
+        if ($tab === 'aktivitas') {
+            $data['logs'] = ActivityLog::with('user')->where('school_id', $school->id)->latest()->paginate(20)->withQueryString();
+        }
+
+        return view('superadmin.school_show', $data);
     }
 
     public function storeSchool(StoreSchoolRequest $request, TenantProvisioningService $provisioning)
@@ -127,24 +154,14 @@ class TenantController extends Controller
                 $request->admin_email
             );
 
-            // Activate Subscription Plan
-            $plan = SubscriptionPlan::findOrFail($request->plan_id);
-            $customQuota = $request->custom_quota ? (int) $request->custom_quota : null;
-            $customStorageMb = $request->custom_storage_mb ? (int) $request->custom_storage_mb : null;
-            $status = $plan->price > 0 ? 'active' : 'trial';
-
-            $this->subscriptionService->subscribeSchool(
+            $this->subscriptionService->onboard(
                 $school,
-                $plan,
-                Carbon::today(),
-                $customQuota,
-                null,
-                $status,
-                "Aktivasi awal tenant sekolah ({$plan->name})",
-                $customStorageMb,
-                true,
-                $request->input('payment_status', 'paid'),
-                $request->payment_method
+                SubscriptionPlan::findOrFail($request->plan_id),
+                $request->input('payment_status', 'paid') === 'paid',
+                $request->payment_method,
+                $request->custom_quota ? (int) $request->custom_quota : null,
+                $request->custom_storage_mb ? (int) $request->custom_storage_mb : null,
+                'Aktivasi awal tenant sekolah'
             );
 
             return [$school, $temporaryPassword];
@@ -391,53 +408,44 @@ class TenantController extends Controller
         }, 200, $headers);
     }
 
-    public function extendSubscription(ExtendSubscriptionRequest $request, School $school)
+    public function extendSubscription(ExtendSubscriptionRequest $request, School $school, TenantLifecycleService $lifecycle)
     {
-        $newPlan = $request->plan_id ? SubscriptionPlan::find($request->plan_id) : null;
+        $current = $school->activeSubscription();
+        $plan = ($request->plan_id ? SubscriptionPlan::find($request->plan_id) : null)
+            ?? $current?->plan
+            ?? SubscriptionPlan::where('code', 'pro-yearly')->first()
+            ?? SubscriptionPlan::firstOrFail();
 
-        $activeSub = $school->activeSubscription();
-        if (!$activeSub) {
-            // Kerangka langganan tanpa invoice yang berakhir hari ini, sehingga perpanjangan
-            // di bawah menjadi satu-satunya tagihan (mencegah tagihan ganda).
-            $basePlan = $newPlan
-                ?? SubscriptionPlan::where('code', 'pro-yearly')->first()
-                ?? SubscriptionPlan::firstOrFail();
-            $activeSub = $this->subscriptionService->subscribeSchool(
-                $school,
-                $basePlan,
-                Carbon::today(),
-                null,
-                0,
-                'active',
-                'Langganan dibuat saat perpanjangan oleh Super Admin',
-                null,
-                false
-            );
-            $activeSub->update(['end_date' => Carbon::today()]);
-        }
+        $paid = $request->input('payment_status', 'paid') === 'paid';
 
-        $this->subscriptionService->extendSubscription(
-            $activeSub,
+        $result = $lifecycle->renew(
+            $school,
+            $plan,
             (int) $request->months,
             (float) $request->price,
+            $paid,
+            $request->payment_method,
             $request->new_quota ? (int) $request->new_quota : null,
-            $request->notes,
-            $newPlan,
             $request->custom_storage_mb ? (int) $request->custom_storage_mb : null,
-            $request->input('payment_status', 'paid'),
-            $request->payment_method
+            $request->notes
         );
 
-        $planNotice = $newPlan ? " dan paket ditingkatkan ke {$newPlan->name}" : "";
+        $invoice = $result['invoice'];
+        $period = $result['period'];
 
         AuditLogService::log(
             'subscription_extend',
             'billing',
-            "Masa sewa tenant {$school->name} diperpanjang +{$request->months} bulan (Rp " . number_format($request->price, 0, ',', '.') . "){$planNotice}.",
+            "{$invoice->type_label} {$school->name}: {$plan->name} +{$request->months} bulan ({$invoice->formatted_amount}) — "
+                . ($period ? "aktif s.d. {$period->end_date->format('d M Y')}." : 'menunggu pembayaran.'),
             $school
         );
 
-        return back()->with('success', "Masa sewa sekolah {$school->name} berhasil diperpanjang +{$request->months} bulan{$planNotice}.");
+        $message = $period
+            ? "{$invoice->type_label} {$school->name} tercatat lunas. {$plan->name} aktif hingga {$period->end_date->format('d M Y')}."
+            : "Tagihan {$invoice->invoice_number} ({$invoice->formatted_amount}) diterbitkan. Periode baru aktif otomatis setelah dilunasi.";
+
+        return back()->with('success', $message);
     }
 
     public function toggleSchool(School $school)
@@ -489,13 +497,13 @@ class TenantController extends Controller
                 $school
             );
 
-            return redirect()->route('superadmin.schools')->with('success', "Penggunaan ruang disk tenant {$school->name} berhasil diperbarui: {$mb} MB.");
+            return back()->with('success', "Penggunaan ruang disk tenant {$school->name} berhasil diperbarui: {$mb} MB.");
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error("[STORAGE RECALCULATE ERROR] Failed for school {$school->id}: " . $e->getMessage(), [
                 'exception' => $e,
             ]);
 
-            return redirect()->route('superadmin.schools')->with('error', "Gagal menghitung ulang storage: " . $e->getMessage());
+            return back()->with('error', "Gagal menghitung ulang storage: " . $e->getMessage());
         }
     }
 

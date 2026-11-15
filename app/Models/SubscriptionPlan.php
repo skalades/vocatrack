@@ -37,6 +37,23 @@ class SubscriptionPlan extends Model
         return $this->hasMany(SchoolSubscription::class, 'plan_id');
     }
 
+    /**
+     * Lama satu siklus tagihan paket ini dalam bulan.
+     */
+    public function periodMonths(): int
+    {
+        return match ($this->billing_period) {
+            'monthly' => 1,
+            'semester' => 6,
+            default => 12,
+        };
+    }
+
+    public function isTrialPlan(): bool
+    {
+        return $this->code === 'trial-14d' || (float) $this->price <= 0;
+    }
+
     public function getFormattedPriceAttribute(): string
     {
         return 'Rp ' . number_format($this->price, 0, ',', '.');

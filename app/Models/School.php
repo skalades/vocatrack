@@ -72,9 +72,19 @@ class School extends Model
         return $this->hasMany(SchoolSubscription::class);
     }
 
-    public function activeSubscription()
+    /**
+     * Periode langganan terkini (end_date terjauh). Memakai relasi yang sudah di-eager load
+     * bila tersedia agar halaman daftar tidak memicu query per sekolah (N+1).
+     */
+    public function activeSubscription(): ?SchoolSubscription
     {
-        return $this->subscriptions()->latest('end_date')->first();
+        if ($this->relationLoaded('subscriptions')) {
+            return $this->subscriptions
+                ->sortByDesc(fn ($s) => [$s->end_date?->timestamp ?? 0, $s->id])
+                ->first();
+        }
+
+        return $this->subscriptions()->orderByDesc('end_date')->orderByDesc('id')->first();
     }
 
     /**

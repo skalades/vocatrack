@@ -146,7 +146,7 @@
                                         </button>
                                     </div>
                                 @elseif($req->status === 'approved' && $req->school_id)
-                                    <a href="{{ route('superadmin.schools', ['search' => $req->npsn]) }}" class="px-2.5 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 font-bold text-xs transition-colors inline-block">
+                                    <a href="{{ route('superadmin.schools.show', $req->school_id) }}" class="px-2.5 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 font-bold text-xs transition-colors inline-block">
                                         Lihat Tenant
                                     </a>
                                 @else

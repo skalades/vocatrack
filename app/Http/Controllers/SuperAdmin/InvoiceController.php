@@ -8,6 +8,7 @@ use App\Models\Invoice;
 use App\Models\PlatformSetting;
 use App\Models\School;
 use App\Services\AuditLogService;
+use App\Services\TenantLifecycleService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -55,12 +56,13 @@ class InvoiceController extends Controller
     public function storeInvoice(StoreInvoiceRequest $request)
     {
         $school = School::findOrFail($request->school_id);
-        $invoiceNumber = 'INV-' . date('Ym') . '-' . strtoupper(Str::random(5));
+        $invoiceNumber = app(TenantLifecycleService::class)->nextInvoiceNumber();
 
         Invoice::create([
             'invoice_number' => $invoiceNumber,
             'school_id' => $school->id,
             'subscription_id' => $school->activeSubscription()?->id,
+            'type' => 'manual',
             'title' => $request->title,
             'amount' => $request->amount,
             'due_date' => $request->due_date,
@@ -78,33 +80,24 @@ class InvoiceController extends Controller
         return back()->with('success', "Invoice tagihan {$invoiceNumber} untuk {$school->name} berhasil diterbitkan.");
     }
 
-    public function markInvoicePaid(Invoice $invoice)
+    public function markInvoicePaid(Request $request, Invoice $invoice, TenantLifecycleService $lifecycle)
     {
-        if ($invoice->status !== 'unpaid') {
+        $request->validate(['payment_method' => ['nullable', 'string', 'max:100']]);
+
+        if (!$invoice->isOpen()) {
             $label = $invoice->status === 'paid' ? 'sudah LUNAS' : 'sudah dibatalkan';
             return back()->with('error', "Invoice {$invoice->invoice_number} {$label} dan tidak dapat diverifikasi ulang.");
         }
 
-        $invoice->update([
-            'status' => 'paid',
-            'paid_at' => Carbon::now(),
-        ]);
+        // Pelunasan tagihan aktivasi/perpanjangan/upgrade otomatis menerbitkan periode baru.
+        $period = $lifecycle->recordPayment($invoice, $request->input('payment_method'));
 
-        // Pulihkan status langganan yang sempat ditandai expired hanya bila masa berlakunya
-        // memang masih berjalan; pelunasan tidak memperpanjang tanggal berakhir secara diam-diam.
-        $subscription = $invoice->subscription;
-        if ($subscription && $subscription->status === 'expired' && !$subscription->end_date->isPast()) {
-            $subscription->update(['status' => 'active']);
+        $message = "Invoice {$invoice->invoice_number} berhasil ditandai LUNAS.";
+        if ($period) {
+            $message .= " {$period->plan_name} aktif hingga {$period->end_date->format('d M Y')}.";
         }
 
-        AuditLogService::log(
-            'invoice_verify',
-            'billing',
-            "Faktur tagihan {$invoice->invoice_number} senilai Rp " . number_format($invoice->amount, 0, ',', '.') . " diverifikasi LUNAS.",
-            $invoice->school
-        );
-
-        return back()->with('success', "Invoice {$invoice->invoice_number} berhasil ditandai LUNAS.");
+        return back()->with('success', $message);
     }
 
     public function cancelInvoice(Invoice $invoice)

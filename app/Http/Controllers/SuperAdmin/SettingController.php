@@ -40,6 +40,7 @@ class SettingController extends Controller
             // Token tidak pernah dikirim balik ke browser; hanya status tersimpan/tidak.
             'wa_api_token_set' => PlatformSetting::hasSecret('wa_api_token'),
             'wa_sender_phone' => PlatformSetting::get('wa_sender_phone', ''),
+            'demo_whatsapp_number' => \App\Http\Controllers\SuperAdmin\SchoolRequestController::demoWhatsappNumber(),
         ];
 
         // Cloud Storage Settings
@@ -108,6 +109,11 @@ class SettingController extends Controller
                 PlatformSetting::setSecret('wa_api_token', $request->wa_api_token);
             }
             PlatformSetting::set('wa_sender_phone', $request->wa_sender_phone ?: '');
+        }
+
+        // Nomor WhatsApp penerima permohonan demo dari landing page
+        if ($request->filled('demo_whatsapp_number')) {
+            PlatformSetting::set('demo_whatsapp_number', $request->demo_whatsapp_number);
         }
 
         // Handle Storage settings
