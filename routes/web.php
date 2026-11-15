@@ -222,6 +222,7 @@ Route::middleware(['auth', 'IdentifyTenant', 'role:siswa'])->prefix('siswa')->gr
     Route::get('/beranda', [StudentController::class, 'home'])->name('student.home');
     Route::get('/absensi', [StudentController::class, 'attendance'])->name('student.attendance');
     Route::post('/checkin', [StudentController::class, 'checkin'])->middleware('throttle:15,1')->name('student.checkin');
+    Route::post('/absensi/checkin', [StudentController::class, 'checkin'])->middleware('throttle:15,1')->name('student.attendance.checkin');
     Route::post('/checkout', [StudentController::class, 'checkout'])->middleware('throttle:15,1')->name('student.checkout');
     Route::post('/permohonan', [StudentController::class, 'storeRequest'])->name('student.request.store');
     Route::post('/lapor-kendala', [StudentController::class, 'storeIncident'])->name('student.incident.store');
@@ -229,8 +230,10 @@ Route::middleware(['auth', 'IdentifyTenant', 'role:siswa'])->prefix('siswa')->gr
     Route::get('/jurnal', [StudentController::class, 'journals'])->name('student.journals');
     Route::post('/jurnal', [StudentController::class, 'storeJournal'])->name('student.journal.store');
     Route::post('/jurnal/{journal}/submit', [StudentController::class, 'submitJournal'])->name('student.journal.submit');
+    Route::delete('/jurnal/{journal}', [StudentController::class, 'destroyJournal'])->name('student.journal.destroy');
 
     Route::get('/profil', [StudentController::class, 'profile'])->name('student.profile');
+    Route::get('/kendala', [StudentController::class, 'incidents'])->name('student.incidents');
     Route::post('/parent-token/regenerate', [ParentMonitoringController::class, 'regenerate'])->name('student.parent-token.regenerate');
     Route::get('/sertifikat/download', [StudentController::class, 'downloadCertificate'])->name('student.certificate.download');
 

@@ -17,8 +17,19 @@ class Journal extends Model
         'student_pkl_id',
         'date',
         'activity_description',
+        'description',
         'status',
     ];
+
+    public function setDescriptionAttribute($value): void
+    {
+        $this->attributes['activity_description'] = $value;
+    }
+
+    public function getDescriptionAttribute(): ?string
+    {
+        return $this->attributes['activity_description'] ?? null;
+    }
 
     protected $casts = [
         'date' => 'date',

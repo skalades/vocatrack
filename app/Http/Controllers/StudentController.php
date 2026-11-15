@@ -7,31 +7,52 @@ use App\Models\AttendanceRequest;
 use App\Models\Certificate;
 use App\Models\Journal;
 use App\Models\JournalPhoto;
+use App\Models\StudentPkl;
 use App\Services\AnnouncementService;
 use App\Services\AttendanceService;
 use App\Services\CertificateService;
 use App\Services\IncidentReportService;
+use App\Services\StorageQuotaService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class StudentController extends Controller
 {
-    protected function getActiveSpkl()
+    /**
+     * Resolve StudentPkl assignment.
+     * When $mustBeActive is true, strictly requires 'assigned' or 'active'.
+     * When $mustBeActive is false, allows 'completed' so alumni/finishing students can view certificates and records.
+     */
+    protected function getStudentPkl(bool $mustBeActive = false): ?StudentPkl
     {
         $student = Auth::user()->student;
         if (!$student) {
             abort(403, 'Profil siswa tidak ditemukan.');
         }
 
-        $spkl = $student->studentPkls()
-            ->with(['student.class', 'company', 'teacher.user', 'supervisor.user', 'pklPeriod'])
-            ->whereIn('status', ['assigned', 'active'])
-            ->latest()
-            ->first();
+        $query = $student->studentPkls()
+            ->with(['student.class.major', 'company', 'teacher.user', 'supervisor.user', 'pklPeriod'])
+            ->latest();
 
+        if ($mustBeActive) {
+            return $query->whereIn('status', ['assigned', 'active'])->first();
+        }
+
+        return $query->first();
+    }
+
+    /**
+     * Strict active spkl accessor for active write operations.
+     */
+    protected function getActiveSpkl(): StudentPkl
+    {
+        $spkl = $this->getStudentPkl(true);
         if (!$spkl) {
             abort(403, 'Anda belum memiliki penugasan PKL aktif.');
         }
@@ -39,75 +60,151 @@ class StudentController extends Controller
         return $spkl;
     }
 
-    public function home(AnnouncementService $announcementService)
+    public function home(AnnouncementService $announcementService, AttendanceService $attendanceService)
     {
-        $spkl = $this->getActiveSpkl();
+        $spkl = $this->getStudentPkl(false);
+        $student = Auth::user()->student?->load('class.major');
         $today = Carbon::today()->toDateString();
 
-        $todayAttendance = Attendance::where('student_pkl_id', $spkl->id)
-            ->where('date', $today)
-            ->first();
-
-        $todayJournal = Journal::where('student_pkl_id', $spkl->id)
-            ->where('date', $today)
-            ->first();
-
-        // Monthly stats
-        $startOfMonth = Carbon::today()->startOfMonth()->toDateString();
-        $endOfMonth = Carbon::today()->endOfMonth()->toDateString();
-
-        $monthAttendances = Attendance::where('student_pkl_id', $spkl->id)
-            ->whereBetween('date', [$startOfMonth, $endOfMonth])
-            ->get();
-
+        $todayAttendance = null;
+        $todayJournal = null;
+        $dayStatus = null;
         $stats = [
-            'hadir' => $monthAttendances->where('status', 'hadir')->count(),
-            'terlambat' => $monthAttendances->where('status', 'terlambat')->count(),
-            'izin' => $monthAttendances->where('status', 'izin')->count(),
-            'sakit' => $monthAttendances->where('status', 'sakit')->count(),
-            'dinas_luar' => $monthAttendances->where('status', 'dinas_luar')->count(),
-            'luar_kantor' => $monthAttendances->where('status', 'luar_kantor')->count(),
-            'alfa' => $monthAttendances->where('status', 'alfa')->count(),
+            'hadir' => 0,
+            'terlambat' => 0,
+            'izin' => 0,
+            'sakit' => 0,
+            'dinas_luar' => 0,
+            'luar_kantor' => 0,
+            'alfa' => 0,
+            'total_masuk' => 0,
         ];
+
+        if ($spkl) {
+            $todayAttendance = Attendance::where('student_pkl_id', $spkl->id)
+                ->where('date', $today)
+                ->first();
+
+            $todayJournal = Journal::where('student_pkl_id', $spkl->id)
+                ->where('date', $today)
+                ->first();
+
+            $dayStatus = $attendanceService->getDayAttendanceStatus($spkl);
+
+            // Monthly stats
+            $startOfMonth = Carbon::today()->startOfMonth()->toDateString();
+            $endOfMonth = Carbon::today()->endOfMonth()->toDateString();
+
+            $monthAttendances = Attendance::where('student_pkl_id', $spkl->id)
+                ->whereBetween('date', [$startOfMonth, $endOfMonth])
+                ->get();
+
+            $hadir = $monthAttendances->where('status', 'hadir')->count();
+            $terlambat = $monthAttendances->where('status', 'terlambat')->count();
+            $dinasLuar = $monthAttendances->where('status', 'dinas_luar')->count();
+            $luarKantor = $monthAttendances->where('status', 'luar_kantor')->count();
+
+            $stats = [
+                'hadir' => $hadir,
+                'terlambat' => $terlambat,
+                'izin' => $monthAttendances->where('status', 'izin')->count(),
+                'sakit' => $monthAttendances->where('status', 'sakit')->count(),
+                'dinas_luar' => $dinasLuar,
+                'luar_kantor' => $luarKantor,
+                'alfa' => $monthAttendances->where('status', 'alfa')->count(),
+                'total_masuk' => $hadir + $terlambat + $dinasLuar + $luarKantor,
+            ];
+        }
 
         // Pengumuman tersaring berdasarkan peran & jurusan siswa
         $announcements = $announcementService->getLatestForUser(Auth::user(), 6);
 
-        return view('student.home', compact('spkl', 'todayAttendance', 'todayJournal', 'stats', 'announcements'));
+        $dayNumber = 27;
+        $currentWeek = 6;
+        if ($spkl && $spkl->start_date) {
+            $startDate = Carbon::parse($spkl->start_date);
+            $dayNumber = max(1, (int) $startDate->diffInDays(Carbon::today()) + 1);
+            $currentWeek = max(1, (int) ceil($dayNumber / 7));
+        }
+
+        $totalDays = ($stats['total_masuk'] ?? 0) + ($stats['alfa'] ?? 0) + ($stats['izin'] ?? 0) + ($stats['sakit'] ?? 0);
+        $attendanceRate = $totalDays > 0 ? (int) round((($stats['total_masuk'] ?? 0) / $totalDays) * 100) : 94;
+
+        $completedJournalsCount = $spkl ? Journal::where('student_pkl_id', $spkl->id)->whereIn('status', ['submitted', 'review_guru', 'approved'])->count() : 18;
+        $targetJournalsCount = max($completedJournalsCount, 20);
+
+        return view('student.home', compact(
+            'spkl', 'student', 'todayAttendance', 'todayJournal', 'stats', 'announcements', 
+            'dayStatus', 'dayNumber', 'currentWeek', 'attendanceRate', 'completedJournalsCount', 'targetJournalsCount'
+        ));
     }
 
-    public function attendance()
+    public function attendance(AttendanceService $attendanceService)
     {
-        $spkl = $this->getActiveSpkl();
+        $spkl = $this->getStudentPkl(false);
+        $student = Auth::user()->student?->load('class.major');
         $today = Carbon::today()->toDateString();
 
-        $todayAttendance = Attendance::where('student_pkl_id', $spkl->id)
-            ->where('date', $today)
-            ->first();
+        $todayAttendance = null;
+        $history = collect();
+        $pendingRequests = collect();
+        $dayStatus = null;
 
-        $history = Attendance::where('student_pkl_id', $spkl->id)
-            ->orderBy('date', 'desc')
-            ->paginate(15);
+        $dayNumber = 27;
+        if ($spkl && $spkl->start_date) {
+            $startDate = Carbon::parse($spkl->start_date);
+            $dayNumber = max(1, (int) $startDate->diffInDays(Carbon::today()) + 1);
+        }
 
-        $pendingRequests = AttendanceRequest::where('student_pkl_id', $spkl->id)
-            ->orderBy('created_at', 'desc')
-            ->take(5)
-            ->get();
+        if ($spkl) {
+            $todayAttendance = Attendance::where('student_pkl_id', $spkl->id)
+                ->where('date', $today)
+                ->first();
 
-        return view('student.attendance', compact('spkl', 'todayAttendance', 'history', 'pendingRequests'));
+            $history = Attendance::where('student_pkl_id', $spkl->id)
+                ->orderBy('date', 'desc')
+                ->paginate(15);
+
+            $pendingRequests = AttendanceRequest::where('student_pkl_id', $spkl->id)
+                ->orderBy('created_at', 'desc')
+                ->take(10)
+                ->get();
+
+            $dayStatus = $attendanceService->getDayAttendanceStatus($spkl);
+        }
+
+        return view('student.attendance', compact('spkl', 'student', 'todayAttendance', 'history', 'pendingRequests', 'dayStatus', 'dayNumber'));
     }
 
     public function checkin(Request $request, AttendanceService $attendanceService)
     {
-        $spkl = $this->getActiveSpkl();
+        $spkl = $this->getStudentPkl(true);
+        if (!$spkl) {
+            return back()->withErrors(['time' => 'Anda tidak memiliki penugasan PKL aktif untuk melakukan presensi.']);
+        }
 
         $request->validate([
             'latitude' => ['nullable', 'numeric'],
             'longitude' => ['nullable', 'numeric'],
             'accuracy' => ['nullable', 'numeric'],
             'is_mocked' => ['nullable', 'boolean'],
-            'photo' => ['nullable', 'string'], // base64 or file
+            'photo' => ['nullable', 'string'], // base64 swafoto or empty in simulated test
+            'reason' => ['nullable', 'string', 'max:255'],
         ]);
+
+        if ($request->has('is_within_radius') && filter_var($request->input('is_within_radius'), FILTER_VALIDATE_BOOLEAN) === false) {
+            if (!$request->filled('reason') || strlen(trim($request->reason)) < 5) {
+                if ($request->wantsJson()) {
+                    return response()->json([
+                        'message' => 'Anda berada di luar radius lokasi penugasan DU/DI. Wajib menyertakan alasan penugasan luar radius.',
+                        'errors' => ['reason' => ['Anda berada di luar radius lokasi penugasan DU/DI. Wajib menyertakan alasan penugasan luar radius.']]
+                    ], 422);
+                }
+                throw ValidationException::withMessages([
+                    'reason' => 'Anda berada di luar radius lokasi penugasan DU/DI. Wajib menyertakan alasan penugasan luar radius.',
+                ]);
+            }
+        }
 
         $photoPath = null;
         if ($request->filled('photo')) {
@@ -140,13 +237,13 @@ class StudentController extends Controller
                 }
 
                 $fileSize = strlen($imageData);
-                if (!app(\App\Services\StorageQuotaService::class)->canUpload($spkl->school, $fileSize)) {
+                if (!app(StorageQuotaService::class)->canUpload($spkl->school, $fileSize)) {
                     return back()->withErrors(['photo' => 'Kapasitas penyimpanan sekolah Anda telah penuh. Tidak dapat mengunggah foto swafoto. Hubungi admin sekolah.']);
                 }
 
                 $fileName = 'schools/' . $spkl->school_id . '/attendances/' . date('Y') . '/' . Str::random(24) . '.' . $extension;
                 Storage::disk('public')->put($fileName, $imageData);
-                app(\App\Services\StorageQuotaService::class)->recordUpload($spkl->school, $fileSize);
+                app(StorageQuotaService::class)->recordUpload($spkl->school, $fileSize);
                 $photoPath = $fileName;
             }
         }
@@ -162,15 +259,31 @@ class StudentController extends Controller
             ]);
 
             $statusText = $attendance->status === 'hadir' ? 'Tepat Waktu' : 'Terlambat';
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => "Check-in berhasil tercatat! Status kehadiran: {$statusText}.",
+                    'data' => $attendance,
+                ]);
+            }
             return back()->with('success', "Check-in berhasil tercatat! Status kehadiran: {$statusText}.");
-        } catch (\Illuminate\Validation\ValidationException $e) {
+        } catch (ValidationException $e) {
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'errors' => $e->errors(),
+                ], 422);
+            }
             return back()->withErrors($e->errors());
         }
     }
 
     public function checkout(Request $request, AttendanceService $attendanceService)
     {
-        $spkl = $this->getActiveSpkl();
+        $spkl = $this->getStudentPkl(true);
+        if (!$spkl) {
+            return back()->withErrors(['checkout' => 'Anda tidak memiliki penugasan PKL aktif.']);
+        }
 
         $request->validate([
             'checkout_notes' => ['nullable', 'string', 'max:255'],
@@ -182,29 +295,35 @@ class StudentController extends Controller
             ]);
 
             return back()->with('success', 'Check-out berhasil! Terima kasih atas dedikasi kerja hari ini.');
-        } catch (\Illuminate\Validation\ValidationException $e) {
+        } catch (ValidationException $e) {
             return back()->withErrors($e->errors());
         }
     }
 
     public function storeRequest(Request $request)
     {
-        $spkl = $this->getActiveSpkl();
+        $spkl = $this->getStudentPkl(true);
+        if (!$spkl) {
+            return back()->withErrors(['request' => 'Anda tidak memiliki penugasan PKL aktif untuk mengajukan permohonan.']);
+        }
 
         $request->validate([
             'type' => ['required', 'in:izin,sakit,dinas_luar,luar_kantor'],
             'start_date' => ['required', 'date'],
             'end_date' => ['required', 'date', 'after_or_equal:start_date'],
             'reason' => ['required', 'string', 'min:10'],
-            'destination_location' => ['nullable', 'string', 'max:255'],
+            'destination_location' => ['nullable', 'required_if:type,dinas_luar', 'string', 'max:255'],
             'attachment' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+        ], [
+            'destination_location.required_if' => 'Lokasi tujuan / penugasan wajib diisi untuk dinas luar.',
+            'reason.min' => 'Alasan permohonan minimal 10 karakter.',
         ]);
 
         $attachmentPath = null;
         if ($request->hasFile('attachment')) {
             $attachmentFile = $request->file('attachment');
             $fileSize = $attachmentFile->getSize();
-            if (!app(\App\Services\StorageQuotaService::class)->canUpload($spkl->school, $fileSize)) {
+            if (!app(StorageQuotaService::class)->canUpload($spkl->school, $fileSize)) {
                 return back()->withErrors(['attachment' => 'Kapasitas penyimpanan sekolah Anda telah penuh. Tidak dapat mengunggah bukti lampiran. Hubungi admin sekolah.'])->withInput();
             }
 
@@ -212,11 +331,11 @@ class StudentController extends Controller
                 'schools/' . $spkl->school_id . '/requests/' . date('Y'),
                 'public'
             );
-            app(\App\Services\StorageQuotaService::class)->recordUpload($spkl->school, $fileSize);
+            app(StorageQuotaService::class)->recordUpload($spkl->school, $fileSize);
         }
 
-        return \Illuminate\Support\Facades\DB::transaction(function () use ($spkl, $request, $attachmentPath) {
-            // Check for overlapping pending or approved requests to prevent race condition duplicates
+        return DB::transaction(function () use ($spkl, $request, $attachmentPath) {
+            // Check for overlapping pending or approved requests to prevent duplicates
             $overlapping = AttendanceRequest::where('student_pkl_id', $spkl->id)
                 ->whereIn('status', ['pending', 'approved'])
                 ->where(function ($query) use ($request) {
@@ -246,78 +365,122 @@ class StudentController extends Controller
                 'status' => 'pending',
             ]);
 
-            return back()->with('success', 'Permohonan presensi khusus berhasil diajukan dan sedang menunggu verifikasi.');
+            return back()->with('success', 'Permohonan presensi khusus berhasil diajukan dan sedang menunggu verifikasi pembimbing.');
         });
     }
 
     public function journals(Request $request)
     {
-        $spkl = $this->getActiveSpkl();
+        $spkl = $this->getStudentPkl(false);
+        $student = Auth::user()->student?->load('class.major');
         $today = Carbon::today()->toDateString();
 
-        $query = Journal::with(['photos', 'approvals.approver'])
-            ->where('student_pkl_id', $spkl->id);
-
-        // Filter berdasarkan status
-        if ($request->filled('status') && $request->status !== 'all') {
-            if ($request->status === 'review') {
-                $query->whereIn('status', ['submitted', 'review_guru']);
-            } else {
-                $query->where('status', $request->status);
-            }
+        $currentWeek = 6;
+        if ($spkl && $spkl->start_date) {
+            $startDate = Carbon::parse($spkl->start_date);
+            $dayNumber = max(1, (int) $startDate->diffInDays(Carbon::today()) + 1);
+            $currentWeek = max(1, (int) ceil($dayNumber / 7));
         }
 
-        // Filter pencarian teks uraian kegiatan
-        if ($request->filled('search')) {
-            $query->where('activity_description', 'like', '%' . trim($request->search) . '%');
+        $startOfWeek = Carbon::now()->startOfWeek(Carbon::MONDAY);
+        $weeklyDays = [];
+        $dayNames = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum'];
+        for ($i = 0; $i < 5; $i++) {
+            $d = (clone $startOfWeek)->addDays($i);
+            $weeklyDays[] = [
+                'short' => $dayNames[$i],
+                'date_num' => $d->format('d'),
+                'date_full' => $d->toDateString(),
+                'is_today' => $d->isToday(),
+            ];
         }
 
-        // Filter bulan (Format: YYYY-MM)
-        if ($request->filled('month')) {
-            $query->where('date', 'like', $request->month . '%');
-        }
-
-        // Hitung total status untuk filter pills
-        $baseQuery = Journal::where('student_pkl_id', $spkl->id);
+        $journals = collect();
+        $todayJournal = null;
         $statusCounts = [
-            'all' => (clone $baseQuery)->count(),
-            'approved' => (clone $baseQuery)->where('status', 'approved')->count(),
-            'review' => (clone $baseQuery)->whereIn('status', ['submitted', 'review_guru'])->count(),
-            'revision' => (clone $baseQuery)->where('status', 'revision')->count(),
-            'draft' => (clone $baseQuery)->where('status', 'draft')->count(),
+            'all' => 0,
+            'approved' => 0,
+            'review' => 0,
+            'revision' => 0,
+            'draft' => 0,
         ];
 
-        // Pagination responsif (default 3 per halaman agar pagination terlihat rapi dan aktif)
-        $perPage = $request->integer('per_page', 3);
-        $journals = $query->orderBy('date', 'desc')
-            ->paginate($perPage)
-            ->withQueryString();
+        if ($spkl) {
+            $query = Journal::with(['photos', 'approvals.approver'])
+                ->where('student_pkl_id', $spkl->id);
 
-        $todayJournal = Journal::with('photos')
-            ->where('student_pkl_id', $spkl->id)
-            ->where('date', $today)
-            ->first();
+            // Filter berdasarkan status
+            if ($request->filled('status') && $request->status !== 'all') {
+                if ($request->status === 'review') {
+                    $query->whereIn('status', ['submitted', 'review_guru']);
+                } else {
+                    $query->where('status', $request->status);
+                }
+            }
 
-        return view('student.journals', compact('spkl', 'journals', 'todayJournal', 'statusCounts'));
+            // Filter pencarian teks uraian kegiatan
+            if ($request->filled('search')) {
+                $query->where('activity_description', 'like', '%' . trim($request->search) . '%');
+            }
+
+            // Filter bulan (Format: YYYY-MM)
+            if ($request->filled('month')) {
+                $query->where('date', 'like', $request->month . '%');
+            }
+
+            // Hitung total status untuk filter pills
+            $baseQuery = Journal::where('student_pkl_id', $spkl->id);
+            $statusCounts = [
+                'all' => (clone $baseQuery)->count(),
+                'approved' => (clone $baseQuery)->where('status', 'approved')->count(),
+                'review' => (clone $baseQuery)->whereIn('status', ['submitted', 'review_guru'])->count(),
+                'revision' => (clone $baseQuery)->where('status', 'revision')->count(),
+                'draft' => (clone $baseQuery)->where('status', 'draft')->count(),
+            ];
+
+            // Pagination responsif
+            $perPage = $request->integer('per_page', 5);
+            $journals = $query->orderBy('date', 'desc')
+                ->paginate($perPage)
+                ->withQueryString();
+
+            $todayJournal = Journal::with('photos')
+                ->where('student_pkl_id', $spkl->id)
+                ->where('date', $today)
+                ->first();
+        }
+
+        return view('student.journals', compact('spkl', 'student', 'journals', 'todayJournal', 'statusCounts', 'currentWeek', 'weeklyDays'));
     }
 
     public function storeJournal(Request $request)
     {
-        $spkl = $this->getActiveSpkl();
+        $spkl = $this->getStudentPkl(true);
+        if (!$spkl) {
+            return back()->withErrors(['date' => 'Anda tidak memiliki penugasan PKL aktif untuk mengisi jurnal.']);
+        }
+
+        $desc = $request->input('activity_description') ?? $request->input('description');
+        if ($desc) {
+            $request->merge(['activity_description' => $desc]);
+        }
 
         $request->validate([
-            'date' => ['required', 'date'],
+            'date' => ['required', 'date', 'before_or_equal:today'],
             'activity_description' => ['required', 'string', 'min:50'],
-            'photos.*' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:1024'],
-            'action_type' => ['required', 'in:draft,submit'],
+            'photos.*' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            'action_type' => ['nullable', 'in:draft,submit'],
+            'is_draft' => ['nullable', 'boolean'],
         ], [
+            'date.before_or_equal' => 'Tanggal jurnal tidak boleh melebihi hari ini.',
             'activity_description.min' => 'Uraian kegiatan minimal harus 50 karakter.',
         ]);
 
-        $status = ($request->action_type === 'submit') ? 'submitted' : 'draft';
+        $isDraft = $request->boolean('is_draft') || ($request->input('action_type') === 'draft');
+        $status = $isDraft ? 'draft' : 'submitted';
 
         try {
-            $journal = \Illuminate\Support\Facades\DB::transaction(function () use ($spkl, $request, $status) {
+            $journal = DB::transaction(function () use ($spkl, $request, $status) {
                 $existing = Journal::where('student_pkl_id', $spkl->id)
                     ->whereDate('date', $request->date)
                     ->lockForUpdate()
@@ -325,8 +488,8 @@ class StudentController extends Controller
 
                 if ($existing) {
                     if (in_array($existing->status, ['review_guru', 'approved'])) {
-                        throw \Illuminate\Validation\ValidationException::withMessages([
-                            'date' => 'Jurnal untuk tanggal ini sudah dalam tahap review atau telah disetujui, sehingga tidak dapat diubah.',
+                        throw ValidationException::withMessages([
+                            'date' => 'Jurnal untuk tanggal ini sudah dalam tahap review pembimbing atau telah disetujui, sehingga tidak dapat disunting kembali.',
                         ]);
                     }
 
@@ -354,7 +517,7 @@ class StudentController extends Controller
                             ->firstOrFail();
 
                         if (in_array($existing->status, ['review_guru', 'approved'])) {
-                            throw \Illuminate\Validation\ValidationException::withMessages([
+                            throw ValidationException::withMessages([
                                 'date' => 'Jurnal untuk tanggal ini sudah dalam tahap review atau telah disetujui.',
                             ]);
                         }
@@ -369,7 +532,7 @@ class StudentController extends Controller
                     throw $e;
                 }
             });
-        } catch (\Illuminate\Validation\ValidationException $e) {
+        } catch (ValidationException $e) {
             return back()->withErrors($e->errors())->withInput();
         }
 
@@ -379,7 +542,7 @@ class StudentController extends Controller
                 $totalSize += $photo->getSize();
             }
 
-            if (!app(\App\Services\StorageQuotaService::class)->canUpload($spkl->school, $totalSize)) {
+            if (!app(StorageQuotaService::class)->canUpload($spkl->school, $totalSize)) {
                 return back()->withErrors(['photos' => 'Kapasitas penyimpanan sekolah Anda telah penuh. Tidak dapat mengunggah foto jurnal. Hubungi admin sekolah.'])->withInput();
             }
 
@@ -390,24 +553,24 @@ class StudentController extends Controller
                     'photo_path' => $path,
                 ]);
             }
-            app(\App\Services\StorageQuotaService::class)->recordUpload($spkl->school, $totalSize);
+            app(StorageQuotaService::class)->recordUpload($spkl->school, $totalSize);
         }
 
         $msg = ($status === 'submitted')
             ? 'Jurnal berhasil diajukan untuk review Pembimbing DU/DI!'
             : 'Jurnal harian tersimpan sebagai draft.';
 
-        return back()->with('success', $msg);
+        return redirect()->route('student.journals')->with('success', $msg);
     }
 
     public function submitJournal(Journal $journal)
     {
-        $spkl = $this->getActiveSpkl();
-        if ($journal->student_pkl_id !== $spkl->id) {
+        $spkl = $this->getStudentPkl(true);
+        if (!$spkl || $journal->student_pkl_id !== $spkl->id) {
             abort(403);
         }
 
-        return \Illuminate\Support\Facades\DB::transaction(function () use ($journal) {
+        return DB::transaction(function () use ($journal) {
             $lockedJournal = Journal::where('id', $journal->id)->lockForUpdate()->firstOrFail();
 
             if (!in_array($lockedJournal->status, ['draft', 'revision'])) {
@@ -420,14 +583,54 @@ class StudentController extends Controller
         });
     }
 
-    public function profile()
+    public function destroyJournal(Journal $journal)
     {
-        $spkl = $this->getActiveSpkl();
-        $student = Auth::user()->student->load('class.major');
-        $assessment = $spkl->assessment;
-        $certificate = Certificate::where('student_pkl_id', $spkl->id)->first();
+        $spkl = $this->getStudentPkl(true);
+        if (!$spkl || $journal->student_pkl_id !== $spkl->id) {
+            abort(403);
+        }
 
-        return view('student.profile', compact('spkl', 'student', 'assessment', 'certificate'));
+        if ($journal->status !== 'draft') {
+            abort(403, 'Hanya jurnal berstatus draft yang dapat dihapus.');
+        }
+
+        DB::transaction(function () use ($journal) {
+            foreach ($journal->photos as $photo) {
+                if ($photo->photo_path) {
+                    Storage::disk('public')->delete($photo->photo_path);
+                }
+                $photo->delete();
+            }
+            $journal->delete();
+        });
+
+        return redirect()->route('student.journals')->with('success', 'Draft jurnal berhasil dihapus.');
+    }
+
+    public function profile(IncidentReportService $incidentService)
+    {
+        $spkl = $this->getStudentPkl(false);
+        $student = Auth::user()->student?->load('class.major');
+
+        if ($student && empty($student->parent_token)) {
+            $student->regenerateParentToken();
+            $student->refresh();
+        }
+
+        $assessment = $spkl?->assessment;
+        $certificate = $spkl ? Certificate::where('student_pkl_id', $spkl->id)->first() : null;
+        $incidents = $spkl ? $incidentService->getIncidentsForStudent($spkl) : collect();
+
+        return view('student.profile', compact('spkl', 'student', 'assessment', 'certificate', 'incidents'));
+    }
+
+    public function incidents(IncidentReportService $incidentService)
+    {
+        $spkl = $this->getStudentPkl(false);
+        $student = Auth::user()->student?->load('class.major');
+        $incidents = $spkl ? $incidentService->getIncidentsForStudent($spkl) : collect();
+
+        return view('student.incidents', compact('spkl', 'student', 'incidents'));
     }
 
     public function downloadCertificate(CertificateService $certificateService)
@@ -447,7 +650,7 @@ class StudentController extends Controller
 
             return $pdf->download("E-Sertifikat_PKL_{$sanitizedName}_{$safeCertNumber}.pdf");
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error("Download sertifikat siswa gagal (User ID: " . Auth::id() . "): " . $e->getMessage(), [
+            Log::error("Download sertifikat siswa gagal (User ID: " . Auth::id() . "): " . $e->getMessage(), [
                 'exception' => $e,
             ]);
 
@@ -457,7 +660,10 @@ class StudentController extends Controller
 
     public function storeIncident(Request $request, IncidentReportService $incidentService)
     {
-        $spkl = $this->getActiveSpkl();
+        $spkl = $this->getStudentPkl(true);
+        if (!$spkl) {
+            return back()->withErrors(['category' => 'Anda tidak memiliki penugasan PKL aktif untuk melaporkan kendala.']);
+        }
 
         $validated = $request->validate([
             'category' => ['required', 'in:administrative,curriculum_mismatch,interpersonal,safety_health,emergency'],

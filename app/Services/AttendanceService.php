@@ -29,6 +29,13 @@ class AttendanceService
         $accuracyMeters = $geoEval['accuracy_meters'];
         $isMockDetected = $geoEval['is_mock_detected'];
 
+        // Enforce reason when outside radius
+        if (!$isWithinRadius && (empty($data['reason']) || strlen(trim($data['reason'])) < 5)) {
+            throw ValidationException::withMessages([
+                'reason' => 'Anda terdeteksi berada di luar radius lokasi DU/DI. Wajib menuliskan alasan penugasan luar radius (minimal 5 karakter).',
+            ]);
+        }
+
         // 2. Resolve Work Hours & Check Late Status
         $workHours = $this->resolveWorkHours($company, $spkl->school_id);
 
@@ -152,6 +159,52 @@ class AttendanceService
             'checkin_late'  => $settings['checkin_late'] ?? '08:00:00',
             'checkin_alfa'  => $settings['checkin_alfa'] ?? '11:00:00',
             'checkout_start'=> $settings['checkout_start'] ?? '16:00:00',
+        ];
+    }
+
+    /**
+     * Resolve comprehensive day status (holidays, weekends, work hours, checkout status) for student UI.
+     */
+    public function getDayAttendanceStatus(StudentPkl $spkl, ?Carbon $date = null): array
+    {
+        $date = $date ?? Carbon::today();
+        $dateString = $date->toDateString();
+        $holidayService = app(HolidayService::class);
+        $isHoliday = $holidayService->isHoliday($spkl->school_id, $date);
+        $holiday = null;
+        if ($isHoliday) {
+            $holiday = \App\Models\SchoolHoliday::withoutGlobalScopes()
+                ->where('school_id', $spkl->school_id)
+                ->whereDate('holiday_date', $dateString)
+                ->first();
+        }
+
+        $company = $spkl->company;
+        $dayOfWeek = $date->dayOfWeekIso; // 1 (Mon) - 7 (Sun)
+        $isWorkDay = true;
+        if ($company) {
+            $isWorkDay = ($company->work_days === '6_days') ? ($dayOfWeek <= 6) : ($dayOfWeek <= 5);
+        }
+
+        $workHours = $company ? $this->resolveWorkHours($company, $spkl->school_id) : null;
+        $now = Carbon::now();
+        $canCheckout = false;
+        $checkoutStartTime = null;
+
+        if ($workHours && isset($workHours['checkout_start'])) {
+            $checkoutStartTime = substr($workHours['checkout_start'], 0, 5);
+            $checkoutStart = Carbon::createFromTimeString($workHours['checkout_start']);
+            $canCheckout = $now->greaterThanOrEqualTo($checkoutStart);
+        }
+
+        return [
+            'is_holiday' => $isHoliday,
+            'holiday_title' => $holiday?->title,
+            'is_work_day' => $isWorkDay,
+            'day_name' => $date->locale('id')->isoFormat('dddd'),
+            'work_hours' => $workHours,
+            'can_checkout' => $canCheckout,
+            'checkout_start_time' => $checkoutStartTime,
         ];
     }
 

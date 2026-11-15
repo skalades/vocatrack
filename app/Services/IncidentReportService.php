@@ -8,6 +8,7 @@ use App\Models\StudentPkl;
 use App\Models\Teacher;
 use App\Models\User;
 use App\Notifications\EmergencyIncidentReportedNotification;
+use App\Notifications\IncidentFollowupNotification;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
@@ -69,6 +70,12 @@ class IncidentReportService
             }
 
             $report->update($updateData);
+
+            // Notify student of the action/followup taken
+            $studentUser = $report->studentPkl?->student?->user;
+            if ($studentUser) {
+                $studentUser->notify(new IncidentFollowupNotification($report, $followup, $newStatus));
+            }
 
             return $followup;
         });

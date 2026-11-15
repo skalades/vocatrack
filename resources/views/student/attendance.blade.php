@@ -1,581 +1,371 @@
 @extends('layouts.student-mobile')
 
-@section('title', 'Absensi GPS & Kamera — VokaTrack Siswa')
+@section('title', 'Presensi Siswa — VokaTrack')
+
+@php
+    $studentName = auth()->user()->name ?? 'Raka Pratama';
+    $firstName = explode(' ', trim($studentName))[0];
+    $companyName = $spkl->company->name ?? 'Kantor PKL';
+    $companyLat = $spkl->company->latitude ?? -6.200000;
+    $companyLng = $spkl->company->longitude ?? 106.816666;
+    $companyRadius = $spkl->company->radius_meters ?? 100;
+@endphp
 
 @section('content')
-<div class="space-y-4">
+<div class="relative w-full font-sans select-none animate-fade-in">
 
-    <!-- Check-In Module Card -->
-    <div id="checkin-section" class="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs">
-        @if(!$todayAttendance)
-            <div class="space-y-4">
-                <div class="flex items-center justify-between pb-3 border-b border-slate-100">
-                    <div>
-                        <span class="text-xs font-bold text-slate-900 block">Check-In Hari Ini</span>
-                        <p class="text-[11px] text-slate-500 font-medium">{{ \Carbon\Carbon::today()->isoFormat('dddd, D MMMM Y') }}</p>
-                    </div>
-                    <x-badge variant="warning" size="xs">
-                        Belum Presensi
-                    </x-badge>
-                </div>
-
-                <!-- GPS Geofencing Status Card -->
-                <div class="p-4 rounded-2xl bg-slate-50/90 border border-slate-200/80 space-y-3">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center space-x-2">
-                            <div class="relative w-7 h-7 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100 flex items-center justify-center shrink-0">
-                                <span id="gps-radar-wave" class="absolute inset-0 rounded-xl bg-indigo-400 opacity-30 animate-radar pointer-events-none"></span>
-                                <svg class="w-4 h-4 stroke-[2] relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                            </div>
-                            <div>
-                                <span class="text-xs font-bold text-slate-900 block leading-tight">Geofencing Lokasi</span>
-                                <span class="text-[10px] text-slate-500 font-medium">Validasi radius presensi kantor</span>
-                            </div>
-                        </div>
-                        <span id="gps-status-badge" class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-700 transition-all inline-flex items-center gap-1.5">
-                            <span class="w-1.5 h-1.5 rounded-full bg-slate-500 animate-pulse"></span>
-                            Mencari GPS...
-                        </span>
-                    </div>
-
-                    <div class="bg-white p-3 rounded-xl border border-slate-200/70 space-y-1.5 shadow-2xs">
-                        <div class="flex items-center justify-between text-xs">
-                            <span class="font-bold text-slate-800 truncate">{{ $spkl->company->name ?? 'Mitra DU/DI' }}</span>
-                            @if($spkl->company->gps_enabled)
-                                <span class="text-[10px] font-extrabold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100 shrink-0">
-                                    Maks: {{ $spkl->company->radius_meters }}m
-                                </span>
-                            @endif
-                        </div>
-                        <div class="flex items-center text-[10px] text-slate-500 font-mono gap-1">
-                            <span class="inline-flex items-center gap-1">
-                                <svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                                Posisi:
-                            </span>
-                            <span id="gps-coords-text" class="truncate font-semibold text-slate-700">Mendeteksi sensor satelit...</span>
-                        </div>
-                        <div class="flex items-center gap-2 pt-1 border-t border-slate-100">
-                            <span id="gps-accuracy-badge" class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
-                                Akurasi GPS: Mendeteksi...
-                            </span>
-                        </div>
-                    </div>
-
-                    <!-- Outside Radius Alert Box (Integrated cleanly) -->
-                    <div id="outside-radius-box" class="hidden p-3.5 rounded-xl bg-amber-50 border border-amber-200/80 text-amber-900 space-y-2">
-                        <div class="flex items-start space-x-2">
-                            <span class="w-5 h-5 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 text-xs font-black mt-0.5">!</span>
-                            <div>
-                                <span class="text-xs font-bold text-amber-950 block">Di Luar Radius Kantor DU/DI</span>
-                                <span class="text-[11px] text-amber-800 font-medium leading-relaxed block mt-0.5">
-                                    Jarak Anda melebihi batas radius mitra. Wajib menuliskan alasan penugasan luar kantor:
-                                </span>
-                            </div>
-                        </div>
-                        <div>
-                            <input type="text" name="location_reason" id="input-location-reason" oninput="validateForm()" 
-                                   placeholder="Contoh: Dinas luar di lokasi klien / instalasi teknis..." 
-                                   class="w-full text-xs p-2.5 rounded-xl bg-white border border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 text-slate-900 font-medium placeholder-slate-400">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Camera / Swafoto Viewport -->
-                <div class="space-y-3">
-                    <div id="camera-viewport" class="relative w-full aspect-4/3 rounded-3xl overflow-hidden bg-gradient-to-b from-slate-900 to-slate-950 border border-slate-800 flex items-center justify-center shadow-lg">
-                        <!-- Camera Shutter Flash Effect Overlay -->
-                        <div id="camera-flash-overlay" class="absolute inset-0 bg-white opacity-0 pointer-events-none z-30 transition-opacity duration-150"></div>
-
-                        <!-- Video Stream -->
-                        <video id="webcam-video" autoplay playsinline class="w-full h-full object-cover hidden"></video>
-                        <canvas id="photo-canvas" class="hidden"></canvas>
-                        
-                        <!-- Photo Preview -->
-                        <div id="photo-preview-wrapper" class="hidden relative w-full h-full">
-                            <img id="photo-preview" class="w-full h-full object-cover" alt="Preview Foto Selfie">
-                            <div class="absolute top-3 left-3 bg-emerald-500/90 backdrop-blur-md text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-md flex items-center gap-1">
-                                <svg class="w-3 h-3 stroke-[3]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-                                <span>Foto Siap Dikirim</span>
-                            </div>
-                        </div>
-
-                        <!-- Face Guideline Oval (Visible during live camera stream) -->
-                        <div id="face-guide" class="hidden pointer-events-none absolute inset-x-12 inset-y-6 border-2 border-dashed border-white/60 rounded-[48%] flex flex-col items-center justify-end pb-3 z-10 transition-opacity">
-                            <span class="px-3 py-1 rounded-full bg-slate-900/70 backdrop-blur-md text-[10px] font-bold text-white tracking-wide shadow-sm">
-                                Posisikan Wajah di Sini
-                            </span>
-                        </div>
-
-                        <!-- Viewport Placeholder (Before Camera Started) -->
-                        <div id="camera-overlay" class="absolute inset-0 flex flex-col items-center justify-center p-6 text-center z-10">
-                            <!-- Viewfinder Corner Brackets -->
-                            <div class="pointer-events-none absolute inset-4">
-                                <div class="w-5 h-5 border-t-2 border-l-2 border-indigo-400 rounded-tl-lg absolute top-0 left-0"></div>
-                                <div class="w-5 h-5 border-t-2 border-r-2 border-indigo-400 rounded-tr-lg absolute top-0 right-0"></div>
-                                <div class="w-5 h-5 border-b-2 border-l-2 border-indigo-400 rounded-bl-lg absolute bottom-0 left-0"></div>
-                                <div class="w-5 h-5 border-b-2 border-r-2 border-indigo-400 rounded-br-lg absolute bottom-0 right-0"></div>
-                            </div>
-
-                            <div class="relative mb-3">
-                                <div class="w-14 h-14 rounded-2xl bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 flex items-center justify-center shadow-lg shadow-indigo-500/10">
-                                    <svg class="w-7 h-7 stroke-[1.8]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                                </div>
-                            </div>
-                            
-                            <p class="text-xs font-bold text-white mb-1">Ambil Swafoto Kehadiran</p>
-                            <p class="text-[11px] text-slate-300 mb-4 max-w-[240px] leading-relaxed">
-                                Wajib swafoto langsung menggunakan kamera browser untuk verifikasi kehadiran.
-                            </p>
-                            
-                            <div class="w-full max-w-xs">
-                                <button type="button" onclick="startCamera()" class="w-full py-3 px-5 rounded-2xl bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white font-bold text-xs shadow-lg shadow-indigo-600/30 transition-all cursor-pointer flex items-center justify-center space-x-2 active:scale-95">
-                                    <svg class="w-4 h-4 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                                    <span>Buka Kamera Sekarang</span>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Snapshot / Retake Controls -->
-                    <div id="camera-controls" class="hidden flex space-x-2">
-                        <button type="button" onclick="takeSnapshot()" id="btn-snap" class="flex-1 py-3.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white font-bold text-xs shadow-lg shadow-indigo-600/25 flex items-center justify-center space-x-2 cursor-pointer transition-all active:scale-95">
-                            <span class="w-3 h-3 rounded-full bg-white animate-pulse"></span>
-                            <span>Ambil Jepretan Wajah</span>
-                        </button>
-                        <button type="button" onclick="retakeSnapshot()" id="btn-retake" class="hidden flex-1 py-3.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs flex items-center justify-center space-x-2 cursor-pointer border border-slate-200 transition-all active:scale-95">
-                            <svg class="w-4 h-4 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-                            <span>Foto Ulang</span>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Submit Form -->
-                <form action="{{ route('student.checkin') }}" method="POST" id="form-checkin" class="space-y-3">
-                    @csrf
-                    <input type="hidden" name="latitude" id="input-lat">
-                    <input type="hidden" name="longitude" id="input-lng">
-                    <input type="hidden" name="accuracy" id="input-accuracy">
-                    <input type="hidden" name="is_mocked" id="input-is-mocked" value="0">
-                    <input type="hidden" name="photo" id="input-photo">
-                    <input type="hidden" name="reason" id="input-form-reason">
-
-                    <button type="submit" id="btn-submit-checkin" disabled 
-                            class="w-full min-h-[48px] py-3.5 px-4 rounded-2xl bg-slate-100 text-slate-400 border border-slate-200 font-bold text-xs tracking-wide cursor-not-allowed transition-all flex items-center justify-center space-x-2">
-                        <svg class="w-4 h-4 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                        <span>Ambil Selfie Dulu untuk Check-In</span>
-                    </button>
-                </form>
-
-                <!-- Shortcut Link to Leave/Sick Request if cannot attend -->
-                <div class="pt-2 text-center border-t border-slate-100">
-                    <p class="text-[11px] text-slate-500 font-medium">
-                        Berhalangan hadir atau sedang sakit?
-                        <button type="button" onclick="openRequestModal('izin')" class="font-bold text-indigo-600 hover:text-indigo-700 underline cursor-pointer ml-0.5">
-                            Ajukan Izin / Sakit Di Sini
-                        </button>
-                    </p>
-                </div>
+    @if(!$spkl)
+        <!-- Case: Siswa Belum Di-Plotting -->
+        <div class="p-5 pt-8 text-center bg-white rounded-[26px] m-5 border border-amber-200 shadow-sm">
+            <div class="w-16 h-16 rounded-full bg-[#FFF1D6] text-[#7A4B00] flex items-center justify-center mx-auto text-2xl font-bold">
+                ⏳
             </div>
-        @elseif($todayAttendance && !$todayAttendance->checkout_time)
-            <!-- Section Checkout Form -->
-            <div class="space-y-4">
-                <div class="flex items-center justify-between pb-3 border-b border-slate-100">
-                    <div>
-                        <span class="text-xs font-bold text-slate-900 block">Check-In Telah Tercatat</span>
-                        <p class="text-[11px] text-slate-500 font-medium">Jam Masuk: {{ substr($todayAttendance->checkin_time, 0, 5) }} WIB</p>
-                    </div>
-                    <x-badge :variant="$todayAttendance->status" size="sm">
-                        {{ strtoupper($todayAttendance->status) }}
-                    </x-badge>
-                </div>
+            <h2 class="font-space font-bold text-lg text-[#10211D] mt-3">Belum Memiliki Penempatan PKL</h2>
+            <p class="text-xs text-[#5A6B65] mt-1 max-w-[280px] mx-auto leading-relaxed">
+                Anda belum memiliki penugasan PKL aktif. Modul presensi kamera selfie dan geofence akan terbuka setelah sekolah memetakan penempatan DU/DI Anda.
+            </p>
+            <a href="{{ route('student.home') }}" class="inline-block mt-4 px-5 py-2.5 rounded-full bg-[#0B2B25] text-white text-xs font-bold">
+                Kembali ke Beranda
+            </a>
+        </div>
 
-                <div class="p-4 rounded-2xl bg-amber-50/70 border border-amber-200/80 space-y-3">
-                    <div class="flex items-center space-x-2 text-amber-900">
-                        <svg class="w-4 h-4 text-amber-600 shrink-0 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                        <span class="text-xs font-bold">Waktunya Check-Out Pulang?</span>
+    @elseif($todayAttendance)
+        <!-- ========================================================
+             SCREEN 3: PRESENSI BERHASIL / BUKTI PRESENSI MASUK
+             ======================================================== -->
+        <x-student.attendance-ticket 
+            :attendance="$todayAttendance" 
+            :spkl="$spkl" 
+            :student="$student" 
+            :dayNumber="$dayNumber ?? 27" 
+        />
+
+        <!-- Secondary Section: Presensi Pulang & Permohonan Khusus -->
+        <div class="px-5 pb-20 -mt-16 relative z-20 flex flex-col gap-3">
+            @if(!$todayAttendance->checkout_time)
+                <!-- Presensi Pulang (Check-Out) Card -->
+                <div class="bg-white rounded-[24px] p-4 shadow-sm border border-slate-100 flex flex-col gap-2.5">
+                    <div class="flex items-center justify-between">
+                        <span class="font-bold text-sm text-[#10211D]">Presensi Pulang</span>
+                        <span class="text-xs font-bold text-[#5A6B65]">Buka 16.00 WIB</span>
                     </div>
-                    <p class="text-xs text-amber-900/90 leading-relaxed font-medium">
-                        Pastikan seluruh pekerjaan telah selesai dirapikan. Tuliskan ringkasan singkat capaian Anda sebelum pulang.
-                    </p>
-                    <form action="{{ route('student.checkout') }}" method="POST" class="space-y-3">
+                    <form action="{{ route('student.checkout') }}" method="POST" class="flex flex-col gap-2">
                         @csrf
-                        <textarea name="checkout_notes" rows="2" required maxlength="255" 
-                                  placeholder="Contoh: Menyelesaikan perbaikan modul 4 dan berkoordinasi dengan mentor..." 
-                                  class="w-full text-xs p-3 rounded-xl bg-white border border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-500/20 font-medium text-slate-800 leading-relaxed"></textarea>
-                        <button type="submit" class="w-full min-h-[48px] py-3 px-4 rounded-2xl bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white font-bold text-xs tracking-wide shadow-md shadow-amber-500/20 cursor-pointer transition-transform active:scale-[0.98]">
-                            Check-Out Pulang Sekarang
+                        <input type="text" name="notes" placeholder="Catatan capaian singkat hari ini (opsional)..." 
+                               class="w-full h-11 rounded-xl bg-[#F7F9F5] border border-[#CBD5CA] px-3 text-xs text-[#10211D] placeholder:text-slate-400 focus:outline-none focus:border-[#0F7A66]">
+                        <button type="submit" 
+                                class="w-full h-12 rounded-[24px] bg-[#0B2B25] hover:bg-[#12382F] text-white font-bold text-xs active:scale-95 transition-all flex items-center justify-center gap-2">
+                            <span>Check-Out Pulang</span>
                         </button>
                     </form>
                 </div>
-            </div>
-        @else
-            <!-- Completely Checked Out -->
-            <div class="p-5 rounded-2xl bg-emerald-50/80 border border-emerald-200/80 text-center space-y-2">
-                <div class="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-lg mx-auto shadow-2xs">
-                    ✓
-                </div>
-                <h4 class="text-xs font-extrabold text-emerald-950">Presensi Hari Ini Sudah Lengkap!</h4>
-                <p class="text-[11px] text-emerald-800 font-medium">
-                    Masuk: {{ substr($todayAttendance->checkin_time, 0, 5) }} WIB &bull; Pulang: {{ substr($todayAttendance->checkout_time, 0, 5) }} WIB
-                </p>
-                @if($todayAttendance->checkout_notes)
-                    <p class="text-[11px] text-slate-600 italic bg-white p-3 rounded-xl border border-emerald-100 font-medium leading-relaxed">
-                        "{{ $todayAttendance->checkout_notes }}"
-                    </p>
-                @endif
-            </div>
-        @endif
-    </div>
+            @endif
 
-    <!-- Permohonan Presensi Cepat (Izin, Sakit, Dinas Luar, WFH) -->
-    <div class="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs space-y-3">
-        <div class="flex items-center justify-between">
-            <div>
-                <h3 class="text-xs font-extrabold text-slate-900 tracking-tight">Permohonan Presensi Cepat</h3>
-                <p class="text-[11px] text-slate-500 font-medium">Berhalangan hadir atau dinas luar? Ajukan izin ke pembimbing.</p>
-            </div>
-        </div>
-        
-        <div class="grid grid-cols-4 gap-2">
-            <button type="button" onclick="openRequestModal('izin')" class="flex flex-col items-center justify-center p-3 rounded-2xl bg-slate-50/70 hover:bg-white border border-slate-200/80 hover:border-sky-300 shadow-2xs hover:shadow-xs transition-all cursor-pointer group active:scale-95">
-                <div class="w-9 h-9 rounded-xl bg-sky-50 text-sky-600 border border-sky-100 flex items-center justify-center mb-1.5 group-hover:scale-105 transition-transform">
-                    <svg class="w-4 h-4 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                </div>
-                <span class="text-[11px] font-bold text-slate-800 group-hover:text-sky-700 transition-colors">Izin</span>
+            <!-- Riwayat Kehadiran Accordion / Button -->
+            <button type="button" onclick="document.getElementById('attendance-history-drawer').classList.toggle('hidden')"
+                    class="w-full h-12 rounded-[24px] bg-white border border-slate-200 text-[#10211D] font-bold text-xs flex items-center justify-between px-4 shadow-xs">
+                <span>Riwayat Kehadiran Saya</span>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
             </button>
 
-            <button type="button" onclick="openRequestModal('sakit')" class="flex flex-col items-center justify-center p-3 rounded-2xl bg-slate-50/70 hover:bg-white border border-slate-200/80 hover:border-purple-300 shadow-2xs hover:shadow-xs transition-all cursor-pointer group active:scale-95">
-                <div class="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 border border-purple-100 flex items-center justify-center mb-1.5 group-hover:scale-105 transition-transform">
-                    <svg class="w-4 h-4 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
-                </div>
-                <span class="text-[11px] font-bold text-slate-800 group-hover:text-purple-700 transition-colors">Sakit</span>
-            </button>
-
-            <button type="button" onclick="openRequestModal('dinas_luar')" class="flex flex-col items-center justify-center p-3 rounded-2xl bg-slate-50/70 hover:bg-white border border-slate-200/80 hover:border-teal-300 shadow-2xs hover:shadow-xs transition-all cursor-pointer group active:scale-95">
-                <div class="w-9 h-9 rounded-xl bg-teal-50 text-teal-600 border border-teal-100 flex items-center justify-center mb-1.5 group-hover:scale-105 transition-transform">
-                    <svg class="w-4 h-4 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-                </div>
-                <span class="text-[11px] font-bold text-slate-800 group-hover:text-teal-700 transition-colors">Dinas</span>
-            </button>
-
-            <button type="button" onclick="openRequestModal('luar_kantor')" class="flex flex-col items-center justify-center p-3 rounded-2xl bg-slate-50/70 hover:bg-white border border-slate-200/80 hover:border-indigo-300 shadow-2xs hover:shadow-xs transition-all cursor-pointer group active:scale-95">
-                <div class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100 flex items-center justify-center mb-1.5 group-hover:scale-105 transition-transform">
-                    <svg class="w-4 h-4 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
-                </div>
-                <span class="text-[11px] font-bold text-slate-800 group-hover:text-indigo-700 transition-colors">WFH</span>
-            </button>
-        </div>
-    </div>
-
-    <!-- Status Pengajuan Presensi Terkini -->
-    @if(isset($pendingRequests) && $pendingRequests->isNotEmpty())
-        <div class="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs space-y-3">
-            <div class="flex items-center justify-between">
-                <div>
-                    <h3 class="text-xs font-extrabold text-slate-900 tracking-tight">Status Pengajuan Terkini</h3>
-                    <p class="text-[11px] text-slate-500 font-medium">Permohonan izin atau dispensasi yang telah diajukan.</p>
-                </div>
-                <span class="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">{{ $pendingRequests->count() }} Pengajuan</span>
-            </div>
-
-            <div class="space-y-2.5">
-                @foreach($pendingRequests as $req)
-                    <div class="p-3.5 rounded-2xl bg-slate-50/90 border border-slate-200/70 space-y-2">
-                        <div class="flex items-center justify-between gap-2">
-                            <div class="flex items-center space-x-2">
-                                <x-badge :variant="$req->type" size="xs">
-                                    {{ strtoupper(str_replace('_', ' ', $req->type)) }}
-                                </x-badge>
-                                <span class="text-[11px] font-bold text-slate-700">
-                                    {{ \Carbon\Carbon::parse($req->start_date)->isoFormat('D MMM') }}
-                                    @if($req->start_date !== $req->end_date)
-                                        - {{ \Carbon\Carbon::parse($req->end_date)->isoFormat('D MMM Y') }}
-                                    @else
-                                        {{ \Carbon\Carbon::parse($req->start_date)->isoFormat('Y') }}
-                                    @endif
-                                </span>
-                            </div>
-                            <x-badge :variant="$req->status" size="xs">
-                                {{ $req->status === 'pending' ? 'Menunggu' : ($req->status === 'approved' ? 'Disetujui' : 'Ditolak') }}
-                            </x-badge>
+            <!-- Collapsible Attendance History -->
+            <div id="attendance-history-drawer" class="hidden flex flex-col gap-2 bg-white rounded-[24px] p-4 border border-slate-100 shadow-sm">
+                <span class="font-bold text-xs text-[#5A6B65] uppercase tracking-wider mb-1 block">Catatan Kehadiran Terakhir</span>
+                @forelse($history as $item)
+                    <div class="flex items-center justify-between py-2 border-b border-slate-100 last:border-0 text-xs">
+                        <div>
+                            <span class="font-bold text-[#10211D] block">{{ \Carbon\Carbon::parse($item->date)->isoFormat('dddd, D MMM') }}</span>
+                            <span class="text-[#5A6B65] text-[11px]">Masuk: {{ $item->checkin_time ? \Carbon\Carbon::parse($item->checkin_time)->format('H.i') : '-' }} WIB</span>
                         </div>
-
-                        <p class="text-xs text-slate-600 font-medium leading-relaxed">
-                            {{ $req->reason }}
-                        </p>
-
-                        @if($req->reviewer_notes)
-                            <div class="text-[11px] text-slate-600 bg-white p-2.5 rounded-xl border border-slate-200/60 font-medium">
-                                <span class="font-bold text-slate-800">Catatan Pembimbing:</span> {{ $req->reviewer_notes }}
-                            </div>
-                        @endif
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold {{ $item->status === 'hadir' ? 'bg-[#DDF3EC] text-[#0B5E4E]' : ($item->status === 'terlambat' ? 'bg-[#FFF1D6] text-[#7A4B00]' : 'bg-slate-100 text-slate-700') }}">
+                            {{ ucfirst($item->status) }}
+                        </span>
                     </div>
-                @endforeach
+                @empty
+                    <p class="text-xs text-slate-400 text-center py-2">Belum ada riwayat presensi.</p>
+                @endforelse
             </div>
+        </div>
+
+    @else
+        <!-- ========================================================
+             SCREEN 2: VERIFIKASI SELFIE PRESENSI (ACTIVE CAMERA)
+             ======================================================== -->
+        <div class="bg-[#0B2B25] text-white min-h-screen flex flex-col justify-between p-5 pb-24 box-border">
+
+            <!-- Topbar Row -->
+            <div class="flex items-center justify-between h-12">
+                <a href="{{ route('student.home') }}" aria-label="Kembali ke beranda"
+                   class="flex items-center justify-center w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M19 12H5M12 19l-7-7 7-7"/>
+                    </svg>
+                </a>
+
+                <div class="flex flex-col items-center">
+                    <h1 class="text-[17px] font-bold text-white tracking-tight">Verifikasi Selfie</h1>
+                    <span class="text-[11px] text-[#A9C2B9] font-medium leading-none">Check-In Hari Ini</span>
+                </div>
+
+                <span class="h-[30px] rounded-full bg-[#C6F26B]/16 text-[#C6F26B] font-space text-[13px] font-bold px-3 flex items-center justify-center">
+                    2 / 3
+                </span>
+            </div>
+
+            <!-- Camera Viewfinder Box (540px Height) -->
+            <div class="relative h-[480px] sm:h-[520px] rounded-[30px] bg-[#12382F] overflow-hidden my-2 flex items-center justify-center border border-white/10 shadow-2xl">
+                <!-- Live Video Feed -->
+                <video id="webcam-feed" autoplay playsinline muted class="w-full h-full object-cover transform scale-x-[-1]"></video>
+
+                <!-- Hidden Canvas for capture snapshot -->
+                <canvas id="snapshot-canvas" class="hidden"></canvas>
+
+                <!-- Face Oval Mask Overlay SVG -->
+                <svg width="100%" height="100%" viewBox="0 0 350 540" role="img" aria-label="Bingkai verifikasi wajah" class="absolute inset-0 pointer-events-none">
+                    <defs>
+                        <mask id="face-viewfinder-mask">
+                            <rect width="350" height="540" fill="#fff"/>
+                            <ellipse cx="175" cy="245" rx="100" ry="135" fill="#000"/>
+                        </mask>
+                    </defs>
+                    <!-- Darkened vignette around face -->
+                    <rect width="350" height="540" fill="rgba(11,43,37,0.58)" mask="url(#face-viewfinder-mask)"/>
+                    <!-- Glowing Dashed Face Guide Oval -->
+                    <ellipse cx="175" cy="245" rx="100" ry="135" fill="none" stroke="#C6F26B" stroke-width="2.8" stroke-dasharray="8 6"/>
+                    <!-- Horizontal alignment marker -->
+                    <line x1="110" y1="245" x2="240" y2="245" stroke="#C6F26B" stroke-width="1.8" opacity="0.6"/>
+                </svg>
+
+                <!-- Top Prompt Pill -->
+                <div class="absolute top-4 inset-x-0 flex justify-center z-10 px-4">
+                    <span id="liveness-prompt-pill" class="inline-flex items-center gap-2 bg-white text-[#0B2B25] rounded-full px-4 py-2 text-[13.5px] font-bold shadow-md transition-all">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M15 18l-6-6 6-6"/>
+                        </svg>
+                        <span id="liveness-prompt-text">Posisikan wajah di dalam bingkai</span>
+                    </span>
+                </div>
+
+                <!-- Bottom Indicators (Wajah, Cahaya, Liveness) -->
+                <div class="absolute bottom-3.5 inset-x-3.5 flex gap-2 justify-center flex-wrap z-10">
+                    <span id="pill-wajah" class="inline-flex items-center gap-1.5 bg-[#0B2B25]/85 text-white rounded-full px-3 py-1.5 text-xs font-bold border border-white/10">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C6F26B" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                        <span>Wajah</span>
+                    </span>
+
+                    <span id="pill-cahaya" class="inline-flex items-center gap-1.5 bg-[#0B2B25]/85 text-white rounded-full px-3 py-1.5 text-xs font-bold border border-white/10">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C6F26B" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                        <span>Cahaya</span>
+                    </span>
+
+                    <span id="pill-liveness" class="inline-flex items-center gap-1.5 bg-[#C6F26B] text-[#0B2B25] rounded-full px-3 py-1.5 text-xs font-extrabold shadow-xs">
+                        Liveness 70%
+                    </span>
+                </div>
+            </div>
+
+            <!-- Location & Time Glass Bar -->
+            <div class="flex items-center justify-between h-12 rounded-[24px] bg-white/[0.08] px-4 border border-white/10 my-1">
+                <span class="inline-flex items-center gap-2 text-[13.5px] font-semibold text-white">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C6F26B" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 2a8 8 0 0 0-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 0 0-8-8z"/>
+                        <circle cx="12" cy="10" r="3"/>
+                    </svg>
+                    <span id="selfie-location-text">{{ $companyName }} · 38 m</span>
+                </span>
+                <span id="selfie-clock-text" class="font-space font-bold text-sm text-[#C6F26B]">
+                    {{ \Carbon\Carbon::now()->format('H.i') }} WIB
+                </span>
+            </div>
+
+            <!-- Controls Row (Flash, Shutter, Flip Camera) -->
+            <div class="flex items-center justify-center gap-9 pt-2">
+                <!-- Flash Button -->
+                <button type="button" onclick="toggleCameraFlash()" aria-label="Nyalakan lampu kilat"
+                        class="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+                    </svg>
+                </button>
+
+                <!-- Big Shutter Button -->
+                <button type="button" id="shutter-btn" onclick="captureAndSubmitPresensi()" aria-label="Ambil foto dan kirim presensi"
+                        class="w-[84px] h-[84px] rounded-full border-4 border-[#C6F26B] flex items-center justify-center active:scale-90 transition-transform cursor-pointer group shadow-[0_0_20px_rgba(198,242,107,0.3)]">
+                    <span class="w-[62px] h-[62px] rounded-full bg-white group-hover:scale-95 transition-transform"></span>
+                </button>
+
+                <!-- Switch Camera Button -->
+                <button type="button" onclick="flipCameraFacing()" aria-label="Ganti kamera"
+                        class="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M20 16v5h-5M4 8V3h5"/>
+                        <path d="M4 16v-1a8 8 0 0 1 14.93-4M20 8v1a8 8 0 0 1-14.93 4"/>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Policy Disclaimer -->
+            <p class="text-center text-xs text-[#A9C2B9] leading-tight mt-2">
+                Hanya kamera langsung. Unggah dari galeri tidak diizinkan.
+            </p>
+
+            <!-- Hidden Check-in Submission Form -->
+            <form id="checkin-form" action="{{ route('student.checkin') }}" method="POST" class="hidden">
+                @csrf
+                <input type="hidden" name="photo" id="form-photo-base64">
+                <input type="hidden" name="latitude" id="form-latitude">
+                <input type="hidden" name="longitude" id="form-longitude">
+                <input type="hidden" name="accuracy" id="form-accuracy">
+                <input type="hidden" name="is_mocked" id="form-is-mocked" value="0">
+                <input type="hidden" name="reason" id="form-reason">
+            </form>
+
         </div>
     @endif
 
-    <!-- Attendance History List -->
-    <div class="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs space-y-3">
-        <h3 class="text-xs font-extrabold text-slate-900 tracking-tight">Riwayat Presensi</h3>
-
-        @if($history->isEmpty())
-            <x-empty-state 
-                title="Belum Ada Presensi" 
-                description="Belum ada riwayat kehadiran yang tercatat untuk akun Anda."
-                class="py-6"
-            />
-        @else
-            <div class="divide-y divide-slate-100">
-                @foreach($history as $item)
-                    <div class="py-3 flex items-center justify-between gap-3">
-                        <div class="min-w-0">
-                            <span class="text-xs font-bold text-slate-900 block truncate">
-                                {{ \Carbon\Carbon::parse($item->date)->isoFormat('dddd, D MMM Y') }}
-                            </span>
-                            <span class="text-[10px] text-slate-500 font-mono block mt-0.5">
-                                Masuk: {{ $item->checkin_time ? substr($item->checkin_time, 0, 5) : '-' }} &bull; Pulang: {{ $item->checkout_time ? substr($item->checkout_time, 0, 5) : '-' }}
-                            </span>
-                        </div>
-                        <x-badge :variant="$item->status" size="xs">
-                            {{ strtoupper(str_replace('_', ' ', $item->status)) }}
-                        </x-badge>
-                    </div>
-                @endforeach
-            </div>
-            <x-pagination :paginator="$history" />
-        @endif
-    </div>
-
-    <!-- Modal Quick Request (Reusable Component) -->
-    <x-attendance-request-modal />
-
 </div>
-@endsection
 
 @push('scripts')
 <script>
-    let streamObj = null;
-    let userLat = null;
-    let userLng = null;
-    let photoData = null;
-    let isOutside = false;
+    let videoStream = null;
+    let currentFacingMode = 'user'; // front camera default
+    let userCoords = { latitude: null, longitude: null, accuracy: null, isMocked: 0 };
+    const targetLat = {{ $companyLat }};
+    const targetLng = {{ $companyLng }};
+    const targetRadius = {{ $companyRadius }};
 
-    const targetLat = {{ $spkl->company->latitude ?? -6.2235 }};
-    const targetLng = {{ $spkl->company->longitude ?? 106.8310 }};
-    const maxRadius = {{ $spkl->company->radius_meters ?? 150 }};
-    const gpsEnabled = {{ $spkl->company->gps_enabled ? 'true' : 'false' }};
+    function startLiveCamera() {
+        const video = document.getElementById('webcam-feed');
+        if (!video) return;
 
-    function startCamera() {
-        const video = document.getElementById('webcam-video');
-        video.classList.remove('hidden');
-        navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false })
+        if (videoStream) {
+            videoStream.getTracks().forEach(track => track.stop());
+        }
+
+        const constraints = {
+            video: {
+                facingMode: currentFacingMode,
+                width: { ideal: 720 },
+                height: { ideal: 960 }
+            },
+            audio: false
+        };
+
+        navigator.mediaDevices.getUserMedia(constraints)
             .then(stream => {
-                streamObj = stream;
+                videoStream = stream;
                 video.srcObject = stream;
-                document.getElementById('camera-overlay').classList.add('hidden');
-                document.getElementById('camera-controls').classList.remove('hidden');
-                document.getElementById('face-guide').classList.remove('hidden');
-                document.getElementById('photo-preview-wrapper').classList.add('hidden');
             })
             .catch(err => {
-                alert('Akses kamera tidak diizinkan atau tidak didukung pada browser ini. Harap izinkan akses kamera untuk melakukan absensi kehadiran.');
-                video.classList.add('hidden');
+                console.warn('Camera access denied or failed:', err);
+                const prompt = document.getElementById('liveness-prompt-text');
+                if (prompt) prompt.textContent = 'Izin kamera dibutuhkan untuk verifikasi';
             });
     }
 
-    function takeSnapshot() {
-        const video = document.getElementById('webcam-video');
-        const canvas = document.getElementById('photo-canvas');
-        const preview = document.getElementById('photo-preview');
-
-        // Trigger camera shutter flash effect
-        const flashOverlay = document.getElementById('camera-flash-overlay');
-        if (flashOverlay) {
-            flashOverlay.style.opacity = '0.9';
-            setTimeout(() => {
-                flashOverlay.style.opacity = '0';
-            }, 120);
+    function flipCameraFacing() {
+        currentFacingMode = (currentFacingMode === 'user') ? 'environment' : 'user';
+        const video = document.getElementById('webcam-feed');
+        if (video) {
+            video.style.transform = (currentFacingMode === 'user') ? 'scaleX(-1)' : 'scaleX(1)';
         }
+        startLiveCamera();
+    }
+
+    function toggleCameraFlash() {
+        if (!videoStream) return;
+        const track = videoStream.getVideoTracks()[0];
+        if (track && track.getCapabilities && track.getCapabilities().torch) {
+            const currentSetting = track.getSettings().torch || false;
+            track.applyConstraints({ advanced: [{ torch: !currentSetting }] }).catch(() => {});
+        } else {
+            // Flash screen simulation
+            const viewfinder = document.getElementById('webcam-feed');
+            if (viewfinder) {
+                viewfinder.style.filter = viewfinder.style.filter ? '' : 'brightness(1.5)';
+            }
+        }
+    }
+
+    function captureAndSubmitPresensi() {
+        const video = document.getElementById('webcam-feed');
+        const canvas = document.getElementById('snapshot-canvas');
+        const form = document.getElementById('checkin-form');
+        const photoInput = document.getElementById('form-photo-base64');
+        const shutterBtn = document.getElementById('shutter-btn');
+
+        if (!video || !canvas || !form) return;
+
+        // Visual flash feedback
+        shutterBtn.classList.add('scale-75', 'opacity-50');
+        setTimeout(() => shutterBtn.classList.remove('scale-75', 'opacity-50'), 250);
 
         canvas.width = video.videoWidth || 640;
         canvas.height = video.videoHeight || 480;
         const ctx = canvas.getContext('2d');
+
+        if (currentFacingMode === 'user') {
+            ctx.translate(canvas.width, 0);
+            ctx.scale(-1, 1);
+        }
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-        photoData = canvas.toDataURL('image/jpeg', 0.85);
-        preview.src = photoData;
-        document.getElementById('photo-preview-wrapper').classList.remove('hidden');
-        document.getElementById('face-guide').classList.add('hidden');
-        video.classList.add('hidden');
+        const base64Photo = canvas.toDataURL('image/jpeg', 0.85);
+        photoInput.value = base64Photo;
 
-        document.getElementById('input-photo').value = photoData;
-        document.getElementById('btn-snap').classList.add('hidden');
-        document.getElementById('btn-retake').classList.remove('hidden');
+        // Fill GPS Form Fields
+        document.getElementById('form-latitude').value = userCoords.latitude || targetLat;
+        document.getElementById('form-longitude').value = userCoords.longitude || targetLng;
+        document.getElementById('form-accuracy').value = userCoords.accuracy || 15;
+        document.getElementById('form-is-mocked').value = userCoords.isMocked ? 1 : 0;
 
-        validateForm();
-    }
-
-    function retakeSnapshot() {
-        const video = document.getElementById('webcam-video');
-        document.getElementById('photo-preview-wrapper').classList.add('hidden');
-        photoData = null;
-        document.getElementById('input-photo').value = '';
-
-        if (streamObj && streamObj.active) {
-            video.classList.remove('hidden');
-            document.getElementById('face-guide').classList.remove('hidden');
-            document.getElementById('camera-overlay').classList.add('hidden');
-            document.getElementById('camera-controls').classList.remove('hidden');
-            document.getElementById('btn-snap').classList.remove('hidden');
-            document.getElementById('btn-retake').classList.add('hidden');
-        } else {
-            document.getElementById('camera-overlay').classList.remove('hidden');
-            document.getElementById('camera-controls').classList.add('hidden');
-            document.getElementById('btn-snap').classList.remove('hidden');
-            document.getElementById('btn-retake').classList.add('hidden');
+        // Stop camera stream
+        if (videoStream) {
+            videoStream.getTracks().forEach(track => track.stop());
         }
 
-        validateForm();
+        // Submit form
+        form.submit();
     }
 
-    // Geolocation API
-    let currentAccuracy = null;
-    let isWeakGps = false;
+    // Geolocation watcher with Fake GPS detection
+    function watchStudentLocation() {
+        if (!navigator.geolocation) return;
 
-    if ('geolocation' in navigator) {
-        navigator.geolocation.getCurrentPosition(
-            pos => {
-                userLat = pos.coords.latitude;
-                userLng = pos.coords.longitude;
-                currentAccuracy = pos.coords.accuracy ? Math.round(pos.coords.accuracy) : null;
+        navigator.geolocation.watchPosition(
+            (pos) => {
+                userCoords.latitude = pos.coords.latitude;
+                userCoords.longitude = pos.coords.longitude;
+                userCoords.accuracy = Math.round(pos.coords.accuracy);
+                userCoords.isMocked = (pos.mocked || userCoords.accuracy === 0) ? 1 : 0;
 
-                document.getElementById('input-lat').value = userLat;
-                document.getElementById('input-lng').value = userLng;
-                if (currentAccuracy) {
-                    document.getElementById('input-accuracy').value = currentAccuracy;
+                // Trigger Fake GPS Screen if mock location is active
+                if (userCoords.isMocked) {
+                    if (window.openFakeGpsModal) window.openFakeGpsModal();
+                    return;
                 }
 
-                // Check for Mock Location / Fake GPS indicators
-                if (pos.coords.isMocked || pos.mocked || currentAccuracy === 0) {
-                    document.getElementById('input-is-mocked').value = '1';
+                // Update location text
+                const locEl = document.getElementById('selfie-location-text');
+                if (locEl) {
+                    locEl.textContent = `Kantor PKL · ±${userCoords.accuracy} m`;
                 }
-
-                const coordText = userLat.toFixed(6) + ', ' + userLng.toFixed(6);
-                document.getElementById('gps-coords-text').innerText = coordText;
-
-                // Accuracy Guard evaluation
-                const accBadge = document.getElementById('gps-accuracy-badge');
-                if (accBadge && currentAccuracy !== null) {
-                    if (currentAccuracy > 80) {
-                        isWeakGps = true;
-                        accBadge.className = 'px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200 inline-flex items-center gap-1';
-                        accBadge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping"></span>Sinyal Lemah (±' + currentAccuracy + 'm - Pindah ke area terbuka)';
-                    } else if (currentAccuracy > 30) {
-                        isWeakGps = false;
-                        accBadge.className = 'px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 inline-flex items-center gap-1';
-                        accBadge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>Akurasi Sedang (±' + currentAccuracy + 'm)';
-                    } else {
-                        isWeakGps = false;
-                        accBadge.className = 'px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 inline-flex items-center gap-1';
-                        accBadge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>GPS Sangat Akurat (±' + currentAccuracy + 'm)';
-                    }
-                }
-
-                if (gpsEnabled) {
-                    const dist = calculateDistance(userLat, userLng, targetLat, targetLng);
-                    const badge = document.getElementById('gps-status-badge');
-                    const reasonBox = document.getElementById('outside-radius-box');
-
-                    const radarWave = document.getElementById('gps-radar-wave');
-                    if (dist <= maxRadius) {
-                        isOutside = false;
-                        badge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 inline-flex items-center gap-1.5 animate-scale-in';
-                        badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Dalam Radius (' + Math.round(dist) + 'm)';
-                        if (radarWave) radarWave.className = 'absolute inset-0 rounded-xl bg-emerald-400 opacity-25 animate-radar pointer-events-none';
-                        reasonBox.classList.add('hidden');
-                    } else {
-                        isOutside = true;
-                        badge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200 inline-flex items-center gap-1.5 animate-scale-in';
-                        badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping"></span>Luar Radius (' + Math.round(dist) + 'm)';
-                        if (radarWave) radarWave.className = 'absolute inset-0 rounded-xl bg-rose-400 opacity-25 animate-radar pointer-events-none';
-                        reasonBox.classList.remove('hidden');
-                        reasonBox.classList.add('animate-fade-in-down');
-                    }
-                } else {
-                    const badge = document.getElementById('gps-status-badge');
-                    const radarWave = document.getElementById('gps-radar-wave');
-                    badge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 inline-flex items-center gap-1.5 animate-scale-in';
-                    badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>GPS Terdeteksi';
-                    if (radarWave) radarWave.className = 'absolute inset-0 rounded-xl bg-emerald-400 opacity-25 animate-radar pointer-events-none';
-                }
-
-                validateForm();
             },
-            err => {
-                const badge = document.getElementById('gps-status-badge');
-                badge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200';
-                badge.innerText = 'GPS Default / Sesuai Kantor';
-                userLat = targetLat;
-                userLng = targetLng;
-                document.getElementById('input-lat').value = userLat;
-                document.getElementById('input-lng').value = userLng;
-                document.getElementById('gps-coords-text').innerText = userLat.toFixed(6) + ', ' + userLng.toFixed(6) + ' (Default DU/DI)';
-                validateForm();
-            },
-            { enableHighAccuracy: true, timeout: 10000 }
+            (err) => {},
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
         );
-    } else {
-        userLat = targetLat;
-        userLng = targetLng;
-        document.getElementById('input-lat').value = userLat;
-        document.getElementById('input-lng').value = userLng;
     }
 
-    function calculateDistance(lat1, lon1, lat2, lon2) {
-        const R = 6371000;
-        const dLat = (lat2 - lat1) * Math.PI / 180;
-        const dLon = (lon2 - lon1) * Math.PI / 180;
-        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                  Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-                  Math.sin(dLon/2) * Math.sin(dLon/2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-        return R * c;
-    }
-
-    function validateForm() {
-        const submitBtn = document.getElementById('btn-submit-checkin');
-        if (!submitBtn) return;
-
-        const reasonInput = document.getElementById('input-location-reason');
-        if (reasonInput) {
-            document.getElementById('input-form-reason').value = reasonInput.value;
-        }
-
-        if (gpsEnabled && isWeakGps) {
-            submitBtn.disabled = true;
-            submitBtn.className = 'w-full min-h-[48px] py-3.5 px-4 rounded-2xl bg-rose-100 text-rose-800 border border-rose-200 font-bold text-xs tracking-wide cursor-not-allowed transition-all flex items-center justify-center space-x-2';
-            submitBtn.innerHTML = '<svg class="w-4 h-4 text-rose-600 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg><span>Sinyal GPS Lemah (±' + currentAccuracy + 'm) — Kalibrasi</span>';
-            return;
-        }
-
-        if (!photoData) {
-            submitBtn.disabled = true;
-            submitBtn.className = 'w-full min-h-[48px] py-3.5 px-4 rounded-2xl bg-slate-100 text-slate-400 border border-slate-200 font-bold text-xs tracking-wide cursor-not-allowed transition-all flex items-center justify-center space-x-2';
-            submitBtn.innerHTML = '<svg class="w-4 h-4 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg><span>Ambil Selfie Dulu untuk Check-In</span>';
-            return;
-        }
-
-        if (isOutside && (!reasonInput || !reasonInput.value.trim())) {
-            submitBtn.disabled = true;
-            submitBtn.className = 'w-full min-h-[48px] py-3.5 px-4 rounded-2xl bg-amber-100 text-amber-800 border border-amber-200 font-bold text-xs tracking-wide cursor-not-allowed transition-all flex items-center justify-center space-x-2';
-            submitBtn.innerHTML = '<svg class="w-4 h-4 text-amber-600 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg><span>Wajib Isi Alasan Luar Radius</span>';
-            return;
-        }
-
-        submitBtn.disabled = false;
-        submitBtn.className = 'w-full min-h-[48px] py-3.5 px-4 rounded-2xl bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-800 hover:opacity-95 text-white font-bold text-xs tracking-wide shadow-lg shadow-indigo-600/30 cursor-pointer flex items-center justify-center space-x-2 transition-all active:scale-[0.98]';
-        submitBtn.innerHTML = '<svg class="w-4 h-4 stroke-[2.5]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg><span>Kirim Check-In Sekarang</span>';
-    }
+    document.addEventListener('DOMContentLoaded', function() {
+        @if(!$todayAttendance)
+            startLiveCamera();
+            watchStudentLocation();
+        @endif
+    });
 </script>
 @endpush
+@endsection

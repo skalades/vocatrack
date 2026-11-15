@@ -8,11 +8,11 @@
     <!-- 1. Digital Student Identity Card -->
     <div class="relative overflow-hidden bg-white rounded-3xl border border-slate-200/80 shadow-xs">
         <!-- Header Banner with Official Motif -->
-        <div class="relative h-20 bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-800 p-4 flex items-start justify-between text-white overflow-hidden">
+        <div class="relative h-20 bg-gradient-to-r from-[#0B2B25] via-[#0F7A66] to-[#0B2B25] p-4 flex items-start justify-between text-white overflow-hidden">
             <div class="absolute -right-6 -bottom-8 w-28 h-28 rounded-full bg-white/10 blur-xs pointer-events-none"></div>
             <div class="relative z-10 flex items-center gap-1.5">
                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                <span class="text-[10px] font-extrabold uppercase tracking-widest text-indigo-100">Kartu Tanda Siswa PKL</span>
+                <span class="text-[10px] font-extrabold uppercase tracking-widest text-[#C6F26B]">Kartu Tanda Siswa PKL</span>
             </div>
             <span class="relative z-10 text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/15 backdrop-blur-md text-white border border-white/20">
                 {{ auth()->user()->school->name ?? 'SMK Indonesia' }}
@@ -23,7 +23,7 @@
         <div class="relative px-5 pb-5 pt-0 text-center">
             <!-- Avatar with Outer Ring & Status Indicator -->
             <div class="relative -mt-10 mx-auto w-20 h-20 rounded-3xl bg-white p-1.5 shadow-md flex items-center justify-center">
-                <div class="w-full h-full rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-700 to-indigo-500 text-white font-black text-2xl flex items-center justify-center shadow-inner select-none transition-transform hover:scale-105 duration-200">
+                <div class="w-full h-full rounded-2xl bg-gradient-to-tr from-[#0B2B25] to-[#0F7A66] text-white font-black text-2xl flex items-center justify-center shadow-inner select-none transition-transform hover:scale-105 duration-200">
                     {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
                 </div>
                 <span class="absolute bottom-1 right-1 flex h-4 w-4">
@@ -44,8 +44,8 @@
 
             <!-- Class & Major Badges (Modular & Scalable) -->
             <div class="flex items-center justify-center flex-wrap gap-1.5 mt-3">
-                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200/80 shadow-2xs">
-                    <svg class="w-3.5 h-3.5 text-indigo-600 stroke-[2.2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 14l9-5-9-5-9 5 9 5z"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/></svg>
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#DDF3EC] text-[#0B5E4E] border border-[#A3DFC8] shadow-2xs">
+                    <svg class="w-3.5 h-3.5 text-[#0B5E4E] stroke-[2.2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 14l9-5-9-5-9 5 9 5z"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/></svg>
                     <span>Kelas {{ $student->class->name ?? '-' }}</span>
                 </span>
                 <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200/80 shadow-2xs">
@@ -73,11 +73,12 @@
     </div>
 
     <!-- 2. PKL Placement Information Card -->
+    @if($spkl)
     <div class="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs space-y-4">
         <!-- Section Title & Status Badge -->
         <div class="flex items-center justify-between pb-3 border-b border-slate-100">
             <div class="flex items-center space-x-2.5">
-                <div class="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100 flex items-center justify-center shrink-0">
+                <div class="w-8 h-8 rounded-xl bg-[#DDF3EC] text-[#0B5E4E] border border-indigo-100 flex items-center justify-center shrink-0">
                     <svg class="w-4 h-4 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
                 </div>
                 <div>
@@ -85,24 +86,38 @@
                     <p class="text-[11px] text-slate-400 font-medium mt-0.5">Mitra Industri & Pembimbing Resmi</p>
                 </div>
             </div>
-            <x-badge variant="success" size="xs">
-                Aktif PKL
-            </x-badge>
+            @if($spkl->status === 'completed')
+                <x-badge variant="success" size="xs">
+                    PKL Selesai
+                </x-badge>
+            @elseif($spkl->status === 'active')
+                <x-badge variant="success" size="xs">
+                    Aktif PKL
+                </x-badge>
+            @elseif($spkl->status === 'assigned')
+                <x-badge variant="warning" size="xs">
+                    Menunggu Mulai
+                </x-badge>
+            @else
+                <x-badge variant="neutral" size="xs">
+                    {{ ucfirst($spkl->status) }}
+                </x-badge>
+            @endif
         </div>
 
         <!-- Mitra DU/DI Spotlight -->
         <div class="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/70 space-y-1.5">
             <div class="flex items-center gap-1.5">
-                <span class="w-2 h-2 rounded-full bg-indigo-600"></span>
-                <span class="text-[10px] font-extrabold text-indigo-700 uppercase tracking-wider">Perusahaan Mitra (DU/DI)</span>
+                <span class="w-2 h-2 rounded-full bg-[#0B2B25]"></span>
+                <span class="text-[10px] font-extrabold text-[#0B5E4E] uppercase tracking-wider">Perusahaan Mitra (DU/DI)</span>
             </div>
             <h4 class="font-black text-slate-900 text-sm sm:text-base leading-snug">
-                {{ $spkl->company->name }}
+                {{ $spkl->company->name ?? 'Perusahaan Mitra' }}
             </h4>
             <div class="flex items-start gap-1.5 pt-1 text-slate-500">
                 <svg class="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                 <p class="text-[11px] font-medium leading-relaxed">
-                    {{ $spkl->company->address }}
+                    {{ $spkl->company->address ?? '-' }}
                 </p>
             </div>
         </div>
@@ -129,11 +144,11 @@
 
             <!-- Guru Pembimbing (Sekolah) -->
             <div class="p-3.5 rounded-2xl bg-white border border-slate-200/80 shadow-2xs flex items-start gap-3">
-                <div class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-700 border border-indigo-200/80 flex items-center justify-center shrink-0">
+                <div class="w-9 h-9 rounded-xl bg-[#DDF3EC] text-[#0B5E4E] border border-[#A3DFC8] flex items-center justify-center shrink-0">
                     <svg class="w-4 h-4 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 14l9-5-9-5-9 5 9 5z"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/></svg>
                 </div>
                 <div class="min-w-0 flex-1">
-                    <span class="text-[10px] font-extrabold text-indigo-700 uppercase tracking-wider block">
+                    <span class="text-[10px] font-extrabold text-[#0B5E4E] uppercase tracking-wider block">
                         Guru Pembimbing (Sekolah)
                     </span>
                     <span class="font-extrabold text-slate-900 text-xs sm:text-sm block leading-snug mt-0.5 break-words">
@@ -153,15 +168,47 @@
                 <div class="flex items-center gap-1.5 text-xs font-bold text-slate-700 mt-0.5">
                     <svg class="w-3.5 h-3.5 text-slate-400 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                     <span>
-                        {{ \Carbon\Carbon::parse($spkl->pklPeriod->start_date)->isoFormat('D MMMM Y') }} &ndash; {{ \Carbon\Carbon::parse($spkl->pklPeriod->end_date)->isoFormat('D MMMM Y') }}
+                        @if($spkl->pklPeriod)
+                            {{ \Carbon\Carbon::parse($spkl->pklPeriod->start_date)->isoFormat('D MMMM Y') }} &ndash; {{ \Carbon\Carbon::parse($spkl->pklPeriod->end_date)->isoFormat('D MMMM Y') }}
+                        @else
+                            -
+                        @endif
                     </span>
                 </div>
             </div>
-            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-indigo-50 text-indigo-700 border border-indigo-200/80 shadow-2xs self-start sm:self-auto">
-                {{ $spkl->pklPeriod->name }}
-            </span>
+            @if($spkl->pklPeriod)
+                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-[#DDF3EC] text-[#0B5E4E] border border-[#A3DFC8] shadow-2xs self-start sm:self-auto">
+                    {{ $spkl->pklPeriod->name }}
+                </span>
+            @endif
         </div>
     </div>
+    @else
+    <!-- Unassigned State Card -->
+    <div class="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-xs space-y-3">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div class="flex items-center space-x-2.5">
+                <div class="w-8 h-8 rounded-xl bg-slate-100 text-slate-600 border border-slate-200 flex items-center justify-center shrink-0">
+                    <svg class="w-4 h-4 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                </div>
+                <div>
+                    <h3 class="text-xs font-extrabold text-slate-900 uppercase tracking-wider leading-none">Informasi Penempatan PKL</h3>
+                    <p class="text-[11px] text-slate-400 font-medium mt-0.5">Mitra Industri & Pembimbing</p>
+                </div>
+            </div>
+            <x-badge variant="neutral" size="xs">
+                Belum Ditempatkan
+            </x-badge>
+        </div>
+
+        <div class="p-4 rounded-2xl bg-amber-50/70 border border-amber-200/80 space-y-1.5 text-xs text-amber-900">
+            <span class="font-bold block">Status: Menunggu Penempatan PKL</span>
+            <p class="text-[11px] text-amber-800 leading-relaxed font-medium">
+                Akun Anda belum dipetakan ke perusahaan mitra DU/DI. Silakan berkoordinasi dengan Ketua Program Keahlian atau Admin BKK / Hubin sekolah Anda.
+            </p>
+        </div>
+    </div>
+    @endif
 
     <!-- 3. Final Assessment Card (Consistent Light Academic Theme) -->
     @if($assessment)
@@ -175,7 +222,7 @@
             };
             $predicateColor = match (true) {
                 $finalScore >= 90 => 'bg-emerald-50 text-emerald-700 border-emerald-200/80',
-                $finalScore >= 80 => 'bg-indigo-50 text-indigo-700 border-indigo-200/80',
+                $finalScore >= 80 => 'bg-[#DDF3EC] text-[#0B5E4E] border-[#A3DFC8]',
                 $finalScore >= 70 => 'bg-amber-50 text-amber-700 border-amber-200/80',
                 default => 'bg-rose-50 text-rose-700 border-rose-200/80',
             };
@@ -201,7 +248,7 @@
             <!-- Grand Score Spotlight Hero -->
             <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-50/70 via-slate-50 to-indigo-50/30 border border-indigo-100/80 p-4 sm:p-5 flex items-center justify-between shadow-2xs">
                 <div class="space-y-1">
-                    <span class="text-[10px] font-black text-indigo-700 uppercase tracking-widest block">
+                    <span class="text-[10px] font-black text-[#0B5E4E] uppercase tracking-widest block">
                         Skor Akhir Terpadu
                     </span>
                     <p class="text-xs text-slate-500 font-medium">
@@ -260,7 +307,7 @@
                     <div>
                         <div class="flex items-center justify-between pb-2 border-b border-slate-200/60">
                             <span class="text-[10px] font-extrabold text-indigo-800 uppercase tracking-wider">Sekolah (Guru)</span>
-                            <span class="text-[10px] font-extrabold text-indigo-700 bg-indigo-100/80 px-2 py-0.5 rounded-md border border-indigo-200">Bobot 40%</span>
+                            <span class="text-[10px] font-extrabold text-[#0B5E4E] bg-indigo-100/80 px-2 py-0.5 rounded-md border border-[#A3DFC8]">Bobot 40%</span>
                         </div>
                         <div class="space-y-2 text-xs mt-2.5">
                             <div class="flex items-center justify-between">
@@ -297,7 +344,7 @@
                     @endif
 
                     @if($assessment->notes_teacher)
-                        <div class="p-3.5 rounded-2xl bg-indigo-50/70 border border-indigo-200/80 space-y-1">
+                        <div class="p-3.5 rounded-2xl bg-[#DDF3EC]/70 border border-[#A3DFC8] space-y-1">
                             <div class="flex items-center gap-1.5 text-indigo-800">
                                 <svg class="w-3.5 h-3.5 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
                                 <span class="text-[10px] font-black uppercase tracking-wider">Catatan Guru Pembimbing:</span>
@@ -326,7 +373,7 @@
     <!-- E-Sertifikat & Transkrip PKL (Sprint 4) -->
     @if(isset($certificate) && $certificate)
         <div class="relative overflow-hidden bg-gradient-to-br from-indigo-900 via-slate-900 to-slate-900 rounded-3xl p-5 border border-indigo-500/40 shadow-lg text-white space-y-4">
-            <div class="absolute -right-8 -bottom-10 w-36 h-36 rounded-full bg-indigo-500/10 blur-xl pointer-events-none"></div>
+            <div class="absolute -right-8 -bottom-10 w-36 h-36 rounded-full bg-[#DDF3EC]0/10 blur-xl pointer-events-none"></div>
 
             <div class="flex items-center justify-between pb-3 border-b border-white/10">
                 <div class="flex items-center space-x-2.5">
@@ -360,7 +407,7 @@
             </div>
 
             <div class="flex flex-col sm:flex-row gap-2 pt-1">
-                <a href="{{ route('student.certificate.download') }}" class="flex-1 py-3 px-4 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs text-center transition-colors shadow-md shadow-indigo-600/30 flex items-center justify-center gap-2">
+                <a href="{{ route('student.certificate.download') }}" class="flex-1 py-3 px-4 rounded-2xl bg-[#0B2B25] hover:bg-[#DDF3EC]0 text-white font-bold text-xs text-center transition-colors shadow-md shadow-indigo-600/30 flex items-center justify-center gap-2">
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
@@ -380,7 +427,7 @@
     <div class="p-5 rounded-3xl bg-white border border-slate-200/80 shadow-xs space-y-4">
         <div class="flex items-start justify-between gap-3">
             <div class="flex items-center space-x-2.5">
-                <div class="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-200/80 text-indigo-600 flex items-center justify-center shrink-0">
+                <div class="w-10 h-10 rounded-2xl bg-[#DDF3EC] border border-[#A3DFC8] text-[#0B5E4E] flex items-center justify-center shrink-0">
                     <svg class="w-5 h-5 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
                     </svg>
@@ -409,7 +456,7 @@
             <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Tautan Pribadi Orang Tua</label>
             <div class="flex items-center gap-2">
                 <input type="text" id="parent-portal-link" readonly value="{{ $monitorUrl }}" class="flex-1 bg-slate-50 border border-slate-200 rounded-2xl px-3.5 py-2.5 text-xs text-slate-700 font-mono select-all focus:outline-hidden focus:border-indigo-400">
-                <button type="button" onclick="copyParentPortalLink()" id="btn-copy-link" class="shrink-0 px-3.5 py-2.5 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-bold text-xs rounded-2xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer">
+                <button type="button" onclick="copyParentPortalLink()" id="btn-copy-link" class="shrink-0 px-3.5 py-2.5 bg-[#0B2B25] hover:bg-[#12382F] active:scale-95 text-white font-bold text-xs rounded-2xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer">
                     <svg class="w-4 h-4 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
                     <span id="copy-text">Salin</span>
                 </button>
@@ -432,11 +479,44 @@
         </div>
     </div>
 
-    <!-- 5. Keamanan Akun & Ubah Kata Sandi Mandiri -->
+    <!-- 5. Laporan Kendala & Keselamatan Siswa (SOS) -->
+    <div class="p-5 rounded-3xl bg-white border border-slate-200/80 shadow-xs space-y-3.5">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div class="flex items-center space-x-2.5">
+                <div class="w-10 h-10 rounded-2xl bg-rose-50 border border-rose-200/80 text-rose-600 flex items-center justify-center shrink-0">
+                    <svg class="w-5 h-5 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="text-xs font-black uppercase tracking-wider text-slate-900">Laporan Kendala & SOS</h3>
+                    <p class="text-[11px] text-slate-500 font-medium mt-0.5">Kanal aduan rahasia & keselamatan PKL</p>
+                </div>
+            </div>
+            <a href="{{ route('student.incidents') }}" class="px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors flex items-center gap-1">
+                <span>Riwayat</span>
+                <svg class="w-3.5 h-3.5 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+            </a>
+        </div>
+        <p class="text-xs text-slate-600 leading-relaxed font-medium">
+            Mengalami ketidaksesuaian tugas, jam kerja berlebih, kendala interpersonal, atau situasi darurat? Laporan Anda dijamin rahasia dan hanya dapat diakses oleh guru pembimbing dan pihak sekolah.
+        </p>
+        <div class="pt-1 flex items-center gap-2">
+            <button type="button" onclick="document.getElementById('modal-incident-report').classList.remove('hidden')" class="flex-1 py-2.5 px-3.5 rounded-2xl bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white font-bold text-xs shadow-md shadow-rose-600/25 transition-all text-center cursor-pointer flex items-center justify-center gap-1.5">
+                <svg class="w-4 h-4 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                <span>Buat Laporan Baru</span>
+            </button>
+            <a href="{{ route('student.incidents') }}" class="py-2.5 px-3.5 rounded-2xl bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold text-xs border border-slate-200/80 transition-colors">
+                Buka Arsip Laporan
+            </a>
+        </div>
+    </div>
+
+    <!-- 6. Keamanan Akun & Ubah Kata Sandi Mandiri -->
     <div class="p-5 rounded-3xl bg-white border border-slate-200/80 shadow-xs space-y-4">
         <div class="flex items-center justify-between">
             <div class="flex items-center space-x-2.5">
-                <div class="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-200/80 text-indigo-600 flex items-center justify-center shrink-0">
+                <div class="w-10 h-10 rounded-2xl bg-[#DDF3EC] border border-[#A3DFC8] text-[#0B5E4E] flex items-center justify-center shrink-0">
                     <svg class="w-5 h-5 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
                     </svg>
@@ -446,7 +526,7 @@
                     <p class="text-[11px] text-slate-500 font-medium mt-0.5">Ubah kata sandi secara mandiri</p>
                 </div>
             </div>
-            <button type="button" onclick="openChangePasswordModal()" class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-bold text-xs rounded-xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer">
+            <button type="button" onclick="openChangePasswordModal()" class="px-3.5 py-2 bg-[#0B2B25] hover:bg-[#12382F] active:scale-95 text-white font-bold text-xs rounded-xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
                 <span>Ubah Sandi</span>
             </button>

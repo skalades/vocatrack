@@ -24,7 +24,7 @@
     </div>
 
     <!-- Mobile Slide-Up / Bottom-Sheet Modal Drawer -->
-    <div id="mobile-notification-drawer" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs hidden transition-all flex flex-col justify-end">
+    <div id="mobile-notification-drawer" onclick="if(event.target === this) closeMobileNotificationDrawer()" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs hidden transition-all flex flex-col justify-end">
         <div onclick="event.stopPropagation()" class="bg-white rounded-t-3xl max-h-[80vh] flex flex-col w-full shadow-2xl border-t border-slate-200 animate-in slide-in-from-bottom duration-200">
             <div class="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
                 <div class="flex items-center space-x-2">

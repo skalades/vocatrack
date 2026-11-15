@@ -1,17 +1,5 @@
-<!-- Floating SOS / Lapor Kendala Pill Button (Mobile Siswa) -->
-<div class="fixed bottom-20 right-4 z-40">
-    <button type="button" onclick="document.getElementById('modal-incident-report').classList.remove('hidden')" 
-            class="px-3.5 py-2 rounded-full bg-gradient-to-r from-rose-600 to-red-700 hover:from-rose-500 hover:to-red-600 text-white font-bold text-xs shadow-lg shadow-rose-600/35 border border-rose-400/30 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer">
-        <span class="relative flex h-2.5 w-2.5">
-            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
-            <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-white"></span>
-        </span>
-        <span>Lapor Kendala / SOS</span>
-    </button>
-</div>
-
 <!-- Modal Form Lapor Kendala & SOS Siswa -->
-<div id="modal-incident-report" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-xs hidden p-4">
+<div id="modal-incident-report" onclick="if(event.target === this) this.classList.add('hidden')" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-xs hidden p-4">
     <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-100 max-h-[92vh] flex flex-col animate-in zoom-in-95 duration-150">
         <!-- Modal Header -->
         <div class="px-5 py-4 bg-gradient-to-r from-rose-500 to-red-600 text-white flex items-center justify-between shrink-0">
@@ -24,9 +12,14 @@
                     <p class="text-[10px] text-rose-100 font-medium">Kanal aduan & keselamatan siswa PKL</p>
                 </div>
             </div>
-            <button type="button" onclick="document.getElementById('modal-incident-report').classList.add('hidden')" class="p-1 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition-colors">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-            </button>
+            <div class="flex items-center gap-1.5">
+                <a href="{{ route('student.incidents') }}" class="px-2.5 py-1 rounded-xl bg-white/20 hover:bg-white/30 text-white text-[11px] font-bold transition-colors">
+                    Riwayat
+                </a>
+                <button type="button" onclick="document.getElementById('modal-incident-report').classList.add('hidden')" class="p-1 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
         </div>
 
         <!-- Privacy Shield Notice -->

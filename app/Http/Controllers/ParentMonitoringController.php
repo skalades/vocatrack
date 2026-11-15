@@ -52,6 +52,6 @@ class ParentMonitoringController extends Controller
 
         $newToken = $service->regenerateToken($student);
 
-        return back()->with('success', 'Tautan monitoring orang tua berhasil diperbarui! Tautan lama kini sudah tidak dapat diakses.');
+        return redirect()->route('student.profile')->with('success', 'Tautan monitoring orang tua berhasil diperbarui! Tautan lama kini sudah tidak dapat diakses.');
     }
 }
