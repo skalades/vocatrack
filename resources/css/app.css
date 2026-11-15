@@ -457,3 +457,110 @@ tbody tr:hover td.table-sticky-right {
 }
 
 .theme-forest ::-webkit-scrollbar-thumb { background: #B9C6BD; }
+
+/* ==========================================================================
+   MOTION LAYER (Guru & Siswa) — dipakai oleh resources/js/motion.js
+   ========================================================================== */
+/* Tilt kartu */
+.vt-tilt {
+    transform: perspective(900px) rotateX(var(--vt-rx, 0deg)) rotateY(var(--vt-ry, 0deg));
+    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease, border-color 0.3s ease;
+    transform-style: preserve-3d;
+}
+
+.vt-reveal {
+    opacity: 0;
+    transform: translate3d(0, 18px, 0) scale(0.985);
+    transition:
+        opacity 0.55s cubic-bezier(0.16, 1, 0.3, 1) var(--vt-delay, 0ms),
+        transform 0.65s cubic-bezier(0.16, 1, 0.3, 1) var(--vt-delay, 0ms);
+    will-change: opacity, transform;
+}
+.vt-reveal.vt-in {
+    opacity: 1;
+    transform: none;
+}
+
+.vt-grow-x { transform: scaleX(0); transform-origin: left center; transition: transform 1s cubic-bezier(0.16, 1, 0.3, 1) 0.2s; }
+.vt-grow-y { transform: scaleY(0); transform-origin: center bottom; transition: transform 0.9s cubic-bezier(0.34, 1.4, 0.64, 1) calc(var(--vt-delay, 0ms) + 0.15s); }
+.vt-grow-x.vt-grown, .vt-grow-y.vt-grown { transform: none; }
+
+/* Spotlight mengikuti kursor */
+.vt-spotlight { isolation: isolate; }
+.vt-spotlight::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background: radial-gradient(420px circle at var(--vt-mx, -500px) var(--vt-my, -500px), rgba(198, 242, 107, 0.13), transparent 60%);
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    z-index: 0;
+}
+.vt-spotlight:hover::after { opacity: 1; }
+
+/* Ripple */
+.vt-ripple-host { position: relative; overflow: hidden; }
+.vt-ripple-dot {
+    position: absolute;
+    border-radius: 9999px;
+    background: currentColor;
+    opacity: 0.22;
+    transform: scale(0);
+    pointer-events: none;
+    animation: vtRipple 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+@keyframes vtRipple { to { transform: scale(1); opacity: 0; } }
+
+/* Transisi halaman */
+.vt-motion main { transition: opacity 0.22s ease, transform 0.22s ease; }
+.vt-motion main.vt-leaving { opacity: 0.35; transform: translateY(6px); }
+
+/* Denyut lembut untuk elemen yang butuh perhatian */
+@keyframes vtAttention {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(234, 88, 12, 0); }
+    50% { box-shadow: 0 0 0 4px rgba(234, 88, 12, 0.14); }
+}
+.vt-attention { animation: vtAttention 2.4s ease-in-out infinite; }
+
+@keyframes vtLiveDot {
+    0% { box-shadow: 0 0 0 0 rgba(198, 242, 107, 0.7); }
+    70% { box-shadow: 0 0 0 7px rgba(198, 242, 107, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(198, 242, 107, 0); }
+}
+.vt-live-dot { animation: vtLiveDot 1.8s ease-out infinite; }
+
+/* Sidebar guru: item meluncur masuk & geser saat hover */
+@keyframes vtSlideIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: none; } }
+.theme-forest.vt-motion #sidebar-menu nav > a {
+    animation: vtSlideIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.theme-forest.vt-motion #sidebar-menu nav > a:nth-of-type(1) { animation-delay: 40ms; }
+.theme-forest.vt-motion #sidebar-menu nav > a:nth-of-type(2) { animation-delay: 80ms; }
+.theme-forest.vt-motion #sidebar-menu nav > a:nth-of-type(3) { animation-delay: 120ms; }
+.theme-forest.vt-motion #sidebar-menu nav > a:nth-of-type(4) { animation-delay: 160ms; }
+.theme-forest.vt-motion #sidebar-menu nav > a:nth-of-type(5) { animation-delay: 200ms; }
+.theme-forest.vt-motion #sidebar-menu nav > a:nth-of-type(6) { animation-delay: 240ms; }
+.theme-forest.vt-motion #sidebar-menu nav > a:nth-of-type(7) { animation-delay: 280ms; }
+.theme-forest.vt-motion #sidebar-menu nav > a:nth-of-type(8) { animation-delay: 320ms; }
+.theme-forest.vt-motion #sidebar-menu nav > a:nth-of-type(n+9) { animation-delay: 360ms; }
+.theme-forest #sidebar-menu nav > a { transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s ease, color 0.2s ease; }
+.theme-forest #sidebar-menu nav > a:hover { transform: translateX(3px); }
+
+/* Dock siswa: pill aktif "pop" & ikon memantul saat ditekan */
+@keyframes vtPop { 0% { transform: scale(0.85); } 60% { transform: scale(1.06); } 100% { transform: scale(1); } }
+.vt-motion nav[aria-label="Navigasi Siswa"] a[aria-current="page"] { animation: vtPop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+nav[aria-label="Navigasi Siswa"] a svg { transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1); }
+nav[aria-label="Navigasi Siswa"] a:active svg { transform: scale(0.82) translateY(1px); }
+@keyframes vtDockIn { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: none; } }
+.vt-motion nav[aria-label="Navigasi Siswa"] { animation: vtDockIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.15s both; }
+
+@media (prefers-reduced-motion: reduce) {
+    .vt-reveal, .vt-grow-x, .vt-grow-y { opacity: 1 !important; transform: none !important; transition: none !important; }
+    .vt-attention, .vt-live-dot, .animate-sos-pulse,
+    .vt-motion #sidebar-menu nav > a,
+    .vt-motion nav[aria-label="Navigasi Siswa"],
+    .vt-motion nav[aria-label="Navigasi Siswa"] a { animation: none !important; }
+    .vt-motion main { transition: none !important; }
+}

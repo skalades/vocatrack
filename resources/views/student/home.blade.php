@@ -53,7 +53,7 @@
         </div>
 
         <!-- Main Content Container with relative positioning -->
-        <div class="relative z-10 flex flex-col px-5 pt-6 box-border">
+        <div data-reveal-stagger class="relative z-10 flex flex-col px-5 pt-6 box-border">
 
             <!-- Top Profile Row -->
             <div class="flex items-center gap-3">
@@ -279,12 +279,12 @@
                 <div class="bg-white rounded-[20px] p-3 px-3.5 flex items-center gap-3 shadow-sm border border-slate-100">
                     <svg width="52" height="52" viewBox="0 0 52 52" role="img" aria-label="Persentase kehadiran {{ $attendanceRate }}%" class="shrink-0">
                         <circle cx="26" cy="26" r="22" fill="none" stroke="#E3E9E0" stroke-width="5"/>
-                        <circle cx="26" cy="26" r="22" fill="none" stroke="#0F7A66" stroke-width="5" stroke-linecap="round"
+                        <circle data-ring cx="26" cy="26" r="22" fill="none" stroke="#0F7A66" stroke-width="5" stroke-linecap="round"
                                 stroke-dasharray="138" stroke-dashoffset="{{ 138 - (138 * ($attendanceRate / 100)) }}"/>
                     </svg>
                     <div class="flex flex-col">
                         <span class="text-xs text-[#5A6B65] font-semibold">Kehadiran</span>
-                        <span class="font-space text-2xl font-bold leading-tight text-[#10211D]">{{ $attendanceRate }}%</span>
+                        <span data-counter class="font-space text-2xl font-bold leading-tight text-[#10211D]">{{ $attendanceRate }}%</span>
                     </div>
                 </div>
 
@@ -293,12 +293,12 @@
                     <div class="flex items-baseline justify-between">
                         <span class="text-xs text-[#5A6B65] font-semibold">Jurnal terisi</span>
                         <span class="font-space text-[22px] font-bold leading-tight text-[#10211D]">
-                            {{ $completedJournalsCount }}<span class="text-sm font-sans font-normal text-[#5A6B65]">/{{ $targetJournalsCount }}</span>
+                            <span data-counter>{{ $completedJournalsCount }}</span><span class="text-sm font-sans font-normal text-[#5A6B65]">/{{ $targetJournalsCount }}</span>
                         </span>
                     </div>
                     <div class="h-2 rounded-full bg-[#E3E9E0] overflow-hidden">
                         @php $journalPct = min(100, round(($completedJournalsCount / max(1, $targetJournalsCount)) * 100)); @endphp
-                        <div class="h-2 rounded-full bg-[#0F7A66] transition-all duration-500" style="width: {{ $journalPct }}%"></div>
+                        <div data-grow-x class="h-2 rounded-full bg-[#0F7A66]" style="width: {{ $journalPct }}%"></div>
                     </div>
                 </div>
             </div>

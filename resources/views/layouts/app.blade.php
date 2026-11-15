@@ -20,7 +20,7 @@
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
     </style>
 </head>
-<body class="h-full antialiased text-slate-800 bg-slate-50 {{ $isForestTheme ? 'selection:bg-[#C6F26B] selection:text-[#0B2B25]' : 'selection:bg-indigo-600 selection:text-white' }}">
+<body data-app="{{ $isForestTheme ? 'teacher' : 'staff' }}" class="h-full antialiased text-slate-800 bg-slate-50 {{ $isForestTheme ? 'selection:bg-[#C6F26B] selection:text-[#0B2B25]' : 'selection:bg-indigo-600 selection:text-white' }}">
     <div class="min-h-full flex flex-col lg:flex-row">
 
         <!-- Mobile Drawer Backdrop -->

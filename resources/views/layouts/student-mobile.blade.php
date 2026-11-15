@@ -19,7 +19,7 @@
     </style>
     @stack('styles')
 </head>
-<body class="min-h-screen bg-slate-200/80 antialiased selection:bg-[#C6F26B] selection:text-[#0B2B25] flex justify-center">
+<body data-app="student" class="min-h-screen bg-slate-200/80 antialiased selection:bg-[#C6F26B] selection:text-[#0B2B25] flex justify-center">
 
     <!-- Mobile App Container (Viewport 390px - 420px, Centered on desktop) -->
     <div class="w-full max-w-[420px] min-h-screen flex flex-col bg-[#F1F4EC] text-[#10211D] relative shadow-2xl overflow-x-hidden pb-24">

@@ -17,7 +17,7 @@
     
     <!-- Beranda -->
     <a href="{{ route('student.home') }}" 
-       class="flex items-center gap-2 h-12 px-4 rounded-[24px] text-[13.5px] font-extrabold transition-all duration-200 {{ $isHome ? 'bg-[#C6F26B] text-[#0B2B25] shadow-xs' : 'text-[#B7CEC5] hover:text-white' }}"
+       data-ripple class="flex items-center gap-2 h-12 px-4 rounded-[24px] text-[13.5px] font-extrabold transition-all duration-200 {{ $isHome ? 'bg-[#C6F26B] text-[#0B2B25] shadow-xs' : 'text-[#B7CEC5] hover:text-white' }}"
        @if($isHome) aria-current="page" @endif>
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>
@@ -36,7 +36,7 @@
 
     <!-- Jurnal -->
     <a href="{{ route('student.journals') }}" 
-       class="flex items-center gap-2 h-12 px-4 rounded-[24px] text-[13.5px] font-extrabold transition-all duration-200 {{ $isJournal ? 'bg-[#C6F26B] text-[#0B2B25] shadow-xs' : 'text-[#B7CEC5] hover:text-white' }}"
+       data-ripple class="flex items-center gap-2 h-12 px-4 rounded-[24px] text-[13.5px] font-extrabold transition-all duration-200 {{ $isJournal ? 'bg-[#C6F26B] text-[#0B2B25] shadow-xs' : 'text-[#B7CEC5] hover:text-white' }}"
        @if($isJournal) aria-current="page" @endif>
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a2.5 2.5 0 0 1-2.5-2.5z"/>

@@ -37,7 +37,7 @@
     <h1 class="sr-only">Dashboard Guru Pembimbing</h1>
 
     {{-- ===================== HERO ===================== --}}
-    <section class="relative overflow-hidden bg-[#0B2B25] rounded-[28px] text-white shadow-xl shadow-[#0B2B25]/20">
+    <section data-reveal data-spotlight class="relative overflow-hidden bg-[#0B2B25] rounded-[28px] text-white shadow-xl shadow-[#0B2B25]/20">
         <div class="absolute -right-24 -top-24 w-96 h-96 rounded-full border border-white/[0.07] pointer-events-none"></div>
         <div class="absolute -right-6 -top-6 w-60 h-60 rounded-full border border-white/[0.07] pointer-events-none"></div>
         <div class="absolute -left-16 -bottom-24 w-72 h-72 rounded-full bg-[#C6F26B]/10 blur-3xl pointer-events-none"></div>
@@ -73,17 +73,17 @@
                             </span>
                         </div>
                         <div class="h-2 rounded-full bg-white/10 overflow-hidden">
-                            <div class="h-full rounded-full bg-[#C6F26B]" style="width: {{ $periodProgress['percent'] }}%"></div>
+                            <div data-grow-x class="h-full rounded-full bg-[#C6F26B]" style="width: {{ $periodProgress['percent'] }}%"></div>
                         </div>
                         <div class="flex items-center justify-between text-[11px] text-[#A9C2B9] font-semibold">
-                            <span>Hari ke-<span class="font-space text-white">{{ $periodProgress['day'] }}</span> dari {{ $periodProgress['total'] }}</span>
-                            <span>Sisa <span class="font-space text-[#C6F26B]">{{ $periodProgress['remaining'] }}</span> hari</span>
+                            <span>Hari ke-<span data-counter class="font-space text-white">{{ $periodProgress['day'] }}</span> dari {{ $periodProgress['total'] }}</span>
+                            <span>Sisa <span data-counter class="font-space text-[#C6F26B]">{{ $periodProgress['remaining'] }}</span> hari</span>
                         </div>
                     </div>
                 @endif
 
                 <div class="flex flex-wrap items-center gap-2.5">
-                    <a href="{{ route('guru.monitoring', ['date' => now()->toDateString()]) }}" class="group inline-flex items-center gap-2 pl-4 pr-1.5 py-1.5 rounded-full bg-[#C6F26B] hover:bg-[#b5e855] text-[#0B2B25] text-xs font-extrabold shadow-md shadow-black/20 transition-all hover:-translate-y-0.5">
+                    <a href="{{ route('guru.monitoring', ['date' => now()->toDateString()]) }}" data-ripple class="group inline-flex items-center gap-2 pl-4 pr-1.5 py-1.5 rounded-full bg-[#C6F26B] hover:bg-[#b5e855] text-[#0B2B25] text-xs font-extrabold shadow-md shadow-black/20 transition-all hover:-translate-y-0.5">
                         <span>Monitoring Absensi</span>
                         <span class="w-7 h-7 rounded-full bg-[#0B2B25] text-[#C6F26B] flex items-center justify-center group-hover:translate-x-0.5 transition-transform">
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M13 6l6 6-6 6"/></svg>
@@ -103,23 +103,23 @@
             <div class="lg:col-span-4 flex flex-col justify-between gap-4 rounded-3xl bg-white/[0.06] border border-white/10 p-5">
                 <div class="flex items-center justify-between text-[11px] font-semibold text-[#A9C2B9]">
                     <span id="banner-live-date">{{ now()->isoFormat('dddd, D MMMM Y') }}</span>
-                    <span class="font-space font-bold text-[#C6F26B]" id="banner-live-clock">{{ now()->format('H:i:s') }} WIB</span>
+                    <span class="inline-flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-[#C6F26B] vt-live-dot"></span><span class="font-space font-bold text-[#C6F26B]" id="banner-live-clock">{{ now()->format('H:i:s') }} WIB</span></span>
                 </div>
                 <div class="flex items-center gap-5">
                     <div class="relative w-24 h-24 shrink-0">
                         <svg class="w-24 h-24 -rotate-90" viewBox="0 0 36 36">
                             <circle cx="18" cy="18" r="15.5" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="3.2"/>
-                            <circle cx="18" cy="18" r="15.5" fill="none" stroke="#C6F26B" stroke-width="3.2" stroke-linecap="round"
+                            <circle data-ring cx="18" cy="18" r="15.5" fill="none" stroke="#C6F26B" stroke-width="3.2" stroke-linecap="round"
                                     stroke-dasharray="{{ round(97.4 * $attendancePct / 100, 1) }} 97.4"/>
                         </svg>
                         <div class="absolute inset-0 flex flex-col items-center justify-center">
-                            <span class="font-space text-xl font-bold leading-none">{{ $attendancePct }}%</span>
+                            <span data-counter class="font-space text-xl font-bold leading-none">{{ $attendancePct }}%</span>
                             <span class="text-[9px] text-[#A9C2B9] font-bold uppercase mt-0.5">Hadir</span>
                         </div>
                     </div>
                     <div class="min-w-0 space-y-1">
                         <p class="text-[11px] font-bold uppercase tracking-wider text-[#A9C2B9]">Presensi hari ini</p>
-                        <p class="font-space text-4xl font-bold leading-none">{{ $todayPresentCount }}<span class="text-white/40 text-2xl">/{{ $expectedToday }}</span></p>
+                        <p class="font-space text-4xl font-bold leading-none"><span data-counter>{{ $todayPresentCount }}</span><span class="text-white/40 text-2xl">/{{ $expectedToday }}</span></p>
                         <p class="text-[11px] text-[#A9C2B9] font-medium">
                             @if($isSchoolHoliday) Hari libur sekolah
                             @elseif($expectedToday === 0) Tidak ada jadwal kerja hari ini
@@ -131,7 +131,7 @@
                 <div class="grid grid-cols-4 gap-1.5 text-center">
                     @foreach([['Tepat', $todaySummary['hadir'], 'text-[#C6F26B]'], ['Telat', $todaySummary['terlambat'], 'text-amber-300'], ['Izin/Skt', $todaySummary['izin_sakit'], 'text-sky-300'], ['Alfa', $todaySummary['alfa'], 'text-rose-300']] as [$lbl, $val, $cls])
                         <div class="rounded-xl bg-white/[0.06] py-2">
-                            <span class="font-space text-base font-bold {{ $cls }} block leading-none">{{ $val }}</span>
+                            <span data-counter class="font-space text-base font-bold {{ $cls }} block leading-none">{{ $val }}</span>
                             <span class="text-[9px] text-[#A9C2B9] font-bold uppercase">{{ $lbl }}</span>
                         </div>
                     @endforeach
@@ -142,7 +142,7 @@
 
     {{-- ===================== ALERTS ===================== --}}
     @if($criticalIncidentsCount > 0 || $flaggedTodayCount > 0 || $todaySummary['belum_telat'] > 0)
-        <section class="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <section data-reveal-stagger class="grid grid-cols-1 md:grid-cols-3 gap-3">
             @if($criticalIncidentsCount > 0)
                 <a href="{{ route('guru.incidents', ['urgency' => 'critical']) }}" class="relative overflow-hidden flex items-center gap-3.5 p-4 rounded-2xl bg-[#B42318] text-white shadow-lg shadow-[#B42318]/25 hover:-translate-y-0.5 transition-transform">
                     <span class="relative w-11 h-11 rounded-full bg-white text-[#B42318] font-space font-extrabold text-xs flex items-center justify-center shrink-0">
@@ -180,16 +180,16 @@
     @endif
 
     {{-- ===================== KPI ===================== --}}
-    <section class="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
+    <section data-reveal-stagger class="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
         {{-- Verifikasi --}}
-        <a href="{{ $pendingJournals >= $pendingRequests ? route('guru.journals') : route('guru.requests') }}" class="group bg-white rounded-3xl p-5 border border-slate-200/70 hover:border-[#0B2B25]/30 hover:shadow-lg transition-all">
+        <a href="{{ $pendingJournals >= $pendingRequests ? route('guru.journals') : route('guru.requests') }}" data-tilt class="group relative bg-white rounded-3xl p-5 border border-slate-200/70 hover:border-[#0B2B25]/30 hover:shadow-lg transition-all">
             <div class="flex items-start justify-between">
                 <p class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Menunggu Verifikasi</p>
                 <span class="w-9 h-9 rounded-xl {{ $verifTotal ? 'bg-[#C6F26B] text-[#0B2B25]' : 'bg-slate-100 text-slate-400' }} flex items-center justify-center">
                     <svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4M7 4h10a2 2 0 012 2v14l-7-3-7 3V6a2 2 0 012-2z"/></svg>
                 </span>
             </div>
-            <p class="font-space text-4xl font-bold text-slate-900 mt-2 leading-none">{{ $verifTotal }}</p>
+            <p data-counter class="font-space text-4xl font-bold text-slate-900 mt-2 leading-none">{{ $verifTotal }}</p>
             <div class="flex flex-wrap gap-1.5 mt-3 text-[11px] font-bold">
                 <span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">{{ $pendingJournals }} jurnal</span>
                 <span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">{{ $pendingRequests }} izin/sakit</span>
@@ -197,42 +197,42 @@
         </a>
 
         {{-- Kendala --}}
-        <a href="{{ route('guru.incidents') }}" class="group bg-white rounded-3xl p-5 border {{ $criticalIncidentsCount ? 'border-rose-300 ring-2 ring-rose-100' : 'border-slate-200/70' }} hover:shadow-lg transition-all">
+        <a href="{{ route('guru.incidents') }}" data-tilt class="group relative bg-white rounded-3xl p-5 border {{ $criticalIncidentsCount ? 'border-rose-300 ring-2 ring-rose-100' : 'border-slate-200/70' }} hover:shadow-lg transition-all">
             <div class="flex items-start justify-between">
                 <p class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Kendala & SOS</p>
                 <span class="w-9 h-9 rounded-xl {{ $openIncidentsCount ? 'bg-rose-50 text-rose-600' : 'bg-slate-100 text-slate-400' }} flex items-center justify-center">
                     <svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3m0 3h.01M10.3 3.9L2.4 18a2 2 0 001.7 3h15.8a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/></svg>
                 </span>
             </div>
-            <p class="font-space text-4xl font-bold {{ $openIncidentsCount ? 'text-rose-600' : 'text-slate-900' }} mt-2 leading-none">{{ $openIncidentsCount }}</p>
+            <p class="font-space text-4xl font-bold {{ $openIncidentsCount ? 'text-rose-600' : 'text-slate-900' }} mt-2 leading-none" data-counter>{{ $openIncidentsCount }}</p>
             <p class="text-[11px] font-semibold text-slate-500 mt-3">
                 {{ $openIncidentsCount ? 'laporan terbuka' . ($criticalIncidentsCount ? ' · ' . $criticalIncidentsCount . ' darurat' : '') : 'Tidak ada laporan terbuka' }}
             </p>
         </a>
 
         {{-- Kehadiran periode --}}
-        <a href="{{ route('guru.monitoring') }}" class="group bg-white rounded-3xl p-5 border border-slate-200/70 hover:border-[#0B2B25]/30 hover:shadow-lg transition-all">
+        <a href="{{ route('guru.monitoring') }}" data-tilt class="group relative bg-white rounded-3xl p-5 border border-slate-200/70 hover:border-[#0B2B25]/30 hover:shadow-lg transition-all">
             <div class="flex items-start justify-between">
                 <p class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Rata-rata Kehadiran</p>
                 <span class="w-9 h-9 rounded-xl bg-slate-100 text-[#0B2B25] flex items-center justify-center">
                     <svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 17l6-6 4 4 8-8M14 7h7v7"/></svg>
                 </span>
             </div>
-            <p class="font-space text-4xl font-bold text-slate-900 mt-2 leading-none">{{ $avgAttendanceRate !== null ? $avgAttendanceRate . '%' : '—' }}</p>
+            <p data-counter class="font-space text-4xl font-bold text-slate-900 mt-2 leading-none">{{ $avgAttendanceRate !== null ? $avgAttendanceRate . '%' : '—' }}</p>
             <p class="text-[11px] font-semibold mt-3 {{ $studentsNeedAttention ? 'text-orange-600' : 'text-slate-500' }}">
                 {{ $studentsNeedAttention ? $studentsNeedAttention . ' siswa perlu perhatian' : 'Selama periode PKL berjalan' }}
             </p>
         </a>
 
         {{-- Penilaian --}}
-        <a href="{{ route('guru.assessments') }}" class="group bg-white rounded-3xl p-5 border border-slate-200/70 hover:border-[#0B2B25]/30 hover:shadow-lg transition-all">
+        <a href="{{ route('guru.assessments') }}" data-tilt class="group relative bg-white rounded-3xl p-5 border border-slate-200/70 hover:border-[#0B2B25]/30 hover:shadow-lg transition-all">
             <div class="flex items-start justify-between">
                 <p class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Nilai Guru Terisi</p>
                 <span class="w-9 h-9 rounded-xl bg-slate-100 text-[#0B2B25] flex items-center justify-center">
                     <svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11.5 3.5l2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.6-4.8 2.6.9-5.4-3.9-3.8 5.4-.8z"/></svg>
                 </span>
             </div>
-            <p class="font-space text-4xl font-bold text-slate-900 mt-2 leading-none">{{ $teacherScoredCount }}<span class="text-slate-300 text-2xl">/{{ $totalStudents }}</span></p>
+            <p class="font-space text-4xl font-bold text-slate-900 mt-2 leading-none"><span data-counter>{{ $teacherScoredCount }}</span><span class="text-slate-300 text-2xl">/{{ $totalStudents }}</span></p>
             <p class="text-[11px] font-semibold text-slate-500 mt-3">
                 {{ $avgFinalScore !== null ? 'Rata-rata nilai akhir ' . $avgFinalScore : 'Belum ada nilai akhir' }}
             </p>
@@ -243,7 +243,7 @@
     <div class="grid grid-cols-1 xl:grid-cols-12 gap-5 items-start">
 
         {{-- ---------- LEFT ---------- --}}
-        <div class="xl:col-span-8 space-y-5 min-w-0">
+        <div data-reveal-stagger class="xl:col-span-8 space-y-5 min-w-0">
 
             {{-- Presensi hari ini --}}
             <section id="presensi-hari-ini" class="bg-white rounded-3xl border border-slate-200/70 overflow-hidden">
@@ -280,7 +280,7 @@
                                     <th class="px-5 py-2.5 text-right">Selfie</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-slate-100">
+                            <tbody data-reveal-stagger class="divide-y divide-slate-100">
                                 @foreach($todayRows as $row)
                                     @php
                                         $sp = $row['spkl']; $att = $row['attendance']; $meta = $stateMeta[$row['state']] ?? $stateMeta['belum'];
@@ -370,7 +370,7 @@
                         @php $sum = $day['hadir'] + $day['terlambat'] + $day['izin'] + $day['alfa']; $isToday = $day['date']->isToday(); @endphp
                         <div class="h-full flex flex-col items-center justify-end gap-2 group" title="{{ $day['date']->isoFormat('dddd, D MMM') }}: {{ $day['hadir'] }} hadir, {{ $day['terlambat'] }} terlambat, {{ $day['izin'] }} izin/sakit, {{ $day['alfa'] }} alfa">
                             <span class="font-space text-[11px] font-bold {{ $sum ? 'text-slate-700' : 'text-slate-300' }}">{{ $sum ?: '–' }}</span>
-                            <div class="w-full max-w-[44px] flex-1 flex flex-col-reverse rounded-xl overflow-hidden bg-slate-50 {{ $isToday ? 'ring-2 ring-[#C6F26B] ring-offset-2' : '' }}">
+                            <div data-grow-y class="w-full max-w-[44px] flex-1 flex flex-col-reverse rounded-xl overflow-hidden bg-slate-50 {{ $isToday ? 'ring-2 ring-[#C6F26B] ring-offset-2' : '' }}">
                                 @foreach([['hadir', 'bg-[#12382F]'], ['terlambat', 'bg-amber-400'], ['izin', 'bg-sky-400'], ['alfa', 'bg-rose-500']] as [$k, $cls])
                                     @if($day[$k] > 0)
                                         <div class="{{ $cls }} w-full" style="height: {{ round($day[$k] / $trendMax * 100, 1) }}%"></div>
@@ -396,7 +396,7 @@
                 @if($studentInsights->isEmpty())
                     <x-empty-state title="Belum Ada Siswa Binaan" description="Hubungi Admin Sekolah untuk plotting siswa ke bimbingan Anda." />
                 @else
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div data-reveal-stagger class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                         @foreach($studentInsights as $s)
                             @php
                                 $sp = $s['spkl'];
@@ -405,7 +405,7 @@
                                 $jPct = $s['journal_total'] ? round($s['journal_approved'] / $s['journal_total'] * 100) : 0;
                                 $todayMeta = $stateMeta[$s['today']['state'] ?? 'belum'] ?? $stateMeta['belum'];
                             @endphp
-                            <article class="rounded-[22px] border {{ count($s['warnings']) ? 'border-orange-200 bg-orange-50/30' : 'border-slate-200/80 bg-white' }} p-4 space-y-4">
+                            <article class="rounded-[22px] border {{ count($s['warnings']) ? 'border-orange-200 bg-orange-50/30' : 'border-slate-200/80 bg-white' }} {{ $s['open_incidents'] ? 'vt-attention' : '' }} p-4 space-y-4 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-[#0B2B25]/[0.07]">
                                 {{-- header --}}
                                 <div class="flex items-start justify-between gap-3">
                                     <div class="flex items-center gap-3 min-w-0">
@@ -435,7 +435,7 @@
                                         <span class="text-slate-500 uppercase tracking-wider">Kehadiran</span>
                                         <span class="font-space text-slate-900 text-sm">{{ $rate !== null ? $rate . '%' : '—' }}</span>
                                     </div>
-                                    <div class="h-1.5 rounded-full bg-slate-100 overflow-hidden"><div class="h-full rounded-full {{ $rateColor }}" style="width: {{ $rate ?? 0 }}%"></div></div>
+                                    <div class="h-1.5 rounded-full bg-slate-100 overflow-hidden"><div data-grow-x class="h-full rounded-full {{ $rateColor }}" style="width: {{ $rate ?? 0 }}%"></div></div>
                                     <div class="flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] font-semibold text-slate-500">
                                         <span><span class="font-space text-slate-800">{{ $s['present'] }}</span> hadir</span>
                                         <span><span class="font-space text-amber-600">{{ $s['late'] }}</span> telat</span>
@@ -451,7 +451,7 @@
                                         <span class="text-slate-500 uppercase tracking-wider">Jurnal disetujui</span>
                                         <span class="font-space text-slate-900 text-sm">{{ $s['journal_approved'] }}<span class="text-slate-300">/{{ $s['journal_total'] }}</span></span>
                                     </div>
-                                    <div class="h-1.5 rounded-full bg-slate-100 overflow-hidden"><div class="h-full rounded-full bg-[#C6F26B]" style="width: {{ $jPct }}%"></div></div>
+                                    <div class="h-1.5 rounded-full bg-slate-100 overflow-hidden"><div data-grow-x class="h-full rounded-full bg-[#C6F26B]" style="width: {{ $jPct }}%"></div></div>
                                     <div class="flex flex-wrap gap-1.5 text-[10px] font-bold">
                                         @if($s['journal_review_guru'])<a href="{{ route('guru.journals') }}" class="px-2 py-0.5 rounded-full bg-[#0B2B25] text-[#C6F26B]">{{ $s['journal_review_guru'] }} menunggu Anda</a>@endif
                                         @if($s['journal_at_dudi'])<span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">{{ $s['journal_at_dudi'] }} di DU/DI</span>@endif
@@ -504,7 +504,7 @@
         </div>
 
         {{-- ---------- RIGHT ---------- --}}
-        <aside class="xl:col-span-4 space-y-5 min-w-0">
+        <aside data-reveal-stagger class="xl:col-span-4 space-y-5 min-w-0">
 
             {{-- Antrean tindakan --}}
             <section class="bg-[#0B2B25] text-white rounded-3xl p-5 space-y-4">
@@ -513,7 +513,7 @@
                         <h3 class="text-base font-extrabold tracking-tight">Antrean Tindakan</h3>
                         <p class="text-[11px] text-[#A9C2B9] font-medium mt-0.5">Diurutkan dari yang paling lama menunggu</p>
                     </div>
-                    <span class="font-space text-2xl font-bold text-[#C6F26B]">{{ $verifTotal }}</span>
+                    <span data-counter class="font-space text-2xl font-bold text-[#C6F26B]">{{ $verifTotal }}</span>
                 </div>
 
                 @if($verifTotal === 0)
@@ -664,7 +664,7 @@
                             @foreach($supervisionStages as $key => $label)
                                 @php $done = $sv['done']->contains($key); @endphp
                                 <div class="space-y-1" title="{{ $label }}{{ $done ? ' — selesai' : ' — belum' }}">
-                                    <div class="h-1.5 rounded-full {{ $done ? 'bg-[#12382F]' : 'bg-slate-100' }}"></div>
+                                    <div class="h-1.5 rounded-full bg-slate-100 overflow-hidden"><div data-grow-x class="h-full rounded-full {{ $done ? 'bg-[#12382F]' : '' }}"></div></div>
                                     <span class="block text-[9px] font-bold {{ $done ? 'text-[#12382F]' : 'text-slate-400' }} truncate">{{ $label }}</span>
                                 </div>
                             @endforeach
@@ -681,7 +681,7 @@
                 @empty
                     <p class="text-[11px] text-slate-500">Belum ada DU/DI binaan.</p>
                 @endforelse
-                <a href="{{ route('guru.supervisions') }}" class="flex items-center justify-center gap-1.5 w-full py-2.5 rounded-full bg-[#C6F26B] hover:bg-[#b5e855] text-[#0B2B25] text-xs font-extrabold transition-colors">
+                <a href="{{ route('guru.supervisions') }}" data-ripple class="flex items-center justify-center gap-1.5 w-full py-2.5 rounded-full bg-[#C6F26B] hover:bg-[#b5e855] text-[#0B2B25] text-xs font-extrabold transition-colors">
                     Catat Kunjungan & Berita Acara
                 </a>
             </section>
