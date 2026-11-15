@@ -16,7 +16,7 @@ class SubscriptionPlanSeeder extends Seeder
         $plans = [
             [
                 'code' => 'trial-14d',
-                'name' => 'Trial Evaluasi (14 Hari)',
+                'name' => 'Trial Evaluasi (7 Hari)',
                 'price' => 0,
                 'billing_period' => 'monthly',
                 'max_students' => 50,
@@ -29,7 +29,7 @@ class SubscriptionPlanSeeder extends Seeder
                     'whatsapp_gateway' => false,
                     'custom_domain' => false,
                 ],
-                'description' => 'Paket uji coba gratis selama 14 hari untuk evaluasi fitur sistem bagi sekolah baru.',
+                'description' => 'Paket uji coba gratis selama 7 hari untuk evaluasi fitur sistem bagi sekolah baru.',
                 'is_popular' => false,
                 'is_active' => true,
             ],
@@ -101,7 +101,7 @@ class SubscriptionPlanSeeder extends Seeder
         $subService = app(SubscriptionService::class);
         $trialPlan = SubscriptionPlan::where('code', 'trial-14d')->first();
 
-        // Seluruh sekolah yang terdaftar saat ini bersifat Paket Demo / Trial Evaluasi (14 Hari)
+        // Seluruh sekolah yang terdaftar saat ini bersifat Paket Demo / Trial Evaluasi (7 Hari)
         $schools = School::all();
         foreach ($schools as $school) {
             $activeSub = $school->activeSubscription();
@@ -120,7 +120,7 @@ class SubscriptionPlanSeeder extends Seeder
                     $demoQuota,
                     0,
                     'trial',
-                    "Paket Demo Evaluasi Sistem (14 Hari) — Tenant {$school->name}"
+                    "Paket Demo Evaluasi Sistem (7 Hari) — Tenant {$school->name}"
                 );
             }
         }

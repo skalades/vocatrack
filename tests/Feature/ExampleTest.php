@@ -25,7 +25,9 @@ class ExampleTest extends TestCase
             'max_students' => 1, 'max_storage_mb' => 500, 'features' => [], 'is_active' => false,
         ]);
 
-        $response = $this->get('/')->assertOk()->assertSee(route('public.request-demo'));
+        $response = $this->get('/')->assertOk()->assertSee(route('public.request-demo'))
+            ->assertSee('Coba gratis 7 hari')
+            ->assertDontSee('14 hari');
 
         if (\App\Http\Controllers\LandingController::SHOW_PRICING) {
             $response->assertSee('Paket Pro Tahunan')

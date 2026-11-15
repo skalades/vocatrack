@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\DB;
 
 class SubscriptionService
 {
-    public const TRIAL_DAYS = 14;
+    public const TRIAL_DAYS = 7;
 
     /**
      * Metrik operasional & pendapatan untuk dashboard Super Admin.
@@ -178,7 +178,7 @@ class SubscriptionService
 
     /**
      * Onboarding sekolah baru. Paket gratis/trial atau paket berbayar yang sudah lunas langsung
-     * aktif; paket berbayar yang belum lunas diberi masa trial 14 hari plus tagihan aktivasi
+     * aktif; paket berbayar yang belum lunas diberi masa trial singkat (TRIAL_DAYS) plus tagihan aktivasi
      * yang otomatis mengaktifkan paket begitu dilunasi.
      */
     public function onboard(

@@ -42,7 +42,7 @@ class SuperAdminFunctionalAuditTest extends TestCase
         // 2. Create Plans
         $this->trialPlan = SubscriptionPlan::create([
             'code' => 'trial-14d',
-            'name' => 'Trial Evaluasi (14 Hari)',
+            'name' => 'Trial Evaluasi (7 Hari)',
             'price' => 0,
             'billing_period' => 'monthly',
             'max_students' => 50,
@@ -147,7 +147,7 @@ class SuperAdminFunctionalAuditTest extends TestCase
         $this->assertEquals(2, $metrics['active_schools']);
         $this->assertEquals(0, $metrics['active_tenants'], 'Paying tenants should be 0');
         $this->assertEquals(2, $metrics['trial_tenants'], 'Demo/Trial tenants should be 2');
-        $this->assertEquals(2, $metrics['expiring_soon'], 'Trial schools expiring within 14 days counted in expiring soon');
+        $this->assertEquals(2, $metrics['expiring_soon'], 'Trial schools expiring within 30 days counted in expiring soon');
         $this->assertEquals(0, $metrics['total_revenue'], 'Revenue from trial packages should be 0');
         $this->assertEquals(0, $metrics['mrr_estimate'], 'MRR from trial packages should be 0');
 
@@ -168,7 +168,7 @@ class SuperAdminFunctionalAuditTest extends TestCase
         $response = $this->actingAs($this->superAdmin)->get(route('superadmin.schools'));
         $response->assertStatus(200);
         $response->assertSee('Tenant Sekolah');
-        $response->assertSee('Trial Evaluasi (14 Hari)');
+        $response->assertSee('Trial Evaluasi (7 Hari)');
         $response->assertSee('Gratis');
 
         // Filter tahap: kedua sekolah sedang trial, tidak ada yang aktif berbayar.
@@ -216,7 +216,8 @@ class SuperAdminFunctionalAuditTest extends TestCase
         $this->assertNotNull($sub);
         $this->assertEquals('trial', $sub->status);
         $this->assertEquals(0, (float) $sub->price_paid);
-        $this->assertEquals(14, Carbon::today()->diffInDays($sub->end_date));
+        $this->assertEquals(SubscriptionService::TRIAL_DAYS, Carbon::today()->diffInDays($sub->end_date));
+        $this->assertEquals(7, SubscriptionService::TRIAL_DAYS, "Trial demo berlangsung 7 hari");
 
         // Verify trial invoice created
         $invoice = Invoice::where('school_id', $newSchool->id)->first();

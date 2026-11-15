@@ -126,7 +126,7 @@
         <div class="flex items-center justify-between pb-3.5 mb-4 border-b border-slate-100">
             <div>
                 <h3 class="text-base font-extrabold text-slate-900 tracking-tight">Daftarkan Sekolah Baru</h3>
-                <p class="text-xs text-slate-500">Paket berbayar yang belum lunas otomatis mendapat trial 14 hari sampai tagihan aktivasi dibayar.</p>
+                <p class="text-xs text-slate-500">Paket berbayar yang belum lunas otomatis mendapat trial {{ \App\Services\SubscriptionService::TRIAL_DAYS }} hari sampai tagihan aktivasi dibayar.</p>
             </div>
             <button type="button" onclick="document.getElementById('modal-add-school').classList.add('hidden')" class="p-1.5 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100" aria-label="Tutup">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -154,7 +154,7 @@
                             <input type="radio" name="plan_id" value="{{ $plan->id }}" {{ (string) old('plan_id', $plans->first()?->id) === (string) $plan->id ? 'checked' : '' }} class="mt-0.5 text-emerald-600">
                             <span>
                                 <span class="block text-xs font-bold text-slate-900">{{ $plan->name }}</span>
-                                <span class="block text-[11px] text-slate-500">{{ $plan->price > 0 ? $plan->formatted_price . ' ' . $plan->period_label : 'Gratis 14 hari' }} · {{ $plan->max_students }} siswa</span>
+                                <span class="block text-[11px] text-slate-500">{{ $plan->price > 0 ? $plan->formatted_price . ' ' . $plan->period_label : 'Gratis ' . \App\Services\SubscriptionService::TRIAL_DAYS . ' hari' }} · {{ $plan->max_students }} siswa</span>
                             </span>
                         </label>
                     @endforeach

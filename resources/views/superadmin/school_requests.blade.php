@@ -9,7 +9,7 @@
     <!-- Enterprise Hero Header -->
     <x-page-header 
         title="Pipeline Calon Sekolah Mitra & Permohonan Demo" 
-        subtitle="Verifikasi pendaftaran formulir mandiri dari sekolah baru, aktifkan akun demo 14 hari dengan 1-klik, dan perluas jangkauan platform."
+        subtitle="Verifikasi pendaftaran formulir mandiri dari sekolah baru, aktifkan akun demo 7 hari dengan 1-klik, dan perluas jangkauan platform."
         badge="ONBOARDING PIPELINE"
     />
 

@@ -47,7 +47,7 @@ class SuperAdminCriticalFixesTest extends TestCase
 
         $features = ['attendance' => true, 'journal' => true, 'assessment' => true];
         $this->trialPlan = SubscriptionPlan::create([
-            'code' => 'trial-14d', 'name' => 'Trial (14 Hari)', 'price' => 0, 'billing_period' => 'monthly',
+            'code' => 'trial-14d', 'name' => 'Trial (7 Hari)', 'price' => 0, 'billing_period' => 'monthly',
             'max_students' => 50, 'max_storage_mb' => 1024, 'features' => $features, 'is_active' => true,
         ]);
         $this->basicPlan = SubscriptionPlan::create([

@@ -85,7 +85,7 @@
                 @if($activeSubscription)
                     @php $status = $activeSubscription->computed_status; @endphp
                     @if($status === 'trial')
-                        <x-badge variant="indigo" size="sm">Trial 14 Hari</x-badge>
+                        <x-badge variant="indigo" size="sm">Trial {{ \App\Services\SubscriptionService::TRIAL_DAYS }} Hari</x-badge>
                     @elseif($status === 'active')
                         <x-badge variant="success" size="sm" :pulse="true">Langganan Aktif</x-badge>
                     @elseif($status === 'grace_period')

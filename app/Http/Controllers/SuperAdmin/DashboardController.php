@@ -44,7 +44,7 @@ class DashboardController extends Controller
             })
             ->filter(fn ($row) => $row['sub'] && (
                 in_array($row['stage'], ['expiring', 'grace', 'expired'], true)
-                || ($row['stage'] === 'trial' && $row['sub']->daysRemaining() <= 7)
+                || ($row['stage'] === 'trial' && $row['sub']->daysRemaining() <= 3)
             ))
             ->sortBy(fn ($row) => $row['sub']->end_date->timestamp)
             ->values();

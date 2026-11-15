@@ -71,7 +71,7 @@
             </p>
             <div class="flex flex-col sm:flex-row gap-3">
                 <a href="#demo" class="inline-flex justify-center items-center px-6 py-3.5 rounded-2xl text-sm font-extrabold bg-[#0B2B25] text-[#C6F26B] hover:bg-[#123d34] shadow-lg shadow-[#0B2B25]/20">
-                    Coba gratis 14 hari
+                    Coba gratis {{ \App\Services\SubscriptionService::TRIAL_DAYS }} hari
                 </a>
                 <a href="{{ $showPricing ? '#harga' : '#fitur' }}" class="inline-flex justify-center items-center px-6 py-3.5 rounded-2xl text-sm font-bold bg-white border border-[#0B2B25]/15 hover:border-[#0B2B25]/30">
                     {{ $showPricing ? 'Lihat paket harga' : 'Lihat fitur' }}
@@ -182,7 +182,7 @@
             <ol class="mt-12 grid md:grid-cols-3 gap-4">
                 @foreach([
                     ['Ajukan demo', 'Isi formulir singkat di bawah. Tim kami memverifikasi NPSN dan menghubungi Anda.'],
-                    ['Trial 14 hari', 'Akun admin sekolah langsung aktif. Impor siswa, guru, dan mitra DU/DI, lalu jalankan PKL sungguhan.'],
+                    ['Trial ' . \App\Services\SubscriptionService::TRIAL_DAYS . ' hari', 'Akun admin sekolah langsung aktif. Impor siswa, guru, dan mitra DU/DI, lalu jalankan PKL sungguhan.'],
                     ['Pilih paket', 'Lanjutkan dengan paket sesuai jumlah siswa. Tagihan dan perpanjangan tercatat rapi di portal sekolah.'],
                 ] as $i => [$title, $desc])
                     <li class="reveal rounded-3xl bg-white/5 border border-white/10 p-6" style="transition-delay: {{ $i * 80 }}ms">
@@ -230,7 +230,7 @@
                         @endif
                         <div class="mt-5">
                             <div class="font-space text-2xl xl:text-3xl font-bold whitespace-nowrap">{{ $isFree ? 'Gratis' : 'Rp ' . number_format($plan->price, 0, ',', '.') }}</div>
-                            <div class="text-xs mt-0.5 {{ $popular ? 'text-[#A9C2B9]' : 'text-[#0B2B25]/55' }}">{{ $isFree ? 'selama 14 hari' : ltrim($plan->period_label, '/ ') }}</div>
+                            <div class="text-xs mt-0.5 {{ $popular ? 'text-[#A9C2B9]' : 'text-[#0B2B25]/55' }}">{{ $isFree ? 'selama ' . \App\Services\SubscriptionService::TRIAL_DAYS . ' hari' : ltrim($plan->period_label, '/ ') }}</div>
                         </div>
                         <ul class="mt-5 space-y-2.5 text-sm flex-1">
                             @foreach(array_filter([
@@ -286,7 +286,7 @@
         <div class="grid lg:grid-cols-5 gap-10 items-start">
             <div class="lg:col-span-2 space-y-4 reveal">
                 <h2 class="font-space text-3xl sm:text-4xl font-bold">Ajukan demo untuk sekolah Anda.</h2>
-                <p class="text-[#0B2B25]/65">Isi data sekolah dan kontak penanggung jawab PKL. Kami akan menghubungi Anda untuk aktivasi trial 14 hari.</p>
+                <p class="text-[#0B2B25]/65">Isi data sekolah dan kontak penanggung jawab PKL. Kami akan menghubungi Anda untuk aktivasi trial {{ \App\Services\SubscriptionService::TRIAL_DAYS }} hari.</p>
                 <ul class="space-y-2 text-sm">
                     <li class="flex gap-2"><span class="text-[#2E6B4F] font-bold">✓</span> Gratis, tanpa kewajiban berlangganan</li>
                     <li class="flex gap-2"><span class="text-[#2E6B4F] font-bold">✓</span> Pendampingan impor data awal</li>
