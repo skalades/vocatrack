@@ -161,6 +161,17 @@
                                 @endforeach
                             </div>
                         @endif
+
+                        @if($incident->status !== 'resolved')
+                            <form action="{{ route('student.incident.followup', $incident->id) }}" method="POST" class="pt-2 border-t border-slate-100 flex items-center gap-2">
+                                @csrf
+                                <input type="text" name="action_note" required placeholder="Tulis update perkembangan kondisi untuk guru..." 
+                                       class="flex-1 h-10 rounded-xl bg-slate-50 border border-slate-200 px-3 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-[#0F7A66] focus:bg-white">
+                                <button type="submit" class="h-10 px-3.5 rounded-xl bg-[#0B2B25] hover:bg-[#12382F] text-white text-xs font-bold active:scale-95 transition-all shrink-0 cursor-pointer">
+                                    Kirim
+                                </button>
+                            </form>
+                        @endif
                     </div>
                 </div>
             @endforeach

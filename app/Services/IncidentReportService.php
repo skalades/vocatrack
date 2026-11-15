@@ -71,10 +71,15 @@ class IncidentReportService
 
             $report->update($updateData);
 
-            // Notify student of the action/followup taken
+            // Notify relevant party: If teacher responded, notify student. If student updated, notify teacher.
             $studentUser = $report->studentPkl?->student?->user;
-            if ($studentUser) {
+            if ($studentUser && $studentUser->id !== $handler->id) {
                 $studentUser->notify(new IncidentFollowupNotification($report, $followup, $newStatus));
+            } elseif ($studentUser && $studentUser->id === $handler->id) {
+                $teacherUser = $report->studentPkl?->teacher?->user;
+                if ($teacherUser) {
+                    $teacherUser->notify(new IncidentFollowupNotification($report, $followup, $newStatus));
+                }
             }
 
             return $followup;

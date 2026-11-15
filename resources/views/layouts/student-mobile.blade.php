@@ -121,14 +121,19 @@
             @yield('content')
         </main>
 
-        <!-- Floating Modern Student Bottom Dock -->
-        <x-student.nav-dock />
+        <!-- Floating Modern Student Bottom Dock (Otomatis disembunyikan saat layar kamera presensi) -->
+        @if(!request()->routeIs('student.attendance') || !empty($todayAttendance))
+            <x-student.nav-dock />
+        @endif
 
         <!-- Screen 6: Bantuan Darurat SOS Modal -->
         <x-student.sos-modal />
 
         <!-- Screen 5: Peringatan Fake GPS Modal -->
         <x-student.fake-gps-modal :spkl="$spkl ?? null" />
+
+        <!-- Panduan Izin Akses Kamera & GPS (iOS Safari & Android) -->
+        <x-student.permission-guide-modal />
 
         <!-- Quick Attendance Request Modal (Izin, Sakit, Dinas Luar) -->
         <x-attendance-request-modal />
@@ -146,6 +151,7 @@
                 document.body.style.overflow = '';
                 if (window.closeSosModal) window.closeSosModal();
                 if (window.closeFakeGpsModal) window.closeFakeGpsModal();
+                if (window.closePermissionGuideModal) window.closePermissionGuideModal();
             }
         });
     </script>

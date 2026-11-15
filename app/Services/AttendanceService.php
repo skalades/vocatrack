@@ -29,10 +29,10 @@ class AttendanceService
         $accuracyMeters = $geoEval['accuracy_meters'];
         $isMockDetected = $geoEval['is_mock_detected'];
 
-        // Enforce reason when outside radius
+        // Enforce reason when outside radius (or guide to Dinas Luar request)
         if (!$isWithinRadius && (empty($data['reason']) || strlen(trim($data['reason'])) < 5)) {
             throw ValidationException::withMessages([
-                'reason' => 'Anda terdeteksi berada di luar radius lokasi DU/DI. Wajib menuliskan alasan penugasan luar radius (minimal 5 karakter).',
+                'reason' => 'Anda terdeteksi berada di luar radius lokasi DU/DI. Presensi kamera selfie hanya berlaku di dalam area kantor penugasan. Silakan ajukan izin melalui menu "Dinas Luar" di Beranda jika sedang bertugas di luar.',
             ]);
         }
 

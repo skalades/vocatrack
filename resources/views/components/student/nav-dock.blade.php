@@ -2,6 +2,10 @@
 
 @php
     $currentRoute = request()->route() ? request()->route()->getName() : '';
+    // Sembunyikan bottom dock saat siswa berada di layar kamera presensi aktif
+    if (str_starts_with($currentRoute, 'student.attendance') && empty($todayAttendance)) {
+        return;
+    }
     $isHome = $active === 'home' || $currentRoute === 'student.home';
     $isJournal = $active === 'journal' || str_starts_with($currentRoute, 'student.journals');
     $isAttendance = $active === 'attendance' || str_starts_with($currentRoute, 'student.attendance');

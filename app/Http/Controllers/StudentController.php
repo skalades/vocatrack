@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Attendance;
 use App\Models\AttendanceRequest;
 use App\Models\Certificate;
+use App\Models\IncidentReport;
 use App\Models\Journal;
 use App\Models\JournalPhoto;
 use App\Models\StudentPkl;
@@ -679,6 +680,27 @@ class StudentController extends Controller
         $msg = $isEmergency 
             ? 'Laporan Darurat / SOS telah dikirimkan ke Guru Pembimbing dan Admin Sekolah untuk penanganan segera.' 
             : 'Laporan kendala Anda berhasil dikirimkan ke Guru Pembimbing.';
+
+        return back()->with('success', $msg);
+    }
+
+    public function followupIncident(Request $request, IncidentReport $report, IncidentReportService $incidentService)
+    {
+        $spkl = $this->getStudentPkl(false);
+        if (!$spkl || $report->student_pkl_id !== $spkl->id) {
+            abort(403, 'Akses ditolak: Anda bukan pemilik laporan kendala ini.');
+        }
+
+        $validated = $request->validate([
+            'action_note' => ['required', 'string', 'max:1000'],
+            'status' => ['nullable', 'in:resolved'],
+        ]);
+
+        $incidentService->addFollowup($report, Auth::user(), $validated['action_note'], $validated['status'] ?? null);
+
+        $msg = ($validated['status'] ?? null) === 'resolved'
+            ? 'Laporan darurat SOS telah ditandai selesai. Tetap jaga keselamatan Anda.'
+            : 'Update kondisi darurat berhasil dikirimkan ke Guru Pembimbing.';
 
         return back()->with('success', $msg);
     }

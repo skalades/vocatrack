@@ -234,6 +234,7 @@ Route::middleware(['auth', 'IdentifyTenant', 'role:siswa'])->prefix('siswa')->gr
 
     Route::get('/profil', [StudentController::class, 'profile'])->name('student.profile');
     Route::get('/kendala', [StudentController::class, 'incidents'])->name('student.incidents');
+    Route::post('/kendala/{report}/followup', [StudentController::class, 'followupIncident'])->name('student.incident.followup');
     Route::post('/parent-token/regenerate', [ParentMonitoringController::class, 'regenerate'])->name('student.parent-token.regenerate');
     Route::get('/sertifikat/download', [StudentController::class, 'downloadCertificate'])->name('student.certificate.download');
 

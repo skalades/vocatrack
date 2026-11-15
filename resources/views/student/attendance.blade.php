@@ -91,12 +91,12 @@
         <!-- ========================================================
              SCREEN 2: VERIFIKASI SELFIE PRESENSI (ACTIVE CAMERA)
              ======================================================== -->
-        <div class="bg-[#0B2B25] text-white min-h-screen flex flex-col justify-between p-5 pb-24 box-border">
+        <div class="bg-[#0B2B25] text-white min-h-screen flex flex-col justify-between p-4 pb-8 box-border">
 
             <!-- Topbar Row -->
             <div class="flex items-center justify-between h-12">
                 <a href="{{ route('student.home') }}" aria-label="Kembali ke beranda"
-                   class="flex items-center justify-center w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors">
+                   class="flex items-center justify-center w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer">
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M19 12H5M12 19l-7-7 7-7"/>
                     </svg>
@@ -107,83 +107,105 @@
                     <span class="text-[11px] text-[#A9C2B9] font-medium leading-none">Check-In Hari Ini</span>
                 </div>
 
-                <span class="h-[30px] rounded-full bg-[#C6F26B]/16 text-[#C6F26B] font-space text-[13px] font-bold px-3 flex items-center justify-center">
-                    2 / 3
-                </span>
+                <a href="{{ route('student.home') }}" title="Batal & Kembali" class="text-xs font-bold text-[#A9C2B9] hover:text-white px-2 py-1">
+                    Batal
+                </a>
             </div>
 
-            <!-- Camera Viewfinder Box (540px Height) -->
-            <div class="relative h-[480px] sm:h-[520px] rounded-[30px] bg-[#12382F] overflow-hidden my-2 flex items-center justify-center border border-white/10 shadow-2xl">
+            <!-- Camera Viewfinder Box (Compact & Responsive for Mobile Viewport) -->
+            <div class="relative h-[380px] sm:h-[430px] rounded-[28px] bg-[#12382F] overflow-hidden my-1 flex items-center justify-center border border-white/10 shadow-2xl">
                 <!-- Live Video Feed -->
                 <video id="webcam-feed" autoplay playsinline muted class="w-full h-full object-cover transform scale-x-[-1]"></video>
 
                 <!-- Hidden Canvas for capture snapshot -->
                 <canvas id="snapshot-canvas" class="hidden"></canvas>
 
+                <!-- Camera Blocked / Permission Denied Overlay -->
+                <div id="camera-blocked-overlay" class="hidden absolute inset-0 z-20 bg-[#071915]/92 backdrop-blur-xs flex flex-col items-center justify-center p-6 text-center animate-fade-in">
+                    <div class="relative w-16 h-16 rounded-2xl bg-white/[0.08] border border-white/15 flex items-center justify-center mb-3 shadow-inner">
+                        <svg class="w-8 h-8 text-[#C6F26B]" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M1 1l22 22m-2-2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3m3-3h6l2 3h4a2 2 0 0 1 2 2v9.34m-7.72-2.06a4 4 0 1 1-5.56-5.56"/>
+                        </svg>
+                        <span class="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-rose-500 text-white flex items-center justify-center text-[10px] font-extrabold border-2 border-[#071915]">
+                            ✕
+                        </span>
+                    </div>
+                    <h3 class="font-space font-bold text-base text-white">Kamera Belum Diizinkan</h3>
+                    <p class="text-xs text-[#A9C2B9] mt-1 max-w-[260px] leading-relaxed">
+                        Safari / Peramban belum diberikan akses ke kamera selfie Anda.
+                    </p>
+                    <button type="button" onclick="window.showPermissionGuideModal('camera')" 
+                            class="mt-3.5 px-4 py-2 rounded-full bg-[#C6F26B] hover:bg-[#b8e85c] text-[#0B2B25] text-xs font-bold active:scale-95 transition-all shadow-xs cursor-pointer flex items-center gap-1.5">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg>
+                        <span>Buka Panduan Izin Kamera</span>
+                    </button>
+                </div>
+
                 <!-- Face Oval Mask Overlay SVG -->
-                <svg width="100%" height="100%" viewBox="0 0 350 540" role="img" aria-label="Bingkai verifikasi wajah" class="absolute inset-0 pointer-events-none">
+                <svg width="100%" height="100%" viewBox="0 0 350 480" role="img" aria-label="Bingkai verifikasi wajah" class="absolute inset-0 pointer-events-none">
                     <defs>
                         <mask id="face-viewfinder-mask">
-                            <rect width="350" height="540" fill="#fff"/>
-                            <ellipse cx="175" cy="245" rx="100" ry="135" fill="#000"/>
+                            <rect width="350" height="480" fill="#fff"/>
+                            <ellipse cx="175" cy="220" rx="95" ry="128" fill="#000"/>
                         </mask>
                     </defs>
                     <!-- Darkened vignette around face -->
-                    <rect width="350" height="540" fill="rgba(11,43,37,0.58)" mask="url(#face-viewfinder-mask)"/>
+                    <rect width="350" height="480" fill="rgba(11,43,37,0.58)" mask="url(#face-viewfinder-mask)"/>
                     <!-- Glowing Dashed Face Guide Oval -->
-                    <ellipse cx="175" cy="245" rx="100" ry="135" fill="none" stroke="#C6F26B" stroke-width="2.8" stroke-dasharray="8 6"/>
+                    <ellipse cx="175" cy="220" rx="95" ry="128" fill="none" stroke="#C6F26B" stroke-width="2.8" stroke-dasharray="8 6"/>
                     <!-- Horizontal alignment marker -->
-                    <line x1="110" y1="245" x2="240" y2="245" stroke="#C6F26B" stroke-width="1.8" opacity="0.6"/>
+                    <line x1="110" y1="220" x2="240" y2="220" stroke="#C6F26B" stroke-width="1.8" opacity="0.6"/>
                 </svg>
 
                 <!-- Top Prompt Pill -->
-                <div class="absolute top-4 inset-x-0 flex justify-center z-10 px-4">
-                    <span id="liveness-prompt-pill" class="inline-flex items-center gap-2 bg-white text-[#0B2B25] rounded-full px-4 py-2 text-[13.5px] font-bold shadow-md transition-all">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M15 18l-6-6 6-6"/>
-                        </svg>
-                        <span id="liveness-prompt-text">Posisikan wajah di dalam bingkai</span>
+                <div class="absolute top-3.5 inset-x-0 flex justify-center z-10 px-4">
+                    <span id="liveness-prompt-pill" class="inline-flex items-center gap-2 bg-white text-[#0B2B25] rounded-full px-4 py-1.5 text-xs font-bold shadow-md transition-all">
+                        <span id="liveness-prompt-text">Posisikan wajah di dalam bingkai oval</span>
                     </span>
                 </div>
 
-                <!-- Bottom Indicators (Wajah, Cahaya, Liveness) -->
-                <div class="absolute bottom-3.5 inset-x-3.5 flex gap-2 justify-center flex-wrap z-10">
-                    <span id="pill-wajah" class="inline-flex items-center gap-1.5 bg-[#0B2B25]/85 text-white rounded-full px-3 py-1.5 text-xs font-bold border border-white/10">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C6F26B" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                            <polyline points="20 6 9 17 4 12"/>
-                        </svg>
-                        <span>Wajah</span>
+                <!-- Bottom Functional Indicators (Kamera Siap & GPS Terkunci) -->
+                <div class="absolute bottom-3 inset-x-3 flex gap-2 justify-center z-10">
+                    <!-- Status Kamera -->
+                    <span id="badge-camera" class="inline-flex items-center gap-1.5 bg-[#071915]/85 backdrop-blur-xs text-white rounded-full px-3 py-1 text-[11px] font-bold border border-white/10 shadow-xs">
+                        <span id="badge-camera-dot" class="w-2 h-2 rounded-full bg-amber-400"></span>
+                        <span id="badge-camera-text">Kamera: Memuat...</span>
                     </span>
 
-                    <span id="pill-cahaya" class="inline-flex items-center gap-1.5 bg-[#0B2B25]/85 text-white rounded-full px-3 py-1.5 text-xs font-bold border border-white/10">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C6F26B" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                            <polyline points="20 6 9 17 4 12"/>
-                        </svg>
-                        <span>Cahaya</span>
-                    </span>
-
-                    <span id="pill-liveness" class="inline-flex items-center gap-1.5 bg-[#C6F26B] text-[#0B2B25] rounded-full px-3 py-1.5 text-xs font-extrabold shadow-xs">
-                        Liveness 70%
+                    <!-- Status GPS -->
+                    <span id="badge-gps" class="inline-flex items-center gap-1.5 bg-[#071915]/85 backdrop-blur-xs text-white rounded-full px-3 py-1 text-[11px] font-bold border border-white/10 shadow-xs">
+                        <span id="badge-gps-dot" class="w-2 h-2 rounded-full bg-amber-400"></span>
+                        <span id="badge-gps-text">GPS: Mencari...</span>
                     </span>
                 </div>
             </div>
 
-            <!-- Location & Time Glass Bar -->
-            <div class="flex items-center justify-between h-12 rounded-[24px] bg-white/[0.08] px-4 border border-white/10 my-1">
-                <span class="inline-flex items-center gap-2 text-[13.5px] font-semibold text-white">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C6F26B" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M12 2a8 8 0 0 0-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 0 0-8-8z"/>
-                        <circle cx="12" cy="10" r="3"/>
-                    </svg>
-                    <span id="selfie-location-text">{{ $companyName }} · 38 m</span>
-                </span>
-                <span id="selfie-clock-text" class="font-space font-bold text-sm text-[#C6F26B]">
-                    {{ \Carbon\Carbon::now()->format('H.i') }} WIB
-                </span>
+            <!-- Location & Realtime Distance Bar -->
+            <div id="location-bar-container" onclick="handleLocationBarClick()" 
+                 class="flex items-center justify-between min-h-[52px] rounded-[22px] bg-white/[0.08] px-4 py-2 border border-white/10 my-1 transition-all cursor-pointer hover:bg-white/[0.12]">
+                <div class="flex items-center gap-2.5 min-w-0">
+                    <span id="location-bar-icon-wrap" class="w-8 h-8 rounded-full bg-[#C6F26B]/15 text-[#C6F26B] flex items-center justify-center shrink-0">
+                        <svg id="location-bar-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 2a8 8 0 0 0-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 0 0-8-8z"/>
+                            <circle cx="12" cy="10" r="3"/>
+                        </svg>
+                    </span>
+                    <div class="flex flex-col min-w-0">
+                        <span class="text-[13px] font-bold text-white truncate">{{ $companyName }}</span>
+                        <span id="selfie-distance-text" class="text-[11px] text-[#A9C2B9] truncate">Menghitung jarak ke kantor...</span>
+                    </div>
+                </div>
+
+                <div class="flex flex-col items-end shrink-0 pl-2">
+                    <span id="selfie-radius-badge" class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-white/10 text-white">
+                        Memeriksa
+                    </span>
+                    <span id="selfie-accuracy-text" class="text-[10px] text-[#A9C2B9] mt-0.5">±-- m</span>
+                </div>
             </div>
 
-            <!-- Controls Row (Flash, Shutter, Flip Camera) -->
-            <div class="flex items-center justify-center gap-9 pt-2">
+            <!-- Controls Row (Flash, Big Shutter, Flip Camera) -->
+            <div class="flex items-center justify-center gap-8 pt-2 pb-1">
                 <!-- Flash Button -->
                 <button type="button" onclick="toggleCameraFlash()" aria-label="Nyalakan lampu kilat"
                         class="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer">
@@ -194,8 +216,8 @@
 
                 <!-- Big Shutter Button -->
                 <button type="button" id="shutter-btn" onclick="captureAndSubmitPresensi()" aria-label="Ambil foto dan kirim presensi"
-                        class="w-[84px] h-[84px] rounded-full border-4 border-[#C6F26B] flex items-center justify-center active:scale-90 transition-transform cursor-pointer group shadow-[0_0_20px_rgba(198,242,107,0.3)]">
-                    <span class="w-[62px] h-[62px] rounded-full bg-white group-hover:scale-95 transition-transform"></span>
+                        class="w-[84px] h-[84px] rounded-full border-4 border-[#C6F26B] flex items-center justify-center active:scale-90 transition-all cursor-pointer group shadow-[0_0_20px_rgba(198,242,107,0.3)]">
+                    <span id="shutter-btn-core" class="w-[62px] h-[62px] rounded-full bg-white group-hover:scale-95 transition-transform"></span>
                 </button>
 
                 <!-- Switch Camera Button -->
@@ -208,9 +230,9 @@
                 </button>
             </div>
 
-            <!-- Policy Disclaimer -->
-            <p class="text-center text-xs text-[#A9C2B9] leading-tight mt-2">
-                Hanya kamera langsung. Unggah dari galeri tidak diizinkan.
+            <!-- Disclaimer Info -->
+            <p class="text-center text-[11px] text-[#A9C2B9] leading-tight mb-1">
+                Presensi hanya berlaku di lokasi DU/DI. Untuk tugas luar, gunakan menu <strong>Dinas Luar</strong> di Beranda.
             </p>
 
             <!-- Hidden Check-in Submission Form -->
@@ -221,7 +243,7 @@
                 <input type="hidden" name="longitude" id="form-longitude">
                 <input type="hidden" name="accuracy" id="form-accuracy">
                 <input type="hidden" name="is_mocked" id="form-is-mocked" value="0">
-                <input type="hidden" name="reason" id="form-reason">
+                <input type="hidden" name="reason" id="form-reason" value="">
             </form>
 
         </div>
@@ -234,16 +256,129 @@
     let videoStream = null;
     let currentFacingMode = 'user'; // front camera default
     let userCoords = { latitude: null, longitude: null, accuracy: null, isMocked: 0 };
+    let cameraStatus = 'loading'; // 'loading', 'ready', 'denied'
+    let gpsStatus = 'searching';   // 'searching', 'locked', 'weak_accuracy', 'denied', 'unavailable'
+    
     const targetLat = {{ $companyLat }};
     const targetLng = {{ $companyLng }};
     const targetRadius = {{ $companyRadius }};
 
+    // Haversine Distance in meters (matches backend GeolocationGuardService)
+    function calculateDistanceM(lat1, lon1, lat2, lon2) {
+        const R = 6371000; // Earth's radius in meters
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                  Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                  Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return Math.round(R * c);
+    }
+
+    // Update Shutter button visual feedback depending on Readiness & Distance
+    function updateShutterVisuals() {
+        const shutterBtn = document.getElementById('shutter-btn');
+        const shutterCore = document.getElementById('shutter-btn-core');
+        if (!shutterBtn || !shutterCore) return;
+
+        const hasRealCoords = userCoords.latitude !== null && userCoords.longitude !== null;
+        let isWithin = false;
+        if (hasRealCoords) {
+            const dist = calculateDistanceM(userCoords.latitude, userCoords.longitude, targetLat, targetLng);
+            isWithin = (dist <= targetRadius);
+        }
+
+        const isReady = (cameraStatus === 'ready') && (gpsStatus === 'locked') && isWithin;
+
+        if (isReady) {
+            shutterBtn.classList.remove('opacity-40', 'border-slate-500', 'shadow-none');
+            shutterBtn.classList.add('border-[#C6F26B]', 'shadow-[0_0_20px_rgba(198,242,107,0.3)]');
+            shutterCore.classList.remove('bg-slate-400');
+            shutterCore.classList.add('bg-white');
+        } else {
+            shutterBtn.classList.add('opacity-40', 'border-slate-500', 'shadow-none');
+            shutterBtn.classList.remove('border-[#C6F26B]', 'shadow-[0_0_20px_rgba(198,242,107,0.3)]');
+            shutterCore.classList.add('bg-slate-400');
+            shutterCore.classList.remove('bg-white');
+        }
+    }
+
+    // Update realtime Camera and GPS status badges inside viewfinder
+    function updateStatusBadges() {
+        const camDot = document.getElementById('badge-camera-dot');
+        const camText = document.getElementById('badge-camera-text');
+        const gpsDot = document.getElementById('badge-gps-dot');
+        const gpsText = document.getElementById('badge-gps-text');
+
+        // Camera Badge
+        if (camDot && camText) {
+            if (cameraStatus === 'ready') {
+                camDot.className = 'w-2 h-2 rounded-full bg-[#C6F26B]';
+                camText.textContent = 'Kamera: Siap';
+            } else if (cameraStatus === 'denied') {
+                camDot.className = 'w-2 h-2 rounded-full bg-rose-500';
+                camText.textContent = 'Kamera: Diblokir';
+            } else {
+                camDot.className = 'w-2 h-2 rounded-full bg-amber-400 animate-pulse';
+                camText.textContent = 'Kamera: Memuat...';
+            }
+        }
+
+        // GPS Badge
+        if (gpsDot && gpsText) {
+            if (gpsStatus === 'locked') {
+                gpsDot.className = 'w-2 h-2 rounded-full bg-[#C6F26B]';
+                gpsText.textContent = `GPS: Terkunci (±${userCoords.accuracy}m)`;
+            } else if (gpsStatus === 'weak_accuracy') {
+                gpsDot.className = 'w-2 h-2 rounded-full bg-amber-400';
+                gpsText.textContent = `GPS: Lemah (±${userCoords.accuracy}m)`;
+            } else if (gpsStatus === 'denied') {
+                gpsDot.className = 'w-2 h-2 rounded-full bg-rose-500';
+                gpsText.textContent = 'GPS: Ditolak';
+            } else if (gpsStatus === 'unavailable') {
+                gpsDot.className = 'w-2 h-2 rounded-full bg-rose-500';
+                gpsText.textContent = 'GPS: Tidak Aktif';
+            } else {
+                gpsDot.className = 'w-2 h-2 rounded-full bg-amber-400 animate-pulse';
+                gpsText.textContent = 'GPS: Mencari...';
+            }
+        }
+    }
+
+    // Handle clicks on location status bar to guide users
+    function handleLocationBarClick() {
+        if (gpsStatus === 'denied') {
+            window.showPermissionGuideModal('location');
+        } else if (gpsStatus === 'weak_accuracy') {
+            window.showPermissionGuideModal('location-accuracy');
+        } else if (gpsStatus === 'searching') {
+            alert('Sedang menunggu sinyal satelit GPS... Pastikan Anda berada di area dengan visibilitas langit terbuka.');
+        } else if (gpsStatus === 'unavailable') {
+            alert('Sensor GPS perangkat tidak aktif atau tidak dapat ditemukan. Buka Pengaturan iPhone/Android Anda dan aktifkan Layanan Lokasi.');
+        } else if (gpsStatus === 'locked') {
+            const dist = calculateDistanceM(userCoords.latitude, userCoords.longitude, targetLat, targetLng);
+            const statusTxt = dist <= targetRadius ? 'Di dalam radius kantor' : 'Di luar radius kantor';
+            alert(`Informasi Lokasi Presensi:\n\n• Jarak ke DU/DI: ±${dist} meter\n• Toleransi Radius: ${targetRadius} meter\n• Status: ${statusTxt}\n• Akurasi Perangkat: ±${userCoords.accuracy} meter`);
+        }
+    }
+
     function startLiveCamera() {
         const video = document.getElementById('webcam-feed');
+        const overlay = document.getElementById('camera-blocked-overlay');
+        const promptText = document.getElementById('liveness-prompt-text');
         if (!video) return;
 
         if (videoStream) {
             videoStream.getTracks().forEach(track => track.stop());
+        }
+
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            cameraStatus = 'denied';
+            if (overlay) overlay.classList.remove('hidden');
+            if (promptText) promptText.textContent = 'Kamera tidak didukung peramban ini';
+            updateStatusBadges();
+            updateShutterVisuals();
+            return;
         }
 
         const constraints = {
@@ -259,11 +394,19 @@
             .then(stream => {
                 videoStream = stream;
                 video.srcObject = stream;
+                cameraStatus = 'ready';
+                if (overlay) overlay.classList.add('hidden');
+                if (promptText) promptText.textContent = 'Posisikan wajah di dalam bingkai oval';
+                updateStatusBadges();
+                updateShutterVisuals();
             })
             .catch(err => {
                 console.warn('Camera access denied or failed:', err);
-                const prompt = document.getElementById('liveness-prompt-text');
-                if (prompt) prompt.textContent = 'Izin kamera dibutuhkan untuk verifikasi';
+                cameraStatus = 'denied';
+                if (overlay) overlay.classList.remove('hidden');
+                if (promptText) promptText.textContent = 'Izin kamera dibutuhkan untuk verifikasi';
+                updateStatusBadges();
+                updateShutterVisuals();
             });
     }
 
@@ -283,7 +426,7 @@
             const currentSetting = track.getSettings().torch || false;
             track.applyConstraints({ advanced: [{ torch: !currentSetting }] }).catch(() => {});
         } else {
-            // Flash screen simulation
+            // Flash screen brightness simulation (Fallback for Safari/iOS)
             const viewfinder = document.getElementById('webcam-feed');
             if (viewfinder) {
                 viewfinder.style.filter = viewfinder.style.filter ? '' : 'brightness(1.5)';
@@ -299,6 +442,50 @@
         const shutterBtn = document.getElementById('shutter-btn');
 
         if (!video || !canvas || !form) return;
+
+        // 1. Guard: Camera Readiness
+        if (cameraStatus !== 'ready' || !videoStream || video.videoWidth === 0) {
+            window.showPermissionGuideModal('camera');
+            return;
+        }
+
+        // 2. Guard: Geolocation Real Readings
+        if (userCoords.latitude === null || userCoords.longitude === null) {
+            if (gpsStatus === 'denied') {
+                window.showPermissionGuideModal('location');
+            } else {
+                alert('Menunggu koordinat GPS perangkat terkunci. Pastikan izin lokasi aktif dan sinyal satelit terhubung.');
+            }
+            return;
+        }
+
+        // 3. Guard: GPS Accuracy Threshold (iOS Precise Location check)
+        if (userCoords.accuracy > 80) {
+            window.showPermissionGuideModal('location-accuracy');
+            return;
+        }
+
+        // 4. Guard: Anti-Fake GPS
+        if (userCoords.isMocked) {
+            if (window.openFakeGpsModal) window.openFakeGpsModal();
+            return;
+        }
+
+        // 5. Guard: Outside Radius Rejection (Direct to Homepage Dinas Luar)
+        const dist = calculateDistanceM(userCoords.latitude, userCoords.longitude, targetLat, targetLng);
+        if (dist > targetRadius) {
+            if (confirm(
+                `Presensi Ditolak: Anda berada di luar radius penugasan DU/DI.\n\n` +
+                `• Jarak Anda: ${dist} meter\n` +
+                `• Batas Toleransi: ${targetRadius} meter\n\n` +
+                `Presensi kamera selfie langsung hanya berlaku jika Anda hadir fisik di kantor penugasan.\n\n` +
+                `Jika Anda sedang ditugaskan di luar kantor (Dinas Luar / WFH), silakan ajukan melalui menu "Dinas Luar" di Beranda.\n\n` +
+                `Kembali ke Beranda sekarang?`
+            )) {
+                window.location.href = "{{ route('student.home') }}";
+            }
+            return;
+        }
 
         // Visual flash feedback
         shutterBtn.classList.add('scale-75', 'opacity-50');
@@ -317,30 +504,49 @@
         const base64Photo = canvas.toDataURL('image/jpeg', 0.85);
         photoInput.value = base64Photo;
 
-        // Fill GPS Form Fields
-        document.getElementById('form-latitude').value = userCoords.latitude || targetLat;
-        document.getElementById('form-longitude').value = userCoords.longitude || targetLng;
-        document.getElementById('form-accuracy').value = userCoords.accuracy || 15;
+        // Fill GPS Form Fields SECURELY from verified device coordinates
+        document.getElementById('form-latitude').value = userCoords.latitude;
+        document.getElementById('form-longitude').value = userCoords.longitude;
+        document.getElementById('form-accuracy').value = userCoords.accuracy;
         document.getElementById('form-is-mocked').value = userCoords.isMocked ? 1 : 0;
+        document.getElementById('form-reason').value = '';
 
         // Stop camera stream
         if (videoStream) {
             videoStream.getTracks().forEach(track => track.stop());
         }
 
+        // Disable button & show submit status
+        shutterBtn.disabled = true;
+        const promptText = document.getElementById('liveness-prompt-text');
+        if (promptText) promptText.textContent = 'Memproses data presensi...';
+
         // Submit form
         form.submit();
     }
 
-    // Geolocation watcher with Fake GPS detection
+    // Geolocation watcher with realtime distance calculation & iPhone Precise Location detection
     function watchStudentLocation() {
-        if (!navigator.geolocation) return;
+        const distEl = document.getElementById('selfie-distance-text');
+        const radiusBadge = document.getElementById('selfie-radius-badge');
+        const accEl = document.getElementById('selfie-accuracy-text');
+        const locContainer = document.getElementById('location-bar-container');
+        const locIcon = document.getElementById('location-bar-icon');
+
+        if (!navigator.geolocation) {
+            gpsStatus = 'unavailable';
+            if (distEl) distEl.textContent = 'GPS tidak didukung peramban ini';
+            updateStatusBadges();
+            updateShutterVisuals();
+            return;
+        }
 
         navigator.geolocation.watchPosition(
             (pos) => {
                 userCoords.latitude = pos.coords.latitude;
                 userCoords.longitude = pos.coords.longitude;
                 userCoords.accuracy = Math.round(pos.coords.accuracy);
+                // pos.mocked exists on Android; on iOS it is undefined, handled safely
                 userCoords.isMocked = (pos.mocked || userCoords.accuracy === 0) ? 1 : 0;
 
                 // Trigger Fake GPS Screen if mock location is active
@@ -349,14 +555,69 @@
                     return;
                 }
 
-                // Update location text
-                const locEl = document.getElementById('selfie-location-text');
-                if (locEl) {
-                    locEl.textContent = `Kantor PKL · ±${userCoords.accuracy} m`;
+                if (accEl) accEl.textContent = `±${userCoords.accuracy} m`;
+
+                // Check iPhone / WebKit Precise Location Threshold (80m)
+                if (userCoords.accuracy > 80) {
+                    gpsStatus = 'weak_accuracy';
+                    if (distEl) distEl.textContent = `Akurasi Rendah (±${userCoords.accuracy}m) · Ketuk Bantuan`;
+                    if (radiusBadge) {
+                        radiusBadge.textContent = 'Akurasi Lemah';
+                        radiusBadge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-[#FFF1D6] text-[#7A4B00] shadow-xs';
+                    }
+                    if (locContainer) locContainer.className = 'flex items-center justify-between min-h-[52px] rounded-[22px] bg-[#FFF1D6]/15 px-4 py-2 border border-[#FFF1D6]/35 my-1 transition-all cursor-pointer hover:bg-[#FFF1D6]/20';
+                    if (locIcon) locIcon.setAttribute('stroke', '#F59E0B');
+                } else {
+                    gpsStatus = 'locked';
+                    const dist = calculateDistanceM(userCoords.latitude, userCoords.longitude, targetLat, targetLng);
+
+                    if (dist <= targetRadius) {
+                        if (distEl) distEl.textContent = `${dist} m dari kantor (Batas: ${targetRadius} m)`;
+                        if (radiusBadge) {
+                            radiusBadge.textContent = 'Di Dalam Radius';
+                            radiusBadge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-[#C6F26B] text-[#0B2B25] shadow-xs';
+                        }
+                        if (locContainer) locContainer.className = 'flex items-center justify-between min-h-[52px] rounded-[22px] bg-white/[0.08] px-4 py-2 border border-white/10 my-1 transition-all cursor-pointer hover:bg-white/[0.12]';
+                        if (locIcon) locIcon.setAttribute('stroke', '#C6F26B');
+                    } else {
+                        if (distEl) distEl.textContent = `${dist} m dari kantor (Batas: ${targetRadius} m)`;
+                        if (radiusBadge) {
+                            radiusBadge.textContent = `Luar Radius (${dist}m)`;
+                            radiusBadge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-[#FFF1D6] text-[#7A4B00] shadow-xs';
+                        }
+                        if (locContainer) locContainer.className = 'flex items-center justify-between min-h-[52px] rounded-[22px] bg-[#FFF1D6]/15 px-4 py-2 border border-[#FFF1D6]/35 my-1 transition-all cursor-pointer hover:bg-[#FFF1D6]/20';
+                        if (locIcon) locIcon.setAttribute('stroke', '#F59E0B');
+                    }
                 }
+
+                updateStatusBadges();
+                updateShutterVisuals();
             },
-            (err) => {},
-            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            (err) => {
+                userCoords.latitude = null;
+                userCoords.longitude = null;
+
+                if (err.code === 1) { // PERMISSION_DENIED
+                    gpsStatus = 'denied';
+                    if (distEl) distEl.textContent = 'Izin Lokasi Ditolak · Ketuk Bantuan';
+                    if (radiusBadge) {
+                        radiusBadge.textContent = 'Izin Ditolak';
+                        radiusBadge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-rose-500 text-white shadow-xs';
+                    }
+                    if (locContainer) locContainer.className = 'flex items-center justify-between min-h-[52px] rounded-[22px] bg-rose-950/40 px-4 py-2 border border-rose-500/40 my-1 transition-all cursor-pointer hover:bg-rose-950/50';
+                    if (locIcon) locIcon.setAttribute('stroke', '#FF5A4D');
+                } else if (err.code === 2) { // POSITION_UNAVAILABLE
+                    gpsStatus = 'unavailable';
+                    if (distEl) distEl.textContent = 'Sinyal GPS Tidak Tersedia';
+                } else { // TIMEOUT
+                    gpsStatus = 'searching';
+                    if (distEl) distEl.textContent = 'Mencari sinyal satelit GPS...';
+                }
+
+                updateStatusBadges();
+                updateShutterVisuals();
+            },
+            { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
         );
     }
 
@@ -364,6 +625,8 @@
         @if(!$todayAttendance)
             startLiveCamera();
             watchStudentLocation();
+            updateStatusBadges();
+            updateShutterVisuals();
         @endif
     });
 </script>

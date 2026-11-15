@@ -197,6 +197,42 @@ class IncidentAndImpersonationTest extends TestCase
         ]);
     }
 
+    public function test_student_can_followup_and_resolve_incident(): void
+    {
+        $report = IncidentReport::create([
+            'school_id' => $this->school->id,
+            'student_pkl_id' => $this->spkl->id,
+            'category' => 'safety_health',
+            'urgency' => 'critical',
+            'subject' => 'DARURAT SOS: Kecelakaan kerja',
+            'description' => 'Siswa mengalami cedera.',
+            'status' => 'in_progress',
+        ]);
+
+        // Student sends progress update
+        $response = $this->actingAs($this->studentUser)
+            ->post(route('student.incident.followup', $report), [
+                'action_note' => 'Sudah mendapat pertolongan pertama di klinik DU/DI.',
+            ]);
+
+        $response->assertRedirect();
+        $this->assertDatabaseHas('incident_followups', [
+            'incident_report_id' => $report->id,
+            'user_id' => $this->studentUser->id,
+            'action_note' => 'Sudah mendapat pertolongan pertama di klinik DU/DI.',
+        ]);
+
+        // Student marks emergency as resolved
+        $responseResolve = $this->actingAs($this->studentUser)
+            ->post(route('student.incident.followup', $report), [
+                'action_note' => 'Keadaan sudah aman.',
+                'status' => 'resolved',
+            ]);
+
+        $responseResolve->assertRedirect();
+        $this->assertEquals('resolved', $report->fresh()->status);
+    }
+
     public function test_impersonation_lifecycle(): void
     {
         // 1. Admin Sekolah starts impersonating Teacher

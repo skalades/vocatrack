@@ -32,7 +32,10 @@ class IncidentFollowupNotification extends Notification
         ];
 
         $statusStr = $statusLabels[$this->report->status] ?? ucfirst($this->report->status);
-        $title = "Tindak Lanjut Laporan Kendala: {$statusStr}";
+        $isTeacher = ($notifiable->role ?? null) === 'guru';
+        $title = $isTeacher 
+            ? "Update Siswa: Laporan {$this->report->subject}"
+            : "Tindak Lanjut Laporan Kendala: {$statusStr}";
         $message = "Catatan: \"{$this->followup->action_note}\"";
 
         return [
@@ -41,7 +44,7 @@ class IncidentFollowupNotification extends Notification
             'message' => $message,
             'incident_report_id' => $this->report->id,
             'status' => $this->report->status,
-            'url' => route('student.incidents'),
+            'url' => $isTeacher ? route('guru.incidents') : route('student.incidents'),
             'color' => $this->report->status === 'resolved' ? 'emerald' : 'indigo',
             'created_at' => now()->toIso8601String(),
         ];
