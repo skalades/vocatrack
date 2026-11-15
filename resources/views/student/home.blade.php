@@ -6,8 +6,7 @@
 <link rel="stylesheet" href="{{ asset('vendor/leaflet/leaflet.css') }}" onerror="this.onerror=null;this.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'">
 <style>
     .leaflet-control-attribution { display: none !important; }
-    .custom-company-pin, .custom-student-pin { background: transparent !important; border: none !important; }
-</style>
+    .custom-company-pin, .custom-student-pin { background: transparent !important; border: none !important; }</style>
 @endpush
 
 @php
@@ -41,106 +40,121 @@
             </a>
         </div>
     @else
-        <!-- Top Dark Green Curved Header Banner -->
-        <div class="absolute left-0 top-0 right-0 h-[250px] bg-[#0B2B25] rounded-b-[36px] overflow-hidden pointer-events-none">
-            <svg width="390" height="250" viewBox="0 0 390 250" aria-hidden="true" class="absolute left-0 top-0 w-full h-full object-cover opacity-60">
-                <circle cx="350" cy="40" r="60" fill="none" stroke="#12382F" stroke-width="2"/>
-                <circle cx="350" cy="40" r="100" fill="none" stroke="#12382F" stroke-width="2"/>
-                <circle cx="350" cy="40" r="140" fill="none" stroke="#12382F" stroke-width="2"/>
-                <circle cx="40" cy="220" r="80" fill="none" stroke="#12382F" stroke-width="2"/>
-                <circle cx="40" cy="220" r="120" fill="none" stroke="#12382F" stroke-width="2"/>
-            </svg>
-        </div>
-
         <!-- Main Content Container with relative positioning -->
-        <div data-reveal-stagger class="relative z-10 flex flex-col px-5 pt-6 box-border">
+        <div data-reveal-stagger class="relative z-10 flex flex-col px-5 box-border">
 
-            <!-- Top Profile Row -->
-            <div class="flex items-center gap-3">
-                <!-- Initials Avatar -->
-                <a href="{{ route('student.profile') }}" title="Lihat Profil Siswa" 
-                   class="w-11 h-11 rounded-full bg-[#C6F26B] text-[#0B2B25] flex items-center justify-center font-space font-bold text-base shrink-0 shadow-sm hover:ring-2 hover:ring-[#C6F26B]/50 active:scale-95 transition-all" role="img" aria-label="Foto profil {{ $studentName }}">
-                    {{ $initials }}
-                </a>
+            <!-- Header Banner (self-contained, content-sized) -->
+            <header class="relative -mx-5 px-5 pt-6 pb-14 bg-[#0B2B25] rounded-b-[32px] overflow-hidden">
+                <svg viewBox="0 0 390 260" preserveAspectRatio="xMaxYMin slice" aria-hidden="true" class="hdr-rings absolute inset-0 w-full h-full pointer-events-none">
+                    <g class="hdr-ring-group hdr-ring-group--a" style="transform-origin:350px 40px">
+                        <circle cx="350" cy="40" r="60" fill="none" stroke="#1C4A3E" stroke-width="2"/>
+                        <circle cx="350" cy="40" r="100" fill="none" stroke="#1C4A3E" stroke-width="2"/>
+                        <circle cx="350" cy="40" r="140" fill="none" stroke="#1C4A3E" stroke-width="2" stroke-dasharray="6 10"/>
+                        <circle class="hdr-ring-wave" cx="350" cy="40" r="60" fill="none" stroke="#C6F26B" stroke-width="1.5"/>
+                    </g>
+                    <g class="hdr-ring-group hdr-ring-group--b" style="transform-origin:40px 240px">
+                        <circle cx="40" cy="240" r="80" fill="none" stroke="#1C4A3E" stroke-width="2"/>
+                        <circle cx="40" cy="240" r="120" fill="none" stroke="#1C4A3E" stroke-width="2" stroke-dasharray="4 12"/>
+                        <circle class="hdr-ring-wave hdr-ring-wave--late" cx="40" cy="240" r="80" fill="none" stroke="#C6F26B" stroke-width="1.5"/>
+                    </g>
+                </svg>
 
-                <!-- Name and Placement -->
-                <a href="{{ route('student.profile') }}" class="flex-1 min-w-0 group" title="Lihat Profil Siswa">
-                    <span class="text-[10px] font-extrabold text-[#C6F26B] uppercase tracking-wider block">Portal Siswa PKL</span>
-                    <span class="font-bold text-[17px] leading-tight text-white block truncate group-hover:text-[#C6F26B] transition-colors">Halo, {{ $firstName }}</span>
-                    <span class="text-[12px] leading-tight text-[#A9C2B9] block truncate mt-0.5">{{ $className }} · {{ $companyName }}</span>
-                </a>
+                <div class="relative flex flex-col gap-4">
+                    <!-- Profile Row -->
+                    <div class="flex items-center gap-3">
+                        <a href="{{ route('student.profile') }}" title="Lihat Profil Siswa"
+                           class="w-11 h-11 rounded-full bg-[#C6F26B] text-[#0B2B25] flex items-center justify-center font-space font-bold text-base shrink-0 shadow-sm ring-2 ring-white/10 hover:ring-[#C6F26B]/50 active:scale-95 transition-all" aria-label="Profil {{ $studentName }}">
+                            {{ $initials }}
+                        </a>
 
-                <!-- Header Actions (Notification + Profile) -->
-                <div class="flex items-center gap-2 shrink-0">
-                    <!-- Notification Bell -->
-                    <a href="{{ route('student.announcements') }}" aria-label="Notifikasi pengumuman" title="Papan Pengumuman"
-                       class="relative flex items-center justify-center w-10 h-10 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
-                            <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
-                        </svg>
-                        <span class="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-[#C6F26B] border-2 border-[#0B2B25]"></span>
-                    </a>
+                        <a href="{{ route('student.profile') }}" class="flex-1 min-w-0 group" title="Lihat Profil Siswa">
+                            <span class="text-[10px] font-extrabold text-[#C6F26B] uppercase tracking-[0.12em] block leading-none">Portal Siswa PKL</span>
+                            <span class="font-bold text-[17px] leading-tight text-white block truncate mt-1 group-hover:text-[#C6F26B] transition-colors">Halo, {{ $firstName }}</span>
+                            <span class="text-[11.5px] leading-tight text-[#A9C2B9] block truncate mt-0.5">{{ $className }} · {{ $companyName }}</span>
+                        </a>
 
-                    <!-- Profile Button in Header -->
-                    <a href="{{ route('student.profile') }}" aria-label="Profil Siswa" title="Profil Siswa"
-                       class="flex items-center justify-center w-10 h-10 rounded-full bg-white/10 text-white hover:bg-white/20 hover:text-[#C6F26B] transition-colors">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <circle cx="12" cy="8" r="4"/>
-                            <path d="M20 21a8 8 0 1 0-16 0"/>
-                        </svg>
-                    </a>
-                </div>
-            </div>
-
-            <!-- Date & Giant Clock Row -->
-            <div class="flex items-end justify-between gap-2.5 mt-3.5">
-                <div class="flex flex-col">
-                    <span id="live-date-header" class="text-[13px] leading-tight text-[#A9C2B9] font-medium">
-                        {{ \Carbon\Carbon::now()->isoFormat('dddd, D MMMM Y') }}
-                    </span>
-                    <div class="flex items-baseline gap-1.5 mt-0.5">
-                        <span id="live-clock-digits" class="font-space font-semibold text-[60px] leading-none text-white tracking-tight">
-                            {{ \Carbon\Carbon::now()->format('H.i') }}
-                        </span>
-                        <span class="text-xs font-bold text-[#C6F26B] font-sans">WIB</span>
+                        <!-- Header actions: notifikasi · profil · keluar -->
+                        <div class="flex items-center gap-0.5 p-1 rounded-full bg-white/[0.08] border border-white/10 shrink-0">
+                            <a href="{{ route('student.announcements') }}" aria-label="Notifikasi pengumuman" title="Papan Pengumuman"
+                               class="relative flex items-center justify-center w-9 h-9 rounded-full text-white hover:bg-white/15 transition-colors">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
+                                    <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
+                                </svg>
+                                <span class="absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full bg-[#C6F26B] border-2 border-[#0B2B25]"></span>
+                            </a>
+                            <a href="{{ route('student.profile') }}" aria-label="Profil Siswa" title="Profil Siswa"
+                               class="flex items-center justify-center w-9 h-9 rounded-full text-white hover:bg-white/15 hover:text-[#C6F26B] transition-colors">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="8" r="4"/>
+                                    <path d="M20 21a8 8 0 1 0-16 0"/>
+                                </svg>
+                            </a>
+                            <form action="{{ route('logout') }}" method="POST" class="contents"
+                                  data-confirm="Anda perlu masuk kembali untuk presensi dan mengisi jurnal." data-confirm-title="Keluar dari akun Siswa?" data-confirm-ok="Ya, keluar" data-confirm-tone="logout">
+                                @csrf
+                                <button type="submit" aria-label="Keluar" title="Keluar"
+                                        class="flex items-center justify-center w-9 h-9 rounded-full text-white/75 hover:bg-white/15 hover:text-white transition-colors cursor-pointer">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                                        <path d="m16 17 5-5-5-5M21 12H9"/>
+                                    </svg>
+                                </button>
+                            </form>
+                        </div>
                     </div>
-                </div>
 
-                <!-- Shift Badge Box -->
-                <div class="bg-white/[0.09] rounded-2xl p-2.5 px-3 flex flex-col gap-0.5 mb-1.5 shrink-0 border border-white/10 backdrop-blur-xs">
-                    <span class="text-[11px] text-[#A9C2B9] font-bold">Shift hari ini</span>
-                    <span class="text-[15px] font-bold text-white leading-tight">08.00 – 16.00</span>
+                    <!-- Clock + Shift Card -->
                     @php
                         $nowHour = (int) date('H');
                         $nowMinute = (int) date('i');
                         $isBeforeShift = ($nowHour < 8);
+                        $isShiftRunning = (!$isBeforeShift && $nowHour < 16);
                     @endphp
-                    <span class="text-xs font-bold text-[#C6F26B]">
-                        @if($isBeforeShift)
-                            Mulai {{ max(1, (8 * 60) - ($nowHour * 60 + $nowMinute)) }} menit lagi
-                        @elseif($nowHour >= 16)
-                            Shift selesai
-                        @else
-                            Sedang berlangsung
-                        @endif
-                    </span>
-                </div>
-            </div>
+                    <div class="flex items-stretch rounded-[22px] bg-white/[0.07] border border-white/10 backdrop-blur-xs">
+                        <div class="flex-1 min-w-0 px-4 py-3">
+                            <span id="live-date-header" class="text-[12px] leading-tight text-[#A9C2B9] font-medium block truncate">
+                                {{ \Carbon\Carbon::now()->isoFormat('dddd, D MMMM Y') }}
+                            </span>
+                            <div class="flex items-baseline gap-1.5 mt-1">
+                                <span id="live-clock-digits" class="font-space font-semibold text-[44px] leading-none text-white tracking-tight tabular-nums">
+                                    {{ \Carbon\Carbon::now()->format('H.i') }}
+                                </span>
+                                <span class="text-[11px] font-bold text-[#C6F26B]">WIB</span>
+                            </div>
+                        </div>
+                        <div class="w-px my-3 bg-white/10"></div>
+                        <div class="shrink-0 px-4 py-3 flex flex-col justify-center gap-0.5">
+                            <span class="text-[11px] text-[#A9C2B9] font-bold">Shift hari ini</span>
+                            <span class="text-[15px] font-bold text-white leading-tight tabular-nums">08.00 – 16.00</span>
+                            <span class="inline-flex items-center gap-1.5 text-[11.5px] font-bold text-[#C6F26B]">
+                                <span class="w-1.5 h-1.5 rounded-full bg-[#C6F26B] {{ $isShiftRunning ? 'animate-pulse' : 'opacity-60' }}"></span>
+                                @if($isBeforeShift)
+                                    Mulai {{ max(1, (8 * 60) - ($nowHour * 60 + $nowMinute)) }} mnt lagi
+                                @elseif($nowHour >= 16)
+                                    Shift selesai
+                                @else
+                                    Berlangsung
+                                @endif
+                            </span>
+                        </div>
+                    </div>
 
-            <!-- Geofence Distance Live Badge -->
-            <div class="flex mt-2.5">
-                <div id="geofence-status-pill" class="inline-flex items-center gap-2 h-8 rounded-full bg-[#C6F26B] text-[#0B2B25] px-3.5 text-[13px] font-bold shadow-xs">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M12 2a8 8 0 0 0-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 0 0-8-8z"/>
-                        <circle cx="12" cy="10" r="3"/>
-                    </svg>
-                    <span id="geofence-text">Memeriksa radius area PKL...</span>
+                    <!-- Geofence Distance Live Badge -->
+                    <div class="flex">
+                        <div id="geofence-status-pill" class="inline-flex items-center gap-2 h-8 rounded-full bg-[#C6F26B] text-[#0B2B25] px-3.5 text-[13px] font-bold shadow-xs">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 2a8 8 0 0 0-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 0 0-8-8z"/>
+                                <circle cx="12" cy="10" r="3"/>
+                            </svg>
+                            <span id="geofence-text">Memeriksa radius area PKL...</span>
+                        </div>
+                    </div>
                 </div>
-            </div>
+            </header>
 
             <!-- Geofence Map Card -->
-            <div class="mt-5 bg-white rounded-[26px] p-2 shadow-[0_10px_30px_rgba(11,43,37,0.12)] border border-slate-100">
+            <div class="relative -mt-10 bg-white rounded-[26px] p-2 shadow-[0_10px_30px_rgba(11,43,37,0.12)] border border-slate-100">
                 <!-- Map Preview Container -->
                 <div class="relative h-[185px] rounded-[19px] overflow-hidden bg-[#1E2922]">
                     <!-- Interactive Leaflet Map Container -->

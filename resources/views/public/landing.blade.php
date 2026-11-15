@@ -83,48 +83,7 @@
         {{-- Mockup ponsel siswa --}}
         <div class="relative flex justify-center lg:justify-end" aria-hidden="true">
             <div class="absolute -top-6 right-6 sm:right-16 w-64 h-64 rounded-full bg-[#C6F26B]/30 blur-3xl"></div>
-            <div class="relative w-[290px] rounded-[42px] bg-[#0B2B25] p-3 shadow-2xl shadow-[#0B2B25]/30 rotate-[2deg]">
-                <div class="rounded-[32px] overflow-hidden bg-[#F1F4EC]">
-                    <div class="forest px-5 pt-6 pb-8 text-white">
-                        <div class="flex items-center justify-between text-[11px] text-[#A9C2B9]">
-                            <span>Senin, 07:12</span><span>PT Mitra Teknik</span>
-                        </div>
-                        <div class="mt-5 text-[11px] text-[#A9C2B9]">Halo, Rina</div>
-                        <div class="font-space text-xl font-bold">Siap check-in hari ini?</div>
-                        <div class="relative mx-auto mt-6 w-36 h-36">
-                            <div class="absolute inset-0 rounded-full border border-[#C6F26B]/25"></div>
-                            <div class="absolute inset-5 rounded-full border border-[#C6F26B]/25"></div>
-                            <div class="ring-pulse"></div><div class="ring-pulse delay"></div>
-                            <div class="absolute inset-[52px] rounded-full bg-[#C6F26B] flex items-center justify-center">
-                                <svg class="w-6 h-6 text-[#0B2B25]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><circle cx="12" cy="11" r="2.5" stroke-width="2.4"/></svg>
-                            </div>
-                        </div>
-                        <div class="mt-4 text-center text-[11px] font-bold text-[#C6F26B]">Di dalam area kantor · 38 m</div>
-                    </div>
-                    <div class="p-4 space-y-2.5 -mt-4">
-                        <div class="rounded-2xl bg-white p-3.5 shadow-sm flex items-center justify-between">
-                            <div>
-                                <div class="text-[11px] text-[#0B2B25]/50 font-semibold">Check-in</div>
-                                <div class="font-space font-bold">07:12 WIB</div>
-                            </div>
-                            <span class="px-2 py-1 rounded-full bg-[#C6F26B]/60 text-[10px] font-extrabold">Tepat waktu</span>
-                        </div>
-                        <div class="rounded-2xl bg-white p-3.5 shadow-sm">
-                            <div class="text-[11px] text-[#0B2B25]/50 font-semibold">Jurnal kemarin</div>
-                            <div class="text-xs font-bold mt-0.5">Instalasi jaringan LAN lantai 2</div>
-                            <div class="mt-2 flex gap-1.5">
-                                <span class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold">DU/DI ✓</span>
-                                <span class="px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 text-[10px] font-bold">Guru: menunggu</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="absolute -left-2 sm:left-6 bottom-10 rounded-2xl bg-white px-4 py-3 shadow-xl border border-[#0B2B25]/5 -rotate-[3deg]">
-                <div class="text-[10px] font-bold text-[#0B2B25]/50">Hadir hari ini</div>
-                <div class="font-space text-2xl font-bold">96%</div>
-                <div class="text-[10px] text-[#0B2B25]/50">contoh tampilan dasbor sekolah</div>
-            </div>
+            @include('public.partials.student-phone-mockup')
         </div>
     </section>
 

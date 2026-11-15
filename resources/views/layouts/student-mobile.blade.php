@@ -17,6 +17,22 @@
         body { font-family: 'Plus Jakarta Sans', system-ui, sans-serif; }
         .font-space { font-family: 'Space Grotesk', system-ui, sans-serif; }
     </style>
+    <style>
+        /* Animated decorative background rings (shared: beranda header, kartu profil) */
+        .hdr-rings { opacity: .7; }
+        .hdr-ring-group { transform-box: view-box; }
+        .hdr-ring-group--a { animation: hdr-spin 40s linear infinite; }
+        .hdr-ring-group--b { animation: hdr-spin 55s linear infinite reverse; }
+        .hdr-ring-group circle:not(.hdr-ring-wave) { animation: hdr-breathe 6s ease-in-out infinite; }
+        .hdr-ring-wave { transform-box: fill-box; transform-origin: center; opacity: 0; animation: hdr-wave 5s ease-out infinite; }
+        .hdr-ring-wave--late { animation-delay: 2.5s; }
+        @keyframes hdr-spin    { to { transform: rotate(360deg); } }
+        @keyframes hdr-breathe { 0%, 100% { stroke-opacity: .55; } 50% { stroke-opacity: 1; } }
+        @keyframes hdr-wave    { 0% { transform: scale(1); opacity: .35; } 100% { transform: scale(2.4); opacity: 0; } }
+        @media (prefers-reduced-motion: reduce) {
+            .hdr-ring-group, .hdr-ring-group circle, .hdr-ring-wave { animation: none !important; }
+        }
+    </style>
     @stack('styles')
 </head>
 <body data-app="student" class="min-h-screen bg-slate-200/80 antialiased selection:bg-[#C6F26B] selection:text-[#0B2B25] flex justify-center">
@@ -70,7 +86,7 @@
                             <path d="M20 21a8 8 0 1 0-16 0" stroke-width="2"/>
                         </svg>
                     </a>
-                    <form action="{{ route('logout') }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin keluar dari akun Siswa?');">
+                    <form action="{{ route('logout') }}" method="POST" data-confirm="Anda perlu masuk kembali untuk presensi dan mengisi jurnal." data-confirm-title="Keluar dari akun Siswa?" data-confirm-ok="Ya, keluar" data-confirm-tone="logout">
                         @csrf
                         <button type="submit" title="Keluar" class="p-1.5 text-white/60 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -117,7 +133,7 @@
         @endif
 
         <!-- Main Content Area -->
-        <main class="flex-1">
+        <main class="flex-1 {{ request()->routeIs(['student.home', 'student.attendance', 'student.journals']) ? '' : 'px-4 pt-4 pb-32' }}">
             @yield('content')
         </main>
 
@@ -139,6 +155,9 @@
         <x-attendance-request-modal />
 
         <x-incident-report-modal />
+
+        <!-- Dialog sistem bertema (pengganti alert/confirm bawaan browser) -->
+        <x-student.app-dialog />
     </div>
 
     <x-image-lightbox />

@@ -352,13 +352,31 @@
         } else if (gpsStatus === 'weak_accuracy') {
             window.showPermissionGuideModal('location-accuracy');
         } else if (gpsStatus === 'searching') {
-            alert('Sedang menunggu sinyal satelit GPS... Pastikan Anda berada di area dengan visibilitas langit terbuka.');
+            window.vtAlert({
+                tone: 'warning',
+                title: 'Mencari sinyal GPS…',
+                message: 'Pastikan Anda berada di area dengan langit terbuka agar sinyal satelit cepat terkunci.',
+            });
         } else if (gpsStatus === 'unavailable') {
-            alert('Sensor GPS perangkat tidak aktif atau tidak dapat ditemukan. Buka Pengaturan iPhone/Android Anda dan aktifkan Layanan Lokasi.');
+            window.vtAlert({
+                tone: 'danger',
+                title: 'GPS tidak aktif',
+                message: 'Sensor GPS perangkat tidak ditemukan. Buka Pengaturan iPhone/Android dan aktifkan Layanan Lokasi.',
+            });
         } else if (gpsStatus === 'locked') {
             const dist = calculateDistanceM(userCoords.latitude, userCoords.longitude, targetLat, targetLng);
-            const statusTxt = dist <= targetRadius ? 'Di dalam radius kantor' : 'Di luar radius kantor';
-            alert(`Informasi Lokasi Presensi:\n\n• Jarak ke DU/DI: ±${dist} meter\n• Toleransi Radius: ${targetRadius} meter\n• Status: ${statusTxt}\n• Akurasi Perangkat: ±${userCoords.accuracy} meter`);
+            const inside = dist <= targetRadius;
+            window.vtAlert({
+                tone: inside ? 'location' : 'warning',
+                eyebrow: 'Informasi lokasi',
+                title: inside ? 'Di dalam radius kantor' : 'Di luar radius kantor',
+                details: [
+                    ['Jarak ke DU/DI', `±${Number(dist).toLocaleString('id-ID')} m`],
+                    ['Toleransi', `${Number(targetRadius).toLocaleString('id-ID')} m`],
+                    ['Akurasi GPS', `±${Math.round(userCoords.accuracy)} m`],
+                    ['Status', inside ? 'Bisa presensi' : 'Belum bisa'],
+                ],
+            });
         }
     }
 
@@ -454,7 +472,11 @@
             if (gpsStatus === 'denied') {
                 window.showPermissionGuideModal('location');
             } else {
-                alert('Menunggu koordinat GPS perangkat terkunci. Pastikan izin lokasi aktif dan sinyal satelit terhubung.');
+                window.vtAlert({
+                    tone: 'warning',
+                    title: 'Menunggu sinyal GPS',
+                    message: 'Koordinat perangkat belum terkunci. Pastikan izin lokasi aktif dan sinyal satelit terhubung, lalu coba lagi.',
+                });
             }
             return;
         }
@@ -474,16 +496,21 @@
         // 5. Guard: Outside Radius Rejection (Direct to Homepage Dinas Luar)
         const dist = calculateDistanceM(userCoords.latitude, userCoords.longitude, targetLat, targetLng);
         if (dist > targetRadius) {
-            if (confirm(
-                `Presensi Ditolak: Anda berada di luar radius penugasan DU/DI.\n\n` +
-                `• Jarak Anda: ${dist} meter\n` +
-                `• Batas Toleransi: ${targetRadius} meter\n\n` +
-                `Presensi kamera selfie langsung hanya berlaku jika Anda hadir fisik di kantor penugasan.\n\n` +
-                `Jika Anda sedang ditugaskan di luar kantor (Dinas Luar / WFH), silakan ajukan melalui menu "Dinas Luar" di Beranda.\n\n` +
-                `Kembali ke Beranda sekarang?`
-            )) {
-                window.location.href = "{{ route('student.home') }}";
-            }
+            window.vtDialog({
+                tone: 'danger',
+                eyebrow: 'Presensi ditolak',
+                title: 'Anda di luar radius DU/DI',
+                message: 'Presensi selfie hanya berlaku jika Anda hadir langsung di lokasi penugasan.',
+                details: [
+                    ['Jarak Anda', `${Number(dist).toLocaleString('id-ID')} m`],
+                    ['Batas toleransi', `${Number(targetRadius).toLocaleString('id-ID')} m`],
+                ],
+                hint: 'Sedang ditugaskan di luar kantor (Dinas Luar / WFH)? Ajukan lewat menu "Dinas Luar" di Beranda.',
+                confirmText: 'Kembali ke Beranda',
+                cancelText: 'Tetap di sini',
+            }).then((ok) => {
+                if (ok) window.location.href = "{{ route('student.home') }}";
+            });
             return;
         }
 

@@ -11,6 +11,35 @@
     }
 @endphp
 
+<style>
+    .sos-pulse-wave {
+        position: absolute;
+        top: 50%; left: 50%;
+        width: 164px; height: 164px;
+        margin: -82px 0 0 -82px;
+        border-radius: 9999px;
+        background: rgba(255, 255, 255, 0.35);
+        pointer-events: none;
+        animation: sos-wave 2.4s cubic-bezier(0.2, 0.6, 0.35, 1) infinite;
+    }
+    @keyframes sos-wave {
+        0%   { transform: scale(1);    opacity: .55; }
+        100% { transform: scale(1.82); opacity: 0; }
+    }
+    .sos-heartbeat { animation: sos-heartbeat 1.6s ease-in-out infinite; }
+    .sos-heartbeat:hover, .sos-heartbeat:active { animation: none; }
+    @keyframes sos-heartbeat {
+        0%, 100% { transform: scale(1);    box-shadow: 0 14px 34px rgba(60,6,2,.45), 0 0 0 0 rgba(255,255,255,.45); }
+        15%      { transform: scale(1.06); }
+        30%      { transform: scale(.98); }
+        45%      { transform: scale(1.04); box-shadow: 0 14px 34px rgba(60,6,2,.45), 0 0 0 18px rgba(255,255,255,0); }
+        60%      { transform: scale(1); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .sos-pulse-wave, .sos-heartbeat { animation: none; }
+    }
+</style>
+
 <!-- Screen 6: Bantuan Darurat SOS (Full-screen Interactive Emergency Modal) -->
 <div id="sos-emergency-modal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-[#B42318] text-white font-sans transition-all duration-300">
     <div class="relative w-full max-w-[420px] min-h-screen mx-auto flex flex-col justify-between p-5 box-border">
@@ -125,11 +154,12 @@
                         <span>Telepon 112 (Panggilan Darurat)</span>
                     </a>
 
-                    <form action="{{ route('student.incident.followup', $activeSos->id) }}" method="POST">
+                    <form action="{{ route('student.incident.followup', $activeSos->id) }}" method="POST"
+                          data-confirm="Guru pembimbing akan diberi tahu bahwa situasi darurat sudah selesai." data-confirm-title="Anda sudah aman?" data-confirm-ok="Ya, saya sudah aman" data-confirm-tone="info">
                         @csrf
                         <input type="hidden" name="action_note" value="Siswa telah mengonfirmasi bahwa keadaan sudah aman dan terkendali.">
                         <input type="hidden" name="status" value="resolved">
-                        <button type="submit" onclick="return confirm('Apakah Anda yakin situasi darurat telah selesai dan Anda sudah aman?')"
+                        <button type="submit"
                                 class="w-full h-11 rounded-[22px] bg-white/20 hover:bg-white/30 text-white font-bold text-xs active:scale-95 transition-all cursor-pointer">
                             ✓ Saya Sudah Aman (Tandai Selesai)
                         </button>
@@ -191,15 +221,20 @@
 
             <!-- Pulsing SOS Button Container -->
             <div class="relative w-[300px] h-[300px] mx-auto my-3 flex items-center justify-center">
-                <!-- Concentric animated ripple rings -->
+                <!-- Static guide rings -->
                 <svg width="300" height="300" viewBox="0 0 300 300" class="absolute inset-0 pointer-events-none" aria-hidden="true">
                     <circle cx="150" cy="150" r="140" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="2"/>
                     <circle cx="150" cy="150" r="115" fill="none" stroke="rgba(255,255,255,0.14)" stroke-width="2"/>
                     <circle cx="150" cy="150" r="92" fill="none" stroke="rgba(255,255,255,0.22)" stroke-width="2"/>
                 </svg>
 
+                <!-- Expanding pulse waves -->
+                <span class="sos-pulse-wave" aria-hidden="true"></span>
+                <span class="sos-pulse-wave" style="animation-delay:.8s" aria-hidden="true"></span>
+                <span class="sos-pulse-wave" style="animation-delay:1.6s" aria-hidden="true"></span>
+
                 <button type="button" onclick="startSosCountdown()" aria-label="Kirim SOS, hitung mundur 5 detik"
-                        class="relative z-10 w-[164px] h-[164px] rounded-full bg-white text-[#B42318] flex flex-col items-center justify-center shadow-[0_14px_34px_rgba(60,6,2,0.45)] hover:scale-105 active:scale-95 transition-all cursor-pointer group">
+                        class="sos-heartbeat relative z-10 w-[164px] h-[164px] rounded-full bg-white text-[#B42318] flex flex-col items-center justify-center shadow-[0_14px_34px_rgba(60,6,2,0.45)] hover:scale-105 active:scale-95 transition-all cursor-pointer group">
                     <span class="font-space font-bold text-[50px] leading-none tracking-wider group-hover:scale-105 transition-transform">SOS</span>
                     <span class="font-sans font-extrabold text-[11px] tracking-wider text-[#7E1810] mt-1">TEKAN UNTUK KIRIM</span>
                 </button>
