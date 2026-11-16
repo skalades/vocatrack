@@ -212,9 +212,11 @@ class StudentController extends Controller
         if ($request->filled('photo')) {
             $base64Image = $request->input('photo');
             
-            // Limit base64 payload size (approx 5MB base64 string ~ 3.7MB binary)
-            if (strlen($base64Image) > 7 * 1024 * 1024) {
-                return back()->withErrors(['photo' => 'Ukuran file foto swafoto terlalu besar (maksimal 5MB).']);
+            // Klien sudah mengompres swafoto (maks 800px, ~250KB). Server hanya melakukan
+            // pengecekan murah (panjang string + header gambar) tanpa resize/re-encode.
+            // 1.4MB base64 ≈ 1MB biner — longgar untuk perangkat lama, ketat untuk payload liar.
+            if (strlen($base64Image) > 1400 * 1024) {
+                return back()->withErrors(['photo' => 'Ukuran foto swafoto terlalu besar (maksimal 1MB). Silakan ambil ulang foto.']);
             }
 
             if (preg_match('/^data:image\/(\w+);base64,/', $base64Image, $typeMatch)) {
@@ -245,6 +247,11 @@ class StudentController extends Controller
                     return back()->withErrors(['photo' => 'Data gambar swafoto rusak atau tidak valid.']);
                 }
                 $extension = $realMimeMap[$imageInfo['mime']];
+
+                // Tolak dimensi berlebih (dibaca dari header, tanpa decode piksel).
+                if (($imageInfo[0] ?? 0) > 2000 || ($imageInfo[1] ?? 0) > 2000) {
+                    return back()->withErrors(['photo' => 'Resolusi foto swafoto terlalu besar. Silakan ambil ulang foto.']);
+                }
 
                 $fileSize = strlen($imageData);
                 if (!app(StorageQuotaService::class)->canUpload($spkl->school, $fileSize)) {

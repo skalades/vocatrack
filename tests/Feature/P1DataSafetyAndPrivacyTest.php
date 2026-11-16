@@ -344,6 +344,38 @@ class P1DataSafetyAndPrivacyTest extends TestCase
         $this->assertSame([], Storage::disk(SecureFileService::DISK)->allFiles());
     }
 
+    public function test_checkin_rejects_oversized_selfie_payload(): void
+    {
+        Carbon::setTestNow(Carbon::today()->setTime(7, 15));
+
+        $this->actingAs($this->studentUser)->post(route('student.attendance.checkin'), [
+            'latitude' => -7.2,
+            'longitude' => 107.9,
+            'photo' => 'data:image/jpeg;base64,' . str_repeat('A', 1500 * 1024),
+        ])->assertSessionHasErrors(['photo']);
+
+        $this->assertSame(0, Attendance::withoutGlobalScopes()->count());
+        $this->assertSame([], Storage::disk(SecureFileService::DISK)->allFiles());
+    }
+
+    public function test_checkin_rejects_selfie_with_excessive_dimensions(): void
+    {
+        Carbon::setTestNow(Carbon::today()->setTime(7, 15));
+
+        // Header PNG kecil yang mengklaim 4000x4000 piksel (hanya header IHDR yang dibaca server).
+        $ihdr = pack('N', 4000) . pack('N', 4000) . "\x08\x02\x00\x00\x00";
+        $png = "\x89PNG\r\n\x1a\n" . pack('N', 13) . 'IHDR' . $ihdr . pack('N', crc32('IHDR' . $ihdr));
+
+        $this->actingAs($this->studentUser)->post(route('student.attendance.checkin'), [
+            'latitude' => -7.2,
+            'longitude' => 107.9,
+            'photo' => 'data:image/png;base64,' . base64_encode($png),
+        ])->assertSessionHasErrors(['photo']);
+
+        $this->assertSame(0, Attendance::withoutGlobalScopes()->count());
+        $this->assertSame([], Storage::disk(SecureFileService::DISK)->allFiles());
+    }
+
     public function test_incident_attachment_is_hidden_from_dudi_and_other_tenants(): void
     {
         Storage::disk(SecureFileService::DISK)->put('schools/1/incidents/a.png', base64_decode(self::TINY_PNG));

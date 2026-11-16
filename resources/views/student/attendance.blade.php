@@ -518,9 +518,17 @@
         shutterBtn.classList.add('scale-75', 'opacity-50');
         setTimeout(() => shutterBtn.classList.remove('scale-75', 'opacity-50'), 250);
 
-        canvas.width = video.videoWidth || 640;
-        canvas.height = video.videoHeight || 480;
+        // Kompresi di sisi klien agar server cukup menyimpan byte apa adanya (tanpa re-encode).
+        // Sisi terpanjang dibatasi 800px, lalu JPEG 0.72; turunkan kualitas bila masih > ~250KB.
+        const MAX_SIDE = 800;
+        const srcW = video.videoWidth || 640;
+        const srcH = video.videoHeight || 480;
+        const scale = Math.min(1, MAX_SIDE / Math.max(srcW, srcH));
+        canvas.width = Math.round(srcW * scale);
+        canvas.height = Math.round(srcH * scale);
         const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
 
         if (currentFacingMode === 'user') {
             ctx.translate(canvas.width, 0);
@@ -528,7 +536,13 @@
         }
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-        const base64Photo = canvas.toDataURL('image/jpeg', 0.85);
+        const MAX_BASE64_LENGTH = 340 * 1024; // ≈ 250KB biner
+        let quality = 0.72;
+        let base64Photo = canvas.toDataURL('image/jpeg', quality);
+        while (base64Photo.length > MAX_BASE64_LENGTH && quality > 0.4) {
+            quality -= 0.1;
+            base64Photo = canvas.toDataURL('image/jpeg', quality);
+        }
         photoInput.value = base64Photo;
 
         // Fill GPS Form Fields SECURELY from verified device coordinates
