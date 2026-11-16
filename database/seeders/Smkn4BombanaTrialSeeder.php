@@ -14,13 +14,18 @@ use Illuminate\Support\Facades\Hash;
 
 class Smkn4BombanaTrialSeeder extends Seeder
 {
-    // TODO: ganti dengan NPSN resmi SMKN 4 Bombana (cek referensi.data.kemdikbud.go.id).
-    public const NPSN = '74040004';
+    /**
+     * NPSN resmi SMK Negeri 04 Bombana (Dapodik / smk.kemendikdasmen.go.id).
+     * SK Pendirian No. 800/541.a/2010 (27 Okt 2010), akreditasi C (BAN-PDM 2023–2028).
+     */
+    public const NPSN = '40404977';
+
+    public const KEPSEK_NAME = 'Amir Ishak, S.Pi.';
 
     /**
-     * Tenant baru SMK Negeri 04 Bombana dengan paket Trial Evaluasi 7 hari (mulai hari ini).
-     * Hanya membuat profil sekolah, pengaturan, Admin Sekolah, Kepala Sekolah, dan langganan trial —
-     * data master (jurusan, kelas, guru, siswa, DUDI) diisi sendiri oleh sekolah selama masa trial.
+     * Tenant SMK Negeri 04 Bombana (Kabaena Barat) dengan paket Trial Evaluasi 7 hari (mulai hari ini):
+     * profil sekolah, pengaturan, Admin Sekolah, Kepala Sekolah, dan langganan trial.
+     * Data master Geologi Pertambangan ada di seeder Smkn4Bombana* lainnya (lihat Smkn4BombanaSeeder).
      *
      * Jalankan: php artisan db:seed --class=Smkn4BombanaTrialSeeder
      */
@@ -34,15 +39,14 @@ class Smkn4BombanaTrialSeeder extends Seeder
         $trialPlan = SubscriptionPlan::where('code', 'trial-14d')->firstOrFail();
 
         // 1. Profil Sekolah
-        $school = School::firstOrCreate(
+        // Sumber: Data Pokok Pendidikan (smk.kemendikdasmen.go.id, sinkron 16 Nov 2026).
+        $school = School::updateOrCreate(
             ['npsn' => self::NPSN],
             [
                 'name' => 'SMK Negeri 04 Bombana',
-                'address' => 'Kabupaten Bombana, Sulawesi Tenggara',
-                'phone' => '-', // TODO: isi nomor telepon resmi sekolah
-                'email' => 'info@smkn4bombana.sch.id',
-                'logo_path' => null,
-                'stamp_path' => null,
+                'address' => 'Jl. Bukit Teletubbies, Desa Baliara, Kec. Kabaena Barat, Kabupaten Bombana, Sulawesi Tenggara 93781',
+                'phone' => '082291416666',
+                'email' => 'smkn.1kabaena@gmail.com',
                 'is_active' => true,
             ]
         );
@@ -59,8 +63,9 @@ class Smkn4BombanaTrialSeeder extends Seeder
             'kop_header_line1' => 'PEMERINTAH PROVINSI SULAWESI TENGGARA',
             'kop_header_line2' => 'DINAS PENDIDIKAN DAN KEBUDAYAAN',
             'kop_header_line3' => 'SEKOLAH MENENGAH KEJURUAN NEGERI 04 BOMBANA',
-            'kepsek_name' => 'Kepala SMKN 04 Bombana',
-            'kepsek_nip' => '-',
+            // Sumber: profil sekolah (smk.sch.id & blog resmi sekolah, SK Kepsek No. 28/2021). Verifikasi ke sekolah.
+            'kepsek_name' => self::KEPSEK_NAME,
+            'kepsek_nip' => '197512222007011006',
         ];
 
         foreach ($settings as $key => $val) {
@@ -87,7 +92,7 @@ class Smkn4BombanaTrialSeeder extends Seeder
             [
                 'gender' => 'L',
                 'phone' => null,
-                'address' => 'Kampus SMKN 04 Bombana, Kabupaten Bombana, Sulawesi Tenggara',
+                'address' => 'Kampus SMKN 04 Bombana, Jl. Bukit Teletubbies, Baliara, Kabaena Barat, Bombana',
             ]
         );
 
@@ -96,7 +101,7 @@ class Smkn4BombanaTrialSeeder extends Seeder
             ['email' => 'kepsek@smkn4bombana.sch.id'],
             [
                 'school_id' => $school->id,
-                'name' => 'Kepala SMKN 04 Bombana',
+                'name' => self::KEPSEK_NAME,
                 'password' => Hash::make('password'),
                 'role' => 'kepala-sekolah',
                 'is_active' => true,
@@ -108,7 +113,7 @@ class Smkn4BombanaTrialSeeder extends Seeder
             [
                 'gender' => 'L',
                 'phone' => null,
-                'address' => 'Kabupaten Bombana, Sulawesi Tenggara',
+                'address' => 'Kec. Kabaena Barat, Kabupaten Bombana, Sulawesi Tenggara',
             ]
         );
 

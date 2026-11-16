@@ -30,7 +30,7 @@ class Smkn4BombanaStudentAndPlottingSeeder extends Seeder
         $period = PklPeriod::firstOrCreate(
             [
                 'school_id' => $school->id,
-                'name' => 'PKL SMKN 04 Bombana TP 2026/2027',
+                'name' => 'PKL Geologi Pertambangan SMKN 04 Bombana TP 2026/2027',
             ],
             [
                 'start_date' => Carbon::today()->startOfMonth()->toDateString(),
@@ -39,18 +39,19 @@ class Smkn4BombanaStudentAndPlottingSeeder extends Seeder
             ]
         );
 
+        // Data contoh siswa Geologi Pertambangan (nama, NIS, NISN fiktif).
         // [nama, email, nis, nisn, gender, kelas, kata kunci DUDI, email guru]
         $studentsData = [
-            ['Muhammad Rizal', 'rizal.tkro@smkn4bombana.sch.id', '262701', '0082700001', 'L', 'XII TKRO 1', 'Sinar Rumbia', 'arif.tkro@smkn4bombana.sch.id'],
-            ['Ahmad Fauzan', 'fauzan.tkro@smkn4bombana.sch.id', '262702', '0082700002', 'L', 'XII TKRO 1', 'Sinar Rumbia', 'arif.tkro@smkn4bombana.sch.id'],
-            ['La Ode Ikhsan', 'ikhsan.tkro@smkn4bombana.sch.id', '262703', '0082700003', 'L', 'XII TKRO 2', 'Jaya Kasipute', 'arif.tkro@smkn4bombana.sch.id'],
-            ['Arman Saputra', 'arman.tkro@smkn4bombana.sch.id', '262704', '0082700004', 'L', 'XII TKRO 2', 'Jaya Kasipute', 'arif.tkro@smkn4bombana.sch.id'],
-            ['Nur Afni', 'afni.tjkt@smkn4bombana.sch.id', '262705', '0082700005', 'P', 'XII TJKT 1', 'Komunikasi dan Informatika', 'andi.tjkt@smkn4bombana.sch.id'],
-            ['Fikri Ramadhan', 'fikri.tjkt@smkn4bombana.sch.id', '262706', '0082700006', 'L', 'XII TJKT 1', 'Komunikasi dan Informatika', 'andi.tjkt@smkn4bombana.sch.id'],
-            ['Wa Ode Sitti Aisyah', 'aisyah.atph@smkn4bombana.sch.id', '262707', '0082700007', 'P', 'XII ATPH 1', 'Pertanian', 'nurhayati.atph@smkn4bombana.sch.id'],
-            ['Haerul Anwar', 'haerul.atph@smkn4bombana.sch.id', '262708', '0082700008', 'L', 'XII ATPH 1', 'Pertanian', 'nurhayati.atph@smkn4bombana.sch.id'],
-            ['Risna Wati', 'risna.akl@smkn4bombana.sch.id', '262709', '0082700009', 'P', 'XII AKL 1', 'Koperasi', 'rahmawati.akl@smkn4bombana.sch.id'],
-            ['Dian Pratiwi', 'dian.akl@smkn4bombana.sch.id', '262710', '0082700010', 'P', 'XII AKL 1', 'Koperasi', 'rahmawati.akl@smkn4bombana.sch.id'],
+            ['Muhammad Rizal', 'rizal.gp@smkn4bombana.sch.id', '262701', '0082700001', 'L', 'XII GP 1', 'Wijaya Nikel', 'hasrun.gp@smkn4bombana.sch.id'],
+            ['La Ode Ikhsan', 'ikhsan.gp@smkn4bombana.sch.id', '262702', '0082700002', 'L', 'XII GP 1', 'Wijaya Nikel', 'hasrun.gp@smkn4bombana.sch.id'],
+            ['Nur Afni', 'afni.gp@smkn4bombana.sch.id', '262703', '0082700003', 'P', 'XII GP 1', 'Wijaya Nikel', 'hasrun.gp@smkn4bombana.sch.id'],
+            ['Arman Saputra', 'arman.gp@smkn4bombana.sch.id', '262704', '0082700004', 'L', 'XII GP 1', 'Delapan Delapan', 'sartina.gp@smkn4bombana.sch.id'],
+            ['Wa Ode Sitti Aisyah', 'aisyah.gp@smkn4bombana.sch.id', '262705', '0082700005', 'P', 'XII GP 1', 'Delapan Delapan', 'sartina.gp@smkn4bombana.sch.id'],
+            ['Haerul Anwar', 'haerul.gp@smkn4bombana.sch.id', '262706', '0082700006', 'L', 'XII GP 2', 'Aneka Tambang', 'sartina.gp@smkn4bombana.sch.id'],
+            ['Fikri Ramadhan', 'fikri.gp@smkn4bombana.sch.id', '262707', '0082700007', 'L', 'XII GP 2', 'Aneka Tambang', 'akbar.gp@smkn4bombana.sch.id'],
+            ['Risna Wati', 'risna.gp@smkn4bombana.sch.id', '262708', '0082700008', 'P', 'XII GP 2', 'Timah Investasi', 'akbar.gp@smkn4bombana.sch.id'],
+            ['Ahmad Fauzan', 'fauzan.gp@smkn4bombana.sch.id', '262709', '0082700009', 'L', 'XII GP 2', 'Timah Investasi', 'akbar.gp@smkn4bombana.sch.id'],
+            ['Dian Pratiwi', 'dian.gp@smkn4bombana.sch.id', '262710', '0082700010', 'P', 'XII GP 2', 'Timah Investasi', 'akbar.gp@smkn4bombana.sch.id'],
         ];
 
         foreach ($studentsData as $i => [$name, $email, $nis, $nisn, $gender, $className, $companyKeyword, $teacherEmail]) {
@@ -70,7 +71,7 @@ class Smkn4BombanaStudentAndPlottingSeeder extends Seeder
                 [
                     'gender' => $gender,
                     'phone' => '0823456780' . str_pad((string) ($i + 1), 2, '0', STR_PAD_LEFT),
-                    'address' => 'Kec. Rumbia, Kabupaten Bombana, Sulawesi Tenggara',
+                    'address' => 'Kec. Kabaena Barat, Kabupaten Bombana, Sulawesi Tenggara',
                 ]
             );
 

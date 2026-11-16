@@ -9,10 +9,10 @@ class Smkn4BombanaSeeder extends Seeder
     /**
      * Master seeder SMK Negeri 04 Bombana (tenant Trial 7 Hari).
      * 1. Profil sekolah, pengaturan, Admin Sekolah, Kepala Sekolah, dan langganan trial
-     * 2. 4 Program Keahlian (TKRO, TJKT, ATPH, AKL) dan kelas XII
-     * 3. Guru Pembimbing dan pemetaan jurusan
-     * 4. 5 Tempat PKL / DUDI beserta Pembimbing DUDI
-     * 5. 10 siswa, periode PKL aktif, dan plotting penempatan
+     * 2. Program Keahlian Geologi Pertambangan (GP) dan kelas XII GP 1–2
+     * 3. 3 Guru Pembimbing produktif Geologi Pertambangan
+     * 4. 4 DUDI pertambangan nikel (mitra sekolah di Dapodik) beserta Pembimbing DUDI
+     * 5. 10 siswa GP, periode PKL aktif, dan plotting penempatan
      *
      * Jalankan: php artisan db:seed --class=Smkn4BombanaSeeder
      */

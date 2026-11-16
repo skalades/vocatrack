@@ -13,7 +13,8 @@ use Illuminate\Support\Facades\Hash;
 class Smkn4BombanaTeacherSeeder extends Seeder
 {
     /**
-     * Seed Guru Pembimbing SMKN 04 Bombana (data contoh) beserta profil dan pemetaan jurusan.
+     * Seed Guru Pembimbing produktif Geologi Pertambangan SMKN 04 Bombana.
+     * Nama & NIP adalah data contoh (data guru riil tidak dipublikasikan) — ganti dengan data sekolah.
      */
     public function run(): void
     {
@@ -21,42 +22,32 @@ class Smkn4BombanaTeacherSeeder extends Seeder
 
         $teachersData = [
             [
-                'name' => 'La Ode Muhammad Arif, S.T.',
-                'email' => 'arif.tkro@smkn4bombana.sch.id',
-                'nip' => '198403122010011004',
+                'name' => 'La Ode Hasrun, S.T.',
+                'email' => 'hasrun.gp@smkn4bombana.sch.id',
+                'nip' => '198502142011011005',
                 'gender' => 'L',
                 'phone' => '082345670101',
-                'address' => 'Kel. Lameroro, Kec. Rumbia, Kabupaten Bombana',
-                'major_codes' => ['TKRO'],
+                'address' => 'Desa Baliara, Kec. Kabaena Barat, Kabupaten Bombana',
             ],
             [
-                'name' => 'Andi Suryadi, S.Kom.',
-                'email' => 'andi.tjkt@smkn4bombana.sch.id',
-                'nip' => '198807202014021003',
-                'gender' => 'L',
+                'name' => 'Wa Ode Sartina, S.T.',
+                'email' => 'sartina.gp@smkn4bombana.sch.id',
+                'nip' => '198808232019032008',
+                'gender' => 'P',
                 'phone' => '082345670102',
-                'address' => 'Kel. Kasipute, Kec. Rumbia, Kabupaten Bombana',
-                'major_codes' => ['TJKT'],
+                'address' => 'Kel. Tedubara, Kec. Kabaena Utara, Kabupaten Bombana',
             ],
             [
-                'name' => 'Wa Ode Nurhayati, S.P.',
-                'email' => 'nurhayati.atph@smkn4bombana.sch.id',
-                'nip' => '198605142011012006',
-                'gender' => 'P',
+                'name' => 'Muhammad Akbar, S.Pd.',
+                'email' => 'akbar.gp@smkn4bombana.sch.id',
+                'nip' => '199105102022211004',
+                'gender' => 'L',
                 'phone' => '082345670103',
-                'address' => 'Desa Lantawonua, Kec. Rumbia Tengah, Kabupaten Bombana',
-                'major_codes' => ['ATPH'],
-            ],
-            [
-                'name' => 'Sitti Rahmawati, S.E.',
-                'email' => 'rahmawati.akl@smkn4bombana.sch.id',
-                'nip' => '199001082015032005',
-                'gender' => 'P',
-                'phone' => '082345670104',
-                'address' => 'Kel. Kasipute, Kec. Rumbia, Kabupaten Bombana',
-                'major_codes' => ['AKL'],
+                'address' => 'Kel. Rahantari, Kec. Kabaena Timur, Kabupaten Bombana',
             ],
         ];
+
+        $gpId = Major::where('school_id', $school->id)->where('code', 'GP')->value('id');
 
         foreach ($teachersData as $t) {
             $user = User::firstOrCreate(
@@ -77,13 +68,8 @@ class Smkn4BombanaTeacherSeeder extends Seeder
 
             $teacher = Teacher::firstOrCreate(['user_id' => $user->id], ['nip' => $t['nip']]);
 
-            $majorIds = Major::where('school_id', $school->id)
-                ->whereIn('code', $t['major_codes'])
-                ->pluck('id')
-                ->toArray();
-
-            if (!empty($majorIds)) {
-                $teacher->majors()->syncWithoutDetaching($majorIds);
+            if ($gpId) {
+                $teacher->majors()->syncWithoutDetaching([$gpId]);
             }
         }
     }

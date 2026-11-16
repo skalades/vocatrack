@@ -14,7 +14,10 @@ use Illuminate\Support\Facades\Hash;
 class Smkn4BombanaCompanySeeder extends Seeder
 {
     /**
-     * Seed Tempat PKL / DUDI mitra SMKN 04 Bombana (data contoh) beserta Pembimbing DUDI dan pemetaan jurusan.
+     * Seed Tempat PKL / DUDI pertambangan SMKN 04 Bombana.
+     * Nama perusahaan diambil dari daftar mitra DUDI Geologi Pertambangan sekolah di Data Pokok Pendidikan
+     * (smk.kemendikdasmen.go.id). Pembimbing DUDI, kontak, dan koordinat GPS adalah data contoh/perkiraan —
+     * sesuaikan dengan data riil sebelum dipakai untuk absensi berbasis lokasi.
      */
     public function run(): void
     {
@@ -22,96 +25,72 @@ class Smkn4BombanaCompanySeeder extends Seeder
 
         $companiesData = [
             [
-                'name' => 'Bengkel Mobil Sinar Rumbia',
-                'address' => 'Jl. Poros Kasipute - Kendari, Kel. Kasipute, Kec. Rumbia, Kabupaten Bombana',
-                'contact_person' => 'Hasanuddin',
+                'name' => 'PT Wijaya Nikel Nusantara',
+                'address' => 'Area Tambang Nikel Pulau Kabaena, Kabupaten Bombana, Sulawesi Tenggara',
+                'contact_person' => 'Ir. Abdul Rahman',
                 'phone' => '082345671001',
-                'latitude' => -4.85620000,
-                'longitude' => 121.94810000,
-                'radius_meters' => 120,
-                'work_days' => '6_days',
-                'major_codes' => ['TKRO'],
+                'latitude' => -5.21500000,
+                'longitude' => 121.90500000,
+                'radius_meters' => 500,
                 'supervisor' => [
-                    'name' => 'Hasanuddin',
-                    'email' => 'spv.sinarrumbia@dudi-bombana.id',
+                    'name' => 'Ir. Abdul Rahman',
+                    'email' => 'spv.wijayanikel@mitra.smkn4bombana.sch.id',
                     'gender' => 'L',
                     'phone' => '082345672001',
-                    'position' => 'Kepala Bengkel & Mekanik Senior',
+                    'position' => 'Mine Geologist / Kepala Seksi Eksplorasi',
                 ],
             ],
             [
-                'name' => 'Bengkel Motor Jaya Kasipute',
-                'address' => 'Jl. Pendidikan, Kel. Kasipute, Kec. Rumbia, Kabupaten Bombana',
-                'contact_person' => 'Muhammad Yusuf',
+                'name' => 'PT Nikel Sukses Delapan Delapan',
+                'address' => 'Area IUP Nikel Pulau Kabaena, Kabupaten Bombana, Sulawesi Tenggara',
+                'contact_person' => 'Syamsul Bahri, S.T.',
                 'phone' => '082345671002',
-                'latitude' => -4.85310000,
-                'longitude' => 121.95120000,
-                'radius_meters' => 100,
-                'work_days' => '6_days',
-                'major_codes' => ['TKRO'],
+                'latitude' => -5.24000000,
+                'longitude' => 121.95000000,
+                'radius_meters' => 500,
                 'supervisor' => [
-                    'name' => 'Muhammad Yusuf',
-                    'email' => 'spv.jayakasipute@dudi-bombana.id',
+                    'name' => 'Syamsul Bahri, S.T.',
+                    'email' => 'spv.nsdd@mitra.smkn4bombana.sch.id',
                     'gender' => 'L',
                     'phone' => '082345672002',
-                    'position' => 'Pemilik & Kepala Mekanik',
+                    'position' => 'Supervisor Grade Control & Quality Control Bijih',
                 ],
             ],
             [
-                'name' => 'Dinas Komunikasi dan Informatika Kabupaten Bombana',
-                'address' => 'Kompleks Perkantoran Pemda Bombana, Kec. Rumbia, Kabupaten Bombana',
-                'contact_person' => 'Irwan Saputra, S.Kom.',
+                'name' => 'PT Aneka Tambang Tbk UBPN Sulawesi Tenggara',
+                'address' => 'Unit Bisnis Pertambangan Nikel, Kec. Pomalaa, Kabupaten Kolaka, Sulawesi Tenggara',
+                'contact_person' => 'Hendra Kurniawan, S.T.',
                 'phone' => '082345671003',
-                'latitude' => -4.85950000,
-                'longitude' => 121.94400000,
-                'radius_meters' => 150,
-                'work_days' => '5_days',
-                'major_codes' => ['TJKT'],
+                'latitude' => -4.18500000,
+                'longitude' => 121.62000000,
+                'radius_meters' => 500,
                 'supervisor' => [
-                    'name' => 'Irwan Saputra, S.Kom.',
-                    'email' => 'spv.diskominfo@dudi-bombana.id',
+                    'name' => 'Hendra Kurniawan, S.T.',
+                    'email' => 'spv.antam@mitra.smkn4bombana.sch.id',
                     'gender' => 'L',
                     'phone' => '082345672003',
-                    'position' => 'Pranata Komputer - Bidang Infrastruktur Jaringan',
+                    'position' => 'Engineer Perencanaan Tambang',
                 ],
             ],
             [
-                'name' => 'Dinas Pertanian dan Peternakan Kabupaten Bombana',
-                'address' => 'Kompleks Perkantoran Pemda Bombana, Kec. Rumbia, Kabupaten Bombana',
-                'contact_person' => 'Ir. Rusdin',
+                'name' => 'PT Timah Investasi Mineral',
+                'address' => 'Site Eksplorasi Nikel Pulau Kabaena, Kabupaten Bombana, Sulawesi Tenggara',
+                'contact_person' => 'Rina Marlina, S.T.',
                 'phone' => '082345671004',
-                'latitude' => -4.86010000,
-                'longitude' => 121.94550000,
-                'radius_meters' => 150,
-                'work_days' => '5_days',
-                'major_codes' => ['ATPH'],
+                'latitude' => -5.19000000,
+                'longitude' => 121.82000000,
+                'radius_meters' => 500,
                 'supervisor' => [
-                    'name' => 'Ir. Rusdin',
-                    'email' => 'spv.distan@dudi-bombana.id',
-                    'gender' => 'L',
-                    'phone' => '082345672004',
-                    'position' => 'Penyuluh Pertanian Lapangan',
-                ],
-            ],
-            [
-                'name' => 'Koperasi Simpan Pinjam Sejahtera Bombana',
-                'address' => 'Jl. Poros Kasipute, Kel. Lameroro, Kec. Rumbia, Kabupaten Bombana',
-                'contact_person' => 'Nurlina, S.E.',
-                'phone' => '082345671005',
-                'latitude' => -4.85480000,
-                'longitude' => 121.94990000,
-                'radius_meters' => 100,
-                'work_days' => '5_days',
-                'major_codes' => ['AKL'],
-                'supervisor' => [
-                    'name' => 'Nurlina, S.E.',
-                    'email' => 'spv.ksp@dudi-bombana.id',
+                    'name' => 'Rina Marlina, S.T.',
+                    'email' => 'spv.timahinvest@mitra.smkn4bombana.sch.id',
                     'gender' => 'P',
-                    'phone' => '082345672005',
-                    'position' => 'Kepala Bagian Keuangan',
+                    'phone' => '082345672004',
+                    'position' => 'Geologist Eksplorasi & Pemetaan',
                 ],
             ],
         ];
+
+        $gpId = Major::where('school_id', $school->id)->where('code', 'GP')->value('id');
 
         foreach ($companiesData as $c) {
             $company = Company::firstOrCreate(
@@ -125,17 +104,12 @@ class Smkn4BombanaCompanySeeder extends Seeder
                     'longitude' => $c['longitude'],
                     'radius_meters' => $c['radius_meters'],
                     'override_hours' => false,
-                    'work_days' => $c['work_days'],
+                    'work_days' => '6_days',
                 ]
             );
 
-            $majorIds = Major::where('school_id', $school->id)
-                ->whereIn('code', $c['major_codes'])
-                ->pluck('id')
-                ->toArray();
-
-            if (!empty($majorIds)) {
-                $company->majors()->syncWithoutDetaching($majorIds);
+            if ($gpId) {
+                $company->majors()->syncWithoutDetaching([$gpId]);
             }
 
             $spv = $c['supervisor'];
