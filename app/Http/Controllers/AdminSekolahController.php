@@ -20,10 +20,12 @@ use App\Models\StudentPkl;
 use App\Models\Supervisor;
 use App\Models\Teacher;
 use App\Models\User;
+use App\Services\AuditLogService;
 use App\Services\CertificateService;
 use App\Services\HolidayService;
 use App\Services\IncidentReportService;
 use App\Services\SubscriptionService;
+use App\Services\TenantProvisioningService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -667,6 +669,46 @@ class AdminSekolahController extends Controller
         });
 
         return back()->with('success', 'Data guru pembimbing berhasil diperbarui.');
+    }
+
+    public function resetTeacherPassword(Request $request, Teacher $teacher)
+    {
+        $schoolId = $this->getSchoolId();
+        abort_if($teacher->user->school_id !== $schoolId, 403);
+
+        $validated = $request->validate([
+            'new_password' => ['nullable', 'string', 'min:8', 'max:100'],
+        ], [
+            'new_password.min' => 'Kata sandi baru minimal 8 karakter. Kosongkan untuk dibuatkan otomatis.',
+        ]);
+
+        $user = $teacher->user;
+        $newPassword = $validated['new_password'] ?? TenantProvisioningService::generateTemporaryPassword();
+
+        $user->update([
+            'password' => $newPassword,
+            'is_active' => true,
+            'must_change_password' => true,
+        ]);
+
+        // Putus seluruh sesi aktif guru agar kata sandi lama tidak bisa dipakai lagi.
+        if (config('session.driver') === 'database') {
+            DB::table(config('session.table', 'sessions'))->where('user_id', $user->id)->delete();
+        }
+
+        AuditLogService::log(
+            'password_reset',
+            'security',
+            "Kata sandi guru pembimbing ({$user->email}) direset oleh Admin Sekolah " . Auth::user()->email . '.'
+        );
+
+        return back()
+            ->with('success', "Kata sandi {$user->name} berhasil direset. Guru wajib menggantinya saat login berikutnya.")
+            ->with('temporary_credential', [
+                'email' => $user->email,
+                'password' => $newPassword,
+                'context' => "Guru Pembimbing {$user->name}",
+            ]);
     }
 
     public function destroyTeacher(Teacher $teacher)

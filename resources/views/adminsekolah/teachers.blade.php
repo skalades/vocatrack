@@ -166,6 +166,13 @@
                                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                                     <span>Edit</span>
                                 </button>
+                                <form action="{{ route('adminsekolah.teachers.reset-password', $t) }}" method="POST" class="inline" onsubmit="var p = prompt('Kata sandi baru untuk {{ addslashes($t->user->name) }} (min. 8 karakter). Kosongkan untuk dibuatkan otomatis:'); if (p === null) return false; this.new_password.value = p; return true;">
+                                    @csrf
+                                    <input type="hidden" name="new_password" value="">
+                                    <button type="submit" class="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[11px] font-bold border border-indigo-200 transition-colors cursor-pointer" title="Reset kata sandi guru pembimbing">
+                                        Reset Sandi
+                                    </button>
+                                </form>
                                 <form action="{{ route('impersonate.start', $t->user) }}" method="POST" class="inline" onsubmit="return confirm('Masuk sebagai {{ $t->user->name }} (Mode Impersonasi)?')">
                                     @csrf
                                     <button type="submit" class="px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 text-[11px] font-bold border border-amber-200 transition-colors cursor-pointer" title="Masuk sebagai akun ini untuk inspeksi sistem">

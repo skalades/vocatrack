@@ -427,7 +427,7 @@
                     </div>
                 @endif
 
-                @if(is_array(session('temporary_credential')) && auth()->user()?->hasRole('super-admin'))
+                @if(is_array(session('temporary_credential')) && auth()->user()?->hasRole(['super-admin', 'admin-sekolah']))
                     @php
                         $tmpCred = session('temporary_credential');
                     @endphp

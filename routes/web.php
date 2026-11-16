@@ -163,6 +163,7 @@ Route::middleware(['auth', 'IdentifyTenant', 'role:admin-sekolah'])->prefix('adm
     Route::get('/teachers', [AdminSekolahController::class, 'teachers'])->name('adminsekolah.teachers');
     Route::post('/teachers', [AdminSekolahController::class, 'storeTeacher'])->name('adminsekolah.teachers.store');
     Route::put('/teachers/{teacher}', [AdminSekolahController::class, 'updateTeacher'])->name('adminsekolah.teachers.update');
+    Route::post('/teachers/{teacher}/reset-password', [AdminSekolahController::class, 'resetTeacherPassword'])->name('adminsekolah.teachers.reset-password');
     Route::delete('/teachers/{teacher}', [AdminSekolahController::class, 'destroyTeacher'])->name('adminsekolah.teachers.destroy');
 
     // DU/DI Companies & Supervisors
