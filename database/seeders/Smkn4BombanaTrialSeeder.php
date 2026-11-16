@@ -14,6 +14,9 @@ use Illuminate\Support\Facades\Hash;
 
 class Smkn4BombanaTrialSeeder extends Seeder
 {
+    // TODO: ganti dengan NPSN resmi SMKN 4 Bombana (cek referensi.data.kemdikbud.go.id).
+    public const NPSN = '74040004';
+
     /**
      * Tenant baru SMK Negeri 04 Bombana dengan paket Trial Evaluasi 7 hari (mulai hari ini).
      * Hanya membuat profil sekolah, pengaturan, Admin Sekolah, Kepala Sekolah, dan langganan trial —
@@ -31,9 +34,8 @@ class Smkn4BombanaTrialSeeder extends Seeder
         $trialPlan = SubscriptionPlan::where('code', 'trial-14d')->firstOrFail();
 
         // 1. Profil Sekolah
-        // TODO: ganti NPSN dengan NPSN resmi SMKN 4 Bombana (cek referensi.data.kemdikbud.go.id).
         $school = School::firstOrCreate(
-            ['npsn' => '74040004'],
+            ['npsn' => self::NPSN],
             [
                 'name' => 'SMK Negeri 04 Bombana',
                 'address' => 'Kabupaten Bombana, Sulawesi Tenggara',

@@ -35,7 +35,7 @@ class DatabaseSeeder extends Seeder
             SubscriptionPlanSeeder::class,
 
             // Sekolah 4: SMKN 04 Bombana (tenant baru, Trial 7 Hari mulai hari ini)
-            Smkn4BombanaTrialSeeder::class,
+            Smkn4BombanaSeeder::class,
         ]);
     }
 }
