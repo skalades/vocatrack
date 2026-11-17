@@ -12,36 +12,170 @@
 @endphp
 
 <!-- Screen 3: Presensi Berhasil (Ticket Receipt Screen) -->
+<style>
+    /* Concentric ripple wave animations */
+    .ticket-ripple {
+        transform-origin: 195px 92px;
+        animation: ticket-ripple-wave 3.6s cubic-bezier(0.25, 1, 0.5, 1) infinite;
+    }
+    .ticket-ripple-1 { animation-delay: 0s; }
+    .ticket-ripple-2 { animation-delay: 1.2s; }
+    .ticket-ripple-3 { animation-delay: 2.4s; }
+
+    @keyframes ticket-ripple-wave {
+        0% {
+            r: 40px;
+            opacity: 0.85;
+            stroke-width: 2.5px;
+        }
+        50% {
+            opacity: 0.45;
+        }
+        100% {
+            r: 220px;
+            opacity: 0;
+            stroke-width: 1px;
+        }
+    }
+
+    /* Subtle breathe for background rings */
+    .ticket-ring-static {
+        transform-origin: 195px 92px;
+        animation: ticket-ring-breathe 4s ease-in-out infinite alternate;
+    }
+
+    @keyframes ticket-ring-breathe {
+        0% { stroke-opacity: 0.45; transform: scale(0.985); }
+        100% { stroke-opacity: 0.9; transform: scale(1.015); }
+    }
+
+    /* Success Check Badge Pop & Pulse */
+    .ticket-badge-pop {
+        animation: ticket-pop-in 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    }
+    .ticket-badge-pulse {
+        animation: ticket-badge-heartbeat 2.8s ease-in-out 0.8s infinite;
+    }
+
+    @keyframes ticket-pop-in {
+        0% {
+            transform: scale(0.3) rotate(-12deg);
+            opacity: 0;
+        }
+        70% {
+            transform: scale(1.14) rotate(3deg);
+            opacity: 1;
+        }
+        100% {
+            transform: scale(1) rotate(0deg);
+            opacity: 1;
+        }
+    }
+
+    @keyframes ticket-badge-heartbeat {
+        0%, 100% {
+            box-shadow: 0 0 0 0 rgba(11, 43, 37, 0.22), 0 8px 24px rgba(11, 43, 37, 0.12);
+        }
+        50% {
+            box-shadow: 0 0 0 16px rgba(11, 43, 37, 0), 0 12px 28px rgba(11, 43, 37, 0.18);
+        }
+    }
+
+    /* SVG Checkmark drawing stroke */
+    .ticket-check-stroke {
+        stroke-dasharray: 40;
+        stroke-dashoffset: 40;
+        animation: ticket-check-draw 0.55s cubic-bezier(0.65, 0, 0.45, 1) 0.35s forwards;
+    }
+
+    @keyframes ticket-check-draw {
+        to {
+            stroke-dashoffset: 0;
+        }
+    }
+
+    /* Staggered text & card reveal */
+    .ticket-title-reveal {
+        animation: ticket-slide-up 0.55s cubic-bezier(0.16, 1, 0.3, 1) 0.25s both;
+    }
+    .ticket-sub-reveal {
+        animation: ticket-slide-up 0.55s cubic-bezier(0.16, 1, 0.3, 1) 0.38s both;
+    }
+    .ticket-card-reveal {
+        animation: ticket-card-up 0.65s cubic-bezier(0.16, 1, 0.3, 1) 0.45s both;
+    }
+
+    @keyframes ticket-slide-up {
+        0% {
+            opacity: 0;
+            transform: translateY(14px);
+        }
+        100% {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes ticket-card-up {
+        0% {
+            opacity: 0;
+            transform: translateY(22px) scale(0.97);
+        }
+        100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .ticket-ripple, .ticket-ring-static, .ticket-badge-pop, .ticket-badge-pulse, .ticket-check-stroke, .ticket-title-reveal, .ticket-sub-reveal, .ticket-card-reveal {
+            animation: none !important;
+            transform: none !important;
+            opacity: 1 !important;
+            stroke-dashoffset: 0 !important;
+        }
+    }
+</style>
+
 <div class="relative w-full flex flex-col items-center pb-24 font-sans select-none animate-fade-in">
 
-    <!-- Lime Green Curved Header Banner -->
+    <!-- Lime Green Curved Header Banner with Animated Waves -->
     <div class="absolute left-0 top-0 right-0 h-[290px] bg-[#C6F26B] rounded-b-[36px] overflow-hidden">
-        <svg width="390" height="290" viewBox="0 0 390 290" aria-hidden="true" class="absolute left-0 top-0 w-full h-full object-cover opacity-80 pointer-events-none">
-            <circle cx="195" cy="92" r="84" fill="none" stroke="#B3E650" stroke-width="2"/>
-            <circle cx="195" cy="92" r="128" fill="none" stroke="#B3E650" stroke-width="2"/>
-            <circle cx="195" cy="92" r="172" fill="none" stroke="#B3E650" stroke-width="2"/>
-            <circle cx="195" cy="92" r="216" fill="none" stroke="#B3E650" stroke-width="2"/>
+        <svg width="390" height="290" viewBox="0 0 390 290" aria-hidden="true" class="absolute left-0 top-0 w-full h-full object-cover opacity-85 pointer-events-none">
+            <!-- Static decorative rings with breathing effect -->
+            <g class="ticket-ring-static">
+                <circle cx="195" cy="92" r="84" fill="none" stroke="#B3E650" stroke-width="2"/>
+                <circle cx="195" cy="92" r="128" fill="none" stroke="#B3E650" stroke-width="2"/>
+                <circle cx="195" cy="92" r="172" fill="none" stroke="#B3E650" stroke-width="2"/>
+                <circle cx="195" cy="92" r="216" fill="none" stroke="#B3E650" stroke-width="2"/>
+            </g>
+            <!-- Dynamic outward expanding ripples -->
+            <circle cx="195" cy="92" r="40" fill="none" stroke="#FFFFFF" class="ticket-ripple ticket-ripple-1"/>
+            <circle cx="195" cy="92" r="40" fill="none" stroke="#B3E650" class="ticket-ripple ticket-ripple-2"/>
+            <circle cx="195" cy="92" r="40" fill="none" stroke="#FFFFFF" class="ticket-ripple ticket-ripple-3"/>
         </svg>
     </div>
 
     <!-- Top Status Icon & Titles -->
     <div class="relative z-10 flex flex-col items-center pt-8 px-5 box-border w-full text-center">
-        <!-- Big Check Icon in Dark Green Circle -->
-        <div class="w-[76px] h-[76px] rounded-full bg-[#0B2B25] text-[#C6F26B] flex items-center justify-center shadow-[0_0_0_10px_rgba(11,43,37,0.1)]">
-            <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="20 6 9 17 4 12"/>
-            </svg>
+        <!-- Big Check Icon in Dark Green Circle with Pop & Aura Pulse -->
+        <div class="ticket-badge-pop">
+            <div class="ticket-badge-pulse w-[76px] h-[76px] rounded-full bg-[#0B2B25] text-[#C6F26B] flex items-center justify-center shadow-[0_0_0_10px_rgba(11,43,37,0.1)]">
+                <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12" class="ticket-check-stroke"/>
+                </svg>
+            </div>
         </div>
 
-        <h1 class="font-space font-bold text-[27px] leading-tight text-[#0B2B25] mt-4">
+        <h1 class="ticket-title-reveal font-space font-bold text-[27px] leading-tight text-[#0B2B25] mt-4">
             Presensi masuk tercatat
         </h1>
-        <p class="text-sm font-medium text-[#1F3B30] mt-1">
+        <p class="ticket-sub-reveal text-sm font-medium text-[#1F3B30] mt-1">
             Selamat bekerja, {{ $firstName }}. Hari ke-{{ $dayNumber }} PKL.
         </p>
 
-        <!-- Perforated Ticket Card -->
-        <div class="relative w-full max-w-[350px] mt-6 bg-white rounded-[28px] shadow-[0_12px_32px_rgba(11,43,37,0.14)] text-left overflow-hidden border border-slate-100">
+        <!-- Perforated Ticket Card with Slide-Up Entrance -->
+        <div class="ticket-card-reveal relative w-full max-w-[350px] mt-6 bg-white rounded-[28px] shadow-[0_12px_32px_rgba(11,43,37,0.14)] text-left overflow-hidden border border-slate-100">
             <!-- Upper Ticket Section -->
             <div class="p-4.5 flex flex-col gap-3.5">
                 <!-- Verified Selfie Row -->
