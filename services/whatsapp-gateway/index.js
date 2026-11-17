@@ -1,6 +1,6 @@
 require('dotenv').config();
 const express = require('express');
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, Browsers } = require('@whiskeysockets/baileys');
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, Browsers, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
 const pino = require('pino');
 const QRCode = require('qrcode');
 const path = require('path');
@@ -15,10 +15,11 @@ const API_KEY = process.env.API_KEY || 'vokatrack-secret-key-2026';
 const AUTH_DIR = path.join(__dirname, 'auth_info_baileys');
 
 let sock = null;
-let connectionStatus = 'initializing';
+let connectionStatus = 'connecting';
 let qrCodeDataUrl = null;
 let connectedUser = null;
 let lastError = null;
+let isConnecting = false;
 
 // Normalisasi nomor telepon ke format WhatsApp (62xxxxxxxxxx@s.whatsapp.net)
 function formatWhatsAppJid(phone) {
@@ -34,72 +35,94 @@ function formatWhatsAppJid(phone) {
 
 // Inisialisasi Koneksi Baileys
 async function connectToWhatsApp() {
+    if (isConnecting) return;
+    isConnecting = true;
+
+    // Bersihkan listener dari socket lama jika ada
+    if (sock) {
+        try {
+            sock.ev.removeAllListeners();
+            sock.end(undefined);
+        } catch (e) {}
+        sock = null;
+    }
+
     connectionStatus = 'connecting';
-    const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
 
-    sock = makeWASocket({
-        auth: state,
-        logger: pino({ level: 'silent' }), // Silent agar terminal tetap bersih dan rapi
-        printQRInTerminal: true,
-        browser: Browsers.ubuntu('Chrome'),
-        connectTimeoutMs: 60000,
-        defaultQueryTimeoutMs: 60000,
-        keepAliveIntervalMs: 15000,
-        syncFullHistory: false
-    });
+    try {
+        const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
+        const { version } = await fetchLatestBaileysVersion().catch(() => ({ version: [2, 3000, 1043857760] }));
 
-    sock.ev.on('creds.update', saveCreds);
+        sock = makeWASocket({
+            version,
+            auth: state,
+            logger: pino({ level: 'silent' }), // Silent agar terminal tetap bersih dan rapi
+            printQRInTerminal: false,
+            browser: Browsers.ubuntu('Chrome'),
+            connectTimeoutMs: 60000,
+            defaultQueryTimeoutMs: 60000,
+            keepAliveIntervalMs: 25000,
+            syncFullHistory: false
+        });
 
-    sock.ev.on('connection.update', async (update) => {
-        const { connection, lastDisconnect, qr } = update;
+        sock.ev.on('creds.update', saveCreds);
 
-        if (qr) {
-            connectionStatus = 'waiting_scan';
-            try {
-                qrCodeDataUrl = await QRCode.toDataURL(qr, { width: 300, margin: 2 });
-                console.log('\n[VokaTrack WA Gateway] >>> QR CODE BARU TERSEDIA <<<');
-                console.log('[VokaTrack WA Gateway] Buka https://vocatrack.nadirlabs.net/super-admin/whatsapp untuk scan di web');
-            } catch (err) {
-                console.error('[VokaTrack WA Gateway] Gagal generate QR:', err);
-            }
-        }
+        sock.ev.on('connection.update', async (update) => {
+            const { connection, lastDisconnect, qr } = update;
 
-        if (connection === 'close') {
-            const statusCode = lastDisconnect?.error?.output?.statusCode;
-            const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
-            lastError = lastDisconnect?.error?.message || 'Koneksi terputus';
-            connectionStatus = 'disconnected';
-            qrCodeDataUrl = null;
-            connectedUser = null;
-
-            if (statusCode === 408) {
-                console.log('[VokaTrack WA Gateway] QR Code kedaluwarsa (belum di-scan). Mengambil QR Code baru dalam 3 detik...');
-            } else {
-                console.log(`[VokaTrack WA Gateway] Koneksi terputus. Alasan: ${statusCode}. Reconnect: ${shouldReconnect}`);
-            }
-
-            if (shouldReconnect) {
-                setTimeout(connectToWhatsApp, 3000);
-            } else {
-                console.log('[VokaTrack WA Gateway] Sesi telah logout. Silakan scan ulang.');
+            if (qr) {
+                connectionStatus = 'waiting_scan';
+                lastError = null;
                 try {
-                    fs.rmSync(AUTH_DIR, { recursive: true, force: true });
-                } catch (e) {}
-                setTimeout(connectToWhatsApp, 3000);
+                    qrCodeDataUrl = await QRCode.toDataURL(qr, { width: 300, margin: 2 });
+                    console.log('\n[VokaTrack WA Gateway] >>> QR CODE BARU TERSEDIA <<<');
+                    console.log('[VokaTrack WA Gateway] Buka https://vocatrack.nadirlabs.net/super-admin/whatsapp untuk scan di web');
+                } catch (err) {
+                    console.error('[VokaTrack WA Gateway] Gagal generate QR:', err);
+                }
             }
-        } else if (connection === 'open') {
-            connectionStatus = 'connected';
-            qrCodeDataUrl = null;
-            lastError = null;
-            connectedUser = sock.user;
-            const phone = sock.user?.id ? sock.user.id.split(':')[0] : 'Aktif';
-            console.log(`\n======================================================`);
-            console.log(`✅ [VokaTrack WA Gateway] WhatsApp BERHASIL TERHUBUNG!`);
-            console.log(`   Nomor Pengirim: ${phone}`);
-            console.log(`   REST API Siap: http://localhost:${PORT}/send-message`);
-            console.log(`======================================================\n`);
-        }
-    });
+
+            if (connection === 'close') {
+                const statusCode = lastDisconnect?.error?.output?.statusCode;
+                const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
+                lastError = lastDisconnect?.error?.message || 'Koneksi terputus';
+                connectedUser = null;
+
+                if (statusCode === 408) {
+                    console.log('[VokaTrack WA Gateway] QR Code kedaluwarsa / timeout. Mengambil QR Code baru dalam 2 detik...');
+                    // Reset AUTH_DIR agar QR counter di-reset WhatsApp dan tidak terjadi infinite loop
+                    try {
+                        fs.rmSync(AUTH_DIR, { recursive: true, force: true });
+                    } catch (e) {}
+                } else {
+                    console.log(`[VokaTrack WA Gateway] Koneksi terputus. Status: ${statusCode || 'Unknown'}. Reconnect: ${shouldReconnect}`);
+                }
+
+                connectionStatus = 'connecting';
+                isConnecting = false;
+                setTimeout(connectToWhatsApp, 2000);
+            } else if (connection === 'open') {
+                connectionStatus = 'connected';
+                qrCodeDataUrl = null;
+                lastError = null;
+                isConnecting = false;
+                connectedUser = sock.user;
+                const phone = sock.user?.id ? sock.user.id.split(':')[0] : 'Aktif';
+                console.log(`\n======================================================`);
+                console.log(`✅ [VokaTrack WA Gateway] WhatsApp BERHASIL TERHUBUNG!`);
+                console.log(`   Nomor Pengirim: ${phone}`);
+                console.log(`   REST API Siap: http://localhost:${PORT}/send-message`);
+                console.log(`======================================================\n`);
+            }
+        });
+    } catch (err) {
+        console.error('[VokaTrack WA Gateway] Error inisialisasi koneksi:', err.message);
+        connectionStatus = 'connecting';
+        isConnecting = false;
+        setTimeout(connectToWhatsApp, 3000);
+    } finally {
+        isConnecting = false;
+    }
 }
 
 // Middleware Autentikasi API Key (Opsional / Bearer Token)

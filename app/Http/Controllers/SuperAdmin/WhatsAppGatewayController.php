@@ -30,7 +30,7 @@ class WhatsAppGatewayController extends Controller
         $provider = config('services.whatsapp.provider', 'custom');
 
         $isServiceRunning = false;
-        $connectionStatus = 'disconnected';
+        $connectionStatus = 'offline';
         $qrCodeDataUrl = null;
         $connectedUser = null;
         $error = null;
@@ -51,16 +51,20 @@ class WhatsAppGatewayController extends Controller
                     $isServiceRunning = true;
                     $activeBaseUrl = $url;
                     $data = $response->json();
-                    $connectionStatus = $data['status'] ?? 'disconnected';
+                    $connectionStatus = $data['status'] ?? 'connecting';
                     $connectedUser = $data['user'] ?? null;
                     $error = $data['error'] ?? null;
 
-                    if ($connectionStatus === 'waiting_scan') {
+                    try {
                         $qrResponse = Http::timeout(3)->get("{$url}/qr-data");
-                        if ($qrResponse->successful()) {
+                        if ($qrResponse->successful() && $qrResponse->json('qr')) {
                             $qrCodeDataUrl = $qrResponse->json('qr');
+                            if ($connectionStatus !== 'connected') {
+                                $connectionStatus = 'waiting_scan';
+                            }
                         }
-                    }
+                    } catch (\Throwable $e) {}
+
                     break;
                 }
             } catch (\Throwable $e) {
@@ -93,14 +97,19 @@ class WhatsAppGatewayController extends Controller
                 $response = Http::timeout(3)->get("{$url}/status");
                 if ($response->successful()) {
                     $data = $response->json();
-                    $status = $data['status'] ?? 'disconnected';
+                    $status = $data['status'] ?? 'connecting';
                     $qr = null;
-                    if ($status === 'waiting_scan') {
+
+                    try {
                         $qrRes = Http::timeout(3)->get("{$url}/qr-data");
-                        if ($qrRes->successful()) {
+                        if ($qrRes->successful() && $qrRes->json('qr')) {
                             $qr = $qrRes->json('qr');
+                            if ($status !== 'connected') {
+                                $status = 'waiting_scan';
+                            }
                         }
-                    }
+                    } catch (\Throwable $e) {}
+
                     return response()->json([
                         'running' => true,
                         'status' => $status,

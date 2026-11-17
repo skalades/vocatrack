@@ -13,10 +13,10 @@
         badge="WHATSAPP ENGINE (SELF-HOSTED)"
     >
         <div class="flex items-center gap-2">
-            <span id="header-status-badge" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold font-mono {{ $connectionStatus === 'connected' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : ($connectionStatus === 'waiting_scan' ? 'bg-amber-50 text-amber-800 border border-amber-200 animate-pulse' : 'bg-rose-50 text-rose-700 border border-rose-200') }}">
-                <span class="w-2 h-2 rounded-full {{ $connectionStatus === 'connected' ? 'bg-emerald-500' : ($connectionStatus === 'waiting_scan' ? 'bg-amber-500' : 'bg-rose-500') }}"></span>
+            <span id="header-status-badge" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold font-mono {{ $connectionStatus === 'connected' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : ($connectionStatus === 'waiting_scan' ? 'bg-amber-50 text-amber-800 border border-amber-200 animate-pulse' : ($isServiceRunning ? 'bg-sky-50 text-sky-800 border border-sky-200 animate-pulse' : 'bg-rose-50 text-rose-700 border border-rose-200')) }}">
+                <span class="w-2 h-2 rounded-full {{ $connectionStatus === 'connected' ? 'bg-emerald-500' : ($connectionStatus === 'waiting_scan' ? 'bg-amber-500' : ($isServiceRunning ? 'bg-sky-500' : 'bg-rose-500')) }}"></span>
                 <span id="header-status-text">
-                    {{ $connectionStatus === 'connected' ? 'TERHUBUNG' : ($connectionStatus === 'waiting_scan' ? 'SCAN QR CODE' : 'OFFLINE') }}
+                    {{ $connectionStatus === 'connected' ? 'TERHUBUNG' : ($connectionStatus === 'waiting_scan' ? 'SCAN QR CODE' : ($isServiceRunning ? 'MENYIAPKAN QR...' : 'OFFLINE')) }}
                 </span>
             </span>
         </div>
@@ -85,7 +85,20 @@
                         </div>
                     </div>
 
-                    <div id="status-card-offline" class="{{ (!$isServiceRunning || $connectionStatus === 'disconnected') ? '' : 'hidden' }} p-6 rounded-2xl bg-rose-50/70 border border-rose-200 text-center space-y-4">
+                    <div id="status-card-connecting" class="{{ ($isServiceRunning && $connectionStatus !== 'connected' && $connectionStatus !== 'waiting_scan') ? '' : 'hidden' }} p-6 rounded-2xl bg-sky-50/70 border border-sky-200 text-center space-y-4">
+                        <div class="w-16 h-16 rounded-2xl bg-sky-100 text-sky-700 flex items-center justify-center mx-auto shadow-sm animate-pulse">
+                            <svg class="w-8 h-8 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
+                        </div>
+                        <div>
+                            <h4 class="text-base font-extrabold text-sky-950">Engine Aktif — Menyiapkan QR Code...</h4>
+                            <p class="text-xs text-sky-800 mt-1">Sedang menghubungkan ke server WhatsApp dan mengambil QR code baru.</p>
+                        </div>
+                        <p class="text-xs text-sky-800/80 max-w-md mx-auto">
+                            Mohon tunggu beberapa saat. Halaman ini akan otomatis menampilkan QR Code begitu server WhatsApp siap.
+                        </p>
+                    </div>
+
+                    <div id="status-card-offline" class="{{ !$isServiceRunning ? '' : 'hidden' }} p-6 rounded-2xl bg-rose-50/70 border border-rose-200 text-center space-y-4">
                         <div class="w-16 h-16 rounded-2xl bg-rose-100 text-rose-700 flex items-center justify-center mx-auto shadow-sm">
                             <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
                         </div>
@@ -178,36 +191,48 @@
             .then(data => {
                 const headerBadge = document.getElementById('header-status-badge');
                 const headerText = document.getElementById('header-status-text');
+                const cardConnecting = document.getElementById('status-card-connecting');
                 const cardConnected = document.getElementById('status-card-connected');
                 const cardQr = document.getElementById('status-card-qr');
                 const cardOffline = document.getElementById('status-card-offline');
                 const qrImage = document.getElementById('qr-image');
                 const phoneDisplay = document.getElementById('connected-phone-display');
 
-                if (!data.running || data.status === 'offline' || data.status === 'disconnected') {
+                if (!data.running || data.status === 'offline') {
                     headerBadge.className = 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold font-mono bg-rose-50 text-rose-700 border border-rose-200';
                     headerText.textContent = 'OFFLINE';
                     cardConnected.classList.add('hidden');
                     cardQr.classList.add('hidden');
+                    cardConnecting.classList.add('hidden');
                     cardOffline.classList.remove('hidden');
                 } else if (data.status === 'connected') {
                     headerBadge.className = 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold font-mono bg-emerald-50 text-emerald-700 border border-emerald-200';
                     headerText.textContent = 'TERHUBUNG';
                     cardConnected.classList.remove('hidden');
                     cardQr.classList.add('hidden');
+                    cardConnecting.classList.add('hidden');
                     cardOffline.classList.add('hidden');
                     if (data.user && data.user.id) {
                         phoneDisplay.textContent = '+' + data.user.id;
                     }
-                } else if (data.status === 'waiting_scan') {
+                } else if (data.status === 'waiting_scan' && data.qr) {
                     headerBadge.className = 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold font-mono bg-amber-50 text-amber-800 border border-amber-200 animate-pulse';
                     headerText.textContent = 'SCAN QR CODE';
                     cardConnected.classList.add('hidden');
                     cardQr.classList.remove('hidden');
+                    cardConnecting.classList.add('hidden');
                     cardOffline.classList.add('hidden');
-                    if (data.qr && qrImage) {
+                    if (qrImage) {
                         qrImage.src = data.qr;
                     }
+                } else {
+                    // Running tapi masih connecting / mengambil QR baru
+                    headerBadge.className = 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold font-mono bg-sky-50 text-sky-800 border border-sky-200 animate-pulse';
+                    headerText.textContent = 'MENYIAPKAN QR...';
+                    cardConnected.classList.add('hidden');
+                    cardQr.classList.add('hidden');
+                    cardOffline.classList.add('hidden');
+                    cardConnecting.classList.remove('hidden');
                 }
             })
             .catch(() => {});
