@@ -229,12 +229,12 @@ class EmergencySosMultiChannelTest extends TestCase
 
         config([
             'services.whatsapp.provider' => 'custom',
-            'services.whatsapp.url' => 'http://127.0.0.1:3000/send-message',
+            'services.whatsapp.url' => 'http://127.0.0.1:3005/send-message',
             'services.whatsapp.token' => 'vokatrack-secret-key-2026',
         ]);
 
         Http::fake([
-            'http://127.0.0.1:3000/send-message' => Http::response(['success' => true], 200),
+            'http://127.0.0.1:3005/send-message' => Http::response(['success' => true], 200),
         ]);
 
         $gateway = new WhatsAppGatewayService();
@@ -242,7 +242,7 @@ class EmergencySosMultiChannelTest extends TestCase
 
         $this->assertTrue($result);
         Http::assertSent(function ($request) {
-            return $request->url() === 'http://127.0.0.1:3000/send-message'
+            return $request->url() === 'http://127.0.0.1:3005/send-message'
                 && $request->hasHeader('Authorization', 'Bearer vokatrack-secret-key-2026')
                 && $request['phone'] === '628123456789'
                 && $request['message'] === 'Uji coba gateway mandiri';

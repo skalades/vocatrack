@@ -14,14 +14,14 @@ class WhatsAppGatewayController extends Controller
 {
     protected function getGatewayBaseUrl(): string
     {
-        $rawUrl = config('services.whatsapp.url', 'http://127.0.0.1:3000/send-message');
+        $rawUrl = config('services.whatsapp.url', 'http://127.0.0.1:3005/send-message');
         $parsed = parse_url($rawUrl);
         if (!empty($parsed['host'])) {
             $scheme = $parsed['scheme'] ?? 'http';
             $port = !empty($parsed['port']) ? ':' . $parsed['port'] : '';
             return "{$scheme}://{$parsed['host']}{$port}";
         }
-        return 'http://127.0.0.1:3000';
+        return 'http://127.0.0.1:3005';
     }
 
     public function index(Request $request)
@@ -35,13 +35,14 @@ class WhatsAppGatewayController extends Controller
         $connectedUser = null;
         $error = null;
 
+        $configuredBaseUrl = $this->getGatewayBaseUrl();
         $tryUrls = array_unique([
-            $this->getGatewayBaseUrl(),
-            'http://127.0.0.1:3000',
-            'http://localhost:3000',
+            $configuredBaseUrl,
+            'http://127.0.0.1:3005',
+            'http://localhost:3005',
         ]);
 
-        $activeBaseUrl = 'http://127.0.0.1:3000';
+        $activeBaseUrl = $configuredBaseUrl;
 
         foreach ($tryUrls as $url) {
             try {
@@ -80,10 +81,11 @@ class WhatsAppGatewayController extends Controller
 
     public function ajaxStatus(): JsonResponse
     {
+        $configuredBaseUrl = $this->getGatewayBaseUrl();
         $tryUrls = array_unique([
-            $this->getGatewayBaseUrl(),
-            'http://127.0.0.1:3000',
-            'http://localhost:3000',
+            $configuredBaseUrl,
+            'http://127.0.0.1:3005',
+            'http://localhost:3005',
         ]);
 
         foreach ($tryUrls as $url) {

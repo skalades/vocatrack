@@ -33,7 +33,7 @@
                         <h3 class="text-base font-extrabold text-slate-900 tracking-tight">Koneksi Perangkat WhatsApp</h3>
                         <p class="text-xs text-slate-500 font-medium">Scan QR Code dengan WhatsApp di HP Administrator/Sekolah.</p>
                     </div>
-                    <span class="text-[11px] font-bold font-mono text-slate-400">Port: 3000</span>
+                    <span class="text-[11px] font-bold font-mono text-slate-400">Port: {{ parse_url($baseUrl, PHP_URL_PORT) ?? '3005' }}</span>
                 </div>
 
                 <div class="py-4">
@@ -91,11 +91,11 @@
                         </div>
                         <div>
                             <h4 class="text-base font-extrabold text-rose-950">Engine WhatsApp Belum Aktif</h4>
-                            <p class="text-xs text-rose-800 mt-1">Microservice Node.js di server belum berjalan pada port 3000.</p>
+                            <p class="text-xs text-rose-800 mt-1">Microservice Node.js di server belum berjalan pada port {{ parse_url($baseUrl, PHP_URL_PORT) ?? '3005' }}.</p>
                         </div>
                         <div class="p-3 bg-white/80 rounded-xl border border-rose-200 text-left font-mono text-xs text-slate-800 space-y-1">
                             <p class="text-[10px] uppercase font-bold text-slate-400">Jalankan di terminal server:</p>
-                            <p class="text-indigo-600 font-bold select-all">cd services/whatsapp-gateway && npm start</p>
+                            <p class="text-indigo-600 font-bold select-all">pm2 restart vokatrack-wa (atau cd services/whatsapp-gateway &amp;&amp; npm start)</p>
                         </div>
                     </div>
                 </div>
