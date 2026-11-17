@@ -37,8 +37,9 @@ class StudentAccountsDataSheet implements FromCollection, WithTitle, WithEvents,
         $school = $this->meta['school_name'] ?? 'Sekolah';
         $major = $this->meta['major_name'] ?? 'Semua Jurusan';
         $class = $this->meta['class_name'] ?? 'Semua Kelas';
+        $company = $this->meta['company_name'] ?? 'Semua Perusahaan';
         $date = $this->meta['downloaded_at'] ?? now()->format('d/m/Y H:i');
-        $rows->push(["Sekolah: {$school}   |   Jurusan: {$major}   |   Kelas: {$class}   |   Waktu Unduh: {$date}"]);
+        $rows->push(["Sekolah: {$school}   |   Jurusan: {$major}   |   Kelas: {$class}   |   Perusahaan: {$company}   |   Waktu Unduh: {$date}"]);
 
         // Row 3: Baris Pemisah Kosong
         $rows->push(['']);
@@ -51,6 +52,7 @@ class StudentAccountsDataSheet implements FromCollection, WithTitle, WithEvents,
             'NIS',
             'Jurusan',
             'Kelas / Rombel',
+            'Tempat PKL / Perusahaan',
             'Email Akun',
             'Password Default',
             'Status Akun',
@@ -68,6 +70,7 @@ class StudentAccountsDataSheet implements FromCollection, WithTitle, WithEvents,
             $email = $user?->email ?? '-';
             $majorName = $student->class?->major?->name ?? '-';
             $className = $student->class?->name ?? '-';
+            $companyName = $student->activePkl?->company?->name ?? 'Belum Diplot';
             $status = ($user && $user->is_active) ? 'Aktif' : 'Nonaktif';
             $defaultPassword = 'password';
 
@@ -80,6 +83,7 @@ class StudentAccountsDataSheet implements FromCollection, WithTitle, WithEvents,
                 $nis,
                 $majorName,
                 $className,
+                $companyName,
                 $email,
                 $defaultPassword,
                 $status,
@@ -114,18 +118,19 @@ class StudentAccountsDataSheet implements FromCollection, WithTitle, WithEvents,
                     'D' => 14,  // NIS
                     'E' => 28,  // Jurusan
                     'F' => 16,  // Kelas
-                    'G' => 30,  // Email
-                    'H' => 18,  // Password Default
-                    'I' => 14,  // Status
-                    'J' => 36,  // Tautan Login
-                    'K' => 48,  // Tautan Monitoring Ortu
+                    'G' => 28,  // Tempat PKL / Perusahaan
+                    'H' => 30,  // Email
+                    'I' => 18,  // Password Default
+                    'J' => 14,  // Status
+                    'K' => 36,  // Tautan Login
+                    'L' => 48,  // Tautan Monitoring Ortu
                 ];
                 foreach ($widths as $col => $w) {
                     $sheet->getColumnDimension($col)->setWidth($w);
                 }
 
                 // 2. Styling Row 1 (Banner Title)
-                $sheet->mergeCells('A1:K1');
+                $sheet->mergeCells('A1:L1');
                 $sheet->getRowDimension(1)->setRowHeight(32);
                 $sheet->getStyle('A1')->applyFromArray([
                     'font' => [
@@ -140,7 +145,7 @@ class StudentAccountsDataSheet implements FromCollection, WithTitle, WithEvents,
                 ]);
 
                 // 3. Styling Row 2 (Metadata Info)
-                $sheet->mergeCells('A2:K2');
+                $sheet->mergeCells('A2:L2');
                 $sheet->getRowDimension(2)->setRowHeight(20);
                 $sheet->getStyle('A2')->applyFromArray([
                     'font' => [
@@ -159,7 +164,7 @@ class StudentAccountsDataSheet implements FromCollection, WithTitle, WithEvents,
 
                 // 4. Styling Row 4 (Table Header)
                 $sheet->getRowDimension(4)->setRowHeight(30);
-                $sheet->getStyle('A4:K4')->applyFromArray([
+                $sheet->getStyle('A4:L4')->applyFromArray([
                     'font' => [
                         'name' => 'Segoe UI',
                         'bold' => true,
@@ -190,7 +195,7 @@ class StudentAccountsDataSheet implements FromCollection, WithTitle, WithEvents,
                         $isOdd = ($row % 2 !== 0);
                         $bgColor = $isOdd ? 'F8FAFC' : 'FFFFFF';
 
-                        $sheet->getStyle("A{$row}:K{$row}")->applyFromArray([
+                        $sheet->getStyle("A{$row}:L{$row}")->applyFromArray([
                             'font' => [
                                 'name' => 'Segoe UI',
                                 'size' => 10,
@@ -216,11 +221,11 @@ class StudentAccountsDataSheet implements FromCollection, WithTitle, WithEvents,
                         $sheet->getStyle("C{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
                         $sheet->getStyle("D{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
                         $sheet->getStyle("F{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-                        $sheet->getStyle("H{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
                         $sheet->getStyle("I{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+                        $sheet->getStyle("J{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
                         // Highlight Password Default Box
-                        $sheet->getStyle("H{$row}")->applyFromArray([
+                        $sheet->getStyle("I{$row}")->applyFromArray([
                             'font' => [
                                 'bold' => true,
                                 'color' => ['rgb' => '0B2B25'],
@@ -232,9 +237,9 @@ class StudentAccountsDataSheet implements FromCollection, WithTitle, WithEvents,
                         ]);
 
                         // Status Badge Color
-                        $statusVal = $sheet->getCell("I{$row}")->getValue();
+                        $statusVal = $sheet->getCell("J{$row}")->getValue();
                         $statusColor = ($statusVal === 'Aktif') ? '047857' : 'DC2626';
-                        $sheet->getStyle("I{$row}")->applyFromArray([
+                        $sheet->getStyle("J{$row}")->applyFromArray([
                             'font' => [
                                 'bold' => true,
                                 'color' => ['rgb' => $statusColor],
@@ -242,10 +247,10 @@ class StudentAccountsDataSheet implements FromCollection, WithTitle, WithEvents,
                         ]);
 
                         // Hyperlink Styling for URLs
-                        $sheet->getStyle("J{$row}")->applyFromArray([
+                        $sheet->getStyle("K{$row}")->applyFromArray([
                             'font' => ['color' => ['rgb' => '0F7A66'], 'underline' => true],
                         ]);
-                        $sheet->getStyle("K{$row}")->applyFromArray([
+                        $sheet->getStyle("L{$row}")->applyFromArray([
                             'font' => ['color' => ['rgb' => '4F46E5'], 'underline' => true],
                         ]);
                     }

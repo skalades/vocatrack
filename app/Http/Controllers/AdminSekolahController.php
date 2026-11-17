@@ -413,16 +413,27 @@ class AdminSekolahController extends Controller
             }
         }
 
+        if ($companyId = $request->query('company_id')) {
+            if ($companyId !== 'all') {
+                if ($companyId === 'unassigned') {
+                    $query->whereDoesntHave('activePkl');
+                } else {
+                    $query->whereHas('activePkl', fn($pq) => $pq->where('company_id', $companyId));
+                }
+            }
+        }
+
         $students = $query->latest()->paginate(15)->withQueryString();
         $classes = SchoolClass::where('school_id', $schoolId)->with('major')->get();
         $majors = Major::where('school_id', $schoolId)->orderBy('name')->get();
+        $companies = Company::where('school_id', $schoolId)->orderBy('name')->get();
 
         // Exact DB metrics across the entire school (Scalable)
         $totalStudents = Student::whereHas('user', fn($q) => $q->where('school_id', $schoolId))->count();
         $totalPlotted = StudentPkl::where('school_id', $schoolId)->whereIn('status', ['assigned', 'active'])->distinct('student_id')->count('student_id');
         $totalUnplotted = max(0, $totalStudents - $totalPlotted);
 
-        return view('adminsekolah.students', compact('students', 'classes', 'majors', 'totalStudents', 'totalPlotted', 'totalUnplotted'));
+        return view('adminsekolah.students', compact('students', 'classes', 'majors', 'companies', 'totalStudents', 'totalPlotted', 'totalUnplotted'));
     }
 
     public function exportStudents(Request $request)
@@ -449,19 +460,34 @@ class AdminSekolahController extends Controller
             }
         }
 
+        $companyPart = '';
+        if ($companyId = $request->query('company_id')) {
+            if ($companyId !== 'all') {
+                if ($companyId === 'unassigned') {
+                    $companyPart = '_Belum_Ditempatkan';
+                } else {
+                    $company = Company::where('school_id', $schoolId)->find($companyId);
+                    if ($company) {
+                        $companyPart = '_' . Str::slug($company->name, '_');
+                    }
+                }
+            }
+        }
+
         $timestamp = date('Ymd_His');
-        $filename = "Akun_Akses_Siswa_{$majorPart}_{$classPart}_{$timestamp}";
+        $filename = "Akun_Akses_Siswa_{$majorPart}_{$classPart}{$companyPart}_{$timestamp}";
 
         AuditLogService::log(
             'student_credentials_export',
             'export',
-            "Mengekspor data akun dan akses siswa (Filter: {$majorPart}, {$classPart})."
+            "Mengekspor data akun dan akses siswa (Filter: {$majorPart}, {$classPart}{$companyPart})."
         );
 
         $filters = [
             'search' => $request->query('search'),
             'major_id' => $request->query('major_id'),
             'class_id' => $request->query('class_id'),
+            'company_id' => $request->query('company_id'),
         ];
 
         // Format CSV jika secara spesifik diminta

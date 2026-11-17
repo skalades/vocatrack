@@ -16,9 +16,9 @@
             <svg class="w-4 h-4 mr-1.5 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
             <span>Link Portal Ortu</span>
         </a>
-        <a href="{{ route('adminsekolah.students.export', request()->only(['search', 'major_id', 'class_id'])) }}" 
+        <a href="{{ route('adminsekolah.students.export', request()->only(['search', 'major_id', 'class_id', 'company_id'])) }}" 
            class="inline-flex items-center justify-center font-bold rounded-xl transition-all shadow-xs cursor-pointer bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-3 py-1.5 text-xs"
-           title="Unduh data login & password siswa sesuai filter dalam format Excel (.xlsx)">
+           title="Unduh data login & password siswa lengkap dengan sheet per perusahaan dalam format Excel (.xlsx)">
             <svg class="w-4 h-4 mr-1.5 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
             <span>Ekspor Akun (Excel)</span>
         </a>
@@ -127,12 +127,32 @@
                     </div>
                 </div>
 
+                {{-- Filter Perusahaan / Tempat PKL --}}
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+                    </div>
+                    <select name="company_id" onchange="this.form.submit()"
+                            class="pl-8 pr-8 py-2.5 text-xs font-semibold rounded-xl bg-slate-50 border border-slate-200 text-slate-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all appearance-none cursor-pointer min-w-[170px]">
+                        <option value="all" {{ request('company_id', 'all') === 'all' ? 'selected' : '' }}>Semua Perusahaan</option>
+                        <option value="unassigned" {{ request('company_id') === 'unassigned' ? 'selected' : '' }}>Belum Ditempatkan</option>
+                        @foreach($companies ?? [] as $company)
+                            <option value="{{ $company->id }}" {{ request('company_id') == $company->id ? 'selected' : '' }}>
+                                {{ $company->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                    <div class="absolute inset-y-0 right-0 pr-2.5 flex items-center pointer-events-none text-slate-400">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                    </div>
+                </div>
+
                 {{-- Submit & Reset --}}
                 <div class="flex items-center gap-2">
                     <button type="submit" class="px-3.5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-colors shadow-xs">
                         Cari
                     </button>
-                    @if(request()->hasAny(['search', 'major_id', 'class_id']))
+                    @if(request()->hasAny(['search', 'major_id', 'class_id', 'company_id']))
                         <a href="{{ route('adminsekolah.students') }}" class="px-3.5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold transition-colors">
                             Reset
                         </a>
@@ -143,9 +163,9 @@
                     <span class="text-xs text-slate-500 font-semibold hidden md:inline whitespace-nowrap">
                         Menampilkan {{ $students->count() }} dari {{ $students->total() }} siswa
                     </span>
-                    <a href="{{ route('adminsekolah.students.export', request()->only(['search', 'major_id', 'class_id'])) }}" 
+                    <a href="{{ route('adminsekolah.students.export', request()->only(['search', 'major_id', 'class_id', 'company_id'])) }}" 
                        class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-xs shrink-0 cursor-pointer"
-                       title="Unduh file Excel (.xlsx) data akun & password siswa sesuai filter">
+                       title="Unduh file Excel (.xlsx) data akun & password siswa lengkap dengan sheet per perusahaan">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                         <span>Ekspor Akun Siswa (Excel)</span>
                     </a>
@@ -153,7 +173,7 @@
             </form>
 
             {{-- Active Filter Badges --}}
-            @if(request()->hasAny(['search', 'major_id']))
+            @if(request()->hasAny(['search', 'major_id', 'company_id']))
                 <div class="flex flex-wrap items-center gap-2">
                     <span class="text-[11px] text-slate-400 font-semibold">Filter aktif:</span>
                     @if(request('search'))
@@ -169,6 +189,20 @@
                                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
                                 {{ $activeMajor->name }}
                             </span>
+                        @endif
+                    @endif
+                    @if(request('company_id') && request('company_id') !== 'all')
+                        @if(request('company_id') === 'unassigned')
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-[11px] font-bold">
+                                Belum Ditempatkan
+                            </span>
+                        @else
+                            @php $activeComp = ($companies ?? collect())->firstWhere('id', request('company_id')); @endphp
+                            @if($activeComp)
+                                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-cyan-50 border border-cyan-200 text-cyan-700 text-[11px] font-bold">
+                                    {{ $activeComp->name }}
+                                </span>
+                            @endif
                         @endif
                     @endif
                 </div>
@@ -198,8 +232,8 @@
                                     <div class="min-w-0">
                                         <span class="font-bold text-slate-900 block truncate text-sm student-name" title="{{ $st->user->name }}">{{ $st->user->name }}</span>
                                         <span class="text-[11px] text-slate-400 font-medium">
-                                            {{ $st->user->profile->gender === 'L' ? 'Laki-Laki' : 'Perempuan' }} 
-                                            @if($st->user->profile->phone) &bull; {{ $st->user->profile->phone }} @endif
+                                            {{ ($st->user->profile?->gender ?? 'L') === 'L' ? 'Laki-Laki' : 'Perempuan' }} 
+                                            @if($st->user->profile?->phone) &bull; {{ $st->user->profile->phone }} @endif
                                         </span>
                                     </div>
                                 </div>

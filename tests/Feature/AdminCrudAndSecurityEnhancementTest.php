@@ -6,6 +6,7 @@ use App\Models\Attendance;
 use App\Models\Company;
 use App\Models\Major;
 use App\Models\PklPeriod;
+use App\Models\Profile;
 use App\Models\School;
 use App\Models\SchoolClass;
 use App\Models\SchoolSetting;
@@ -766,5 +767,184 @@ class AdminCrudAndSecurityEnhancementTest extends TestCase
         $contentOther = $resOther->streamedContent();
         $this->assertStringNotContainsString('Ahmad RPL', $contentOther);
         $this->assertStringNotContainsString('Budi TKJ', $contentOther);
+    }
+
+    public function test_admin_excel_export_includes_sheets_filtered_per_company(): void
+    {
+        $teacherUser = User::create([
+            'school_id' => $this->school->id,
+            'name' => 'Guru Pembimbing Utama',
+            'email' => 'guruutama@test.com',
+            'password' => bcrypt('password123'),
+            'role' => 'guru-pembimbing',
+        ]);
+        $teacher = Teacher::create([
+            'school_id' => $this->school->id,
+            'user_id' => $teacherUser->id,
+            'nip' => '198501012008011003',
+        ]);
+
+        $comp1 = Company::create([
+            'school_id' => $this->school->id,
+            'name' => 'PT Solusi Teknologi Digital',
+            'address' => 'Jl. Digital No. 1',
+            'contact_person' => 'Budi Mentor',
+            'phone' => '0812345678',
+            'work_days' => '5_days',
+            'is_active' => true,
+        ]);
+
+        $comp2 = Company::create([
+            'school_id' => $this->school->id,
+            'name' => 'PT Mitra Kreatif / Studio *Tech*',
+            'address' => 'Jl. Kreatif No. 2',
+            'contact_person' => 'Siti Mentor',
+            'phone' => '0899999999',
+            'work_days' => '5_days',
+            'is_active' => true,
+        ]);
+
+        // Student 1 -> Company 1
+        $u1 = User::create([
+            'school_id' => $this->school->id,
+            'name' => 'Siswa Comp 1',
+            'email' => 'siswa1@comp.com',
+            'password' => bcrypt('password'),
+            'role' => 'siswa',
+        ]);
+        Profile::create(['user_id' => $u1->id, 'gender' => 'L']);
+        $st1 = Student::create([
+            'user_id' => $u1->id,
+            'class_id' => $this->class->id,
+            'nis' => '101',
+            'nisn' => '00101',
+        ]);
+        StudentPkl::create([
+            'school_id' => $this->school->id,
+            'student_id' => $st1->id,
+            'company_id' => $comp1->id,
+            'teacher_id' => $teacher->id,
+            'pkl_period_id' => $this->period->id,
+            'status' => 'active',
+        ]);
+
+        // Student 2 -> Company 2
+        $u2 = User::create([
+            'school_id' => $this->school->id,
+            'name' => 'Siswa Comp 2',
+            'email' => 'siswa2@comp.com',
+            'password' => bcrypt('password'),
+            'role' => 'siswa',
+        ]);
+        Profile::create(['user_id' => $u2->id, 'gender' => 'P']);
+        $st2 = Student::create([
+            'user_id' => $u2->id,
+            'class_id' => $this->class->id,
+            'nis' => '102',
+            'nisn' => '00102',
+        ]);
+        StudentPkl::create([
+            'school_id' => $this->school->id,
+            'student_id' => $st2->id,
+            'company_id' => $comp2->id,
+            'teacher_id' => $teacher->id,
+            'pkl_period_id' => $this->period->id,
+            'status' => 'active',
+        ]);
+
+        // Student 3 -> Belum Diplot (Unassigned)
+        $u3 = User::create([
+            'school_id' => $this->school->id,
+            'name' => 'Siswa Belum Diplot',
+            'email' => 'siswa3@unassigned.com',
+            'password' => bcrypt('password'),
+            'role' => 'siswa',
+        ]);
+        Profile::create(['user_id' => $u3->id, 'gender' => 'L']);
+        $st3 = Student::create([
+            'user_id' => $u3->id,
+            'class_id' => $this->class->id,
+            'nis' => '103',
+            'nisn' => '00103',
+        ]);
+
+        // 1. Export sheets directly without company filter
+        $export = new \App\Exports\StudentCredentialsExport($this->school->id);
+        $sheets = $export->sheets();
+
+        // Must have: Master Sheet + WA Broadcast + Comp 1 + Comp 2 + Belum Ditempatkan
+        $this->assertCount(5, $sheets);
+        $titles = array_map(fn($s) => $s->title(), $sheets);
+        $this->assertContains('Data Akun Siswa', $titles);
+        $this->assertContains('Format Siap Kirim WA', $titles);
+        $this->assertContains('PT Solusi Teknologi Digital', $titles);
+        $this->assertContains('PT Mitra Kreatif Studio Tech', $titles); // Sanitized from / and *
+        $this->assertContains('Belum Ditempatkan', $titles);
+
+        // Verify company sheet content
+        $comp1Sheet = collect($sheets)->first(fn($s) => $s->title() === 'PT Solusi Teknologi Digital');
+        $this->assertInstanceOf(\App\Exports\Sheets\CompanyStudentsSheet::class, $comp1Sheet);
+        $rowsComp1 = $comp1Sheet->collection();
+        $this->assertTrue($rowsComp1->contains(fn($r) => in_array('Siswa Comp 1', (array) $r)));
+        $this->assertFalse($rowsComp1->contains(fn($r) => in_array('Siswa Comp 2', (array) $r)));
+
+        // Verify Belum Ditempatkan sheet content
+        $unassignedSheet = collect($sheets)->first(fn($s) => $s->title() === 'Belum Ditempatkan');
+        $this->assertInstanceOf(\App\Exports\Sheets\CompanyStudentsSheet::class, $unassignedSheet);
+        $rowsUnassigned = $unassignedSheet->collection();
+        $this->assertTrue($rowsUnassigned->contains(fn($r) => in_array('Siswa Belum Diplot', (array) $r)));
+        $this->assertFalse($rowsUnassigned->contains(fn($r) => in_array('Siswa Comp 1', (array) $r)));
+
+        // 2. Export filtered specifically by Company 1
+        $exportComp1 = new \App\Exports\StudentCredentialsExport($this->school->id, ['company_id' => $comp1->id]);
+        $sheetsComp1 = $exportComp1->sheets();
+        $this->assertCount(3, $sheetsComp1); // Master + WA + Comp 1
+        $titlesComp1 = array_map(fn($s) => $s->title(), $sheetsComp1);
+        $this->assertContains('PT Solusi Teknologi Digital', $titlesComp1);
+        $this->assertNotContains('PT Mitra Kreatif Studio Tech', $titlesComp1);
+        $this->assertNotContains('Belum Ditempatkan', $titlesComp1);
+
+        // 3. Export filtered by unassigned
+        $exportUnassigned = new \App\Exports\StudentCredentialsExport($this->school->id, ['company_id' => 'unassigned']);
+        $sheetsUnassigned = $exportUnassigned->sheets();
+        $this->assertCount(3, $sheetsUnassigned); // Master + WA + Belum Ditempatkan
+        $titlesUnassigned = array_map(fn($s) => $s->title(), $sheetsUnassigned);
+        $this->assertContains('Belum Ditempatkan', $titlesUnassigned);
+        $this->assertNotContains('PT Solusi Teknologi Digital', $titlesUnassigned);
+
+        // 4. HTTP Route download works with company_id filter
+        $response = $this->actingAs($this->adminUser)->get(route('adminsekolah.students.export', ['company_id' => $comp1->id]));
+        $response->assertOk();
+        $this->assertStringContainsString('.xlsx', (string) $response->headers->get('content-disposition'));
+
+        // 5. HTTP Route students view accepts company_id filter
+        $resView = $this->actingAs($this->adminUser)->get(route('adminsekolah.students', ['company_id' => $comp1->id]));
+        $resView->assertOk();
+        $resView->assertSee('Siswa Comp 1');
+        $resView->assertDontSee('Siswa Comp 2');
+    }
+
+    public function test_sanitize_sheet_title_edge_cases(): void
+    {
+        $usedTitles = ['data akun siswa', 'format siap kirim wa'];
+
+        // Test forbidden characters
+        $title1 = \App\Exports\StudentCredentialsExport::sanitizeSheetTitle('PT [Inovasi] / Tech : Super * (CV)', $usedTitles);
+        $this->assertStringNotContainsString('/', $title1);
+        $this->assertStringNotContainsString('[', $title1);
+        $this->assertStringNotContainsString(']', $title1);
+        $this->assertStringNotContainsString('*', $title1);
+        $this->assertStringNotContainsString(':', $title1);
+
+        // Test length limit (max 31 characters)
+        $veryLongTitle = 'PT Perusahaan Multinasional Sangat Panjang Sekali Sekali Banget';
+        $title2 = \App\Exports\StudentCredentialsExport::sanitizeSheetTitle($veryLongTitle, $usedTitles);
+        $this->assertLessThanOrEqual(31, mb_strlen($title2));
+
+        // Test collision handling
+        $title3 = \App\Exports\StudentCredentialsExport::sanitizeSheetTitle($veryLongTitle, $usedTitles);
+        $this->assertLessThanOrEqual(31, mb_strlen($title3));
+        $this->assertNotEquals($title2, $title3);
+        $this->assertStringEndsWith('(2)', $title3);
     }
 }
