@@ -23,9 +23,9 @@
         </button>
     </div>
 
-    <!-- Mobile Slide-Up / Bottom-Sheet Modal Drawer -->
-    <div id="mobile-notification-drawer" onclick="if(event.target === this) closeMobileNotificationDrawer()" class="fixed inset-0 z-[85] bg-slate-900/60 backdrop-blur-xs hidden transition-all flex flex-col justify-end">
-        <div onclick="event.stopPropagation()" class="bg-white rounded-t-3xl max-h-[80vh] flex flex-col w-full shadow-2xl border-t border-slate-200 animate-in slide-in-from-bottom duration-200">
+    <!-- Mobile Notification Dropdown / Top Modal -->
+    <div id="mobile-notification-drawer" onclick="if(event.target === this) closeMobileNotificationDrawer()" class="fixed inset-0 z-[85] bg-slate-900/60 backdrop-blur-xs hidden transition-all flex flex-col justify-start items-center p-3 pt-14 sm:pt-16">
+        <div onclick="event.stopPropagation()" class="bg-white rounded-3xl max-h-[75vh] flex flex-col w-full max-w-[400px] shadow-2xl border border-slate-200/80 animate-in slide-in-from-top-4 duration-200 overflow-hidden">
             <div class="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
                 <div class="flex items-center space-x-2">
                     <div class="w-7 h-7 rounded-lg bg-[#EBF6F0] text-[#0F7A66] flex items-center justify-center font-bold text-xs">
