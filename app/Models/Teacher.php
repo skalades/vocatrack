@@ -27,6 +27,25 @@ class Teacher extends Model
         return $this->belongsToMany(Major::class, 'major_teacher')->withTimestamps();
     }
 
+    public function headedMajors(): HasMany
+    {
+        return $this->hasMany(Major::class, 'head_teacher_id');
+    }
+
+    public function headedMajor(): ?Major
+    {
+        return $this->headedMajors()->first();
+    }
+
+    public function isMajorHead(?int $majorId = null): bool
+    {
+        if ($majorId) {
+            return $this->headedMajors()->where('id', $majorId)->exists();
+        }
+
+        return $this->headedMajors()->exists();
+    }
+
     public function studentPkls(): HasMany
     {
         return $this->hasMany(StudentPkl::class);

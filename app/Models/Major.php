@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Traits\BelongsToSchool;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -14,9 +15,15 @@ class Major extends Model
 
     protected $fillable = [
         'school_id',
+        'head_teacher_id',
         'code',
         'name',
     ];
+
+    public function headTeacher(): BelongsTo
+    {
+        return $this->belongsTo(Teacher::class, 'head_teacher_id');
+    }
 
     public function classes(): HasMany
     {

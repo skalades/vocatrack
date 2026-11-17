@@ -72,6 +72,21 @@ class User extends Authenticatable
         return $this->wantsChannel('mail', $type);
     }
 
+    public function isKajur(?int $majorId = null): bool
+    {
+        return (bool) $this->teacher?->isMajorHead($majorId);
+    }
+
+    public function headedMajor(): ?Major
+    {
+        return $this->teacher?->headedMajor();
+    }
+
+    public function getHeadedMajorIdsAttribute(): array
+    {
+        return $this->teacher?->headedMajors()->pluck('id')->toArray() ?? [];
+    }
+
     public function hasRole(string|array $roles): bool
     {
         if (is_array($roles)) {

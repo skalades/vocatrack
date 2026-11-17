@@ -5,6 +5,7 @@ use App\Http\Controllers\AnnouncementController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CertificateVerificationController;
 use App\Http\Controllers\ImpersonationController;
+use App\Http\Controllers\KajurController;
 use App\Http\Controllers\LandingController;
 use App\Http\Controllers\KepsekController;
 use App\Http\Controllers\NotificationController;
@@ -319,6 +320,29 @@ Route::middleware(['auth', 'IdentifyTenant', 'role:guru-pembimbing'])->prefix('g
 
     // Peta Interaktif Sebaran Siswa PKL Bimbingan & DU/DI
     Route::get('/peta-sebaran', [PklMapController::class, 'guruMap'])->name('guru.map');
+});
+
+// 4.1 Kepala Jurusan / Kepala Program Keahlian Routes
+Route::middleware(['auth', 'IdentifyTenant', 'is-kajur'])->prefix('kajur')->group(function () {
+    Route::get('/dashboard', [KajurController::class, 'dashboard'])->name('kajur.dashboard');
+
+    // Mitra Perusahaan (DU/DI)
+    Route::get('/companies', [KajurController::class, 'companies'])->name('kajur.companies');
+    Route::post('/companies', [KajurController::class, 'storeCompany'])->name('kajur.companies.store');
+    Route::put('/companies/{company}', [KajurController::class, 'updateCompany'])->name('kajur.companies.update');
+    Route::delete('/companies/{company}', [KajurController::class, 'destroyCompany'])->name('kajur.companies.destroy');
+
+    // Siswa & Plotting PKL Jurusan
+    Route::get('/students', [KajurController::class, 'students'])->name('kajur.students');
+    Route::post('/students/{student}/assign', [KajurController::class, 'assignPlotting'])->name('kajur.students.assign');
+
+    // Monitoring Presensi & Jurnal
+    Route::get('/attendance', [KajurController::class, 'attendance'])->name('kajur.attendance');
+    Route::get('/journals', [KajurController::class, 'journals'])->name('kajur.journals');
+
+    // Supervisi Guru & Nilai
+    Route::get('/supervisions', [KajurController::class, 'supervisions'])->name('kajur.supervisions');
+    Route::get('/grades', [KajurController::class, 'grades'])->name('kajur.grades');
 });
 
 // 5. Pembimbing DU/DI Routes

@@ -14,6 +14,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'IdentifyTenant' => \App\Http\Middleware\IdentifyTenant::class,
             'role' => \App\Http\Middleware\CheckRole::class,
+            'is-kajur' => \App\Http\Middleware\EnsureIsMajorHead::class,
             'feature' => \App\Http\Middleware\CheckFeatureEntitlement::class,
         ]);
         $middleware->appendToGroup('web', \App\Http\Middleware\AttachMonitoringContext::class);

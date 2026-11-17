@@ -172,10 +172,16 @@ class AdminSekolahController extends Controller
     public function majors()
     {
         $schoolId = $this->getSchoolId();
-        $majors = Major::where('school_id', $schoolId)->withCount('classes')->get();
+        $majors = Major::where('school_id', $schoolId)
+            ->with(['headTeacher.user'])
+            ->withCount('classes')
+            ->get();
         $classes = SchoolClass::where('school_id', $schoolId)->with('major')->get();
+        $teachers = Teacher::whereHas('user', fn($q) => $q->where('school_id', $schoolId)->where('is_active', true))
+            ->with('user')
+            ->get();
 
-        return view('adminsekolah.majors', compact('majors', 'classes'));
+        return view('adminsekolah.majors', compact('majors', 'classes', 'teachers'));
     }
 
     public function storeMajor(Request $request)
@@ -187,12 +193,17 @@ class AdminSekolahController extends Controller
                 Rule::unique('majors', 'code')->where('school_id', $schoolId),
             ],
             'name' => ['required', 'string', 'max:100'],
+            'head_teacher_id' => [
+                'nullable',
+                Rule::exists('teachers', 'id')->where(fn($q) => $q->whereIn('user_id', User::where('school_id', $schoolId)->pluck('id'))),
+            ],
         ], [
             'code.unique' => 'Kode jurusan ini sudah digunakan.',
         ]);
 
         Major::create([
             'school_id' => $schoolId,
+            'head_teacher_id' => $request->head_teacher_id,
             'code' => strtoupper($request->code),
             'name' => $request->name,
         ]);
@@ -211,11 +222,16 @@ class AdminSekolahController extends Controller
                 Rule::unique('majors', 'code')->where('school_id', $schoolId)->ignore($major->id),
             ],
             'name' => ['required', 'string', 'max:100'],
+            'head_teacher_id' => [
+                'nullable',
+                Rule::exists('teachers', 'id')->where(fn($q) => $q->whereIn('user_id', User::where('school_id', $schoolId)->pluck('id'))),
+            ],
         ], [
             'code.unique' => 'Kode jurusan ini sudah digunakan.',
         ]);
 
         $major->update([
+            'head_teacher_id' => $request->head_teacher_id,
             'code' => strtoupper($request->code),
             'name' => $request->name,
         ]);

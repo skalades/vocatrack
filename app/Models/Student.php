@@ -69,9 +69,19 @@ class Student extends Model
         return $this->belongsTo(SchoolClass::class, 'class_id');
     }
 
+    public function schoolClass(): BelongsTo
+    {
+        return $this->belongsTo(SchoolClass::class, 'class_id');
+    }
+
     public function studentPkls(): HasMany
     {
         return $this->hasMany(StudentPkl::class);
+    }
+
+    public function studentPkl(): HasOne
+    {
+        return $this->hasOne(StudentPkl::class);
     }
 
     public function activePkl(): HasOne

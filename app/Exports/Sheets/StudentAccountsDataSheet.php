@@ -41,7 +41,7 @@ class StudentAccountsDataSheet implements FromCollection, WithTitle, WithEvents,
         $rows->push(["Sekolah: {$school}   |   Jurusan: {$major}   |   Kelas: {$class}   |   Waktu Unduh: {$date}"]);
 
         // Row 3: Baris Pemisah Kosong
-        $rows->push([]);
+        $rows->push(['']);
 
         // Row 4: Header Kolom
         $rows->push([
@@ -153,6 +153,9 @@ class StudentAccountsDataSheet implements FromCollection, WithTitle, WithEvents,
                         'vertical' => Alignment::VERTICAL_CENTER,
                     ],
                 ]);
+
+                // 3.5. Styling Row 3 (Pemisah Kosong)
+                $sheet->getRowDimension(3)->setRowHeight(12);
 
                 // 4. Styling Row 4 (Table Header)
                 $sheet->getRowDimension(4)->setRowHeight(30);

@@ -103,9 +103,22 @@
                                     <span class="font-bold text-slate-900 block truncate group-hover:text-indigo-600 transition-colors text-sm">
                                         {{ $m->name }}
                                     </span>
-                                    <span class="text-[11px] font-mono text-slate-400 font-medium">
-                                        Kode: {{ $m->code }} &bull; {{ $m->classes_count }} Rombel Kelas
-                                    </span>
+                                    <div class="flex items-center gap-2 mt-0.5 flex-wrap">
+                                        <span class="text-[11px] font-mono text-slate-400 font-medium">
+                                            Kode: {{ $m->code }} &bull; {{ $m->classes_count }} Rombel Kelas
+                                        </span>
+                                        <span class="text-slate-300">&bull;</span>
+                                        @if($m->headTeacher)
+                                            <span class="inline-flex items-center gap-1 font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200/60 text-[11px]">
+                                                <svg class="w-3 h-3 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                                                Kajur: {{ $m->headTeacher->user->name }}
+                                            </span>
+                                        @else
+                                            <span class="inline-flex items-center text-slate-400 italic text-[11px]">
+                                                Kajur: Belum Ditunjuk
+                                            </span>
+                                        @endif
+                                    </div>
                                 </div>
                             </div>
                             <div class="flex items-center gap-1.5 shrink-0">
@@ -117,6 +130,7 @@
                                             'id' => $m->id,
                                             'code' => $m->code,
                                             'name' => $m->name,
+                                            'head_teacher_id' => $m->head_teacher_id,
                                             'update_url' => route('adminsekolah.majors.update', $m),
                                         ]) }})"
                                         class="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors cursor-pointer"
@@ -234,6 +248,17 @@
                 <input type="text" name="name" required placeholder="Contoh: Rekayasa Perangkat Lunak" 
                        class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium text-slate-900">
             </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1.5">Kepala Program Keahlian (Kajur)</label>
+                <select name="head_teacher_id" 
+                        class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium text-slate-900">
+                    <option value="">-- Belum Ditunjuk / Pilih Nanti --</option>
+                    @foreach($teachers as $t)
+                        <option value="{{ $t->id }}">{{ $t->user->name }} (NIP: {{ $t->nip ?? '-' }})</option>
+                    @endforeach
+                </select>
+                <p class="text-[11px] text-slate-400 mt-1">Guru yang ditunjuk otomatis memiliki akses ke panel Kepala Jurusan.</p>
+            </div>
             <div class="flex items-center justify-end space-x-2.5 pt-3 border-t border-slate-100">
                 <x-button type="button" variant="secondary" size="md" onclick="document.getElementById('modal-add-major').classList.add('hidden')">
                     Batal
@@ -326,6 +351,16 @@
                 <input type="text" id="edit-major-name" name="name" required 
                        class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium text-slate-900">
             </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1.5">Kepala Program Keahlian (Kajur)</label>
+                <select id="edit-major-head-teacher-id" name="head_teacher_id" 
+                        class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium text-slate-900">
+                    <option value="">-- Belum Ditunjuk / Kosongkan --</option>
+                    @foreach($teachers as $t)
+                        <option value="{{ $t->id }}">{{ $t->user->name }} (NIP: {{ $t->nip ?? '-' }})</option>
+                    @endforeach
+                </select>
+            </div>
             <div class="flex items-center justify-end space-x-2.5 pt-3 border-t border-slate-100">
                 <x-button type="button" variant="secondary" size="md" onclick="document.getElementById('modal-edit-major').classList.add('hidden')">
                     Batal
@@ -401,6 +436,7 @@
         document.getElementById('edit-major-form').action = data.update_url;
         document.getElementById('edit-major-code').value = data.code;
         document.getElementById('edit-major-name').value = data.name;
+        document.getElementById('edit-major-head-teacher-id').value = data.head_teacher_id || '';
         document.getElementById('modal-edit-major').classList.remove('hidden');
     }
 

@@ -155,6 +155,29 @@ class ViewRenderingTest extends TestCase
         $this->actingAs($user)->get(route('kepsek.map'))->assertStatus(200)->assertSee('Peta Sebaran PKL');
     }
 
+    public function test_kajur_views_render_successfully(): void
+    {
+        $teacher = User::where('role', 'guru-pembimbing')->first();
+        if (!$teacher || !$teacher->teacher) {
+            $this->markTestSkipped('Teacher user not seeded');
+        }
+
+        $major = \App\Models\Major::where('school_id', $teacher->school_id)->first();
+        if (!$major) {
+            $this->markTestSkipped('Major not seeded');
+        }
+
+        $major->update(['head_teacher_id' => $teacher->teacher->id]);
+
+        $this->actingAs($teacher)->get(route('kajur.dashboard'))->assertStatus(200)->assertSee('Kepala Program Keahlian');
+        $this->actingAs($teacher)->get(route('kajur.companies'))->assertStatus(200)->assertSee('Mitra Perusahaan');
+        $this->actingAs($teacher)->get(route('kajur.students'))->assertStatus(200)->assertSee('Siswa & Plotting PKL');
+        $this->actingAs($teacher)->get(route('kajur.attendance'))->assertStatus(200)->assertSee('Monitoring Presensi');
+        $this->actingAs($teacher)->get(route('kajur.journals'))->assertStatus(200)->assertSee('Monitoring Jurnal');
+        $this->actingAs($teacher)->get(route('kajur.supervisions'))->assertStatus(200)->assertSee('Supervisi & Kunjungan Industri');
+        $this->actingAs($teacher)->get(route('kajur.grades'))->assertStatus(200)->assertSee('Rekapitulasi Nilai');
+    }
+
     public function test_notifications_view_renders_for_users(): void
     {
         $teacher = User::where('role', 'guru-pembimbing')->first();

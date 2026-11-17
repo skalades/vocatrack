@@ -35,7 +35,7 @@ class StudentBroadcastWhatsappSheet implements FromCollection, WithTitle, WithEv
         $rows->push(['Salin (copy) teks pada kolom "Pesan Siap Kirim WhatsApp" untuk dibagikan langsung ke grup WhatsApp siswa atau wali murid.']);
 
         // Row 3: Baris Pemisah
-        $rows->push([]);
+        $rows->push(['']);
 
         // Row 4: Header Kolom
         $rows->push([
@@ -118,6 +118,9 @@ class StudentBroadcastWhatsappSheet implements FromCollection, WithTitle, WithEv
                     ],
                     'alignment' => ['vertical' => Alignment::VERTICAL_CENTER],
                 ]);
+
+                // Row 3 (Pemisah Kosong)
+                $sheet->getRowDimension(3)->setRowHeight(12);
 
                 // Row 4 (Header)
                 $sheet->getRowDimension(4)->setRowHeight(30);
