@@ -1,6 +1,6 @@
 require('dotenv').config();
 const express = require('express');
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, Browsers } = require('@whiskeysockets/baileys');
 const pino = require('pino');
 const QRCode = require('qrcode');
 const path = require('path');
@@ -40,8 +40,12 @@ async function connectToWhatsApp() {
     sock = makeWASocket({
         auth: state,
         logger: pino({ level: 'silent' }), // Silent agar terminal tetap bersih dan rapi
-        printQRInTerminal: false,
-        browser: ['VokaTrack SOS Gateway', 'Chrome', '1.0.0']
+        printQRInTerminal: true,
+        browser: Browsers.ubuntu('Chrome'),
+        connectTimeoutMs: 60000,
+        defaultQueryTimeoutMs: 60000,
+        keepAliveIntervalMs: 15000,
+        syncFullHistory: false
     });
 
     sock.ev.on('creds.update', saveCreds);
@@ -53,11 +57,8 @@ async function connectToWhatsApp() {
             connectionStatus = 'waiting_scan';
             try {
                 qrCodeDataUrl = await QRCode.toDataURL(qr, { width: 300, margin: 2 });
-                console.log('\n[VokaTrack WA Gateway] Silakan buka http://localhost:' + PORT + ' untuk scan QR Code!');
-                // Juga tampilkan di console terminal
-                QRCode.toString(qr, { type: 'terminal', small: true }, (err, str) => {
-                    if (!err) console.log(str);
-                });
+                console.log('\n[VokaTrack WA Gateway] >>> QR CODE BARU TERSEDIA <<<');
+                console.log('[VokaTrack WA Gateway] Buka https://vocatrack.nadirlabs.net/super-admin/whatsapp untuk scan di web');
             } catch (err) {
                 console.error('[VokaTrack WA Gateway] Gagal generate QR:', err);
             }
@@ -71,10 +72,14 @@ async function connectToWhatsApp() {
             qrCodeDataUrl = null;
             connectedUser = null;
 
-            console.log(`[VokaTrack WA Gateway] Koneksi terputus. Alasan: ${statusCode}. Reconnect: ${shouldReconnect}`);
+            if (statusCode === 408) {
+                console.log('[VokaTrack WA Gateway] QR Code kedaluwarsa (belum di-scan). Mengambil QR Code baru dalam 3 detik...');
+            } else {
+                console.log(`[VokaTrack WA Gateway] Koneksi terputus. Alasan: ${statusCode}. Reconnect: ${shouldReconnect}`);
+            }
 
             if (shouldReconnect) {
-                setTimeout(connectToWhatsApp, 5000);
+                setTimeout(connectToWhatsApp, 3000);
             } else {
                 console.log('[VokaTrack WA Gateway] Sesi telah logout. Silakan scan ulang.');
                 try {
