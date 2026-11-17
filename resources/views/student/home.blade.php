@@ -356,6 +356,9 @@
                 </a>
             @endif
 
+            <!-- PWA Card: Pasang Aplikasi & Akses Offline di Layar Utama HP -->
+            <x-student.pwa-card />
+
         </div>
     @endif
 

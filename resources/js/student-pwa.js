@@ -543,14 +543,94 @@ function bindOfflineFormGuard() {
 // ---------------------------------------------------------------------------
 // Tombol pasang aplikasi (Android/Chrome)
 // ---------------------------------------------------------------------------
+// Instalasi PWA & Banner Pintasan
+// ---------------------------------------------------------------------------
+
+let deferredInstallPrompt = null;
+
+function syncPwaCardState() {
+    const card = document.getElementById('student-pwa-card');
+    if (!card) return;
+
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    if (isStandalone) {
+        const badge = card.querySelector('#pwa-card-badge');
+        if (badge) {
+            badge.className = 'bg-[#DDF3EC] text-[#0F7A66] text-[10px] font-extrabold px-2 py-0.5 rounded-full shrink-0';
+            badge.textContent = 'Terpasang (PWA)';
+        }
+        const actionWrap = card.querySelector('#pwa-card-action');
+        if (actionWrap) {
+            actionWrap.innerHTML = `
+                <div class="w-full h-11 rounded-2xl bg-[#F4FAF6] border border-[#D5EADB] text-[#0F7A66] font-bold text-xs flex items-center justify-center gap-1.5 shadow-2xs">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                    <span>Mode PWA Aktif · Siap Digunakan Offline</span>
+                </div>
+            `;
+        }
+    }
+}
+
+async function promptInstall() {
+    if (deferredInstallPrompt) {
+        deferredInstallPrompt.prompt();
+        const choice = await deferredInstallPrompt.userChoice.catch(() => {});
+        deferredInstallPrompt = null;
+        document.getElementById('vt-install-chip')?.remove();
+        syncPwaCardState();
+        return choice;
+    }
+
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    if (isStandalone) {
+        if (window.vtDialog) {
+            window.vtDialog({
+                tone: 'info',
+                eyebrow: 'Aplikasi Terpasang',
+                title: 'Aplikasi Sudah Aktif di HP',
+                message: 'VokaTrack sudah terpasang dan berjalan dalam mode PWA standalone di perangkat Anda. Anda dapat mengisi jurnal kapan saja bahkan saat offline.',
+                confirmText: 'Tutup'
+            });
+        }
+        return;
+    }
+
+    const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    if (isIos) {
+        if (window.vtDialog) {
+            window.vtDialog({
+                tone: 'info',
+                eyebrow: 'Panduan iOS (iPhone / iPad)',
+                title: 'Pasang VokaTrack di Layar Utama',
+                message: '1. Ketuk tombol Bagikan (ikon Share ⎋) di bagian bawah Safari.\n2. Gulir menu dan pilih "Tambah ke Layar Utama" (Add to Home Screen).\n3. Ketuk "Tambah" di sudut kanan atas.',
+                confirmText: 'Saya Mengerti'
+            });
+        } else {
+            alert('Ketuk tombol Share di Safari, lalu pilih "Tambah ke Layar Utama" (Add to Home Screen).');
+        }
+        return;
+    }
+
+    // Android / Desktop Chrome jika prompt belum siap atau otomatis dicegah
+    if (window.vtDialog) {
+        window.vtDialog({
+            tone: 'info',
+            eyebrow: 'Panduan Pasang PWA',
+            title: 'Pasang di Layar Utama HP',
+            message: 'Buka menu browser Anda (ikon titik tiga ⋮ di sudut kanan atas), lalu pilih "Pasang aplikasi" (Install app) atau "Tambahkan ke Layar Utama".',
+            confirmText: 'Saya Mengerti'
+        });
+    } else {
+        alert('Buka menu browser Anda (titik tiga ⋮), lalu pilih "Pasang aplikasi" atau "Tambahkan ke Layar Utama".');
+    }
+}
 
 function bindInstallPrompt() {
-    let deferred = null;
     const dismissed = () => safeStorage(() => localStorage.getItem('vt-install-dismissed') === '1', false);
 
     window.addEventListener('beforeinstallprompt', (e) => {
         e.preventDefault();
-        deferred = e;
+        deferredInstallPrompt = e;
         if (dismissed() || document.getElementById('vt-install-chip')) return;
 
         const appLogo = document.body?.dataset?.appLogo || '/icons/icon-192.png';
@@ -585,10 +665,8 @@ function bindInstallPrompt() {
         chip.addEventListener('click', async (ev) => {
             const choice = ev.target.closest('[data-install]')?.dataset.install;
             if (!choice) return;
-            if (choice === 'yes' && deferred) {
-                deferred.prompt();
-                await deferred.userChoice.catch(() => {});
-                deferred = null;
+            if (choice === 'yes') {
+                await promptInstall();
             } else {
                 safeStorage(() => localStorage.setItem('vt-install-dismissed', '1'));
             }
@@ -597,7 +675,10 @@ function bindInstallPrompt() {
         });
     });
 
-    window.addEventListener('appinstalled', () => document.getElementById('vt-install-chip')?.remove());
+    window.addEventListener('appinstalled', () => {
+        document.getElementById('vt-install-chip')?.remove();
+        syncPwaCardState();
+    });
 }
 
 // ---------------------------------------------------------------------------
@@ -612,6 +693,7 @@ bindQueuePanelActions();
 bindInstallPrompt();
 
 renderQueueUi().then(() => syncQueue());
+syncPwaCardState();
 
 window.addEventListener('online', () => { bannerDismissed = false; renderQueueUi(); syncQueue(); });
 window.addEventListener('offline', () => { bannerDismissed = false; renderQueueUi(); });
@@ -620,4 +702,10 @@ document.addEventListener('visibilitychange', () => {
 });
 setInterval(() => syncQueue(), 60000);
 
-window.VokaTrackPwa = { syncQueue, queueAll, isOnline: () => navigator.onLine };
+window.VokaTrackPwa = {
+    syncQueue,
+    queueAll,
+    promptInstall,
+    isOnline: () => navigator.onLine,
+    isStandalone: () => window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true,
+};
