@@ -148,8 +148,7 @@ class School extends Model
 
     public function getSetting(string $key, $default = null)
     {
-        $setting = $this->settings()->where('key', $key)->first();
-        return $setting ? $setting->value : $default;
+        return SchoolSetting::allForSchool((int) $this->id)[$key] ?? $default;
     }
 
     public function getStorageUsedMbAttribute(): float

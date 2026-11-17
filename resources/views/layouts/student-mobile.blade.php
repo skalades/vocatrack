@@ -6,13 +6,22 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ $title ?? 'VokaTrack Siswa — Portal PKL' }}</title>
     <link rel="icon" type="image/png" href="{{ $systemLogo ?? asset('images/logo.png') }}">
-    
+
+    <!-- PWA: dapat dipasang di HP & tetap bisa mengisi jurnal tanpa sinyal -->
+    <link rel="manifest" href="/manifest.webmanifest">
+    <meta name="theme-color" content="#0B2B25">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="VokaTrack">
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+
     <!-- Google Fonts: Plus Jakarta Sans & Space Grotesk -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
     
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @vite(['resources/css/app.css', 'resources/js/app.js', 'resources/js/student-pwa.js'])
     <style>
         body { font-family: 'Plus Jakarta Sans', system-ui, sans-serif; }
         .font-space { font-family: 'Space Grotesk', system-ui, sans-serif; }
@@ -35,10 +44,14 @@
     </style>
     @stack('styles')
 </head>
-<body data-app="student" class="min-h-screen bg-slate-200/80 antialiased selection:bg-[#C6F26B] selection:text-[#0B2B25] flex justify-center">
+<body data-app="student"
+      data-user-id="{{ auth()->id() }}"
+      data-journal-store-url="{{ route('student.journal.store') }}"
+      data-app-timezone="{{ config('app.timezone') }}"
+      class="min-h-screen bg-slate-200/80 antialiased selection:bg-[#C6F26B] selection:text-[#0B2B25] flex justify-center">
 
     <!-- Mobile App Container (Viewport 390px - 420px, Centered on desktop) -->
-    <div class="w-full max-w-[420px] min-h-screen flex flex-col bg-[#F1F4EC] text-[#10211D] relative shadow-2xl overflow-x-hidden pb-24">
+    <div data-student-shell class="w-full max-w-[420px] min-h-screen flex flex-col bg-[#F1F4EC] text-[#10211D] relative shadow-2xl overflow-x-hidden pb-24">
 
         <!-- Sticky Impersonation Warning Header for Mobile -->
         @if(app(\App\Services\ImpersonationService::class)->isImpersonating())

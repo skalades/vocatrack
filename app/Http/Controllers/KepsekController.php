@@ -8,6 +8,7 @@ use App\Models\Journal;
 use App\Models\Major;
 use App\Models\SchoolClass;
 use App\Models\StudentPkl;
+use App\Models\SupervisionVisit;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -36,12 +37,65 @@ class KepsekController extends Controller
 
         $majors = Major::where('school_id', $schoolId)->withCount('classes')->get();
 
+        // 1. Tren kehadiran 7 hari terakhir
+        $trendDates = collect();
+        for ($i = 6; $i >= 0; $i--) {
+            $trendDates->push(Carbon::today()->subDays($i)->toDateString());
+        }
+
+        $weeklyAttendances = Attendance::where('school_id', $schoolId)
+            ->whereDate('date', '>=', Carbon::today()->subDays(6)->toDateString())
+            ->get();
+
+        $weeklyTrend = $trendDates->map(function ($date) use ($weeklyAttendances) {
+            $dayRecords = $weeklyAttendances->where('date', $date);
+            return [
+                'date' => Carbon::parse($date)->isoFormat('dd, D MMM'),
+                'hadir' => $dayRecords->whereIn('status', ['hadir', 'terlambat'])->count(),
+                'izin' => $dayRecords->whereIn('status', ['izin', 'sakit', 'dinas_luar', 'luar_kantor'])->count(),
+                'alfa' => $dayRecords->where('status', 'alfa')->count(),
+                'total' => $dayRecords->count(),
+            ];
+        });
+
+        // 2. Siswa Berisiko (memiliki catatan alfa atau keterlambatan tinggi)
+        $studentsAtRisk = StudentPkl::where('school_id', $schoolId)
+            ->where('status', 'active')
+            ->whereHas('attendances', fn($q) => $q->where('status', 'alfa'))
+            ->with(['student.user', 'company'])
+            ->withCount([
+                'attendances as alfa_count' => fn($q) => $q->where('status', 'alfa'),
+                'attendances as late_count' => fn($q) => $q->where('status', 'terlambat'),
+            ])
+            ->orderByDesc('alfa_count')
+            ->take(5)
+            ->get();
+
+        // 3. Ringkasan Supervisi Guru
+        $supervisionCount = SupervisionVisit::where('school_id', $schoolId)->count();
+        $supervisionThisMonth = SupervisionVisit::where('school_id', $schoolId)
+            ->whereMonth('visit_date', Carbon::today()->month)
+            ->whereYear('visit_date', Carbon::today()->year)
+            ->count();
+
+        // 4. DU/DI Rekanan Utama dengan Penempatan Siswa Terbanyak
+        $topCompanies = Company::where('school_id', $schoolId)
+            ->withCount(['studentPkls as active_students_count' => fn($q) => $q->where('status', 'active')])
+            ->orderByDesc('active_students_count')
+            ->take(4)
+            ->get();
+
         return view('kepsek.dashboard', compact(
             'totalActivePkl',
             'totalCompanies',
             'attendanceRate',
             'journalApprovalRate',
-            'majors'
+            'majors',
+            'weeklyTrend',
+            'studentsAtRisk',
+            'supervisionCount',
+            'supervisionThisMonth',
+            'topCompanies'
         ));
     }
 

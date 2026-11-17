@@ -4,12 +4,13 @@ namespace App\Notifications;
 
 use App\Models\SchoolRequest;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
 
 /**
  * Masuk ke inbox (lonceng notifikasi) Super Admin setiap ada permohonan demo baru dari landing page.
  */
-class DemoRequestSubmittedNotification extends Notification
+class DemoRequestSubmittedNotification extends Notification implements ShouldQueue
 {
     use Queueable;
 

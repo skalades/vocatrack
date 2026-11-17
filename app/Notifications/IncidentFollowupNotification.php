@@ -5,9 +5,10 @@ namespace App\Notifications;
 use App\Models\IncidentFollowup;
 use App\Models\IncidentReport;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
 
-class IncidentFollowupNotification extends Notification
+class IncidentFollowupNotification extends Notification implements ShouldQueue
 {
     use Queueable;
 

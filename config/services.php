@@ -28,11 +28,28 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    /*
+    | URL heartbeat (mis. Healthchecks.io / BetterStack / UptimeRobot) yang di-ping setiap
+    | kali cron berhasil atau gagal. Kosongkan untuk menonaktifkan.
+    */
+    'heartbeat' => [
+        'evaluate_absence' => env('HEARTBEAT_EVALUATE_ABSENCE_URL'),
+        'evaluate_subscriptions' => env('HEARTBEAT_EVALUATE_SUBSCRIPTIONS_URL'),
+        'backup' => env('HEARTBEAT_BACKUP_URL'),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
+    ],
+
+    'whatsapp' => [
+        'provider' => env('WHATSAPP_GATEWAY_PROVIDER', 'log'),
+        'token' => env('WHATSAPP_GATEWAY_TOKEN'),
+        'url' => env('WHATSAPP_GATEWAY_URL'),
+        'enabled' => env('WHATSAPP_GATEWAY_ENABLED', true),
     ],
 
 ];

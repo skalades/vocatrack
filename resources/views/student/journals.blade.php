@@ -155,6 +155,9 @@
 
         </div>
 
+        <!-- Jurnal yang ditulis offline & menunggu dikirim (diisi oleh resources/js/student-pwa.js) -->
+        <div id="offline-journal-queue" class="hidden mt-5" aria-live="polite"></div>
+
         <!-- Riwayat Jurnal Section -->
         <div class="flex items-center justify-between mt-5 h-6">
             <h2 class="font-bold text-base text-[#10211D]">Riwayat jurnal</h2>

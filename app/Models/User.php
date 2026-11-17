@@ -16,10 +16,12 @@ class User extends Authenticatable
         'school_id',
         'name',
         'email',
+        'wa_number',
         'password',
         'role',
         'is_active',
         'must_change_password',
+        'notification_preferences',
     ];
 
     protected $hidden = [
@@ -33,7 +35,41 @@ class User extends Authenticatable
             'password' => 'hashed',
             'is_active' => 'boolean',
             'must_change_password' => 'boolean',
+            'notification_preferences' => 'array',
         ];
+    }
+
+    public function getFormattedWaNumberAttribute(): ?string
+    {
+        $phone = $this->wa_number ?: ($this->profile?->phone ?? null);
+        return \App\Services\WhatsAppGatewayService::normalizePhoneNumber($phone);
+    }
+
+    /**
+     * Cek apakah user bersedia menerima notifikasi di channel tertentu.
+     * Catatan: Notifikasi darurat/SOS tidak dapat dimatikan (selalu true).
+     */
+    public function wantsChannel(string $channel, string $type = 'general'): bool
+    {
+        if (in_array($type, ['sos', 'emergency_incident'], true)) {
+            return true;
+        }
+
+        if (empty($this->notification_preferences)) {
+            return true;
+        }
+
+        return (bool) ($this->notification_preferences[$type][$channel] ?? true);
+    }
+
+    public function wantsWhatsAppNotification(string $type = 'general'): bool
+    {
+        return $this->wantsChannel('whatsapp', $type);
+    }
+
+    public function wantsMailNotification(string $type = 'general'): bool
+    {
+        return $this->wantsChannel('mail', $type);
     }
 
     public function hasRole(string|array $roles): bool

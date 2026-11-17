@@ -242,5 +242,41 @@ class AuthController extends Controller
 
         return back()->with('success', 'Kata sandi Anda berhasil diperbarui.');
     }
+
+    /**
+     * Perbarui nomor WhatsApp dan preferensi notifikasi pengguna.
+     */
+    public function updateContactAndPreferences(Request $request)
+    {
+        $validated = $request->validate([
+            'wa_number' => ['nullable', 'string', 'max:25'],
+            'notification_preferences' => ['nullable', 'array'],
+        ]);
+
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
+        $wa = $validated['wa_number'] ?? null;
+        if ($wa) {
+            $normalized = \App\Services\WhatsAppGatewayService::normalizePhoneNumber($wa);
+            if (!\App\Services\WhatsAppGatewayService::isValidIndonesianNumber($normalized)) {
+                return back()->withErrors(['wa_number' => 'Format nomor WhatsApp tidak valid. Gunakan format 08xx atau 628xx (minimal 10 digit).'])->withInput();
+            }
+            $wa = $normalized;
+        }
+
+        $user->update([
+            'wa_number' => $wa,
+            'notification_preferences' => $validated['notification_preferences'] ?? $user->notification_preferences,
+        ]);
+
+        AuditLogService::log(
+            action: 'profile_contact_updated',
+            module: 'profile',
+            description: "Pengguna {$user->name} memperbarui data kontak / preferensi notifikasi."
+        );
+
+        return back()->with('success', 'Data kontak WhatsApp dan preferensi notifikasi berhasil diperbarui.');
+    }
 }
 

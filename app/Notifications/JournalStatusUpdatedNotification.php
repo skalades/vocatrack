@@ -4,9 +4,11 @@ namespace App\Notifications;
 
 use App\Models\Journal;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-class JournalStatusUpdatedNotification extends Notification
+class JournalStatusUpdatedNotification extends Notification implements ShouldQueue
 {
     use Queueable;
 
@@ -18,7 +20,39 @@ class JournalStatusUpdatedNotification extends Notification
 
     public function via(object $notifiable): array
     {
-        return ['database'];
+        $channels = ['database'];
+
+        if (!empty($notifiable->email) && (!method_exists($notifiable, 'wantsMailNotification') || $notifiable->wantsMailNotification('journal_status'))) {
+            $channels[] = 'mail';
+        }
+
+        return $channels;
+    }
+
+    public function getNotificationType(): string
+    {
+        return 'journal_status';
+    }
+
+    public function toMail(object $notifiable): MailMessage
+    {
+        $dateStr = \Carbon\Carbon::parse($this->journal->date)->format('d M Y');
+        $statusLabel = match ($this->status) {
+            'approved' => 'Disetujui',
+            'revision' => 'Perlu Revisi',
+            'review_guru' => 'Diverifikasi DU/DI',
+            default => ucfirst($this->status),
+        };
+
+        $mail = (new MailMessage)
+            ->subject("[VokaTrack] Pembaruan Status Jurnal PKL: {$statusLabel}")
+            ->line("Jurnal kegiatan PKL Anda untuk tanggal {$dateStr} telah diperbarui statusnya menjadi: {$statusLabel}.");
+
+        if ($this->notes) {
+            $mail->line("Catatan pembimbing: \"{$this->notes}\"");
+        }
+
+        return $mail->action('Lihat Jurnal Saya', url('/siswa/jurnal'));
     }
 
     public function toArray(object $notifiable): array

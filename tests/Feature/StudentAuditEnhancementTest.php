@@ -163,27 +163,33 @@ class StudentAuditEnhancementTest extends TestCase
 
     public function test_checkin_requires_reason_when_outside_radius()
     {
-        // 1. Outside radius without reason should fail validation
-        $responseFail = $this->actingAs($this->studentUser)->postJson(route('student.attendance.checkin'), [
-            'latitude' => -6.300000,
-            'longitude' => 106.900000,
-            'is_within_radius' => false,
-            'photo' => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
-            'reason' => '',
-        ]);
-        $responseFail->assertStatus(422);
-        $responseFail->assertJsonValidationErrors(['reason']);
+        Carbon::setTestNow(Carbon::today()->setHour(8)->setMinute(0));
 
-        // 2. Outside radius with valid reason should succeed
-        $responseSuccess = $this->actingAs($this->studentUser)->postJson(route('student.attendance.checkin'), [
-            'latitude' => -6.300000,
-            'longitude' => 106.900000,
-            'is_within_radius' => false,
-            'photo' => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
-            'reason' => 'Tugas dinas luar di lokasi proyek klien',
-        ]);
-        $responseSuccess->assertStatus(200);
-        $responseSuccess->assertJson(['success' => true]);
+        try {
+            // 1. Outside radius without reason should fail validation
+            $responseFail = $this->actingAs($this->studentUser)->postJson(route('student.attendance.checkin'), [
+                'latitude' => -6.300000,
+                'longitude' => 106.900000,
+                'is_within_radius' => false,
+                'photo' => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
+                'reason' => '',
+            ]);
+            $responseFail->assertStatus(422);
+            $responseFail->assertJsonValidationErrors(['reason']);
+
+            // 2. Outside radius with valid reason should succeed
+            $responseSuccess = $this->actingAs($this->studentUser)->postJson(route('student.attendance.checkin'), [
+                'latitude' => -6.300000,
+                'longitude' => 106.900000,
+                'is_within_radius' => false,
+                'photo' => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
+                'reason' => 'Tugas dinas luar di lokasi proyek klien',
+            ]);
+            $responseSuccess->assertStatus(200);
+            $responseSuccess->assertJson(['success' => true]);
+        } finally {
+            Carbon::setTestNow();
+        }
     }
 
     public function test_journal_rejects_future_dates_and_allows_draft_deletion()

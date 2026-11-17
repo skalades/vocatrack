@@ -33,6 +33,8 @@ Route::get('/', [LandingController::class, 'index'])->name('landing');
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [AuthController::class, 'login'])->name('login.post');
 Route::match(['get', 'post'], '/logout', [AuthController::class, 'logout'])->name('logout');
+Route::get('/forgot-password', [\App\Http\Controllers\PasswordResetController::class, 'showForgotForm'])->name('password.request');
+Route::post('/forgot-password', [\App\Http\Controllers\PasswordResetController::class, 'requestReset'])->middleware('throttle:5,15')->name('password.email');
 
 // Guest Public Verification for E-Sertifikat PKL (QR Code Destination)
 Route::get('/verify/cert/{uuid}', [CertificateVerificationController::class, 'verify'])->middleware('throttle:60,1')->name('public.cert.verify');
@@ -58,8 +60,9 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/impersonate/leave', [ImpersonationController::class, 'stop'])->name('impersonate.leave');
     Route::post('/impersonate/{user}', [ImpersonationController::class, 'start'])->name('impersonate.start');
 
-    // Self-Service Password Change for All User Levels
+    // Self-Service Password Change & Contact/Preferences for All User Levels
     Route::post('/profile/change-password', [AuthController::class, 'changePassword'])->name('profile.change-password');
+    Route::post('/profile/contact-preferences', [AuthController::class, 'updateContactAndPreferences'])->name('profile.contact-preferences');
 });
 
 // 1. Super Admin Platform Routes (Modular SaaS Architecture)
@@ -156,6 +159,7 @@ Route::middleware(['auth', 'IdentifyTenant', 'role:admin-sekolah'])->prefix('adm
     Route::get('/students', [AdminSekolahController::class, 'students'])->name('adminsekolah.students');
     Route::post('/students', [AdminSekolahController::class, 'storeStudent'])->name('adminsekolah.students.store');
     Route::put('/students/{student}', [AdminSekolahController::class, 'updateStudent'])->name('adminsekolah.students.update');
+    Route::post('/students/{student}/reset-password', [AdminSekolahController::class, 'resetStudentPassword'])->name('adminsekolah.students.reset-password');
     Route::delete('/students/{student}', [AdminSekolahController::class, 'destroyStudent'])->name('adminsekolah.students.destroy');
     Route::post('/students/import', [AdminSekolahController::class, 'importStudents'])->name('adminsekolah.students.import');
 
@@ -257,6 +261,7 @@ Route::middleware(['auth', 'IdentifyTenant', 'role:siswa'])->prefix('siswa')->gr
 Route::middleware(['auth', 'IdentifyTenant', 'role:guru-pembimbing'])->prefix('guru')->group(function () {
     Route::get('/dashboard', [TeacherController::class, 'dashboard'])->name('guru.dashboard');
     Route::get('/monitoring', [TeacherController::class, 'monitoring'])->name('guru.monitoring');
+    Route::post('/students/{student}/reset-password', [TeacherController::class, 'resetStudentPassword'])->middleware('throttle:5,1')->name('guru.students.reset-password');
     Route::get('/requests', [TeacherController::class, 'requests'])->name('guru.requests');
     Route::post('/requests/bulk', [TeacherController::class, 'bulkProcessRequests'])->name('guru.requests.bulk');
     Route::post('/requests/{attRequest}/process', [TeacherController::class, 'processRequest'])->name('guru.requests.process');

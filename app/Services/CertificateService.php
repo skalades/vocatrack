@@ -2,13 +2,18 @@
 
 namespace App\Services;
 
+use App\Jobs\GenerateStudentCertificate;
 use App\Models\Assessment;
 use App\Models\Certificate;
 use App\Models\School;
 use App\Models\StudentPkl;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Barryvdh\DomPDF\PDF as DomPdfInstance;
+use Illuminate\Bus\Batch;
+use Illuminate\Bus\PendingBatch;
+use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -114,10 +119,7 @@ class CertificateService
         });
     }
 
-    /**
-     * Generate batch untuk seluruh siswa pada suatu periode PKL yang sudah memiliki penilaian.
-     */
-    public function generateBatchForSchool(int $schoolId, ?int $pklPeriodId = null): int
+    public function eligibleStudentPklIds(int $schoolId, ?int $pklPeriodId = null): array
     {
         $query = StudentPkl::where('school_id', $schoolId)
             ->whereHas('assessment')
@@ -127,15 +129,29 @@ class CertificateService
             $query->where('pkl_period_id', $pklPeriodId);
         }
 
-        $students = $query->get();
-        $generatedCount = 0;
+        return $query->pluck('id')->all();
+    }
 
-        foreach ($students as $spkl) {
-            $this->generateForStudentPkl($spkl);
-            $generatedCount++;
-        }
+    public function dispatchBatchForSchool(int $schoolId, ?int $pklPeriodId = null): \Illuminate\Bus\PendingBatch
+    {
+        $jobs = collect($this->eligibleStudentPklIds($schoolId, $pklPeriodId))
+            ->map(fn (int $studentPklId) => new GenerateStudentCertificate($studentPklId))
+            ->all();
 
-        return $generatedCount;
+        return Bus::batch($jobs)
+            ->name("certificate-school-{$schoolId}")
+            ->allowFailures()
+            ->onQueue('certificates');
+    }
+
+    public function generateBatchForSchool(int $schoolId, ?int $pklPeriodId = null): int
+    {
+        return $this->dispatchBatchForSchool($schoolId, $pklPeriodId)->dispatch()->totalJobs;
+    }
+
+    public function batchStatus(string $batchId): ?Batch
+    {
+        return Bus::findBatch($batchId);
     }
 
     /**

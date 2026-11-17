@@ -140,6 +140,45 @@
         </div>
     </section>
 
+    {{-- ===================== PERMOHONAN RESET SANDI SISWA ===================== --}}
+    @if(isset($pendingResetRequests) && $pendingResetRequests->isNotEmpty())
+        <section data-reveal class="p-4 sm:p-5 rounded-3xl bg-amber-50/90 border border-amber-200/80 text-amber-950 shadow-sm animate-fade-in-up">
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+                <div class="flex items-center gap-2.5 font-extrabold text-sm text-amber-950">
+                    <span class="w-8 h-8 rounded-xl bg-amber-200/80 text-amber-900 flex items-center justify-center shrink-0">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+                    </span>
+                    <div>
+                        <h4 class="font-extrabold text-amber-950 leading-tight">Permohonan Reset Kata Sandi Siswa ({{ $pendingResetRequests->count() }})</h4>
+                        <p class="text-xs text-amber-800/90 font-medium">Siswa bimbingan berikut meminta reset kata sandi melalui halaman login lupa password:</p>
+                    </div>
+                </div>
+                <span class="text-[11px] font-bold text-amber-800 bg-amber-100/80 px-2.5 py-1 rounded-full border border-amber-200">Perlu Tindakan Guru</span>
+            </div>
+            <div class="space-y-2">
+                @foreach($pendingResetRequests as $req)
+                    <div class="flex flex-wrap items-center justify-between gap-3 p-3 bg-white rounded-2xl border border-amber-200/60 shadow-2xs text-xs">
+                        <div class="min-w-0">
+                            <span class="font-bold text-slate-900">{{ $req->student->user?->name ?? 'Siswa' }}</span>
+                            <span class="text-slate-500 font-mono text-[11px] ml-1">({{ $req->student->nisn ?? $req->student->nis }})</span>
+                            <span class="text-slate-300 mx-1.5">·</span>
+                            <span class="text-slate-600 font-medium">{{ $req->email }}</span>
+                            <span class="text-slate-400 text-[10px] ml-2">Diajukan: {{ $req->created_at->diffForHumans() }}</span>
+                        </div>
+                        <form method="POST" action="{{ route('guru.students.reset-password', $req->student) }}" class="inline" onsubmit="var p = prompt('Kata sandi baru sementara siswa (min. 8 karakter). Kosongkan untuk dibuatkan otomatis:'); if (p === null) return false; this.new_password.value = p; return confirm('Reset kata sandi siswa ini sekarang?');">
+                            @csrf
+                            <input type="hidden" name="new_password" value="">
+                            <button type="submit" class="px-3.5 py-1.5 rounded-xl bg-[#0B2B25] hover:bg-[#12382F] text-[#C6F26B] font-bold text-xs transition-colors shadow-sm cursor-pointer inline-flex items-center gap-1.5">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                <span>Reset Kata Sandi Sekarang</span>
+                            </button>
+                        </form>
+                    </div>
+                @endforeach
+            </div>
+        </section>
+    @endif
+
     {{-- ===================== ALERTS ===================== --}}
     @if($criticalIncidentsCount > 0 || $flaggedTodayCount > 0 || $todaySummary['belum_telat'] > 0)
         <section data-reveal-stagger class="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -277,7 +316,8 @@
                                     <th class="px-3 py-2.5">Masuk</th>
                                     <th class="px-3 py-2.5">Pulang</th>
                                     <th class="px-3 py-2.5">Lokasi</th>
-                                    <th class="px-5 py-2.5 text-right">Selfie</th>
+                                    <th class="px-3 py-2.5 text-center">Selfie</th>
+                                    <th class="px-5 py-2.5 text-right">Aksi Akun</th>
                                 </tr>
                             </thead>
                             <tbody data-reveal-stagger class="divide-y divide-slate-100">
@@ -334,13 +374,27 @@
                                                 <span class="block text-[10px] text-slate-400 mt-0.5">±{{ $att->accuracy_meters }} m</span>
                                             @endif
                                         </td>
-                                        <td class="px-5 py-3 text-right">
+                                        <td class="px-3 py-3 text-center">
                                             @if($att && $att->checkin_photo_path)
                                                 <button type="button" onclick="openImageLightbox('{{ $att->checkin_photo_url }}', 'Selfie masuk: {{ addslashes($sp->student->user->name) }}')" class="inline-block cursor-zoom-in" title="Lihat selfie">
-                                                    <img src="{{ $att->checkin_photo_url }}" alt="Selfie {{ $sp->student->user->name }}" class="w-9 h-9 rounded-xl object-cover border border-slate-200 hover:scale-110 transition-transform">
+                                                    <img src="{{ $att->checkin_photo_url }}" alt="Selfie {{ $sp->student->user->name }}" class="w-8 h-8 rounded-xl object-cover border border-slate-200 hover:scale-110 transition-transform mx-auto">
                                                 </button>
                                             @else
                                                 <span class="text-slate-300">—</span>
+                                            @endif
+                                        </td>
+                                        <td class="px-5 py-3 text-right whitespace-nowrap">
+                                            @if(in_array($sp->status, ['assigned', 'active'], true))
+                                                <form method="POST" action="{{ route('guru.students.reset-password', $sp->student) }}" class="inline" onsubmit="var p = prompt('Kata sandi baru sementara siswa (min. 8 karakter). Kosongkan untuk dibuatkan otomatis:'); if (p === null) return false; this.new_password.value = p; return confirm('Reset kata sandi siswa {{ addslashes($sp->student->user->name) }} sekarang? Siswa wajib menggantinya saat login berikutnya.');">
+                                                    @csrf
+                                                    <input type="hidden" name="new_password" value="">
+                                                    <button type="submit" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-900 font-bold text-[11px] transition-colors cursor-pointer shadow-2xs" title="Reset kata sandi akun siswa ini">
+                                                        <svg class="w-3.5 h-3.5 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+                                                        <span>Reset Sandi</span>
+                                                    </button>
+                                                </form>
+                                            @else
+                                                <span class="text-slate-300 text-xs">—</span>
                                             @endif
                                         </td>
                                     </tr>

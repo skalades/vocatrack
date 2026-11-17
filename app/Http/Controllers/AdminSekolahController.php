@@ -419,6 +419,58 @@ class AdminSekolahController extends Controller
         return back()->with('success', 'Data siswa berhasil diperbarui.');
     }
 
+    public function resetStudentPassword(Request $request, Student $student)
+    {
+        $schoolId = $this->getSchoolId();
+        abort_if($student->user->school_id !== $schoolId, 403);
+
+        $validated = $request->validate([
+            'new_password' => ['nullable', 'string', 'min:8', 'max:100'],
+        ], [
+            'new_password.min' => 'Kata sandi baru minimal 8 karakter. Kosongkan untuk dibuatkan otomatis.',
+        ]);
+
+        $user = $student->user;
+        $newPassword = $validated['new_password'] ?? TenantProvisioningService::generateTemporaryPassword();
+
+        DB::transaction(function () use ($user, $newPassword, $student, $schoolId) {
+            $user->update([
+                'password' => $newPassword,
+                'is_active' => true,
+                'must_change_password' => true,
+            ]);
+
+            if (config('session.driver') === 'database') {
+                DB::table(config('session.table', 'sessions'))->where('user_id', $user->id)->delete();
+            }
+
+            \App\Models\StudentPasswordResetRequest::where('student_id', $student->id)
+                ->where('status', 'pending')
+                ->update([
+                    'status' => 'completed',
+                    'notes' => "Direset oleh Admin Sekolah " . Auth::user()->name . " pada " . now()->format('d/m/Y H:i'),
+                ]);
+
+            AuditLogService::log(
+                'password_reset',
+                'security',
+                "Kata sandi akun siswa ({$user->email}) direset oleh Admin Sekolah " . Auth::user()->email . '.',
+                null,
+                Auth::user(),
+                null,
+                ['target_user_id' => $user->id, 'student_id' => $student->id, 'school_id' => $schoolId]
+            );
+        });
+
+        return back()
+            ->with('success', "Kata sandi siswa {$user->name} berhasil direset. Siswa wajib menggantinya saat login berikutnya.")
+            ->with('temporary_credential', [
+                'email' => $user->email,
+                'password' => $newPassword,
+                'context' => "Siswa {$user->name}",
+            ]);
+    }
+
     public function destroyStudent(Student $student)
     {
         $schoolId = $this->getSchoolId();

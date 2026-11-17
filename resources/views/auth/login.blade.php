@@ -216,6 +216,9 @@
                                 <input type="checkbox" name="remember" class="w-4 h-4 rounded border-[#B9C6BD] text-[#12382F] accent-[#12382F] focus:ring-[#C6F26B] cursor-pointer">
                                 <span class="text-[#4A5E55] font-semibold">Ingat saya di perangkat ini</span>
                             </label>
+                            <a href="{{ route('password.request') }}" class="font-bold text-[#2E6B4F] hover:text-[#0B2B25] hover:underline transition-colors">
+                                Lupa password?
+                            </a>
                         </div>
 
                         <button type="submit" id="login-submit" class="group w-full py-3.5 px-4 rounded-2xl bg-[#0B2B25] hover:bg-[#12382F] text-white font-bold text-sm tracking-wide shadow-lg shadow-[#0B2B25]/25 transition-all active:scale-[0.99] cursor-pointer flex items-center justify-center gap-2 disabled:opacity-80 disabled:cursor-wait">

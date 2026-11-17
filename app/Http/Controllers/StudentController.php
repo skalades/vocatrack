@@ -477,7 +477,7 @@ class StudentController extends Controller
     {
         $spkl = $this->getStudentPkl(true);
         if (!$spkl) {
-            return back()->withErrors(['date' => 'Anda tidak memiliki penugasan PKL aktif untuk mengisi jurnal.']);
+            return $this->journalErrorResponse($request, ['date' => 'Anda tidak memiliki penugasan PKL aktif untuk mengisi jurnal.']);
         }
 
         $desc = $request->input('activity_description') ?? $request->input('description');
@@ -553,7 +553,7 @@ class StudentController extends Controller
                 }
             });
         } catch (ValidationException $e) {
-            return back()->withErrors($e->errors())->withInput();
+            return $this->journalErrorResponse($request, $e->errors());
         }
 
         if ($request->hasFile('photos')) {
@@ -563,7 +563,7 @@ class StudentController extends Controller
             }
 
             if (!app(StorageQuotaService::class)->canUpload($spkl->school, $totalSize)) {
-                return back()->withErrors(['photos' => 'Kapasitas penyimpanan sekolah Anda telah penuh. Tidak dapat mengunggah foto jurnal. Hubungi admin sekolah.'])->withInput();
+                return $this->journalErrorResponse($request, ['photos' => 'Kapasitas penyimpanan sekolah Anda telah penuh. Tidak dapat mengunggah foto jurnal. Hubungi admin sekolah.']);
             }
 
             foreach ($request->file('photos') as $photo) {
@@ -580,7 +580,31 @@ class StudentController extends Controller
             ? 'Jurnal berhasil diajukan untuk review Pembimbing DU/DI!'
             : 'Jurnal harian tersimpan sebagai draft.';
 
+        // Sinkronisasi jurnal offline dari PWA mengirim Accept: application/json.
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => $msg,
+                'journal_id' => $journal->id,
+                'status' => $journal->status,
+                'date' => $journal->date?->toDateString(),
+            ]);
+        }
+
         return redirect()->route('student.journals')->with('success', $msg);
+    }
+
+    /**
+     * Respons galat jurnal: JSON 422 untuk sinkronisasi offline, redirect-back untuk form biasa.
+     */
+    protected function journalErrorResponse(Request $request, array $errors)
+    {
+        if ($request->expectsJson()) {
+            $first = collect($errors)->flatten()->first();
+
+            return response()->json(['message' => $first, 'errors' => $errors], 422);
+        }
+
+        return back()->withErrors($errors)->withInput();
     }
 
     public function submitJournal(Journal $journal)

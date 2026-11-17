@@ -22,6 +22,36 @@
         </x-button>
     </x-page-header>
 
+    @if(isset($pendingResetRequests) && $pendingResetRequests->isNotEmpty())
+        <div class="mb-5 p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 shadow-sm animate-fade-in-up">
+            <div class="flex items-center gap-2 mb-2 font-bold text-sm">
+                <svg class="w-5 h-5 text-amber-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                <span>Permohonan Reset Kata Sandi Siswa Masuk ({{ $pendingResetRequests->count() }})</span>
+            </div>
+            <p class="text-xs text-amber-800 mb-3">Siswa bimbingan berikut mengajukan reset sandi melalui halaman lupa password:</p>
+            <div class="space-y-2">
+                @foreach($pendingResetRequests as $req)
+                    <div class="flex flex-wrap items-center justify-between gap-2 p-2.5 bg-white rounded-xl border border-amber-100 text-xs">
+                        <div>
+                            <span class="font-bold text-slate-800">{{ $req->student->user?->name ?? 'Siswa' }}</span>
+                            <span class="text-slate-500 font-mono ml-1">({{ $req->student->nisn }})</span>
+                            <span class="text-slate-400 mx-1">·</span>
+                            <span class="text-slate-600">{{ $req->email }}</span>
+                            <span class="text-slate-400 text-[10px] ml-2">Diajukan: {{ $req->created_at->diffForHumans() }}</span>
+                        </div>
+                        <form method="POST" action="{{ route('guru.students.reset-password', $req->student) }}" class="inline" onsubmit="var p = prompt('Kata sandi baru sementara siswa (min. 8 karakter). Kosongkan untuk dibuatkan otomatis:'); if (p === null) return false; this.new_password.value = p; return confirm('Reset kata sandi siswa ini sekarang?');">
+                            @csrf
+                            <input type="hidden" name="new_password" value="">
+                            <button type="submit" class="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-colors shadow-sm cursor-pointer">
+                                Reset Kata Sandi Sekarang
+                            </button>
+                        </form>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    @endif
+
     <!-- Top KPI Metrics -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <x-stat-card 
@@ -234,7 +264,14 @@
                                 {{ $a->checkout_notes ?? '-' }}
                             </td>
                             <td class="py-3.5 px-4 text-center whitespace-nowrap table-sticky-right">
-                                <button type="button" 
+                                @if(in_array($a->studentPkl->status, ['assigned', 'active'], true))
+                                    <form method="POST" action="{{ route('guru.students.reset-password', $a->studentPkl->student) }}" class="inline" onsubmit="var p = prompt('Kata sandi sementara siswa (min. 8 karakter). Kosongkan untuk dibuatkan otomatis:'); if (p === null) return false; this.new_password.value = p; return confirm('Reset kata sandi siswa ini? Siswa wajib menggantinya saat login berikutnya.');">
+                                        @csrf
+                                        <input type="hidden" name="new_password" value="">
+                                        <button type="submit" class="py-1.5 px-2.5 rounded-xl border border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold text-xs cursor-pointer" title="Reset kata sandi siswa">Reset sandi</button>
+                                    </form>
+                                @endif
+                                <button type="button"
                                         onclick='showAttendanceDetail(@json($detailPayload))'
                                         class="py-1.5 px-2.5 rounded-xl border border-slate-200 bg-white hover:bg-indigo-50 hover:border-indigo-300 text-slate-700 hover:text-indigo-700 font-bold text-xs shadow-2xs transition-all cursor-pointer inline-flex items-center gap-1.5"
                                         title="Buka rincian lengkap foto swafoto, jam, dan titik lokasi presensi">

@@ -10,8 +10,11 @@
         "barryvdh/laravel-dompdf": "^3.1",
         "laravel/framework": "^12.0",
         "laravel/tinker": "^2.10.1",
+        "league/flysystem-aws-s3-v3": "^3.0",
         "livewire/livewire": "^4.4",
         "maatwebsite/excel": "^3.1",
+        "predis/predis": "*",
+        "sentry/sentry-laravel": "^4.10",
         "simplesoftwareio/simple-qrcode": "*"
     },
     "require-dev": {

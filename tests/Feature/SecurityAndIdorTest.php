@@ -180,6 +180,36 @@ class SecurityAndIdorTest extends TestCase
         ]);
     }
 
+    public function test_teacher_can_reset_password_for_assigned_active_student(): void
+    {
+        $studentUser = $this->spklA->student->user;
+        $response = $this->actingAs($this->teacherUserA)->post(
+            route('guru.students.reset-password', $this->spklA->student),
+            ['new_password' => 'SiswaBaru2026']
+        );
+
+        $response->assertRedirect();
+        $response->assertSessionHas('temporary_credential', fn ($credential) => $credential['password'] === 'SiswaBaru2026');
+        $this->assertTrue(password_verify('SiswaBaru2026', $studentUser->fresh()->password));
+        $this->assertTrue($studentUser->fresh()->must_change_password);
+        $this->assertDatabaseHas('activity_logs', [
+            'school_id' => $this->school->id,
+            'user_id' => $this->teacherUserA->id,
+            'action' => 'password_reset',
+            'module' => 'security',
+        ]);
+    }
+
+    public function test_teacher_cannot_reset_another_teachers_student(): void
+    {
+        $response = $this->actingAs($this->teacherUserB)->post(
+            route('guru.students.reset-password', $this->spklA->student),
+            ['new_password' => 'TidakBoleh2026']
+        );
+
+        $response->assertNotFound();
+        $this->assertTrue(password_verify('password', $this->spklA->student->user->fresh()->password));
+    }
     public function test_teacher_cannot_process_request_of_another_teachers_student(): void
     {
         // Teacher B tries to approve Student A's attendance request (mentored by Teacher A)

@@ -32,6 +32,11 @@ class BackupService
         }
     }
 
+    public function backupDirectory(): string
+    {
+        return $this->backupDir;
+    }
+
     /**
      * Seluruh tabel domain yang dicadangkan, diurutkan sesuai dependensi foreign key
      * (induk lebih dulu). Restore menghapus data dengan urutan terbalik lalu mengisi
@@ -73,6 +78,7 @@ class BackupService
         'activity_logs',
         'platform_announcements',
         'school_requests',
+        'student_password_reset_requests',
     ];
 
     /**

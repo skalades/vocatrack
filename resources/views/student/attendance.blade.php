@@ -461,6 +461,19 @@
 
         if (!video || !canvas || !form) return;
 
+        // 0. Guard: Koneksi internet. Presensi tidak bisa diantrekan offline karena waktu
+        //    & lokasi wajib diverifikasi server saat itu juga. Kamera tetap menyala agar
+        //    siswa bisa langsung mencoba lagi begitu sinyal kembali.
+        if (!navigator.onLine) {
+            window.vtAlert({
+                tone: 'warning',
+                title: 'Tidak ada koneksi internet',
+                message: 'Presensi memerlukan internet karena waktu dan lokasi diverifikasi server. Cari titik bersinyal lalu tekan tombol presensi lagi.',
+                hint: 'Jika seharian tidak ada sinyal di lokasi PKL, laporkan ke guru pembimbing agar dicatat manual.',
+            });
+            return;
+        }
+
         // 1. Guard: Camera Readiness
         if (cameraStatus !== 'ready' || !videoStream || video.videoWidth === 0) {
             window.showPermissionGuideModal('camera');

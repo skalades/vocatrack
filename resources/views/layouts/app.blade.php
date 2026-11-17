@@ -220,9 +220,19 @@
                         <svg class="w-4 h-4 shrink-0 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>
                         <span>Pengumuman</span>
                     </a>
-                    <a href="{{ route('guru.monitoring') }}" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs transition-colors {{ request()->routeIs('guru.monitoring*') ? $activeClass : $inactiveClass }}">
-                        <svg class="w-4 h-4 shrink-0 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
-                        <span>Monitoring Absensi</span>
+                    <a href="{{ route('guru.monitoring') }}" class="flex items-center justify-between px-3 py-2.5 rounded-xl text-xs transition-colors {{ request()->routeIs('guru.monitoring*') ? $activeClass : $inactiveClass }}">
+                        <div class="flex items-center space-x-3 min-w-0">
+                            <svg class="w-4 h-4 shrink-0 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                            <span class="truncate">Monitoring Absensi</span>
+                        </div>
+                        @php
+                            $sbPendingResets = auth()->user()?->teacher ? \App\Models\StudentPasswordResetRequest::where('teacher_id', auth()->user()->teacher->id)->where('status', 'pending')->count() : 0;
+                        @endphp
+                        @if($sbPendingResets > 0)
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-400 text-amber-950 shrink-0" title="{{ $sbPendingResets }} permohonan reset sandi siswa">
+                                {{ $sbPendingResets }}
+                            </span>
+                        @endif
                     </a>
                     <a href="{{ route('guru.requests') }}" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs transition-colors {{ request()->routeIs('guru.requests*') ? $activeClass : $inactiveClass }}">
                         <svg class="w-4 h-4 shrink-0 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
@@ -427,7 +437,7 @@
                     </div>
                 @endif
 
-                @if(is_array(session('temporary_credential')) && auth()->user()?->hasRole(['super-admin', 'admin-sekolah']))
+                @if(is_array(session('temporary_credential')) && auth()->user()?->hasRole(['super-admin', 'admin-sekolah', 'guru-pembimbing']))
                     @php
                         $tmpCred = session('temporary_credential');
                     @endphp

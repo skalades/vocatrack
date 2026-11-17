@@ -118,6 +118,95 @@
 
     </div>
 
+    <!-- Tren Kehadiran & Siswa Berisiko (P2 Nilai Tambah) -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Tren Kehadiran 7 Hari -->
+        <div class="lg:col-span-2">
+            <x-card 
+                title="Tren Kehadiran 7 Hari Terakhir" 
+                subtitle="Dinamika presensi siswa aktif di industri sepekan terakhir"
+            >
+                <div class="space-y-3 pt-1">
+                    @foreach($weeklyTrend as $day)
+                        @php
+                            $total = max(1, $day['total']);
+                            $pctHadir = round(($day['hadir'] / $total) * 100);
+                            $pctIzin = round(($day['izin'] / $total) * 100);
+                            $pctAlfa = round(($day['alfa'] / $total) * 100);
+                        @endphp
+                        <div>
+                            <div class="flex items-center justify-between text-xs font-semibold mb-1">
+                                <span class="text-slate-700 w-24 shrink-0 font-medium">{{ $day['date'] }}</span>
+                                <div class="flex items-center gap-3 text-[11px] font-mono">
+                                    <span class="text-emerald-700 font-bold">{{ $day['hadir'] }} Hadir</span>
+                                    @if($day['izin'] > 0)
+                                        <span class="text-amber-700">{{ $day['izin'] }} Izin/Sakit</span>
+                                    @endif
+                                    @if($day['alfa'] > 0)
+                                        <span class="text-rose-700 font-bold">{{ $day['alfa'] }} Alfa</span>
+                                    @endif
+                                    <span class="text-slate-400">({{ $day['total'] }} rekaman)</span>
+                                </div>
+                            </div>
+                            <div class="h-2 w-full bg-slate-100 rounded-full overflow-hidden flex">
+                                <div style="width: {{ $pctHadir }}%" class="bg-emerald-500" title="{{ $day['hadir'] }} Hadir"></div>
+                                <div style="width: {{ $pctIzin }}%" class="bg-amber-400" title="{{ $day['izin'] }} Izin/Sakit"></div>
+                                <div style="width: {{ $pctAlfa }}%" class="bg-rose-500" title="{{ $day['alfa'] }} Alfa"></div>
+                            </div>
+                        </div>
+                    @endforeach
+
+                    <div class="pt-3 border-t border-slate-100 flex items-center justify-end gap-4 text-[11px] text-slate-500">
+                        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Hadir/Terlambat</span>
+                        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span> Izin/Sakit/Dinas</span>
+                        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span> Alfa/Tanpa Keterangan</span>
+                    </div>
+                </div>
+            </x-card>
+        </div>
+
+        <!-- Siswa Butuh Perhatian (Alfa / Resiko) -->
+        <div>
+            <x-card 
+                title="Siswa Butuh Perhatian" 
+                subtitle="Deteksi dini kedisiplinan siswa dengan catatan alfa"
+            >
+                @if(isset($studentsAtRisk) && $studentsAtRisk->isNotEmpty())
+                    <div class="divide-y divide-slate-100">
+                        @foreach($studentsAtRisk as $spkl)
+                            <div class="py-2.5 first:pt-0 last:pb-0 flex items-center justify-between text-xs">
+                                <div>
+                                    <span class="font-bold text-slate-900 block">{{ $spkl->student->user?->name ?? 'Siswa' }}</span>
+                                    <span class="text-[11px] text-slate-500 truncate block max-w-[170px]">{{ $spkl->company->name ?? 'DU/DI' }}</span>
+                                </div>
+                                <div class="text-right shrink-0">
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                                        {{ $spkl->alfa_count }} Alfa
+                                    </span>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                @else
+                    <div class="text-center py-6 text-slate-400">
+                        <svg class="w-8 h-8 mx-auto mb-2 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        <p class="text-xs font-semibold text-slate-700">Disiplin Presensi Terjaga</p>
+                        <p class="text-[11px] text-slate-400 mt-0.5">Tidak ada siswa aktif dengan catatan alfa beruntun.</p>
+                    </div>
+                @endif
+
+                <div class="mt-4 pt-3 border-t border-slate-100">
+                    <div class="flex items-center justify-between text-xs text-slate-600">
+                        <span class="font-medium">Kunjungan Supervisi Guru:</span>
+                        <span class="font-bold text-slate-900">{{ $supervisionThisMonth }} bulan ini ({{ $supervisionCount }} total)</span>
+                    </div>
+                </div>
+            </x-card>
+        </div>
+
+    </div>
+
     <!-- Jurusan Distribution & Actions -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         

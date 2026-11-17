@@ -330,6 +330,12 @@ class TeacherController extends Controller
 
         $recentAnnouncements = $announcementService->getLatestForUser($user, 3);
 
+        $pendingResetRequests = \App\Models\StudentPasswordResetRequest::where('teacher_id', $teacher->id)
+            ->where('status', 'pending')
+            ->with('student.user')
+            ->latest()
+            ->get();
+
         return view('teacher.dashboard', compact(
             'teacher',
             'totalStudents',
@@ -363,10 +369,68 @@ class TeacherController extends Controller
             'teacherScoredCount',
             'avgFinalScore',
             'studentPkls',
-            'recentAnnouncements'
+            'recentAnnouncements',
+            'pendingResetRequests'
         ));
     }
 
+    public function resetStudentPassword(Request $request, \App\Models\Student $student)
+    {
+        $teacher = $this->getTeacher();
+        $assignment = StudentPkl::where('teacher_id', $teacher->id)
+            ->where('student_id', $student->id)
+            ->whereIn('status', ['assigned', 'active'])
+            ->where('school_id', Auth::user()->school_id)
+            ->firstOrFail();
+
+        abort_unless($student->user?->role === 'siswa', 403, 'Akun target bukan akun siswa.');
+
+        $validated = $request->validate([
+            'new_password' => ['nullable', 'string', 'min:8', 'max:100'],
+        ], [
+            'new_password.min' => 'Kata sandi baru minimal 8 karakter. Kosongkan untuk dibuatkan otomatis.',
+        ]);
+
+        $user = $student->user;
+        $newPassword = $validated['new_password'] ?? \App\Services\TenantProvisioningService::generateTemporaryPassword();
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($user, $newPassword, $teacher, $assignment, $student) {
+            $user->update([
+                'password' => $newPassword,
+                'is_active' => true,
+                'must_change_password' => true,
+            ]);
+
+            if (config('session.driver') === 'database') {
+                \Illuminate\Support\Facades\DB::table(config('session.table', 'sessions'))->where('user_id', $user->id)->delete();
+            }
+
+            \App\Models\StudentPasswordResetRequest::where('student_id', $student->id)
+                ->where('status', 'pending')
+                ->update([
+                    'status' => 'completed',
+                    'notes' => "Direset oleh guru pembimbing {$teacher->user->name} pada " . now()->format('d/m/Y H:i'),
+                ]);
+
+            \App\Services\AuditLogService::log(
+                'password_reset',
+                'security',
+                "Kata sandi siswa ({$user->email}) direset oleh guru pembimbing " . Auth::user()->email . '.',
+                null,
+                Auth::user(),
+                null,
+                ['target_user_id' => $user->id, 'student_pkl_id' => $assignment->id, 'teacher_id' => $teacher->id]
+            );
+        });
+
+        return back()
+            ->with('success', "Kata sandi {$user->name} berhasil direset. Siswa wajib menggantinya saat login berikutnya.")
+            ->with('temporary_credential', [
+                'email' => $user->email,
+                'password' => $newPassword,
+                'context' => "Siswa Bimbingan {$user->name}",
+            ]);
+    }
     public function monitoring(Request $request)
     {
         $teacher = $this->getTeacher();
@@ -396,7 +460,13 @@ class TeacherController extends Controller
             'leave' => (clone $baseStatsQuery)->whereIn('status', ['izin', 'sakit', 'dinas_luar', 'luar_kantor'])->count(),
         ];
 
-        return view('teacher.monitoring', compact('attendances', 'stats'));
+        $pendingResetRequests = \App\Models\StudentPasswordResetRequest::where('teacher_id', $teacher->id)
+            ->where('status', 'pending')
+            ->with('student.user')
+            ->latest()
+            ->get();
+
+        return view('teacher.monitoring', compact('attendances', 'stats', 'pendingResetRequests'));
     }
 
     public function requests()

@@ -159,7 +159,7 @@ class AttendanceService
         }
 
         // Get school custom settings or fallback to defaults
-        $settings = SchoolSetting::where('school_id', $schoolId)->pluck('value', 'key');
+        $settings = SchoolSetting::allForSchool($schoolId);
 
         return [
             'checkin_start' => $settings['checkin_start'] ?? '06:00:00',
