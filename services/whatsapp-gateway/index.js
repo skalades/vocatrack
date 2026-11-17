@@ -94,10 +94,14 @@ async function connectToWhatsApp() {
                 connectedUser = null;
 
                 if (statusCode === 408) {
-                    console.log('[VokaTrack WA Gateway] QR Code kedaluwarsa / timeout. Mengambil QR Code baru dalam 2 detik...');
+                    console.log('[VokaTrack WA Gateway] QR Code kedaluwarsa / timeout. Cooldown 30 detik sebelum QR baru...');
                     try {
                         fs.rmSync(AUTH_DIR, { recursive: true, force: true });
                     } catch (e) {}
+                    connectionStatus = 'connecting';
+                    isConnecting = false;
+                    setTimeout(connectToWhatsApp, 30000); // 30 detik cooldown agar tidak di-throttle WA
+                    return;
                 } else if (statusCode === 401 || statusCode === DisconnectReason.loggedOut) {
                     console.log('[VokaTrack WA Gateway] Sesi telah logout. Silakan scan ulang.');
                     try {
@@ -109,7 +113,7 @@ async function connectToWhatsApp() {
 
                 connectionStatus = 'connecting';
                 isConnecting = false;
-                setTimeout(connectToWhatsApp, 3000);
+                setTimeout(connectToWhatsApp, 10000); // 10 detik untuk reconnect normal
             } else if (connection === 'open') {
                 connectionStatus = 'connected';
                 qrCodeDataUrl = null;
@@ -128,7 +132,7 @@ async function connectToWhatsApp() {
         console.error('[VokaTrack WA Gateway] Error inisialisasi koneksi:', err.message);
         connectionStatus = 'connecting';
         isConnecting = false;
-        setTimeout(connectToWhatsApp, 3000);
+        setTimeout(connectToWhatsApp, 10000); // 10 detik cooldown jika error inisialisasi
     } finally {
         isConnecting = false;
     }
