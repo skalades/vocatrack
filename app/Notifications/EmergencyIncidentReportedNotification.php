@@ -4,14 +4,15 @@ namespace App\Notifications;
 
 use App\Channels\WhatsAppChannel;
 use App\Models\IncidentReport;
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-class EmergencyIncidentReportedNotification extends Notification implements ShouldQueue
+/**
+ * Notifikasi darurat SOS — TIDAK di-queue agar terkirim langsung (real-time).
+ * Jangan tambahkan ShouldQueue di sini.
+ */
+class EmergencyIncidentReportedNotification extends Notification
 {
-    use Queueable;
 
     public function __construct(
         public IncidentReport $incidentReport
