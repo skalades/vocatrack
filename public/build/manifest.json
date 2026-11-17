@@ -1,6 +1,6 @@
 {
   "resources/css/app.css": {
-    "file": "assets/app-BluJ4m9m.css",
+    "file": "assets/app-etYnRVoE.css",
     "src": "resources/css/app.css",
     "isEntry": true,
     "name": "app",
@@ -15,7 +15,7 @@
     "isEntry": true
   },
   "resources/js/student-pwa.js": {
-    "file": "assets/student-pwa-B0E8twiN.js",
+    "file": "assets/student-pwa-CQw4WoMP.js",
     "name": "student-pwa",
     "src": "resources/js/student-pwa.js",
     "isEntry": true

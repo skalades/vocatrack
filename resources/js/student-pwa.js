@@ -555,16 +555,25 @@ function bindInstallPrompt() {
 
         const chip = document.createElement('div');
         chip.id = 'vt-install-chip';
-        chip.className = 'fixed left-1/2 -translate-x-1/2 bottom-28 z-[60] w-[calc(100%-32px)] max-w-[388px] bg-white border border-slate-200 rounded-2xl shadow-xl p-3 flex items-center gap-3';
+        chip.className = 'fixed top-4 left-1/2 -translate-x-1/2 z-35 w-[calc(100%-32px)] max-w-[380px] bg-white text-[#10211D] border border-slate-200/90 rounded-2xl shadow-[0_12px_32px_rgba(0,0,0,0.18)] p-3 flex items-center gap-3 backdrop-blur-md transition-all duration-300 animate-in fade-in slide-in-from-top-2';
         chip.innerHTML = `
-            <img src="/icons/icon-192.png" alt="" class="w-10 h-10 rounded-xl shrink-0">
+            <img src="/icons/icon-192.png" alt="" class="w-10 h-10 rounded-xl shrink-0 shadow-xs">
             <div class="flex-1 min-w-0">
                 <p class="text-xs font-bold text-[#10211D]">Pasang VokaTrack di HP</p>
                 <p class="text-[11px] text-[#5A6B65]">Buka lebih cepat & tetap bisa isi jurnal tanpa sinyal.</p>
             </div>
-            <button type="button" data-install="yes" class="px-3 h-9 rounded-xl bg-[#0B2B25] text-white text-[11px] font-bold cursor-pointer">Pasang</button>
-            <button type="button" data-install="no" aria-label="Tutup" class="w-7 h-7 rounded-full text-slate-400 hover:bg-slate-100 cursor-pointer">✕</button>`;
+            <button type="button" data-install="yes" class="px-3 h-9 rounded-xl bg-[#0B2B25] hover:bg-[#12382F] active:scale-95 text-white text-[11px] font-bold transition-all cursor-pointer">Pasang</button>
+            <button type="button" data-install="no" aria-label="Tutup" class="w-7 h-7 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 active:scale-90 flex items-center justify-center transition-all cursor-pointer">✕</button>`;
         body.appendChild(chip);
+
+        const syncModalVisibility = () => {
+            const hasOpenModal = document.querySelector(
+                '#mobile-notification-drawer:not(.hidden), #vt-dialog:not(.hidden), #sos-modal:not(.hidden), #fake-gps-alert-modal:not(.hidden), [id^="modal-"]:not(.hidden)'
+            );
+            chip.style.display = hasOpenModal ? 'none' : '';
+        };
+        const modalObs = new MutationObserver(syncModalVisibility);
+        modalObs.observe(document.body, { attributes: true, subtree: true, attributeFilter: ['class', 'style'] });
 
         chip.addEventListener('click', async (ev) => {
             const choice = ev.target.closest('[data-install]')?.dataset.install;
@@ -576,6 +585,7 @@ function bindInstallPrompt() {
             } else {
                 safeStorage(() => localStorage.setItem('vt-install-dismissed', '1'));
             }
+            modalObs.disconnect();
             chip.remove();
         });
     });
