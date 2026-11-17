@@ -356,7 +356,7 @@ function renderQueuePanel(items) {
                         </span>
                     </div>
                     <p class="text-xs text-[#5A6B65] leading-relaxed line-clamp-2">${escapeHtml(q.activity_description)}</p>
-                    ${q.photo ? '<span class="text-[11px] text-[#5A6B65]">📎 1 foto terlampir</span>' : ''}
+                    ${q.photo ? '<span class="inline-flex items-center gap-1 text-[11px] text-[#5A6B65]"><svg class="w-3 h-3 text-[#5A6B65]" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>1 foto terlampir</span>' : ''}
                     ${q.error ? `<p class="text-[11px] font-semibold text-rose-700">${escapeHtml(q.error)}</p>` : ''}
                     <div class="flex gap-2 pt-1">
                         ${q.status === 'failed' ? `<button type="button" data-queue-action="edit" data-id="${q.id}" class="flex-1 min-h-[36px] rounded-xl bg-[#0B2B25] text-white text-[11px] font-bold cursor-pointer">Perbaiki</button>` : ''}

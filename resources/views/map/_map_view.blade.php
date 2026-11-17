@@ -162,9 +162,9 @@
                     <label class="block text-[11px] font-bold text-slate-600 mb-1">Indikator Status</label>
                     <select name="status_filter" class="w-full text-xs font-semibold py-2 px-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all">
                         <option value="all" {{ $currentStatus === 'all' ? 'selected' : '' }}>Semua Status</option>
-                        <option value="green" {{ $currentStatus === 'green' ? 'selected' : '' }}>🟢 Hijau (Aman & Tertib)</option>
-                        <option value="yellow" {{ $currentStatus === 'yellow' ? 'selected' : '' }}>🟡 Kuning (Perlu Perhatian)</option>
-                        <option value="red" {{ $currentStatus === 'red' ? 'selected' : '' }}>🔴 Merah (Kritis / Alfa / Kendala)</option>
+                        <option value="green" {{ $currentStatus === 'green' ? 'selected' : '' }}>Hijau (Aman & Tertib)</option>
+                        <option value="yellow" {{ $currentStatus === 'yellow' ? 'selected' : '' }}>Kuning (Perlu Perhatian)</option>
+                        <option value="red" {{ $currentStatus === 'red' ? 'selected' : '' }}>Merah (Kritis / Alfa / Kendala)</option>
                     </select>
                 </div>
 
@@ -175,7 +175,9 @@
                         <input type="text" name="search" value="{{ $currentSearch }}" placeholder="Nama DU/DI, alamat..." 
                                class="w-full text-xs font-semibold pl-3 pr-8 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all">
                         @if($currentSearch)
-                            <a href="{{ route($routePrefix, array_merge(request()->except('search'))) }}" class="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 text-xs font-bold">✕</a>
+                            <a href="{{ route($routePrefix, array_merge(request()->except('search'))) }}" class="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 text-xs font-bold flex items-center justify-center">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                            </a>
                         @endif
                     </div>
                 </div>
@@ -291,26 +293,34 @@
                                 {{ $marker['name'] }}
                             </span>
                             @if($marker['status'] === 'green')
-                                <span class="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-[10px] font-bold shrink-0 border border-emerald-200">
-                                    🟢 Aman
+                                <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-[10px] font-bold shrink-0 border border-emerald-200">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                    <span>Aman</span>
                                 </span>
                             @elseif($marker['status'] === 'yellow')
-                                <span class="px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 text-[10px] font-bold shrink-0 border border-amber-200">
-                                    🟡 Perhatian
+                                <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 text-[10px] font-bold shrink-0 border border-amber-200">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                                    <span>Perhatian</span>
                                 </span>
                             @elseif($marker['status'] === 'red')
-                                <span class="px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 text-[10px] font-bold shrink-0 border border-rose-200 animate-pulse">
-                                    🔴 Kritis
+                                <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 text-[10px] font-bold shrink-0 border border-rose-200 animate-pulse">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                                    <span>Kritis</span>
                                 </span>
                             @else
-                                <span class="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[10px] font-bold shrink-0">
-                                    ⚪ Kosong
+                                <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[10px] font-bold shrink-0">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+                                    <span>Kosong</span>
                                 </span>
                             @endif
                         </div>
 
-                        <p class="text-[11px] text-slate-500 line-clamp-1 mb-2">
-                            📍 {{ $marker['address'] }}
+                        <p class="text-[11px] text-slate-500 line-clamp-1 mb-2 flex items-center gap-1.5">
+                            <svg class="w-3.5 h-3.5 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 2a8 8 0 0 0-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 0 0-8-8z"/>
+                                <circle cx="12" cy="10" r="3"/>
+                            </svg>
+                            <span class="truncate">{{ $marker['address'] }}</span>
                         </p>
 
                         <div class="flex items-center justify-between text-[11px] pt-1.5 border-t border-slate-100/80">
@@ -438,7 +448,7 @@
                 else if (st.status === 'sakit') statusBadge = '<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-700">Sakit</span>';
                 else if (st.status === 'alfa') statusBadge = '<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-200 text-rose-900">ALFA</span>';
 
-                let incidentIcon = st.has_incident ? '<span class="text-rose-600 font-bold ml-1" title="Siswa memiliki laporan kendala/SOS aktif">⚠️ SOS</span>' : '';
+                let incidentIcon = st.has_incident ? '<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 font-bold ml-1 text-[9px]"><svg class="w-2.5 h-2.5 text-rose-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>SOS</span>' : '';
 
                 return `
                     <div class="flex items-center justify-between py-1 border-b border-slate-100 text-[11px] last:border-b-0">
@@ -478,8 +488,9 @@
 
                 <div class="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
                     <span class="text-[10px] text-slate-400">Radius GPS: ${company.radius}m</span>
-                    <a href="${company.gmaps_url}" target="_blank" class="px-3 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold inline-flex items-center gap-1 shadow-xs transition-colors">
-                        <span>🧭 Rute Navigasi</span>
+                    <a href="${company.gmaps_url}" target="_blank" class="px-3 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold inline-flex items-center gap-1.5 shadow-xs transition-colors">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                        <span>Rute Navigasi</span>
                     </a>
                 </div>
             </div>

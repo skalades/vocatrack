@@ -91,7 +91,7 @@
                 <!-- Step 3: Precise Location Highlight (Crucial for iOS) -->
                 <div class="bg-[#FFF1D6]/10 border border-[#FFF1D6]/25 rounded-[20px] p-3.5 flex items-start gap-3">
                     <span class="w-7 h-7 rounded-xl bg-[#FFF1D6] text-[#7A4B00] flex items-center justify-center font-extrabold text-xs shrink-0 mt-0.5">
-                        ★
+                        3
                     </span>
                     <div class="flex-1 min-w-0">
                         <span class="text-[13px] font-bold block text-[#FFE2A4]">Wajib: Aktifkan "Lokasi Tepat" (Precise Location)</span>

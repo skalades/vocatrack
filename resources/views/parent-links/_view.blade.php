@@ -171,7 +171,9 @@
                         <input type="text" name="search" value="{{ $currentSearch }}" placeholder="Nama, NISN, NIS..." 
                                class="w-full text-xs font-semibold pl-3 pr-8 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all">
                         @if($currentSearch)
-                            <a href="{{ route($routePrefix, array_merge(request()->except('search'))) }}" class="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 text-xs font-bold">✕</a>
+                            <a href="{{ route($routePrefix, array_merge(request()->except('search'))) }}" class="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 text-xs font-bold flex items-center justify-center">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                            </a>
                         @endif
                     </div>
                 </div>
@@ -208,8 +210,9 @@
             </div>
 
             <div class="flex items-center gap-2">
-                <span class="text-[11px] text-slate-400 font-medium">
-                    💡 Klik tombol "Salin" untuk menyalin tautan, atau gunakan "Pesan WA" untuk mengirim format broadcast.
+                <span class="inline-flex items-center gap-1.5 text-[11px] text-slate-500 font-medium">
+                    <svg class="w-3.5 h-3.5 text-amber-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <span>Klik tombol "Salin" untuk menyalin tautan, atau gunakan "Pesan WA" untuk mengirim format broadcast.</span>
                 </span>
             </div>
         </div>
@@ -270,8 +273,9 @@
                             <!-- Penempatan PKL -->
                             <td class="py-3 px-4 min-w-[180px]">
                                 @if($spkl)
-                                    <span class="font-bold text-slate-800 block truncate text-[11px]" title="{{ $spkl->company->name }}">
-                                        🏢 {{ $spkl->company->name }}
+                                    <span class="font-bold text-slate-800 flex items-center gap-1.5 truncate text-[11px]" title="{{ $spkl->company->name }}">
+                                        <svg class="w-3.5 h-3.5 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+                                        <span class="truncate">{{ $spkl->company->name }}</span>
                                     </span>
                                     <span class="text-[10px] text-slate-400 block truncate">
                                         Pembimbing: {{ $spkl->teacher->user->name ?? 'Belum Diplot' }}

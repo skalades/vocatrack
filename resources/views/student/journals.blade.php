@@ -338,7 +338,7 @@
         if (counter) counter.textContent = `${len} / 300`;
         if (hint) {
             if (len >= 50) {
-                hint.textContent = '✓ Karakter telah memenuhi standar uraian kegiatan.';
+                hint.textContent = 'Karakter telah memenuhi standar uraian kegiatan.';
                 hint.className = 'text-[11px] text-[#0B5E4E] font-semibold';
             } else {
                 hint.textContent = `Minimal 50 karakter (${50 - len} karakter lagi).`;

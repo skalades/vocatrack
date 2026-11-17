@@ -27,8 +27,10 @@
     @if(!$spkl)
         <!-- Siswa Belum Di-Plotting -->
         <div class="p-5 pt-8 text-center bg-white rounded-[26px] m-5 border border-amber-200 shadow-sm">
-            <div class="w-16 h-16 rounded-full bg-[#FFF1D6] text-[#7A4B00] flex items-center justify-center mx-auto text-2xl font-bold">
-                ⏳
+            <div class="w-16 h-16 rounded-full bg-[#FFF1D6] text-[#7A4B00] flex items-center justify-center mx-auto shadow-xs">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
             </div>
             <span class="text-[11px] font-bold text-[#0F7A66] uppercase tracking-wider block mt-3">Portal Siswa PKL</span>
             <h2 class="font-space font-bold text-lg text-[#10211D] mt-1">Belum Memiliki Penempatan PKL</h2>
@@ -177,7 +179,12 @@
                     <!-- Mode Toggle Button (Satelit / Peta Jalan) -->
                     <button type="button" onclick="toggleStudentMapLayer()" id="btn-map-layer-toggle" aria-label="Ganti tampilan satelit atau jalan" title="Ganti tampilan peta"
                             class="absolute left-2.5 bottom-2.5 h-8 px-2.5 rounded-full bg-white/95 backdrop-blur-xs text-[#0B2B25] flex items-center gap-1.5 shadow-md hover:bg-white active:scale-95 transition-all cursor-pointer z-10 border border-slate-200">
-                        <span id="layer-toggle-icon" class="text-xs">🛰️</span>
+                        <span id="layer-toggle-icon" class="flex items-center text-xs">
+                            <svg class="w-3.5 h-3.5 text-[#0B2B25]" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 2a14.5 14.5 0 0 0 0 20M12 2a14.5 14.5 0 0 1 0 20M2 12h20"/>
+                            </svg>
+                        </span>
                         <span id="layer-toggle-text" class="text-[11px] font-extrabold tracking-tight">Satelit</span>
                     </button>
 
@@ -195,8 +202,8 @@
                 <!-- Stepper Indicators -->
                 <div class="flex items-center px-2.5 pt-3 pb-1.5 text-xs font-bold">
                     <div class="flex items-center gap-2" id="step-lokasi-container">
-                        <span id="step-lokasi-badge" class="w-6 h-6 rounded-full bg-[#C6F26B] text-[#0B2B25] flex items-center justify-center font-extrabold text-[11px] transition-colors">
-                            ✓
+                        <span id="step-lokasi-badge" class="w-6 h-6 rounded-full bg-[#C6F26B] text-[#0B2B25] flex items-center justify-center transition-colors">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
                         </span>
                         <span id="step-lokasi-text" class="text-[12.5px] text-[#0B2B25] transition-colors">Lokasi</span>
                     </div>
@@ -431,7 +438,7 @@
                 }
             });
 
-            if (iconEl) iconEl.textContent = '🛰️';
+            if (iconEl) iconEl.innerHTML = '<svg class="w-3.5 h-3.5 text-[#0B2B25]" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><circle cx="12" cy="12" r="10"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 2a14.5 14.5 0 0 0 0 20M12 2a14.5 14.5 0 0 1 0 20M2 12h20"/></svg>';
             if (textEl) textEl.textContent = 'Satelit';
         } else {
             // OpenStreetMap Standard Streets
@@ -439,7 +446,7 @@
                 maxZoom: 19,
                 attribution: ''
             });
-            if (iconEl) iconEl.textContent = '🗺️';
+            if (iconEl) iconEl.innerHTML = '<svg class="w-3.5 h-3.5 text-[#0B2B25]" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>';
             if (textEl) textEl.textContent = 'Jalan';
         }
 
@@ -552,8 +559,8 @@
                 // Update Stepper
                 if (stepBadge && stepText && stepLine) {
                     if (isInside) {
-                        stepBadge.className = 'w-6 h-6 rounded-full bg-[#C6F26B] text-[#0B2B25] flex items-center justify-center font-extrabold text-[11px]';
-                        stepBadge.textContent = '✓';
+                        stepBadge.className = 'w-6 h-6 rounded-full bg-[#C6F26B] text-[#0B2B25] flex items-center justify-center';
+                        stepBadge.innerHTML = '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>';
                         stepText.className = 'text-[12.5px] text-[#0B2B25]';
                         stepLine.className = 'flex-1 h-0.5 bg-[#C6F26B] mx-2 rounded-full';
                     } else {

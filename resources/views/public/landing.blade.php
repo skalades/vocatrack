@@ -159,7 +159,9 @@
                 {{-- Chip mengambang di sekitar ponsel --}}
                 <div class="hidden sm:block absolute -left-16 top-44 hero-in" style="--d: 1500ms">
                     <div class="float-chip flex items-center gap-2 rounded-2xl bg-white/95 border border-[#0B2B25]/10 shadow-xl shadow-[#0B2B25]/10 px-3 py-2">
-                        <span class="w-7 h-7 rounded-full bg-[#C6F26B] text-[#0B2B25] flex items-center justify-center text-xs font-extrabold">✓</span>
+                        <span class="w-7 h-7 rounded-full bg-[#C6F26B] text-[#0B2B25] flex items-center justify-center">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                        </span>
                         <span class="text-[11px] leading-tight"><span class="block font-extrabold">Presensi tercatat</span><span class="text-[#0B2B25]/55">07.12 · 38 m dari lokasi</span></span>
                     </div>
                 </div>
@@ -335,9 +337,9 @@
                 <h2 class="font-space text-3xl sm:text-4xl font-bold">Ajukan demo untuk sekolah Anda.</h2>
                 <p class="text-[#0B2B25]/65">Isi data sekolah dan kontak penanggung jawab PKL. Kami akan menghubungi Anda untuk aktivasi trial {{ \App\Services\SubscriptionService::TRIAL_DAYS }} hari.</p>
                 <ul class="space-y-2 text-sm">
-                    <li class="flex gap-2"><span class="text-[#2E6B4F] font-bold">✓</span> Gratis, tanpa kewajiban berlangganan</li>
-                    <li class="flex gap-2"><span class="text-[#2E6B4F] font-bold">✓</span> Pendampingan impor data awal</li>
-                    <li class="flex gap-2"><span class="text-[#2E6B4F] font-bold">✓</span> Satu NPSN untuk satu permohonan</li>
+                    <li class="flex items-center gap-2"><svg class="w-4 h-4 text-[#2E6B4F] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg> <span>Gratis, tanpa kewajiban berlangganan</span></li>
+                    <li class="flex items-center gap-2"><svg class="w-4 h-4 text-[#2E6B4F] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg> <span>Pendampingan impor data awal</span></li>
+                    <li class="flex items-center gap-2"><svg class="w-4 h-4 text-[#2E6B4F] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg> <span>Satu NPSN untuk satu permohonan</span></li>
                 </ul>
             </div>
 

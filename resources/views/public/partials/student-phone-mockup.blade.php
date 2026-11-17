@@ -98,7 +98,11 @@
                         </span>
                         <span class="absolute right-2.5 top-2.5 bg-white/95 text-[#10211D] rounded-full py-1 px-2.5 text-[11px] font-bold shadow-md border border-slate-200">Akurasi ±8 m</span>
                         <span class="absolute left-2.5 bottom-2.5 h-8 px-2.5 rounded-full bg-white/95 text-[#0B2B25] flex items-center gap-1.5 shadow-md border border-slate-200">
-                            <span class="text-xs">🛰️</span><span class="text-[11px] font-extrabold tracking-tight">Satelit</span>
+                            <svg class="w-3.5 h-3.5 text-[#0B2B25]" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 2a14.5 14.5 0 0 0 0 20M12 2a14.5 14.5 0 0 1 0 20M2 12h20"/>
+                            </svg>
+                            <span class="text-[11px] font-extrabold tracking-tight">Satelit</span>
                         </span>
                         <span class="absolute right-2.5 bottom-2.5 w-9 h-9 rounded-full bg-white/95 text-[#10211D] flex items-center justify-center shadow-md border border-slate-200">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/></svg>
@@ -108,7 +112,9 @@
                     {{-- Stepper Lokasi → Selfie → Kirim --}}
                     <div class="flex items-center px-2.5 pt-3 pb-1.5 text-xs font-bold">
                         <span class="flex items-center gap-2">
-                            <span class="w-6 h-6 rounded-full bg-[#C6F26B] text-[#0B2B25] flex items-center justify-center font-extrabold text-[11px]">✓</span>
+                            <span class="w-6 h-6 rounded-full bg-[#C6F26B] text-[#0B2B25] flex items-center justify-center">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                            </span>
                             <span class="text-[12.5px] text-[#0B2B25]">Lokasi</span>
                         </span>
                         <span class="mk-line flex-1 h-0.5 bg-[#C6F26B] mx-2 rounded-full"></span>

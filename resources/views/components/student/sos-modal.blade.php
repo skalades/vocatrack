@@ -168,8 +168,9 @@
                         <input type="hidden" name="action_note" value="Siswa telah mengonfirmasi bahwa keadaan sudah aman dan terkendali.">
                         <input type="hidden" name="status" value="resolved">
                         <button type="submit"
-                                class="w-full h-11 rounded-[22px] bg-white/20 hover:bg-white/30 text-white font-bold text-xs active:scale-95 transition-all cursor-pointer">
-                            ✓ Saya Sudah Aman (Tandai Selesai)
+                                class="w-full h-11 rounded-[22px] bg-white/20 hover:bg-white/30 text-white font-bold text-xs active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-1.5">
+                            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                            <span>Saya Sudah Aman (Tandai Selesai)</span>
                         </button>
                     </form>
 
