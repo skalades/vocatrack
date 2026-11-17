@@ -1,0 +1,56 @@
+1
+00:00:00,000 --> 00:00:30,750
+Selamat datang di VokaTrack, platform pengelolaan Praktik Kerja Lapangan yang menghubungkan siswa, sekolah, dan mitra industri. Dari presensi dan jurnal harian hingga pembimbingan, perlindungan siswa, serta dokumen hasil PKL, berbagai proses tersedia dalam satu sistem digital. VokaTrack dapat diakses melalui vocatrack.nadirlabs.net dan dikembangkan oleh nadirlabs.net.
+
+2
+00:00:30,750 --> 00:00:51,420
+Presensi dan jurnal yang dikelola secara manual sering kali menyulitkan pemantauan kegiatan dan rekap di akhir periode. VokaTrack menyediakan alur pencatatan digital agar kegiatan siswa dapat ditinjau oleh pembimbing yang berwenang, dan tindak lanjut lebih mudah dikoordinasikan.
+
+3
+00:00:51,420 --> 00:01:17,200
+Sistem membedakan akses berdasarkan tanggung jawab. Admin sekolah mengelola data institusi. Kepala jurusan mengelola kebutuhan jurusannya. Kepala sekolah memantau rekap, guru dan pembimbing industri meninjau kegiatan, siswa mencatat aktivitas, dan orang tua dapat memantau informasi tertentu melalui tautan khusus.
+
+4
+00:01:17,200 --> 00:01:39,520
+Admin sekolah menyiapkan struktur program PKL dengan mengelola jurusan, kelas, siswa, guru, perusahaan mitra, dan pembimbing industri. Admin juga mengatur periode pelaksanaan serta penempatan siswa agar informasi dasar program tersusun sebelum kegiatan dimulai.
+
+5
+00:01:39,520 --> 00:02:05,110
+Portal Kepala Jurusan berfokus pada kompetensi keahlian yang menjadi tanggung jawabnya. Kajur dapat memantau siswa, kehadiran, jurnal, supervisi, dan nilai jurusan. Portal ini juga menyediakan pengelolaan mitra dan penempatan serta bank Capaian Pembelajaran untuk mendukung keterkaitan kegiatan PKL dengan kurikulum.
+
+6
+00:02:05,110 --> 00:02:28,510
+Capaian Pembelajaran dikelola sesuai jurusan dan dapat dihubungkan dengan jurnal siswa. Saat mengisi jurnal, siswa memilih capaian yang relevan dengan aktivitasnya. Guru dan pembimbing industri dapat melihat kaitan tersebut ketika meninjau jurnal, dan capaian juga dapat dirangkum pada dokumen transkrip PKL.
+
+7
+00:02:28,510 --> 00:02:52,820
+Siswa menggunakan tampilan yang dioptimalkan untuk ponsel. Dari beranda, siswa dapat melihat informasi penempatan dan jadwal, melakukan presensi, serta menulis jurnal kegiatan dengan dokumentasi foto. Jika Capaian Pembelajaran tersedia untuk jurusannya, siswa juga dapat menautkannya pada jurnal.
+
+8
+00:02:52,820 --> 00:03:15,460
+Saat presensi, informasi lokasi digunakan untuk menilai apakah siswa berada di sekitar lokasi mitra yang tercatat. Foto dan riwayat kehadiran membantu pembimbing melihat konteks presensi. Jika sistem menandai anomali, pihak sekolah dapat meninjaunya sebagai bagian dari pemantauan.
+
+9
+00:03:15,460 --> 00:03:39,370
+Jurnal dimulai dari catatan siswa mengenai pekerjaan dan aktivitas hariannya. Pembimbing industri meninjau kesesuaian kegiatan dengan pengalaman kerja. Setelah itu guru memeriksa kaitannya dengan pembelajaran dan capaian jurusan. Pembimbing dapat memberikan masukan atau meminta revisi sebelum jurnal disetujui.
+
+10
+00:03:39,370 --> 00:04:02,840
+Guru pembimbing memantau siswa binaan, meninjau jurnal, memproses permohonan, serta mendokumentasikan kunjungan supervisi. Pembimbing industri melengkapi proses dengan tinjauan pekerjaan dan asesmen kompetensi. Informasi dari kedua pihak membantu sekolah mengevaluasi pelaksanaan PKL.
+
+11
+00:04:02,840 --> 00:04:37,810
+Jika membutuhkan bantuan, siswa dapat membuka menu SOS, memilih kategori keadaan, lalu mengirim laporan setelah hitung mundur singkat. Laporan muncul pada sistem untuk ditindaklanjuti oleh pihak sekolah. Notifikasi darurat juga diteruskan melalui WhatsApp Gateway kepada guru pembimbing jika nomor kontaknya sudah tersimpan dan gateway terhubung. Jika guru pembimbing belum ditetapkan, notifikasi WhatsApp dapat dialihkan kepada admin sekolah sebagai penerima cadangan.
+
+12
+00:04:37,810 --> 00:04:59,880
+Peta interaktif membantu sekolah meninjau sebaran mitra dan penempatan siswa, termasuk status kegiatan yang tersedia. Orang tua dapat menggunakan tautan pemantauan khusus untuk melihat informasi tertentu mengenai kehadiran dan jurnal, sehingga keluarga lebih mudah mengikuti kegiatan PKL.
+
+13
+00:04:59,880 --> 00:05:22,870
+Di akhir kegiatan, catatan presensi, jurnal, dan penilaian dapat digunakan sebagai bahan laporan dan evaluasi. Sekolah dapat menerbitkan sertifikat dalam format PDF, dan kode QR pada dokumen mengarah ke halaman verifikasi untuk membantu pemeriksa mencocokkan informasi sertifikat.
+
+14
+00:05:22,870 --> 00:05:47,680
+VokaTrack menghubungkan pencatatan aktivitas siswa dengan pembimbingan, capaian pembelajaran, tindak lanjut keselamatan, dan administrasi sekolah. VokaTrack dapat diakses melalui vocatrack.nadirlabs.net dan dikembangkan oleh nadirlabs.net. Terima kasih telah menyimak pengenalan VokaTrack.
+

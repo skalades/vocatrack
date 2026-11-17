@@ -1,0 +1,2170 @@
+<!DOCTYPE html>
+<html lang="id" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VokaTrack — Presentasi Fitur Lengkap Sistem PKL SMK</title>
+  <link rel="icon" type="image/png" href="logo.png">
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              200: '#c7d2fe',
+              300: '#a5b4fc',
+              400: '#818cf8',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+              800: '#3730a3',
+              900: '#312e81',
+              950: '#1e1b4b',
+            },
+            surface: {
+              dark: '#0B0F19',
+              card: '#111827',
+              border: '#1F2937',
+              accent: '#1E293B'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+    
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+    
+    code, pre {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Ambient Glowing Background Orbs */
+    .orb-container {
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+      pointer-events: none;
+      z-index: 0;
+    }
+    
+    .orb-1 {
+      position: absolute;
+      top: -12%;
+      right: -8%;
+      width: 580px;
+      height: 580px;
+      border-radius: 9999px;
+      background: radial-gradient(circle, rgba(99, 102, 241, 0.22) 0%, rgba(99, 102, 241, 0) 70%);
+      filter: blur(65px);
+      animation: orbFloat1 20s ease-in-out infinite alternate;
+    }
+
+    .orb-2 {
+      position: absolute;
+      bottom: -15%;
+      left: -8%;
+      width: 620px;
+      height: 620px;
+      border-radius: 9999px;
+      background: radial-gradient(circle, rgba(16, 185, 129, 0.16) 0%, rgba(16, 185, 129, 0) 70%);
+      filter: blur(75px);
+      animation: orbFloat2 24s ease-in-out infinite alternate;
+    }
+
+    .orb-3 {
+      position: absolute;
+      top: 35%;
+      left: 30%;
+      width: 480px;
+      height: 480px;
+      border-radius: 9999px;
+      background: radial-gradient(circle, rgba(244, 63, 94, 0.10) 0%, rgba(244, 63, 94, 0) 70%);
+      filter: blur(85px);
+      animation: orbFloat3 28s ease-in-out infinite alternate;
+    }
+
+    @keyframes orbFloat1 {
+      0% { transform: translate(0, 0) scale(1); }
+      50% { transform: translate(-70px, 45px) scale(1.12); }
+      100% { transform: translate(45px, -35px) scale(0.94); }
+    }
+
+    @keyframes orbFloat2 {
+      0% { transform: translate(0, 0) scale(1); }
+      50% { transform: translate(60px, -60px) scale(1.16); }
+      100% { transform: translate(-35px, 45px) scale(0.92); }
+    }
+
+    @keyframes orbFloat3 {
+      0% { transform: translate(0, 0) scale(0.9); opacity: 0.5; }
+      50% { transform: translate(-50px, -35px) scale(1.2); opacity: 0.85; }
+      100% { transform: translate(55px, 25px) scale(1.02); opacity: 0.6; }
+    }
+
+    /* Custom Glassmorphism */
+    .glass-panel {
+      background: rgba(17, 24, 39, 0.78);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.28s ease, box-shadow 0.28s ease;
+    }
+    
+    .glass-panel:hover {
+      transform: translateY(-3px);
+      border-color: rgba(99, 102, 241, 0.38);
+      box-shadow: 0 16px 32px -10px rgba(0, 0, 0, 0.6), 0 0 24px -4px rgba(99, 102, 241, 0.22);
+    }
+    
+    .glass-card {
+      background: rgba(30, 41, 59, 0.65);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    /* Direction-Aware Slide Transition Animations */
+    .slide-wrapper {
+      position: relative;
+      z-index: 10;
+    }
+    
+    .slide-enter {
+      opacity: 0;
+      pointer-events: none;
+      display: none;
+    }
+
+    .slide-active {
+      display: flex;
+    }
+
+    .slide-active-forward {
+      animation: slideInFromRight 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    .slide-active-backward {
+      animation: slideInFromLeft 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    @keyframes slideInFromRight {
+      from {
+        opacity: 0;
+        transform: translateX(45px) scale(0.985);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+      }
+    }
+
+    @keyframes slideInFromLeft {
+      from {
+        opacity: 0;
+        transform: translateX(-45px) scale(0.985);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+      }
+    }
+
+    /* Staggered Entrance Animations for Elements Inside Slides */
+    .slide-active .anim-item {
+      animation: fadeInUpItem 0.52s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    .slide-active .anim-delay-1 { animation-delay: 0.06s; }
+    .slide-active .anim-delay-2 { animation-delay: 0.14s; }
+    .slide-active .anim-delay-3 { animation-delay: 0.22s; }
+    .slide-active .anim-delay-4 { animation-delay: 0.30s; }
+    .slide-active .anim-delay-5 { animation-delay: 0.38s; }
+
+    @keyframes fadeInUpItem {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* Animated Gradient Text */
+    @keyframes gradientTextFlow {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    
+    .animated-gradient-text {
+      background-size: 200% auto;
+      animation: gradientTextFlow 4s ease infinite;
+    }
+
+    /* Phone Mockup Floating Breathing Animation */
+    @keyframes phoneFloat {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-7px); }
+    }
+    .phone-mockup-anim {
+      animation: phoneFloat 4.5s ease-in-out infinite;
+    }
+
+    /* SOS Glow Warning Pulse */
+    @keyframes sosAura {
+      0%, 100% { box-shadow: 0 0 15px rgba(244, 63, 94, 0.25); border-color: rgba(244, 63, 94, 0.35); }
+      50% { box-shadow: 0 0 35px rgba(244, 63, 94, 0.55); border-color: rgba(244, 63, 94, 0.7); }
+    }
+    .sos-glow-card {
+      animation: sosAura 3.2s ease-in-out infinite;
+    }
+
+    /* Shimmer Effect on Progress Bar */
+    @keyframes shimmerBar {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(250%); }
+    }
+    .progress-shimmer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 45%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent);
+      animation: shimmerBar 2.6s infinite ease-in-out;
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.6);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(99, 102, 241, 0.4);
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(99, 102, 241, 0.7);
+    }
+
+    /* Print / PDF Mode */
+    @media print {
+      body {
+        background: #ffffff !important;
+        color: #000000 !important;
+      }
+      .no-print, .orb-container {
+        display: none !important;
+      }
+      .slide-wrapper {
+        display: block !important;
+        opacity: 1 !important;
+        transform: none !important;
+        animation: none !important;
+        page-break-after: always;
+        break-after: page;
+        min-height: 100vh;
+        padding: 2rem !important;
+        background: #ffffff !important;
+        color: #111827 !important;
+        border-bottom: 2px solid #e5e7eb;
+      }
+      .anim-item {
+        opacity: 1 !important;
+        transform: none !important;
+        animation: none !important;
+      }
+      .glass-panel, .glass-card {
+        background: #f9fafb !important;
+        border: 1px solid #e5e7eb !important;
+        color: #111827 !important;
+        box-shadow: none !important;
+      }
+      .text-slate-100, .text-slate-200, .text-slate-300, .text-white {
+        color: #111827 !important;
+      }
+      .text-slate-400 {
+        color: #4b5563 !important;
+      }
+      .bg-surface-dark, .bg-slate-900, .bg-slate-950 {
+        background: #ffffff !important;
+      }
+    }
+  </style>
+</head>
+<body class="bg-surface-dark text-slate-100 min-h-screen flex flex-col selection:bg-brand-500 selection:text-white antialiased overflow-hidden relative">
+
+  <!-- BACKGROUND AMBIENT ORBS -->
+  <div class="orb-container">
+    <div class="orb-1"></div>
+    <div class="orb-2"></div>
+    <div class="orb-3"></div>
+  </div>
+
+  <!-- TOP APP / PRESENTATION BAR (no-print) -->
+  <header class="no-print h-14 border-b border-surface-border bg-slate-950/85 backdrop-blur-md px-4 flex items-center justify-between z-30 shrink-0 relative">
+    <!-- Brand Info -->
+    <div class="flex items-center space-x-3">
+      <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-600 to-indigo-400 flex items-center justify-center font-bold text-white shadow-lg shadow-brand-500/25 text-sm transition-transform hover:scale-105">
+        VT
+      </div>
+      <div>
+        <div class="flex items-center space-x-2">
+          <span class="font-bold tracking-tight text-white text-sm sm:text-base">VokaTrack</span>
+          <span class="text-[10px] font-semibold uppercase tracking-wider bg-brand-500/20 text-brand-300 px-2 py-0.5 rounded-full border border-brand-500/30">v2.1 Motion Deck</span>
+        </div>
+        <p class="text-[11px] text-slate-400 hidden sm:block">Sistem Presensi, Jurnal & Sertifikasi PKL SMK Terpadu</p>
+      </div>
+    </div>
+
+    <!-- Center Category Indicator -->
+    <div class="hidden md:flex items-center space-x-2 bg-slate-900/90 border border-slate-800 rounded-full px-3 py-1 text-xs shadow-inner">
+      <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+      <span id="currentCategoryText" class="text-slate-300 font-medium truncate max-w-xs">Pengantar & Arsitektur</span>
+    </div>
+
+    <!-- Right Controls -->
+    <div class="flex items-center space-x-2 sm:space-x-3">
+      <!-- Slide Counter -->
+      <div class="text-xs font-mono font-medium px-2.5 py-1 rounded-md bg-slate-900 border border-slate-800 text-slate-300 shadow-sm">
+        <span id="currentSlideNum" class="text-brand-400 font-bold">1</span> / <span id="totalSlidesNum">16</span>
+      </div>
+
+      <!-- Quick Nav Buttons -->
+      <button onclick="prevSlide()" title="Slide Sebelumnya (Arrow Left)" class="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white transition active:scale-90">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+      </button>
+      <button onclick="nextSlide()" title="Slide Selanjutnya (Arrow Right / Spasi)" class="p-1.5 rounded-lg bg-brand-600 hover:bg-brand-500 text-white transition active:scale-90 shadow-md shadow-brand-600/30">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+      </button>
+
+      <!-- Grid Overview Button -->
+      <button onclick="toggleGridModal()" title="Daftar Semua Slide (M)" class="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white transition active:scale-90">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2z"/></svg>
+      </button>
+
+      <!-- Fullscreen Toggle -->
+      <button onclick="toggleFullscreen()" title="Fullscreen (F)" class="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white transition hidden sm:inline-flex active:scale-90">
+        <svg id="fsIcon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/></svg>
+      </button>
+
+      <!-- Print Button -->
+      <button onclick="window.print()" title="Cetak / Simpan PDF (P)" class="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white transition hidden md:inline-flex active:scale-90">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- SLIM PROGRESS BAR (no-print) -->
+  <div class="no-print w-full bg-slate-900 h-1 relative overflow-hidden shrink-0 z-20">
+    <div id="progressBar" class="h-full bg-gradient-to-r from-brand-500 via-indigo-400 to-emerald-400 transition-all duration-300 ease-out relative" style="width: 6.25%;">
+      <div class="progress-shimmer"></div>
+    </div>
+  </div>
+
+  <!-- MAIN SLIDES VIEWPORT CONTAINER -->
+  <main class="flex-1 relative overflow-y-auto overflow-x-hidden p-4 sm:p-6 lg:p-8 flex items-center justify-center z-10">
+
+    <!-- ======================================================== -->
+    <!-- SLIDE 1: COVER & EXECUTIVE SUMMARY                       -->
+    <!-- ======================================================== -->
+    <section id="slide-1" class="slide-wrapper slide-active slide-active-forward w-full max-w-7xl flex-col items-center justify-center min-h-[78vh] text-center" data-category="Pengantar & Visi">
+      <div class="anim-item anim-delay-1 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-brand-500/10 border border-brand-500/20 text-brand-300 text-xs sm:text-sm font-medium mb-6 shadow-sm">
+        <span class="w-2 h-2 rounded-full bg-brand-400 animate-ping"></span>
+        Platform Transformasi Digital Pendidikan Vokasi SMK
+      </div>
+      
+      <h1 class="anim-item anim-delay-2 text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white max-w-4xl leading-tight">
+        Sistem Presensi, Jurnal & E-Sertifikasi <span class="animated-gradient-text bg-gradient-to-r from-brand-400 via-indigo-300 to-emerald-400 bg-clip-text text-transparent">PKL SMK Terpadu</span>
+      </h1>
+      
+      <p class="anim-item anim-delay-3 mt-5 text-base sm:text-lg lg:text-xl text-slate-300 max-w-3xl leading-relaxed">
+        Solusi terintegrasi untuk memvalidasi kehadiran berbasis <strong>Geofencing GPS & Kamera WebRTC</strong>, persetujuan jurnal berjenjang <strong>Dua Tingkat (DU/DI & Guru)</strong>, keselamatan siswa dengan <strong>Tombol Darurat SOS</strong>, serta penerbitan <strong>E-Sertifikat 2 Halaman Ber-QR Code</strong>.
+      </p>
+
+      <!-- Key Value Badges -->
+      <div class="anim-item anim-delay-4 mt-8 flex flex-wrap justify-center gap-2.5 max-w-3xl">
+        <span class="px-3 py-1 rounded-lg bg-slate-900/90 border border-slate-700 text-xs font-semibold text-slate-200 flex items-center gap-1.5 shadow-sm transition hover:scale-105">
+          <svg class="w-3.5 h-3.5 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+          Role-Based Access Control (RBAC)
+        </span>
+        <span class="px-3 py-1 rounded-lg bg-slate-900/90 border border-slate-700 text-xs font-semibold text-slate-200 flex items-center gap-1.5 shadow-sm transition hover:scale-105">
+          <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          Anti-Fake GPS & Radius Haversine
+        </span>
+        <span class="px-3 py-1 rounded-lg bg-slate-900/90 border border-slate-700 text-xs font-semibold text-slate-200 flex items-center gap-1.5 shadow-sm transition hover:scale-105">
+          <svg class="w-3.5 h-3.5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          Two-Tier Approval (Industri & Guru)
+        </span>
+        <span class="px-3 py-1 rounded-lg bg-slate-900/90 border border-slate-700 text-xs font-semibold text-slate-200 flex items-center gap-1.5 shadow-sm transition hover:scale-105">
+          <svg class="w-3.5 h-3.5 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+          Lapor Kendala / SOS Terisolasi
+        </span>
+        <span class="px-3 py-1 rounded-lg bg-slate-900/90 border border-slate-700 text-xs font-semibold text-slate-200 flex items-center gap-1.5 shadow-sm transition hover:scale-105">
+          <svg class="w-3.5 h-3.5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+          Verifikasi Kredensial QR Publik
+        </span>
+      </div>
+
+      <!-- Quick Metrics Ribbon -->
+      <div class="anim-item anim-delay-5 mt-12 grid grid-cols-2 sm:grid-cols-4 gap-4 w-full max-w-4xl text-left">
+        <div class="glass-panel p-4 rounded-xl border border-slate-800">
+          <div class="text-2xl lg:text-3xl font-extrabold text-brand-400">6 Peran</div>
+          <div class="text-xs text-slate-400 mt-1">Hak Akses Terstruktur (RBAC)</div>
+        </div>
+        <div class="glass-panel p-4 rounded-xl border border-slate-800">
+          <div class="text-2xl lg:text-3xl font-extrabold text-emerald-400">100%</div>
+          <div class="text-xs text-slate-400 mt-1">Paperless & Validasi Digital Real-Time</div>
+        </div>
+        <div class="glass-panel p-4 rounded-xl border border-slate-800">
+          <div class="text-2xl lg:text-3xl font-extrabold text-amber-400">&lt; 800 KB</div>
+          <div class="text-xs text-slate-400 mt-1">Kompresi Gambar WebP Hemat Kuota</div>
+        </div>
+        <div class="glass-panel p-4 rounded-xl border border-slate-800">
+          <div class="text-2xl lg:text-3xl font-extrabold text-indigo-400">Instant</div>
+          <div class="text-xs text-slate-400 mt-1">Verifikasi QR Code Sertifikat Publik</div>
+        </div>
+      </div>
+
+      <div class="anim-item anim-delay-5 mt-8 text-xs text-slate-500 font-mono">
+        Tekan <kbd class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">Space</kbd> atau <kbd class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">→</kbd> untuk melanjutkan presentasi
+      </div>
+    </section>
+
+    <!-- ======================================================== -->
+    <!-- SLIDE 2: PROBLEM STATEMENT & DIGITAL TRANSFORMATION      -->
+    <!-- ======================================================== -->
+    <section id="slide-2" class="slide-wrapper slide-enter w-full max-w-7xl flex-col min-h-[78vh]" data-category="Latar Belakang & Masalah">
+      <div class="anim-item anim-delay-1 mb-6">
+        <span class="text-xs font-bold uppercase tracking-wider text-brand-400 bg-brand-500/10 px-3 py-1 rounded-full border border-brand-500/20">Problem vs Solution</span>
+        <h2 class="text-2xl sm:text-4xl font-extrabold text-white mt-2">Tantangan Riil PKL Vokasi & Solusi VokaTrack</h2>
+        <p class="text-slate-400 text-sm sm:text-base mt-1">Mengubah operasional manual yang rapuh menjadi ekosistem digital yang akuntabel dan transparan.</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1">
+        <!-- Problem Card -->
+        <div class="anim-item anim-delay-2 glass-panel p-6 rounded-2xl border-rose-900/30 bg-gradient-to-b from-rose-950/20 to-slate-900/60 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center space-x-3 mb-4">
+              <div class="w-10 h-10 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center font-bold">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+              </div>
+              <div>
+                <h3 class="text-lg font-bold text-white">Tantangan Konvensional (Sebelumnya)</h3>
+                <p class="text-xs text-rose-300/80">Celah operasional, kecurangan & inefisiensi administrasi</p>
+              </div>
+            </div>
+
+            <ul class="space-y-3.5 text-sm text-slate-300">
+              <li class="flex items-start gap-2.5">
+                <span class="text-rose-400 mt-0.5 font-bold">✕</span>
+                <span><strong>Titip Absen & Manipulasi Lokasi:</strong> Siswa mengisi lembar kehadiran tanpa verifikasi posisi fisik sebenarnya di industri mitra.</span>
+              </li>
+              <li class="flex items-start gap-2.5">
+                <span class="text-rose-400 mt-0.5 font-bold">✕</span>
+                <span><strong>Jurnal Kertas Menumpuk:</strong> Pengisian jurnal manual sering dirapel di akhir masa PKL, tanpa keterlibatan nyata mentor industri.</span>
+              </li>
+              <li class="flex items-start gap-2.5">
+                <span class="text-rose-400 mt-0.5 font-bold">✕</span>
+                <span><strong>Kerapuhan Keselamatan Siswa:</strong> Siswa takut melapor ketika mengalami kecelakaan kerja, intimidasi, atau tugas di luar kompetensi.</span>
+              </li>
+              <li class="flex items-start gap-2.5">
+                <span class="text-rose-400 mt-0.5 font-bold">✕</span>
+                <span><strong>Birokrasi Supervisi Guru yang Lambat:</strong> Pembuatan berita acara kunjungan guru harus dicetak dan ditandatangani manual.</span>
+              </li>
+              <li class="flex items-start gap-2.5">
+                <span class="text-rose-400 mt-0.5 font-bold">✕</span>
+                <span><strong>Ijazah & Sertifikat PKL Rawan Dipalsukan:</strong> Dokumen fisik mudah dimanipulasi tanpa adanya sistem verifikasi otentik instan.</span>
+              </li>
+            </ul>
+          </div>
+
+          <div class="mt-6 pt-4 border-t border-rose-900/30 text-xs text-rose-300/90 font-mono">
+            ⚠️ Menyebabkan data evaluasi kelulusan PKL tidak akurat bagi akreditasi sekolah.
+          </div>
+        </div>
+
+        <!-- Solution Card -->
+        <div class="anim-item anim-delay-3 glass-panel p-6 rounded-2xl border-emerald-900/30 bg-gradient-to-b from-emerald-950/20 to-slate-900/60 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center space-x-3 mb-4">
+              <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+              </div>
+              <div>
+                <h3 class="text-lg font-bold text-white">Solusi Terpadu VokaTrack</h3>
+                <p class="text-xs text-emerald-300/80">Otomatisasi, transparansi & keamanan tingkat institusi</p>
+              </div>
+            </div>
+
+            <ul class="space-y-3.5 text-sm text-slate-300">
+              <li class="flex items-start gap-2.5">
+                <span class="text-emerald-400 mt-0.5 font-bold">✓</span>
+                <span><strong>Geofencing Haversine & Anti-Fake GPS:</strong> Presensi selfie kamera depan langsung dan kunci radius lokasi DU/DI secara presisi.</span>
+              </li>
+              <li class="flex items-start gap-2.5">
+                <span class="text-emerald-400 mt-0.5 font-bold">✓</span>
+                <span><strong>Persetujuan Jurnal Berjenjang (Two-Tier):</strong> Diverifikasi terlebih dahulu oleh mentor industri (teknis), lalu disahkan guru (kurikulum).</span>
+              </li>
+              <li class="flex items-start gap-2.5">
+                <span class="text-emerald-400 mt-0.5 font-bold">✓</span>
+                <span><strong>Kerahasiaan Tombol Darurat SOS:</strong> Laporan bahaya dan kendala disalurkan privat ke sekolah, diisolasi dari akses pihak industri.</span>
+              </li>
+              <li class="flex items-start gap-2.5">
+                <span class="text-emerald-400 mt-0.5 font-bold">✓</span>
+                <span><strong>Otomasi Berita Acara Supervisi PDF:</strong> Sekali input hasil kunjungan lapangan, dokumen A4 ber-KOP resmi langsung terbit instan.</span>
+              </li>
+              <li class="flex items-start gap-2.5">
+                <span class="text-emerald-400 mt-0.5 font-bold">✓</span>
+                <span><strong>E-Sertifikat & QR Code Verifikasi Publik:</strong> Standar nasional 2 halaman lengkap dengan transkrip nilai teruji anti-pemalsuan.</span>
+              </li>
+            </ul>
+          </div>
+
+          <div class="mt-6 pt-4 border-t border-emerald-900/30 text-xs text-emerald-300/90 font-mono">
+            🛡️ Menjamin akuntabilitas akademik 100% selaras dengan regulasi vokasi Kemendikbudristek.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================== -->
+    <!-- SLIDE 3: SYSTEM ARCHITECTURE & 4 DESIGN PILLARS          -->
+    <!-- ======================================================== -->
+    <section id="slide-3" class="slide-wrapper slide-enter w-full max-w-7xl flex-col min-h-[78vh]" data-category="Arsitektur & Prinsip">
+      <div class="anim-item anim-delay-1 mb-5">
+        <span class="text-xs font-bold uppercase tracking-wider text-brand-400 bg-brand-500/10 px-3 py-1 rounded-full border border-brand-500/20">Architecture & Standards</span>
+        <h2 class="text-2xl sm:text-4xl font-extrabold text-white mt-2">Arsitektur Sistem & 4 Pilar Perancangan</h2>
+        <p class="text-slate-400 text-sm sm:text-base mt-1">Fondasi teknologi tangguh yang memadukan skalabilitas tinggi, modularitas, kemudahan pemeliharaan, dan konsistensi UI.</p>
+      </div>
+
+      <!-- 4 Pillars Grid -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <!-- Pillar 1 -->
+        <div class="anim-item anim-delay-2 glass-panel p-4 rounded-xl border-t-2 border-t-brand-500 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-brand-400 uppercase tracking-wider">Pilar 1</span>
+              <span class="p-1 rounded bg-brand-500/20 text-brand-300 text-[10px]">High Load</span>
+            </div>
+            <h4 class="font-bold text-white text-base">Scalable (Skalabilitas)</h4>
+            <p class="text-xs text-slate-300 mt-1.5 leading-relaxed">
+              Arsitektur basis data relasional terindeks tinggi yang dirancang tangguh menangani lonjakan kueri. Operasi terjadwal massal memanfaatkan teknik batch chunking <code class="text-brand-300">chunkById(100)</code> dengan memoization lokal, memproses ribuan data presensi tanpa kebocoran RAM.
+            </p>
+          </div>
+          <div class="mt-3 text-[11px] text-brand-300 font-mono bg-brand-950/40 p-2 rounded border border-brand-800/40">
+            • High-Performance Indexing<br>• Client WebP Compression
+          </div>
+        </div>
+
+        <!-- Pillar 2 -->
+        <div class="anim-item anim-delay-3 glass-panel p-4 rounded-xl border-t-2 border-t-emerald-500 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-emerald-400 uppercase tracking-wider">Pilar 2</span>
+              <span class="p-1 rounded bg-emerald-500/20 text-emerald-300 text-[10px]">Clean Code</span>
+            </div>
+            <h4 class="font-bold text-white text-base">Modular (Modularitas)</h4>
+            <p class="text-xs text-slate-300 mt-1.5 leading-relaxed">
+              Controller tetap ramping (*Thin Controllers*) dengan memusatkan seluruh logika domain kompleks ke dalam Service Layer independen di <code class="text-emerald-300">app/Services/</code>. Mudah diperluas atau diintegrasikan ke WhatsApp API/SMS.
+            </p>
+          </div>
+          <div class="mt-3 text-[11px] text-emerald-300 font-mono bg-emerald-950/40 p-2 rounded border border-emerald-800/40">
+            • Dedicated Service Layer<br>• Decoupled Notification Engine
+          </div>
+        </div>
+
+        <!-- Pillar 3 -->
+        <div class="anim-item anim-delay-4 glass-panel p-4 rounded-xl border-t-2 border-t-amber-500 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-amber-400 uppercase tracking-wider">Pilar 3</span>
+              <span class="p-1 rounded bg-amber-500/20 text-amber-300 text-[10px]">Maintainability</span>
+            </div>
+            <h4 class="font-bold text-white text-base">Mudah Dimaintenance</h4>
+            <p class="text-xs text-slate-300 mt-1.5 leading-relaxed">
+              Penerapan *Single Responsibility Principle* (SRP). Seluruh transaksi ganda (approval massal, check-in, scoring) dilindungi <code class="text-amber-300">DB::transaction()</code> dan <code class="text-amber-300">lockForUpdate()</code> untuk mengeliminasi bahaya *race conditions*.
+            </p>
+          </div>
+          <div class="mt-3 text-[11px] text-amber-300 font-mono bg-amber-950/40 p-2 rounded border border-amber-800/40">
+            • Pessimistic Locking<br>• Automated Rollback Safety
+          </div>
+        </div>
+
+        <!-- Pillar 4 -->
+        <div class="anim-item anim-delay-5 glass-panel p-4 rounded-xl border-t-2 border-t-indigo-500 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-indigo-400 uppercase tracking-wider">Pilar 4</span>
+              <span class="p-1 rounded bg-indigo-500/20 text-indigo-300 text-[10px]">Unified UI</span>
+            </div>
+            <h4 class="font-bold text-white text-base">Konsisten UI</h4>
+            <p class="text-xs text-slate-300 mt-1.5 leading-relaxed">
+              Sistem komponen Blade terstandarisasi (<code class="text-indigo-300">x-card</code>, <code class="text-indigo-300">x-badge</code>, <code class="text-indigo-300">x-bulk-action-bar</code>) serta skema token warna status seragam: Hadir (Emerald), Terlambat (Amber), Izin (Blue), Sakit/SOS (Rose), Alfa (Slate).
+            </p>
+          </div>
+          <div class="mt-3 text-[11px] text-indigo-300 font-mono bg-indigo-950/40 p-2 rounded border border-indigo-800/40">
+            • Mobile-First Viewport (Siswa)<br>• Multi-Panel Layout (Admin)
+          </div>
+        </div>
+      </div>
+
+      <!-- Architectural Tech Stack Banner -->
+      <div class="anim-item anim-delay-5 glass-panel p-4 rounded-xl border border-slate-800 flex flex-wrap items-center justify-between gap-4 text-xs">
+        <div class="flex items-center space-x-2">
+          <span class="font-bold text-white">Tech Engine:</span>
+          <span class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">Laravel 11 (PHP 8.2+)</span>
+          <span class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">PostgreSQL / MySQL 8.0</span>
+          <span class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">Tailwind CSS</span>
+          <span class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">DomPDF Generator</span>
+          <span class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">Leaflet.js GIS</span>
+        </div>
+        <div class="text-slate-400 font-mono">
+          Security: Middleware Session Auth, RBAC & Rate Limiting Guards
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================== -->
+    <!-- SLIDE 4: RBAC & MATRIKS HAK AKSES GLOBAL                 -->
+    <!-- ======================================================== -->
+    <section id="slide-4" class="slide-wrapper slide-enter w-full max-w-7xl flex-col min-h-[78vh]" data-category="Hak Akses & RBAC">
+      <div class="anim-item anim-delay-1 mb-4">
+        <span class="text-xs font-bold uppercase tracking-wider text-brand-400 bg-brand-500/10 px-3 py-1 rounded-full border border-brand-500/20">RBAC Matrix</span>
+        <h2 class="text-2xl sm:text-4xl font-extrabold text-white mt-1">Matriks Peran & Hak Akses Global (6 Peran Pengguna)</h2>
+        <p class="text-slate-400 text-sm mt-1">Pemisahan wewenang yang tegas menjamin integritas data akademik dan privasi lintas pemangku kepentingan sekolah.</p>
+      </div>
+
+      <!-- Table Matrix Container -->
+      <div class="anim-item anim-delay-2 glass-panel rounded-xl border border-slate-800 overflow-hidden flex-1 flex flex-col justify-between">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-900/90 text-slate-300 border-b border-slate-800 font-semibold">
+              <tr>
+                <th class="p-3 w-1/4">Modul / Kapabilitas Fitur</th>
+                <th class="p-3 text-center">Admin Sekolah</th>
+                <th class="p-3 text-center">Kepala Sekolah</th>
+                <th class="p-3 text-center">Guru Pembimbing</th>
+                <th class="p-3 text-center">Pembimbing DU/DI</th>
+                <th class="p-3 text-center">Siswa PKL</th>
+                <th class="p-3 text-center">Publik / Tamu</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800/60 text-slate-300">
+              <tr class="hover:bg-slate-800/40 transition">
+                <td class="p-2.5 font-medium text-white flex items-center gap-1.5">
+                  <span class="w-1.5 h-1.5 rounded-full bg-brand-400"></span> Pengaturan Sekolah, Jam & Kop Surat
+                </td>
+                <td class="p-2.5 text-center text-emerald-400 font-bold">CRUD</td>
+                <td class="p-2.5 text-center text-slate-400">Lihat</td>
+                <td class="p-2.5 text-center text-slate-600">-</td>
+                <td class="p-2.5 text-center text-slate-600">-</td>
+                <td class="p-2.5 text-center text-slate-600">-</td>
+                <td class="p-2.5 text-center text-slate-600">-</td>
+              </tr>
+              <tr class="hover:bg-slate-800/40 transition">
+                <td class="p-2.5 font-medium text-white flex items-center gap-1.5">
+                  <span class="w-1.5 h-1.5 rounded-full bg-brand-400"></span> Master Data & Penempatan Plotting
+                </td>
+                <td class="p-2.5 text-center text-emerald-400 font-bold">CRUD</td>
+                <td class="p-2.5 text-center text-slate-400">Lihat</td>
+                <td class="p-2.5 text-center text-slate-400">Lihat Binaan</td>
+                <td class="p-2.5 text-center text-slate-400">Lihat Siswanya</td>
+                <td class="p-2.5 text-center text-slate-600">-</td>
+                <td class="p-2.5 text-center text-slate-600">-</td>
+              </tr>
+              <tr class="hover:bg-slate-800/40 transition">
+                <td class="p-2.5 font-medium text-white flex items-center gap-1.5">
+                  <span class="w-1.5 h-1.5 rounded-full bg-indigo-400"></span> Impersonasi Akun (Login As Diagnostik)
+                </td>
+                <td class="p-2.5 text-center text-indigo-400 font-semibold">Guru / Siswa / DU/DI</td>
+                <td class="p-2.5 text-center text-slate-600">-</td>
+                <td class="p-2.5 text-center text-slate-600">-</td>
+                <td class="p-2.5 text-center text-slate-600">-</td>
+                <td class="p-2.5 text-center text-slate-600">-</td>
+                <td class="p-2.5 text-center text-slate-600">-</td>
+              </tr>
+              <tr class="hover:bg-slate-800/40 transition">
+                <td class="p-2.5 font-medium text-white flex items-center gap-1.5">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Presensi Selfie Kamera & GPS Guard
+                </td>
+                <td class="p-2.5 text-center text-slate-400">Monitoring</td>
+                <td class="p-2.5 text-center text-slate-400">Rekap Makro</td>
+                <td class="p-2.5 text-center text-slate-400">Monitoring Flag</td>
+                <td class="p-2.5 text-center text-slate-400">Validasi Shift</td>
+                <td class="p-2.5 text-center text-emerald-400 font-bold">Checkin/Out</td>
+                <td class="p-2.5 text-center text-slate-600">-</td>
+              </tr>
+              <tr class="hover:bg-slate-800/40 transition">
+                <td class="p-2.5 font-medium text-white flex items-center gap-1.5">
+                  <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span> Verifikasi Jurnal PKL (Two-Tier)
+                </td>
+                <td class="p-2.5 text-center text-slate-600">-</td>
+                <td class="p-2.5 text-center text-slate-600">-</td>
+                <td class="p-2.5 text-center text-blue-400 font-bold">Tier 2 (Guru)</td>
+                <td class="p-2.5 text-center text-amber-400 font-bold">Tier 1 (Industri)</td>
+                <td class="p-2.5 text-center text-slate-200">Input & Foto</td>
+                <td class="p-2.5 text-center text-slate-600">-</td>
+              </tr>
+              <tr class="hover:bg-slate-800/40 transition">
+                <td class="p-2.5 font-medium text-white flex items-center gap-1.5">
+                  <span class="w-1.5 h-1.5 rounded-full bg-rose-400"></span> Lapor Kendala & Darurat SOS
+                </td>
+                <td class="p-2.5 text-center text-rose-400 font-bold">Investigasi</td>
+                <td class="p-2.5 text-center text-slate-600">-</td>
+                <td class="p-2.5 text-center text-rose-400 font-bold">Tindak Lanjut</td>
+                <td class="p-2.5 text-center text-rose-600 font-bold bg-rose-950/40">ISOLASI (BLOKIR)</td>
+                <td class="p-2.5 text-center text-rose-400 font-bold">Kirim SOS</td>
+                <td class="p-2.5 text-center text-slate-600">-</td>
+              </tr>
+              <tr class="hover:bg-slate-800/40 transition">
+                <td class="p-2.5 font-medium text-white flex items-center gap-1.5">
+                  <span class="w-1.5 h-1.5 rounded-full bg-indigo-400"></span> Berita Acara Supervisi Kunjungan
+                </td>
+                <td class="p-2.5 text-center text-slate-400">Arsip</td>
+                <td class="p-2.5 text-center text-slate-400">Laporan</td>
+                <td class="p-2.5 text-center text-emerald-400 font-bold">Input & PDF</td>
+                <td class="p-2.5 text-center text-slate-400">TTD Fisik</td>
+                <td class="p-2.5 text-center text-slate-600">-</td>
+                <td class="p-2.5 text-center text-slate-600">-</td>
+              </tr>
+              <tr class="hover:bg-slate-800/40 transition">
+                <td class="p-2.5 font-medium text-white flex items-center gap-1.5">
+                  <span class="w-1.5 h-1.5 rounded-full bg-purple-400"></span> E-Sertifikat & QR Verifikasi
+                </td>
+                <td class="p-2.5 text-center text-emerald-400 font-bold">Batch Terbit</td>
+                <td class="p-2.5 text-center text-slate-400">TTD Digital</td>
+                <td class="p-2.5 text-center text-slate-600">-</td>
+                <td class="p-2.5 text-center text-slate-600">-</td>
+                <td class="p-2.5 text-center text-slate-200">Unduh PDF</td>
+                <td class="p-2.5 text-center text-emerald-400 font-bold">Verifikasi Publik</td>
+              </tr>
+              <tr class="hover:bg-slate-800/40 transition">
+                <td class="p-2.5 font-medium text-white flex items-center gap-1.5">
+                  <span class="w-1.5 h-1.5 rounded-full bg-teal-400"></span> Portal Pantau Orang Tua
+                </td>
+                <td class="p-2.5 text-center text-slate-300">Batch Link</td>
+                <td class="p-2.5 text-center text-slate-600">-</td>
+                <td class="p-2.5 text-center text-slate-300">Ekspor Link</td>
+                <td class="p-2.5 text-center text-slate-600">-</td>
+                <td class="p-2.5 text-center text-slate-300">Regenerasi</td>
+                <td class="p-2.5 text-center text-emerald-400 font-bold">Pantau Real-Time</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="p-3 bg-slate-900/60 border-t border-slate-800 flex items-center justify-between text-[11px] text-slate-400">
+          <span>* Catatan: Data terenkapsulasi secara aman. Pihak DU/DI sama sekali tidak memiliki akses ke laporan kendala internal siswa.</span>
+          <span class="font-mono text-brand-300">RBAC System + Auth Guards</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================== -->
+    <!-- SLIDE 5: LEVEL 1 — ADMIN SEKOLAH (MASTER DATA & SETUP)   -->
+    <!-- ======================================================== -->
+    <section id="slide-5" class="slide-wrapper slide-enter w-full max-w-7xl flex-col min-h-[78vh]" data-category="Level 1: Admin Sekolah">
+      <div class="anim-item anim-delay-1 mb-4">
+        <span class="text-xs font-bold uppercase tracking-wider text-brand-400 bg-brand-500/10 px-3 py-1 rounded-full border border-brand-500/20">Level 1: School Administration</span>
+        <h2 class="text-2xl sm:text-4xl font-extrabold text-white mt-1">Admin Sekolah — Master Data, Jam & DU/DI</h2>
+        <p class="text-slate-400 text-sm mt-1">Mengelola identitas sekolah, rombel, akun siswa, mitra industri, dan pemetaan penempatan PKL.</p>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 flex-1">
+        <!-- Col 1: Pengaturan & Jam -->
+        <div class="anim-item anim-delay-2 glass-panel p-4 rounded-xl border border-slate-800 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-brand-400">F-AS02 & F-AS03</span>
+              <span class="text-[10px] text-slate-400 font-mono">School Config</span>
+            </div>
+            <h4 class="font-bold text-white text-sm mb-2">Kop Surat, TTD & Kebijakan Presensi</h4>
+            <ul class="space-y-2 text-xs text-slate-300">
+              <li class="p-2 rounded bg-slate-900 border border-slate-800">
+                <strong class="text-white">Visual Branding:</strong> Unggah Logo Sekolah, Kop Surat 3 baris dinamis, Nama & NIP Kepala Sekolah, serta stempel digital transparan.
+              </li>
+              <li class="p-2 rounded bg-slate-900 border border-slate-800">
+                <strong class="text-white">Jam Kerja Standar:</strong> Atur jam buka presensi (06:00), batas terlambat (08:00), batas toleransi alfa (11:00), dan jam pulang (16:00).
+              </li>
+              <li class="p-2 rounded bg-slate-900 border border-slate-800">
+                <strong class="text-white">Bobot Nilai:</strong> Menentukan rasio penilaian akhir (contoh: 60% Industri : 40% Guru Pembimbing).
+              </li>
+            </ul>
+          </div>
+          <div class="mt-3 text-[10px] text-slate-400 font-mono">Dinamis pada Kop Laporan & Sertifikat</div>
+        </div>
+
+        <!-- Col 2: Master Siswa, Kelas & Guru -->
+        <div class="anim-item anim-delay-3 glass-panel p-4 rounded-xl border border-slate-800 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-brand-400">F-AS04 s.d F-AS07</span>
+              <span class="text-[10px] text-slate-400 font-mono">Academic Master</span>
+            </div>
+            <h4 class="font-bold text-white text-sm mb-2">Jurusan, Rombel & Impor Siswa Excel</h4>
+            <ul class="space-y-2 text-xs text-slate-300">
+              <li class="p-2 rounded bg-slate-900 border border-slate-800">
+                <strong class="text-white">Struktur Kejuruan:</strong> Kode Jurusan (RPL, TKJ, AKL), Nama Jurusan, dan Rombongan Belajar (XII RPL 1).
+              </li>
+              <li class="p-2 rounded bg-slate-900 border border-slate-800">
+                <strong class="text-white">Impor Excel Cerdas:</strong> Impor ratusan siswa via file Excel/CSV dengan <em>Row-level Fault Tolerance</em> (baris duplikat dilaporkan tanpa membatalkan baris valid).
+              </li>
+              <li class="p-2 rounded bg-slate-900 border border-slate-800">
+                <strong class="text-white">Guru Pembimbing:</strong> Pendaftaran NIP, nama lengkap, gelar, dan nomor WhatsApp kontak darurat.
+              </li>
+            </ul>
+          </div>
+          <div class="mt-3 text-[10px] text-slate-400 font-mono">Auto Account Creation (Role: Siswa & Guru)</div>
+        </div>
+
+        <!-- Col 3: DU/DI & Plotting -->
+        <div class="anim-item anim-delay-4 glass-panel p-4 rounded-xl border border-slate-800 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-brand-400">F-AS08 & F-AS09</span>
+              <span class="text-[10px] text-slate-400 font-mono">Placement Engine</span>
+            </div>
+            <h4 class="font-bold text-white text-sm mb-2">Geofence DU/DI & Plotting 4-Arah</h4>
+            <ul class="space-y-2 text-xs text-slate-300">
+              <li class="p-2 rounded bg-slate-900 border border-slate-800">
+                <strong class="text-white">Radius Geofencing GPS:</strong> Menentukan titik koordinat latitude, longitude, dan radius presisi (default 100m) untuk setiap kantor industri.
+              </li>
+              <li class="p-2 rounded bg-slate-900 border border-slate-800">
+                <strong class="text-white">Hari Kerja Fleksibel:</strong> Opsi 5 hari kerja (Senin-Jumat) atau 6 hari kerja (Senin-Sabtu) per DU/DI.
+              </li>
+              <li class="p-2 rounded bg-slate-900 border border-slate-800">
+                <strong class="text-white">Plotting Massal:</strong> Memetakan relasi Siswa ↔ DU/DI ↔ Guru ↔ Mentor Industri dengan proteksi anti-penugasan ganda.
+              </li>
+            </ul>
+          </div>
+          <div class="mt-3 text-[10px] text-slate-400 font-mono">Strict Integrity: 1 Siswa 1 Penugasan Aktif</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================== -->
+    <!-- SLIDE 6: LEVEL 1 — ADMIN SEKOLAH (OPERASIONAL & SERTIFIKAT) -->
+    <!-- ======================================================== -->
+    <section id="slide-6" class="slide-wrapper slide-enter w-full max-w-7xl flex-col min-h-[78vh]" data-category="Level 1: Admin Sekolah">
+      <div class="anim-item anim-delay-1 mb-4">
+        <span class="text-xs font-bold uppercase tracking-wider text-brand-400 bg-brand-500/10 px-3 py-1 rounded-full border border-brand-500/20">Level 1: Operational & Credentials</span>
+        <h2 class="text-2xl sm:text-4xl font-extrabold text-white mt-1">Admin Sekolah — Kalender, E-Sertifikat & SOS</h2>
+        <p class="text-slate-400 text-sm mt-1">Mencegah false-positive absensi, pengumuman tersemat, investigasi insiden, dan penerbitan sertifikat massal.</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-5 flex-1">
+        <!-- Feature 1: Kalender Libur -->
+        <div class="anim-item anim-delay-2 glass-panel p-4 rounded-xl border border-slate-800 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-amber-400">[F-AS10]</span>
+              <span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px]">Filter Otomatis</span>
+            </div>
+            <h4 class="font-bold text-white text-base mb-2">Kalender Libur & Sync Nasional</h4>
+            <p class="text-xs text-slate-300 leading-relaxed mb-3">
+              Mencegah puluhan siswa ditandai Alfa secara keliru saat hari libur nasional atau cuti bersama yang jatuh di hari kerja.
+            </p>
+            <div class="p-2.5 rounded bg-slate-900 border border-slate-800 text-xs text-slate-300 space-y-1.5">
+              <div>• <strong>Sinkronisasi 1-Klik:</strong> Mengunduh jadwal libur nasional resmi secara otomatis melalui <code class="text-amber-300">HolidayService</code>.</div>
+              <div>• <strong>Libur Khusus Sekolah:</strong> Menambahkan libur manual (Ujian Sekolah, Class Meeting, Hari Guru).</div>
+              <div>• <strong>Integrasi Cron Engine:</strong> Mesin absensi 23:59 langsung mengecualikan evaluasi di hari libur.</div>
+            </div>
+          </div>
+          <div class="mt-3 text-[11px] text-amber-400 font-mono">Auto-Alfa Exemption Guaranteed</div>
+        </div>
+
+        <!-- Feature 2: E-Sertifikat & Transkrip Massal -->
+        <div class="anim-item anim-delay-3 glass-panel p-4 rounded-xl border border-slate-800 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-emerald-400">[F-AS13]</span>
+              <span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px]">Batch Generator</span>
+            </div>
+            <h4 class="font-bold text-white text-base mb-2">E-Sertifikat & Transkrip 2 Halaman</h4>
+            <p class="text-xs text-slate-300 leading-relaxed mb-3">
+              Menerbitkan dokumen kelulusan PKL resmi berstandar nasional secara instan untuk 1 siswa atau seluruh kelas sekaligus.
+            </p>
+            <div class="p-2.5 rounded bg-slate-900 border border-slate-800 text-xs text-slate-300 space-y-1.5">
+              <div>• <strong>Format 2 Halaman:</strong> Halaman 1 Piagam Penghargaan, Halaman 2 Lembar Transkrip Nilai gabungan.</div>
+              <div>• <strong>Nomor Surat Otomatis:</strong> Standarisasi kode unik <code class="text-emerald-300">VKT/{NPSN}/{TAHUN}/{NO}</code>.</div>
+              <div>• <strong>Kalkulasi Predikat Cerdas:</strong> Konversi nilai angka ke predikat (Sangat Baik / Baik / Cukup / Kurang).</div>
+              <div>• <strong>QR Code Terverifikasi:</strong> Mengarahkan langsung ke portal validasi publik.</div>
+            </div>
+          </div>
+          <div class="mt-3 text-[11px] text-emerald-400 font-mono">PDF DomPDF + TTD & Stempel Digital</div>
+        </div>
+
+        <!-- Feature 3: Pengumuman & Investigasi SOS -->
+        <div class="anim-item anim-delay-4 glass-panel p-4 rounded-xl border border-slate-800 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-rose-400">[F-AS11 & F-AS12]</span>
+              <span class="px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 text-[10px]">Security & SOS</span>
+            </div>
+            <h4 class="font-bold text-white text-base mb-2">Pengumuman & Investigasi Insiden</h4>
+            <p class="text-xs text-slate-300 leading-relaxed mb-3">
+              Komunikasi terarah dan penanganan masalah keselamatan siswa secara cepat dan terisolasi.
+            </p>
+            <div class="p-2.5 rounded bg-slate-900 border border-slate-800 text-xs text-slate-300 space-y-1.5">
+              <div>• <strong>Targeting Pengumuman:</strong> Mengirimkan siaran ke Semua, Khusus Siswa, Khusus Guru, atau Jurusan tertentu.</div>
+              <div>• <strong>Pinning Prioritas:</strong> Menyematkan pengumuman penting di bagian teratas mobile app siswa.</div>
+              <div>• <strong>Penanganan Insiden SOS:</strong> Investigasi kendala pelecehan/bahaya fisik, mediasi DU/DI, hingga penarikan siswa bimbingan.</div>
+              <div>• <strong>[F-AS14] Impersonasi Diagnostik:</strong> Login as Guru/Siswa untuk verifikasi tampilan akun bermasalah tanpa meminta password.</div>
+            </div>
+          </div>
+          <div class="mt-3 text-[11px] text-rose-400 font-mono">Privat dari Pihak DU/DI</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================== -->
+    <!-- SLIDE 7: LEVEL 2 — KEPALA SEKOLAH (EXECUTIVE MONITORING)  -->
+    <!-- ======================================================== -->
+    <section id="slide-7" class="slide-wrapper slide-enter w-full max-w-7xl flex-col min-h-[78vh]" data-category="Level 2: Kepala Sekolah">
+      <div class="anim-item anim-delay-1 mb-5">
+        <span class="text-xs font-bold uppercase tracking-wider text-blue-400 bg-blue-500/10 px-3 py-1 rounded-full border border-blue-500/20">Level 2: Executive Leadership</span>
+        <h2 class="text-2xl sm:text-4xl font-extrabold text-white mt-1">Kepala Sekolah — Executive Analytics & Rekapitulasi</h2>
+        <p class="text-slate-400 text-sm mt-1">Visibilitas makro program PKL untuk evaluasi kurikulum, akreditasi, dan pertanggungjawaban dinas pendidikan.</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-5 flex-1">
+        <!-- Widget 1: Executive Dashboard -->
+        <div class="anim-item anim-delay-2 glass-panel p-5 rounded-xl border border-slate-800 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-xs font-bold text-blue-400 font-mono">[F-KS01]</span>
+              <span class="text-[10px] bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded">Macro Analytics</span>
+            </div>
+            <h3 class="text-base font-bold text-white mb-2">Executive Dashboard KPIs</h3>
+            <p class="text-xs text-slate-300 mb-4">
+              Indikator performa strategis seluruh program PKL dalam satu layar tanpa kerumitan administrasi teknis:
+            </p>
+            <div class="space-y-2 text-xs">
+              <div class="flex justify-between items-center p-2 rounded bg-slate-900 border border-slate-800 transition hover:border-slate-700">
+                <span class="text-slate-400">Attendance Rate Global</span>
+                <span class="text-emerald-400 font-bold font-mono">96.8% Kehadiran</span>
+              </div>
+              <div class="flex justify-between items-center p-2 rounded bg-slate-900 border border-slate-800 transition hover:border-slate-700">
+                <span class="text-slate-400">Journal Clearance Rate</span>
+                <span class="text-brand-400 font-bold font-mono">92.4% Disetujui</span>
+              </div>
+              <div class="flex justify-between items-center p-2 rounded bg-slate-900 border border-slate-800 transition hover:border-slate-700">
+                <span class="text-slate-400">Total Mitra DU/DI Aktif</span>
+                <span class="text-white font-bold font-mono">48 Perusahaan</span>
+              </div>
+              <div class="flex justify-between items-center p-2 rounded bg-slate-900 border border-slate-800 transition hover:border-slate-700">
+                <span class="text-slate-400">Distribusi Siswa Tersebar</span>
+                <span class="text-indigo-400 font-bold font-mono">340 Siswa Magang</span>
+              </div>
+            </div>
+          </div>
+          <div class="mt-4 text-[11px] text-blue-300 font-mono">Real-time aggregate data queries</div>
+        </div>
+
+        <!-- Widget 2: Rekapitulasi Matriks Bulanan -->
+        <div class="anim-item anim-delay-3 glass-panel p-5 rounded-xl border border-slate-800 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-xs font-bold text-blue-400 font-mono">[F-KS02]</span>
+              <span class="text-[10px] bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded">Calendar Grid</span>
+            </div>
+            <h3 class="text-base font-bold text-white mb-2">Matriks Presensi 1–31 Bulanan</h3>
+            <p class="text-xs text-slate-300 mb-3">
+              Inspeksi kedisiplinan per rombel kelas pada bulan berjalan dalam format tabel matriks kalender interaktif.
+            </p>
+            <div class="p-3 rounded bg-slate-900 border border-slate-800 text-xs text-slate-300 space-y-2">
+              <div class="text-[11px] text-slate-400 font-semibold">Label Status Singkat Terstandarisasi:</div>
+              <div class="grid grid-cols-4 gap-1.5 text-center font-bold text-[10px]">
+                <span class="p-1 rounded bg-emerald-500/20 text-emerald-400">H = Hadir</span>
+                <span class="p-1 rounded bg-amber-500/20 text-amber-400">T = Lambat</span>
+                <span class="p-1 rounded bg-blue-500/20 text-blue-400">I = Izin</span>
+                <span class="p-1 rounded bg-rose-500/20 text-rose-400">S = Sakit</span>
+                <span class="p-1 rounded bg-purple-500/20 text-purple-400">DL = Dinas</span>
+                <span class="p-1 rounded bg-sky-500/20 text-sky-400">LK = Remote</span>
+                <span class="p-1 rounded bg-slate-700 text-slate-300">A = Alfa</span>
+                <span class="p-1 rounded bg-slate-800 text-slate-400">Libur = -</span>
+              </div>
+              <div class="text-slate-400 text-[11px] mt-2">
+                Kolom akumulasi otomatis di ujung tabel menghitung total masing-masing kehadiran per siswa.
+              </div>
+            </div>
+          </div>
+          <div class="mt-4 text-[11px] text-blue-300 font-mono">Route: /kepala-sekolah/rekap</div>
+        </div>
+
+        <!-- Widget 3: Ekspor Rekapitulasi CSV/Excel -->
+        <div class="anim-item anim-delay-4 glass-panel p-5 rounded-xl border border-slate-800 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-xs font-bold text-blue-400 font-mono">[F-KS03]</span>
+              <span class="text-[10px] bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded">Accreditation Ready</span>
+            </div>
+            <h3 class="text-base font-bold text-white mb-2">Ekspor CSV/Excel UTF-8 BOM</h3>
+            <p class="text-xs text-slate-300 mb-3">
+              Mengunduh data rekapitulasi presensi lengkap untuk bukti fisik visitasi akreditasi BAN-SM atau dinas terkait.
+            </p>
+            <div class="p-3 rounded bg-slate-900 border border-slate-800 text-xs text-slate-300 space-y-2">
+              <div class="font-semibold text-emerald-400 flex items-center gap-1.5">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                Excel Auto-Formatting Guarantee
+              </div>
+              <p class="text-slate-400 leading-relaxed">
+                File CSV di-encode dengan byte mark khusus <code class="text-blue-300 font-mono">\xEF\xBB\xBF</code> (UTF-8 BOM). Terbuka otomatis dengan rapi, kolom terpisah sempurna di Microsoft Excel tanpa error tanda baca atau teks rusak.
+              </p>
+            </div>
+          </div>
+          <div class="mt-4 text-[11px] text-blue-300 font-mono">Streamed Response Tanpa Beban RAM</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================== -->
+    <!-- SLIDE 8: LEVEL 3 — GURU PEMBIMBING (SUPERVISI & LAPORAN)  -->
+    <!-- ======================================================== -->
+    <section id="slide-8" class="slide-wrapper slide-enter w-full max-w-7xl flex-col min-h-[78vh]" data-category="Level 3: Guru Pembimbing">
+      <div class="anim-item anim-delay-1 mb-4">
+        <span class="text-xs font-bold uppercase tracking-wider text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">Level 3: Academic Supervision</span>
+        <h2 class="text-2xl sm:text-4xl font-extrabold text-white mt-1">Guru Pembimbing — Bimbingan, Supervisi & Buku Laporan</h2>
+        <p class="text-slate-400 text-sm mt-1">Mengawal ketercapaian kompetensi kurikulum, validasi absensi, supervisi industri, dan evaluasi akhir.</p>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 flex-1">
+        <!-- Feature 1: Monitoring & Anti-Fake GPS -->
+        <div class="anim-item anim-delay-2 glass-panel p-4 rounded-xl border border-slate-800 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-emerald-400">[F-GP01 & F-GP02]</span>
+              <span class="p-1 rounded bg-emerald-500/20 text-emerald-300 text-[10px]">Guard</span>
+            </div>
+            <h4 class="font-bold text-white text-sm mb-1.5">Monitoring Kehadiran & Flagged GPS</h4>
+            <p class="text-xs text-slate-300 leading-relaxed">
+              Memantau kehadiran siswa binaan secara real-time. Jika siswa absen di luar radius atau terindikasi mock location, sistem menyematkan badge peringatan <span class="text-rose-400 font-bold">[FLAGGED]</span> beserta alasan siswa.
+            </p>
+          </div>
+          <div class="mt-3 text-[10px] text-slate-400 font-mono">Tinjau Foto Selfie & Jarak Haversine</div>
+        </div>
+
+        <!-- Feature 2: Bulk Approval Requests & Jurnal Tier 2 -->
+        <div class="anim-item anim-delay-3 glass-panel p-4 rounded-xl border border-slate-800 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-emerald-400">[F-GP03 & F-GP04]</span>
+              <span class="p-1 rounded bg-emerald-500/20 text-emerald-300 text-[10px]">Action Bar</span>
+            </div>
+            <h4 class="font-bold text-white text-sm mb-1.5">Persetujuan Massal & Jurnal Kurikulum</h4>
+            <p class="text-xs text-slate-300 leading-relaxed">
+              Dilengkapi <em>Sticky Floating Action Bar</em> untuk menyetujui izin/sakit dan jurnal puluhan siswa sekali klik. Verifikasi jurnal tahap 2 memastikan kesesuaian uraian kerja industri dengan kurikulum sekolah.
+            </p>
+          </div>
+          <div class="mt-3 text-[10px] text-slate-400 font-mono">Pilihan: Setujui / Minta Revisi Interaktif</div>
+        </div>
+
+        <!-- Feature 3: Logbook Supervisi Kunjungan & Berita Acara PDF -->
+        <div class="anim-item anim-delay-4 glass-panel p-4 rounded-xl border border-slate-800 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-emerald-400">[F-GP06]</span>
+              <span class="p-1 rounded bg-emerald-500/20 text-emerald-300 text-[10px]">Otomasi PDF</span>
+            </div>
+            <h4 class="font-bold text-white text-sm mb-1.5">Supervisi Lapangan & Berita Acara PDF</h4>
+            <p class="text-xs text-slate-300 leading-relaxed">
+              Merekam tahapan kunjungan resmi (Monitoring Awal / Tengah / Evaluasi Akhir / Penjemputan) + foto bersama industri. Langsung meng-generate dokumen Berita Acara Kunjungan format A4 ber-KOP resmi.
+            </p>
+          </div>
+          <div class="mt-3 text-[10px] text-slate-400 font-mono">Dokumen Standar Kurikulum Kemendikbud</div>
+        </div>
+
+        <!-- Feature 4: Portofolio Laporan PKL Lengkap -->
+        <div class="anim-item anim-delay-5 glass-panel p-4 rounded-xl border border-slate-800 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-emerald-400">[F-GP07 & F-GP08]</span>
+              <span class="p-1 rounded bg-emerald-500/20 text-emerald-300 text-[10px]">Final Bundle</span>
+            </div>
+            <h4 class="font-bold text-white text-sm mb-1.5">Penilaian & Cetak Buku Portofolio</h4>
+            <p class="text-xs text-slate-300 leading-relaxed">
+              Input penilaian sekolah (0-100) dan cetak buku laporan utuh PKL siswa: Rekap presensi, kompilasi seluruh jurnal approved, transkrip nilai gabungan, dan lembar pengesahan tanda tangan.
+            </p>
+          </div>
+          <div class="mt-3 text-[10px] text-slate-400 font-mono">Buku Laporan PKL Siap Cetak & Arsip</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================== -->
+    <!-- SLIDE 9: LEVEL 4 — PEMBIMBING DU/DI (WORKPLACE MENTOR)  -->
+    <!-- ======================================================== -->
+    <section id="slide-9" class="slide-wrapper slide-enter w-full max-w-7xl flex-col min-h-[78vh]" data-category="Level 4: Pembimbing DU/DI">
+      <div class="anim-item anim-delay-1 mb-5">
+        <span class="text-xs font-bold uppercase tracking-wider text-amber-400 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20">Level 4: Industry Mentorship</span>
+        <h2 class="text-2xl sm:text-4xl font-extrabold text-white mt-1">Pembimbing DU/DI — Pengawasan Lapangan & Asesmen Industri</h2>
+        <p class="text-slate-400 text-sm mt-1">Validasi teknis pekerjaan industri, persetujuan penugasan lapangan, dan evaluasi keterampilan kerja nyata.</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-5 flex-1">
+        <!-- Feature 1: Shift Monitoring -->
+        <div class="anim-item anim-delay-2 glass-panel p-5 rounded-xl border border-slate-800 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-xs font-bold text-amber-400 font-mono">[F-DU01 & F-DU02]</span>
+              <span class="text-[10px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded">Workplace Shift</span>
+            </div>
+            <h3 class="text-base font-bold text-white mb-2">Monitoring Shift & Validasi Hadir</h3>
+            <p class="text-xs text-slate-300 mb-3 leading-relaxed">
+              Mentor industri dapat melihat daftar siswa yang aktif di perusahaannya hari ini dengan data akurat:
+            </p>
+            <ul class="space-y-2 text-xs text-slate-300">
+              <li class="p-2 rounded bg-slate-900 border border-slate-800">
+                <strong>Jam Masuk & Pulang:</strong> Waktu check-in dan check-out tepat waktu atau terlambat.
+              </li>
+              <li class="p-2 rounded bg-slate-900 border border-slate-800">
+                <strong>Foto Selfie Otentik:</strong> Verifikasi visual wajah siswa di area kerja fisik pabrik/kantor.
+              </li>
+              <li class="p-2 rounded bg-slate-900 border border-slate-800">
+                <strong>Jarak Koordinat Meter:</strong> Jarak riil GPS perangkat terhadap kantor industri.
+              </li>
+            </ul>
+          </div>
+          <div class="mt-4 text-[11px] text-amber-400 font-mono">Dukungan Jam Kerja Khusus DU/DI</div>
+        </div>
+
+        <!-- Feature 2: Approval Dinas Luar & Jurnal Tier 1 -->
+        <div class="anim-item anim-delay-3 glass-panel p-5 rounded-xl border border-slate-800 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-xs font-bold text-amber-400 font-mono">[F-DU03 & F-DU04]</span>
+              <span class="text-[10px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded">Tier 1 Approval</span>
+            </div>
+            <h3 class="text-base font-bold text-white mb-2">Dinas Luar & Verifikasi Jurnal Teknis</h3>
+            <p class="text-xs text-slate-300 mb-3 leading-relaxed">
+              Otoritas mentor industri terhadap kegiatan kerja siswa di lapangan:
+            </p>
+            <ul class="space-y-2 text-xs text-slate-300">
+              <li class="p-2 rounded bg-slate-900 border border-slate-800">
+                <strong>Dinas Luar / Remote:</strong> Persetujuan penugasan siswa ke cabang klien atau WFH tanpa batasan radius kantor.
+              </li>
+              <li class="p-2 rounded bg-slate-900 border border-slate-800">
+                <strong>Verifikasi Jurnal Tingkat 1:</strong> Memastikan uraian pekerjaan dan 1-3 foto dokumentasi benar-benar dikerjakan di industri.
+              </li>
+              <li class="p-2 rounded bg-slate-900 border border-slate-800">
+                <strong>Bulk Action Bar:</strong> Opsi menyetujui seluruh jurnal harian kelompok magang dalam 1 sentuhan.
+              </li>
+            </ul>
+          </div>
+          <div class="mt-4 text-[11px] text-amber-400 font-mono">Status Berubah: Review Guru (Tier 2)</div>
+        </div>
+
+        <!-- Feature 3: Asesmen Kinerja Industri -->
+        <div class="anim-item anim-delay-4 glass-panel p-5 rounded-xl border border-slate-800 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-xs font-bold text-amber-400 font-mono">[F-DU05]</span>
+              <span class="text-[10px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded">Industry Score</span>
+            </div>
+            <h3 class="text-base font-bold text-white mb-2">Penilaian Kompetensi Industri</h3>
+            <p class="text-xs text-slate-300 mb-3 leading-relaxed">
+              Evaluasi kinerja riil dunia kerja yang menjadi komponen nilai terbesar (bobot default 60%):
+            </p>
+            <div class="space-y-2 text-xs">
+              <div class="p-2 rounded bg-slate-900 border border-slate-800 flex justify-between items-center">
+                <span class="text-slate-300">Kedisiplinan & Etika Kerja</span>
+                <span class="font-mono text-amber-400 font-bold">Skor 0–100</span>
+              </div>
+              <div class="p-2 rounded bg-slate-900 border border-slate-800 flex justify-between items-center">
+                <span class="text-slate-300">Keterampilan Teknis & Kualitas</span>
+                <span class="font-mono text-amber-400 font-bold">Skor 0–100</span>
+              </div>
+              <div class="p-2 rounded bg-slate-900 border border-slate-800 flex justify-between items-center">
+                <span class="text-slate-300">Inisiatif & Kerja Sama Tim</span>
+                <span class="font-mono text-amber-400 font-bold">Skor 0–100</span>
+              </div>
+              <div class="p-2 rounded bg-slate-900 border border-slate-800 text-slate-400">
+                Catatan evaluasi kualitatif dan rekomendasi masa depan dari industri.
+              </div>
+            </div>
+          </div>
+          <div class="mt-4 text-[11px] text-amber-400 font-mono">Terkonversi ke E-Sertifikat Akhir</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================== -->
+    <!-- SLIDE 10: LEVEL 5 — SISWA PKL (MOBILE-FIRST EXPERIENCE)  -->
+    <!-- ======================================================== -->
+    <section id="slide-10" class="slide-wrapper slide-enter w-full max-w-7xl flex-col min-h-[78vh]" data-category="Level 5: Siswa PKL">
+      <div class="anim-item anim-delay-1 mb-4">
+        <span class="text-xs font-bold uppercase tracking-wider text-brand-400 bg-brand-500/10 px-3 py-1 rounded-full border border-brand-500/20">Level 5: Student Mobile-First</span>
+        <h2 class="text-2xl sm:text-4xl font-extrabold text-white mt-1">Siswa PKL — Pengalaman Mobile Handheld Ergonomis</h2>
+        <p class="text-slate-400 text-sm mt-1">Desain responsif optimal untuk genggaman ponsel pintar (viewport 360–430px) dengan aksesibilitas jempol 1-sentuhan.</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-5 flex-1">
+        <!-- Mockup Visual Card -->
+        <div class="anim-item anim-delay-2 glass-panel p-5 rounded-xl border border-slate-800 flex flex-col justify-between bg-gradient-to-b from-slate-900 to-slate-950">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-xs font-bold text-brand-400 font-mono">[F-SW01] Mobile Home</span>
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            </div>
+            <div class="phone-mockup-anim mx-auto w-full max-w-[260px] bg-slate-950 border-2 border-slate-800 rounded-3xl p-3 shadow-2xl relative">
+              <!-- Top bar simulator -->
+              <div class="flex justify-between items-center pb-2 border-b border-slate-800 text-[10px] text-slate-400">
+                <span class="font-bold text-white">VokaTrack Mobile</span>
+                <span class="text-brand-400 font-mono">08:02 WIB</span>
+              </div>
+              <!-- Status presensi box -->
+              <div class="mt-2.5 p-2.5 rounded-xl bg-gradient-to-tr from-brand-900/60 to-indigo-900/40 border border-brand-500/30 text-center shadow-md">
+                <span class="text-[10px] text-slate-300">Status Hari Ini</span>
+                <div class="text-xs font-bold text-emerald-400 mt-0.5">HADIR (07:45 WIB)</div>
+                <button class="mt-2 w-full py-1.5 rounded-lg bg-brand-600 text-white font-bold text-[11px] shadow-sm transition hover:bg-brand-500">
+                  ✓ Check-Out (16:00)
+                </button>
+              </div>
+              <!-- Fast pill buttons -->
+              <div class="grid grid-cols-2 gap-1.5 mt-2">
+                <span class="py-1 rounded bg-slate-900 border border-slate-800 text-[10px] text-center text-slate-300">Form Izin</span>
+                <span class="py-1 rounded bg-slate-900 border border-slate-800 text-[10px] text-center text-slate-300">Surat Sakit</span>
+                <span class="py-1 rounded bg-slate-900 border border-slate-800 text-[10px] text-center text-slate-300">Dinas Luar</span>
+                <span class="py-1 rounded bg-rose-950/60 border border-rose-800/40 text-[10px] text-center text-rose-300 font-bold">🚨 SOS</span>
+              </div>
+              <!-- Bottom nav simulator -->
+              <div class="flex justify-around items-center pt-2.5 mt-2.5 border-t border-slate-800 text-[9px] text-slate-400">
+                <span class="text-brand-400 font-bold">Beranda</span>
+                <span>Absensi</span>
+                <span>Jurnal</span>
+                <span>Profil</span>
+              </div>
+            </div>
+          </div>
+          <div class="text-center mt-3 text-[10px] text-slate-400 font-mono">Fixed Bottom Nav 64px + Safe Area Padding</div>
+        </div>
+
+        <!-- Col 2: Presensi Selfie & Guard -->
+        <div class="anim-item anim-delay-3 glass-panel p-5 rounded-xl border border-slate-800 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-xs font-bold text-emerald-400 font-mono">[F-SW02 & F-SW03]</span>
+              <span class="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded">GPS & WebRTC</span>
+            </div>
+            <h3 class="text-base font-bold text-white mb-2">Presensi Selfie & Kunci Lokasi Satelit</h3>
+            <p class="text-xs text-slate-300 mb-3 leading-relaxed">
+              Mencegah segala bentuk kecurangan titip absen atau manipulasi perangkat:
+            </p>
+            <div class="space-y-2 text-xs text-slate-300">
+              <div class="p-2.5 rounded bg-slate-900 border border-slate-800 transition hover:border-slate-700">
+                <strong class="text-white">Kamera Depan WebRTC Live:</strong> Akses stream video langsung dari browser siswa. Upload dari galeri dinonaktifkan demi keaslian.
+              </div>
+              <div class="p-2.5 rounded bg-slate-900 border border-slate-800 transition hover:border-slate-700">
+                <strong class="text-white">Satelit Accuracy Guard (&lt; 80m):</strong> Menolak submit jika akurasi GPS buruk/lemah untuk mencegah manipulasi sinyal dalam ruangan.
+              </div>
+              <div class="p-2.5 rounded bg-slate-900 border border-slate-800 transition hover:border-slate-700">
+                <strong class="text-white">Deteksi Mock Location:</strong> Mencegah aplikasi Fake GPS pihak ketiga. Anomali koordinat otomatis ditandai di dashboard guru.
+              </div>
+            </div>
+          </div>
+          <div class="mt-3 text-[11px] text-emerald-400 font-mono">Haversine Distance Formula Matrix</div>
+        </div>
+
+        <!-- Col 3: Jurnal & Profil Sertifikat -->
+        <div class="anim-item anim-delay-4 glass-panel p-5 rounded-xl border border-slate-800 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-xs font-bold text-brand-400 font-mono">[F-SW04 s.d F-SW07]</span>
+              <span class="text-[10px] bg-brand-500/20 text-brand-300 px-2 py-0.5 rounded">Journal Lifecycle</span>
+            </div>
+            <h3 class="text-base font-bold text-white mb-2">Jurnal Interaktif & E-Sertifikat</h3>
+            <p class="text-xs text-slate-300 mb-3 leading-relaxed">
+              Dokumentasi aktivitas harian terintegrasi dengan siklus review berjenjang:
+            </p>
+            <div class="space-y-2 text-xs text-slate-300">
+              <div class="p-2.5 rounded bg-slate-900 border border-slate-800 transition hover:border-slate-700">
+                <strong class="text-white">Kompresi WebP Otomatis:</strong> Unggah 1–3 foto dokumentasi dikompresi di browser ke WebP &lt; 800KB untuk menghemat kuota siswa.
+              </div>
+              <div class="p-2.5 rounded bg-slate-900 border border-slate-800 transition hover:border-slate-700">
+                <strong class="text-white">Siklus Status Jurnal:</strong> Draft → Terkirim (Review DU/DI) → Review Guru → Disetujui (atau Revisi interaktif).
+              </div>
+              <div class="p-2.5 rounded bg-slate-900 border border-slate-800 transition hover:border-slate-700">
+                <strong class="text-white">Download E-Sertifikat Resmi:</strong> Akses unduhan sertifikat kelulusan digital langsung dari profil jika telah disahkan.
+              </div>
+            </div>
+          </div>
+          <div class="mt-3 text-[11px] text-brand-300 font-mono">Real-Time In-App Notification Bell</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================== -->
+    <!-- SLIDE 11: MODUL KESELAMATAN SISWA — DARURAT SOS          -->
+    <!-- ======================================================== -->
+    <section id="slide-11" class="slide-wrapper slide-enter w-full max-w-7xl flex-col min-h-[78vh]" data-category="Keselamatan Siswa: SOS">
+      <div class="anim-item anim-delay-1 mb-4">
+        <span class="text-xs font-bold uppercase tracking-wider text-rose-400 bg-rose-500/10 px-3 py-1 rounded-full border border-rose-500/20">Student Safety & Whistleblower</span>
+        <h2 class="text-2xl sm:text-4xl font-extrabold text-white mt-1">Modul Keselamatan Siswa — Lapor Kendala & Darurat SOS</h2>
+        <p class="text-slate-400 text-sm mt-1">Mekanisme perlindungan siswa dari bahaya, pelecehan, dan eksploitasi kerja dengan jaminan kerahasiaan 100%.</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-5 flex-1">
+        <!-- Card 1: 5 Kategori & Isolasi Privasi -->
+        <div class="anim-item anim-delay-2 glass-panel p-5 rounded-xl border border-rose-900/40 bg-gradient-to-b from-rose-950/20 to-slate-900 flex flex-col justify-between sos-glow-card">
+          <div>
+            <div class="flex items-center space-x-2 text-rose-400 font-bold text-sm mb-3">
+              <span class="w-3 h-3 rounded-full bg-rose-500 animate-ping"></span>
+              <span>5 Kategori Insiden yang Dilindungi</span>
+            </div>
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs mb-4">
+              <div class="p-2.5 rounded bg-slate-900/90 border border-slate-800 text-slate-300 transition hover:border-rose-900/50">
+                <strong class="text-rose-400">1. Pelecehan & Bullying:</strong> Tindakan perundungan fisik atau verbal di lingkungan kerja.
+              </div>
+              <div class="p-2.5 rounded bg-slate-900/90 border border-slate-800 text-slate-300 transition hover:border-rose-900/50">
+                <strong class="text-rose-400">2. Bahaya / Kecelakaan:</strong> Kecelakaan kerja fisik atau kondisi lingkungan kerja membahayakan.
+              </div>
+              <div class="p-2.5 rounded bg-slate-900/90 border border-slate-800 text-slate-300 transition hover:border-rose-900/50">
+                <strong class="text-rose-400">3. Eksploitasi Tugas:</strong> Penugasan di luar batas jam atau tidak sesuai kejuruan.
+              </div>
+              <div class="p-2.5 rounded bg-slate-900/90 border border-slate-800 text-slate-300 transition hover:border-rose-900/50">
+                <strong class="text-rose-400">4. Lingkungan Toksik:</strong> Konflik berat atau diskriminasi di tempat magang.
+              </div>
+              <div class="p-2.5 rounded bg-slate-900/90 border border-slate-800 text-slate-300 sm:col-span-2 transition hover:border-rose-900/50">
+                <strong class="text-rose-400">5. Kendala Fasilitas / Transportasi:</strong> Hambatan kritis akomodasi dan akses.
+              </div>
+            </div>
+
+            <!-- Isolation Guard Box -->
+            <div class="p-3.5 rounded-xl bg-rose-950/40 border border-rose-500/30 text-xs text-rose-200">
+              <div class="font-bold flex items-center gap-1.5 text-rose-300 mb-1">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                Prinsip Isolasi Akses Mutlak (Anti-Intimidasi)
+              </div>
+              Laporan ini <strong>sama sekali diblokir dari antarmuka Pembimbing DU/DI</strong>. Hal ini menjamin siswa aman dari ancaman intimidasi di lokasi magang. Laporan hanya sampai ke Guru Pembimbing dan Admin Sekolah.
+            </div>
+          </div>
+          <div class="mt-4 text-[11px] text-rose-400 font-mono">Service: IncidentReportService.php</div>
+        </div>
+
+        <!-- Card 2: Alur Penanganan & Investigasi -->
+        <div class="anim-item anim-delay-3 glass-panel p-5 rounded-xl border border-slate-800 flex flex-col justify-between">
+          <div>
+            <h3 class="text-base font-bold text-white mb-3">Alur Cepat Respons & Kronologi Tindak Lanjut</h3>
+            
+            <div class="space-y-3 text-xs text-slate-300">
+              <div class="flex items-start gap-3 p-3 rounded-lg bg-slate-900 border border-slate-800 transition hover:border-slate-700">
+                <span class="w-6 h-6 rounded-full bg-rose-500/20 text-rose-400 font-bold flex items-center justify-center shrink-0">1</span>
+                <div>
+                  <strong class="text-white">Trigger SOS dari HP Siswa:</strong>
+                  <p class="text-slate-400 mt-0.5">Siswa memilih kategori insiden, mendeskripsikan kronologi kejadian, dan menyertakan foto bukti fisik (opsional).</p>
+                </div>
+              </div>
+
+              <div class="flex items-start gap-3 p-3 rounded-lg bg-slate-900 border border-slate-800 transition hover:border-slate-700">
+                <span class="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 font-bold flex items-center justify-center shrink-0">2</span>
+                <div>
+                  <strong class="text-white">Notifikasi Instan Lencana Bahaya:</strong>
+                  <p class="text-slate-400 mt-0.5">Guru Pembimbing menerima notifikasi darurat merah di dashboard dengan nomor kontak siswa yang siap dihubungi.</p>
+                </div>
+              </div>
+
+              <div class="flex items-start gap-3 p-3 rounded-lg bg-slate-900 border border-slate-800 transition hover:border-slate-700">
+                <span class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 font-bold flex items-center justify-center shrink-0">3</span>
+                <div>
+                  <strong class="text-white">Tindakan Mitigasi Terstruktur:</strong>
+                  <p class="text-slate-400 mt-0.5">Pencatatan resmi rekam jejak investigasi: Konseling siswa, kunjungan klarifikasi ke DU/DI, mediasi manajemen, atau penarikan siswa ke sekolah.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-4 pt-3 border-t border-slate-800 flex justify-between items-center text-[11px] text-slate-400">
+            <span>Status Siklus: <code class="text-amber-400">submitted</code> → <code class="text-emerald-400">resolved</code></span>
+            <span class="font-mono text-rose-300">Strict Anonymity Guard</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================== -->
+    <!-- SLIDE 12: INOVASI BARU — PETA INTERAKTIF SEBARAN GIS     -->
+    <!-- ======================================================== -->
+    <section id="slide-12" class="slide-wrapper slide-enter w-full max-w-7xl flex-col min-h-[78vh]" data-category="Inovasi: Peta Interaktif GIS">
+      <div class="anim-item anim-delay-1 mb-4">
+        <span class="text-xs font-bold uppercase tracking-wider text-indigo-400 bg-indigo-500/10 px-3 py-1 rounded-full border border-indigo-500/20">Geospatial Intelligence</span>
+        <h2 class="text-2xl sm:text-4xl font-extrabold text-white mt-1">Peta Interaktif Sebaran Siswa PKL & DU/DI (GIS)</h2>
+        <p class="text-slate-400 text-sm mt-1">Visualisasi pemetaan geospasial real-time menggunakan OpenStreetMap & Leaflet.js untuk monitoring spasial.</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-5 flex-1">
+        <!-- Visual Map Preview simulator -->
+        <div class="anim-item anim-delay-2 glass-panel p-5 rounded-xl border border-slate-800 flex flex-col justify-between bg-gradient-to-b from-slate-900 to-slate-950 md:col-span-2">
+          <div>
+            <div class="flex items-center justify-between mb-3 text-xs">
+              <div class="flex items-center space-x-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span class="font-bold text-white">GIS Map Viewport Controller</span>
+              </div>
+              <div class="flex items-center space-x-2 text-[11px]">
+                <span class="px-2 py-0.5 rounded bg-brand-500/20 text-brand-300 font-mono">PklMapService</span>
+                <span class="px-2 py-0.5 rounded bg-slate-800 text-slate-300">Live Spatial Data</span>
+              </div>
+            </div>
+
+            <!-- Map Mockup Graphic -->
+            <div class="w-full h-56 sm:h-64 rounded-xl bg-slate-950 border border-slate-800 relative overflow-hidden flex items-center justify-center">
+              <!-- Grid background -->
+              <div class="absolute inset-0 bg-[radial-gradient(#312e81_1px,transparent_1px)] [background-size:16px_16px] opacity-40"></div>
+              
+              <!-- Map elements simulated with animations -->
+              <div class="absolute top-1/4 left-1/3 flex flex-col items-center">
+                <div class="w-12 h-12 rounded-full border border-emerald-500/40 bg-emerald-500/10 animate-ping absolute"></div>
+                <div class="w-7 h-7 rounded-full bg-emerald-500 text-slate-950 font-bold text-xs flex items-center justify-center shadow-lg shadow-emerald-500/50 z-10 transition-transform hover:scale-125">🏢</div>
+                <span class="text-[10px] bg-slate-900/90 text-emerald-300 px-1.5 py-0.5 rounded border border-slate-700 mt-1 font-mono">PT Telkom (100m)</span>
+              </div>
+
+              <div class="absolute bottom-1/3 right-1/4 flex flex-col items-center">
+                <div class="w-7 h-7 rounded-full bg-brand-500 text-white font-bold text-xs flex items-center justify-center shadow-lg shadow-brand-500/50 z-10 transition-transform hover:scale-125">🏢</div>
+                <span class="text-[10px] bg-slate-900/90 text-brand-300 px-1.5 py-0.5 rounded border border-slate-700 mt-1 font-mono">Astra Motor (150m)</span>
+              </div>
+
+              <div class="absolute bottom-1/4 left-1/2 flex flex-col items-center">
+                <div class="w-6 h-6 rounded-full bg-rose-500 text-white font-bold text-[10px] flex items-center justify-center shadow-lg shadow-rose-500/50 z-10 transition-transform hover:scale-125">📍</div>
+                <span class="text-[9px] bg-rose-950/90 text-rose-300 px-1.5 py-0.5 rounded border border-rose-800 mt-0.5 font-mono">Siswa (Luar Radius)</span>
+              </div>
+
+              <!-- Map Legend Floating -->
+              <div class="absolute bottom-3 left-3 bg-slate-900/90 backdrop-blur-md p-2 rounded-lg border border-slate-800 text-[10px] space-y-1 shadow-md">
+                <div class="flex items-center gap-1.5 text-slate-300"><span class="w-2 h-2 rounded-full bg-emerald-400"></span> DU/DI Aktif</div>
+                <div class="flex items-center gap-1.5 text-slate-300"><span class="w-2 h-2 rounded-full bg-brand-400"></span> Siswa Hadir Valid</div>
+                <div class="flex items-center gap-1.5 text-slate-300"><span class="w-2 h-2 rounded-full bg-rose-400"></span> Presensi Di Luar Radius</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-4 pt-3 border-t border-slate-800 flex justify-between items-center text-xs text-slate-400">
+            <span>Dukungan Multi-Role: Admin Sekolah, Guru Pembimbing, Kepala Sekolah</span>
+            <span class="font-mono text-indigo-400">Leaflet.js + OSM Tiles</span>
+          </div>
+        </div>
+
+        <!-- Filter & Capabilities -->
+        <div class="anim-item anim-delay-3 glass-panel p-5 rounded-xl border border-slate-800 flex flex-col justify-between">
+          <div>
+            <h3 class="text-base font-bold text-white mb-3">Fitur Filter Multi-Dimensi</h3>
+            <ul class="space-y-2.5 text-xs text-slate-300">
+              <li class="p-2.5 rounded bg-slate-900 border border-slate-800 transition hover:border-slate-700">
+                <strong class="text-white">Filter Tanggal Operasional:</strong> Melacak sebaran presensi pada hari ini atau riwayat tanggal sebelumnya.
+              </li>
+              <li class="p-2.5 rounded bg-slate-900 border border-slate-800 transition hover:border-slate-700">
+                <strong class="text-white">Filter Jurusan & Rombel:</strong> Isolasi tampilan peta khusus jurusan tertentu (misal: hanya konsentrasi RPL).
+              </li>
+              <li class="p-2.5 rounded bg-slate-900 border border-slate-800 transition hover:border-slate-700">
+                <strong class="text-white">Filter Status Presensi:</strong> Melihat siswa yang telah hadir, terlambat, izin, atau belum absen.
+              </li>
+              <li class="p-2.5 rounded bg-slate-900 border border-slate-800 transition hover:border-slate-700">
+                <strong class="text-white">Radius Circle Overlay:</strong> Menampilkan lingkaran batas geofence resmi DU/DI secara visual di atas peta.
+              </li>
+            </ul>
+          </div>
+          <div class="mt-4 text-[11px] text-indigo-400 font-mono">Routes: /admin-sekolah/peta-sebaran</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================== -->
+    <!-- SLIDE 13: INOVASI BARU — PORTAL PANTAU ORANG TUA         -->
+    <!-- ======================================================== -->
+    <section id="slide-13" class="slide-wrapper slide-enter w-full max-w-7xl flex-col min-h-[78vh]" data-category="Inovasi: Portal Orang Tua">
+      <div class="anim-item anim-delay-1 mb-4">
+        <span class="text-xs font-bold uppercase tracking-wider text-teal-400 bg-teal-500/10 px-3 py-1 rounded-full border border-teal-500/20">Family Transparency</span>
+        <h2 class="text-2xl sm:text-4xl font-extrabold text-white mt-1">Portal Pantau Orang Tua — Akses Publik Zero-Login</h2>
+        <p class="text-slate-400 text-sm mt-1">Memberikan ketenangan bagi wali murid untuk memantau anak di industri tanpa kerepotan registrasi akun.</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-5 flex-1">
+        <!-- Feature 1: Zero-Login UUID Token -->
+        <div class="anim-item anim-delay-2 glass-panel p-5 rounded-xl border border-slate-800 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-xs font-bold text-teal-400 font-mono">/pantau/{token}</span>
+              <span class="text-[10px] bg-teal-500/20 text-teal-300 px-2 py-0.5 rounded">Zero-Login</span>
+            </div>
+            <h3 class="text-base font-bold text-white mb-2">Tautan Aman via Token Unik</h3>
+            <p class="text-xs text-slate-300 leading-relaxed mb-4">
+              Orang tua cukup mengklik tautan khusus yang dikirimkan melalui WhatsApp tanpa perlu mengingat username dan password:
+            </p>
+            <div class="space-y-2 text-xs text-slate-300">
+              <div class="p-2.5 rounded bg-slate-900 border border-slate-800 transition hover:border-slate-700">
+                <strong class="text-white">Token UUID Terenkripsi:</strong> String acak berkeamanan tinggi yang unik untuk setiap entitas siswa.
+              </div>
+              <div class="p-2.5 rounded bg-slate-900 border border-slate-800 transition hover:border-slate-700">
+                <strong class="text-white">Rate Limiting Guard:</strong> Dilindungi middleware <code class="text-teal-300">throttle:60,1</code> untuk mencegah upaya brute-force URL.
+              </div>
+            </div>
+          </div>
+          <div class="mt-4 text-[11px] text-teal-300 font-mono">Service: ParentMonitoringService.php</div>
+        </div>
+
+        <!-- Feature 2: Transparansi Data -->
+        <div class="anim-item anim-delay-3 glass-panel p-5 rounded-xl border border-slate-800 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-xs font-bold text-teal-400 font-mono">Mobile View</span>
+              <span class="text-[10px] bg-teal-500/20 text-teal-300 px-2 py-0.5 rounded">Parent Dashboard</span>
+            </div>
+            <h3 class="text-base font-bold text-white mb-2">Informasi Real-Time untuk Orang Tua</h3>
+            <ul class="space-y-2.5 text-xs text-slate-300">
+              <li class="p-2.5 rounded bg-slate-900 border border-slate-800 transition hover:border-slate-700">
+                <strong class="text-white">Status Presensi Hari Ini:</strong> Mengetahui jam berapa anak tiba di kantor industri dan jam kepulangannya.
+              </li>
+              <li class="p-2.5 rounded bg-slate-900 border border-slate-800 transition hover:border-slate-700">
+                <strong class="text-white">Nama Perusahaan & Pembimbing:</strong> Mengetahui secara jelas lokasi magang dan nomor kontak darurat guru pembimbing.
+              </li>
+              <li class="p-2.5 rounded bg-slate-900 border border-slate-800 transition hover:border-slate-700">
+                <strong class="text-white">Riwayat Kehadiran & Jurnal:</strong> Menampilkan ringkasan kedisiplinan dan capaian kerja positif anak.
+              </li>
+            </ul>
+          </div>
+          <div class="mt-4 text-[11px] text-teal-300 font-mono">Membangun Kepercayaan Orang Tua</div>
+        </div>
+
+        <!-- Feature 3: Tata Kelola Sekolah & Regenerasi -->
+        <div class="anim-item anim-delay-4 glass-panel p-5 rounded-xl border border-slate-800 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-xs font-bold text-teal-400 font-mono">Admin & Guru Tool</span>
+              <span class="text-[10px] bg-teal-500/20 text-teal-300 px-2 py-0.5 rounded">Batch Control</span>
+            </div>
+            <h3 class="text-base font-bold text-white mb-2">Manajemen Link & Batch Export</h3>
+            <ul class="space-y-2.5 text-xs text-slate-300">
+              <li class="p-2.5 rounded bg-slate-900 border border-slate-800 transition hover:border-slate-700">
+                <strong class="text-white">Ekspor Massal WhatsApp:</strong> Guru atau Admin dapat mengekspor seluruh tautan monitoring kelas untuk dibagikan ke grup wali murid.
+              </li>
+              <li class="p-2.5 rounded bg-slate-900 border border-slate-800 transition hover:border-slate-700">
+                <strong class="text-white">Regenerasi Token Cepat:</strong> Siswa atau admin dapat mengganti token kapan saja jika tautan lama tidak sengaja tersebar ke pihak lain.
+              </li>
+              <li class="p-2.5 rounded bg-slate-900 border border-slate-800 transition hover:border-slate-700">
+                <strong class="text-white">Saklar Master (Toggle):</strong> Akses portal dapat dinonaktifkan sementara oleh pihak sekolah jika diperlukan.
+              </li>
+            </ul>
+          </div>
+          <div class="mt-4 text-[11px] text-teal-300 font-mono">Batch Generate & Toggle Per Rombel</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================== -->
+    <!-- SLIDE 14: LEVEL 6 — VERIFIKASI SERTIFIKAT QR PUBLIK      -->
+    <!-- ======================================================== -->
+    <section id="slide-14" class="slide-wrapper slide-enter w-full max-w-7xl flex-col min-h-[78vh]" data-category="Level 6: Verifikasi Sertifikat">
+      <div class="anim-item anim-delay-1 mb-4">
+        <span class="text-xs font-bold uppercase tracking-wider text-purple-400 bg-purple-500/10 px-3 py-1 rounded-full border border-purple-500/20">Public Verification Gateway</span>
+        <h2 class="text-2xl sm:text-4xl font-extrabold text-white mt-1">E-Sertifikat PKL & Verifikasi Publik QR Code</h2>
+        <p class="text-slate-400 text-sm mt-1">Menjamin keaslian kredensial kelulusan PKL bagi perusahaan perekrut dan institusi perguruan tinggi.</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-5 flex-1">
+        <!-- Simulator Sertifikat Visual -->
+        <div class="anim-item anim-delay-2 glass-panel p-5 rounded-xl border border-slate-800 flex flex-col justify-between bg-gradient-to-b from-slate-900 to-slate-950">
+          <div>
+            <div class="flex items-center justify-between mb-3 text-xs">
+              <span class="font-bold text-white">Anatomi Dokumen E-Sertifikat 2 Halaman</span>
+              <span class="text-emerald-400 font-mono">Format Resmi A4</span>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-3">
+              <!-- Halaman 1 Piagam -->
+              <div class="bg-white text-slate-900 p-3 rounded-lg shadow-lg border border-slate-200 text-[9px] flex flex-col justify-between min-h-[190px] transition-transform hover:scale-105">
+                <div>
+                  <div class="text-center font-bold border-b pb-1 mb-1">
+                    <div class="text-[8px] text-slate-500">PEMERINTAH PROVINSI / DINAS PENDIDIKAN</div>
+                    <div class="font-extrabold text-[10px] text-slate-800">SMK NEGERI CONTOH</div>
+                  </div>
+                  <div class="text-center font-bold text-[10px] text-brand-700 my-1">SERTIFIKAT PRAKTIK KERJA LAPANGAN</div>
+                  <p class="text-[8px] text-center text-slate-600">Diberikan kepada:</p>
+                  <div class="text-center font-extrabold text-[10px] my-0.5">AHMAD FAUZI</div>
+                  <p class="text-[7px] text-center text-slate-500">NISN: 0061234567 | Kompetensi: Rekayasa Perangkat Lunak</p>
+                  <p class="text-[8px] text-center mt-1">Telah menyelesaikan PKL di <strong>PT Industri Kreatif</strong> dengan Predikat <strong>SANGAT BAIK</strong>.</p>
+                </div>
+                <div class="flex justify-between items-end pt-1 border-t text-[7px]">
+                  <div class="w-7 h-7 bg-slate-900 text-white flex items-center justify-center font-mono font-bold">QR</div>
+                  <div class="text-right">
+                    Kepala Sekolah<br><strong>(TTD & Stempel Digital)</strong>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Halaman 2 Transkrip -->
+              <div class="bg-white text-slate-900 p-3 rounded-lg shadow-lg border border-slate-200 text-[9px] flex flex-col justify-between min-h-[190px] transition-transform hover:scale-105">
+                <div>
+                  <div class="text-center font-bold border-b pb-1 mb-1 text-[9px]">
+                    TRANSKRIP NILAI PRAKTIK KERJA LAPANGAN
+                  </div>
+                  <table class="w-full text-[7px] mt-1 border border-slate-300">
+                    <tr class="bg-slate-100 font-bold border-b">
+                      <th class="p-0.5 text-left">Aspek Penilaian</th>
+                      <th class="p-0.5 text-center">Skor</th>
+                    </tr>
+                    <tr class="border-b"><td class="p-0.5">Kedisiplinan & Etika Industri</td><td class="p-0.5 text-center font-mono">92</td></tr>
+                    <tr class="border-b"><td class="p-0.5">Keterampilan Teknis Kerja</td><td class="p-0.5 text-center font-mono">95</td></tr>
+                    <tr class="border-b"><td class="p-0.5">Inisiatif & Kerja Sama Tim</td><td class="p-0.5 text-center font-mono">90</td></tr>
+                    <tr class="border-b"><td class="p-0.5">Portofolio Jurnal & Sikap</td><td class="p-0.5 text-center font-mono">94</td></tr>
+                    <tr class="bg-slate-50 font-bold"><td class="p-0.5">Nilai Akhir Rata-Rata</td><td class="p-0.5 text-center font-mono text-emerald-700">93.2 (A)</td></tr>
+                  </table>
+                </div>
+                <div class="text-[7px] text-center text-slate-500 pt-1 border-t">
+                  Nomor Sertifikat: VKT/20101234/2026/00142
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-4 text-xs text-slate-400 font-mono">
+            Generated with DomPDF Engine • 100% Vector Quality
+          </div>
+        </div>
+
+        <!-- Verification Flow & Public Landing -->
+        <div class="anim-item anim-delay-3 glass-panel p-5 rounded-xl border border-slate-800 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-xs font-bold text-emerald-400 font-mono">/verify/cert/{uuid}</span>
+              <span class="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded">Guest Endpoint</span>
+            </div>
+            <h3 class="text-base font-bold text-white mb-2">Alur Verifikasi Publik Kredensial</h3>
+            <p class="text-xs text-slate-300 mb-3 leading-relaxed">
+              Memudahkan HRD perusahaan atau pihak eksternal memvalidasi keaslian dokumen tanpa login:
+            </p>
+            <div class="space-y-2.5 text-xs text-slate-300">
+              <div class="p-2.5 rounded bg-slate-900 border border-slate-800 flex items-start gap-2 transition hover:border-slate-700">
+                <span class="text-emerald-400 font-bold">1.</span>
+                <span><strong>Scan QR Code Fisik:</strong> Mengarahkan langsung browser ke endpoint verifikasi unik sekolah.</span>
+              </div>
+              <div class="p-2.5 rounded bg-slate-900 border border-slate-800 flex items-start gap-2 transition hover:border-slate-700">
+                <span class="text-emerald-400 font-bold">2.</span>
+                <span><strong>Lencana Otentisitas Hijau:</strong> Menampilkan nama siswa, NISN, nama sekolah, tempat PKL, nilai akhir, dan predikat resmi.</span>
+              </div>
+              <div class="p-2.5 rounded bg-slate-900 border border-slate-800 flex items-start gap-2 transition hover:border-slate-700">
+                <span class="text-emerald-400 font-bold">3.</span>
+                <span><strong>Unduh Salinan Asli:</strong> Perekrut dapat mengunduh salinan file PDF asli dari server untuk dicocokkan dengan dokumen yang dibawa pelamar.</span>
+              </div>
+            </div>
+          </div>
+          <div class="mt-4 text-[11px] text-emerald-400 font-mono">CertificateVerificationController.php</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================== -->
+    <!-- SLIDE 15: OTOMASI LATAR BELAKANG — CRON ENGINE 23:59      -->
+    <!-- ======================================================== -->
+    <section id="slide-15" class="slide-wrapper slide-enter w-full max-w-7xl flex-col min-h-[78vh]" data-category="Otomasi: Cron Engine">
+      <div class="anim-item anim-delay-1 mb-4">
+        <span class="text-xs font-bold uppercase tracking-wider text-amber-400 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20">Automated Background Daemon</span>
+        <h2 class="text-2xl sm:text-4xl font-extrabold text-white mt-1">Otomasi Evaluasi Ketidakhadiran (EvaluateDailyAbsence)</h2>
+        <p class="text-slate-400 text-sm mt-1">Mesin cerdas latar belakang yang beroperasi setiap hari pukul 23:59 WIB dengan 4 lapis proteksi akurasi.</p>
+      </div>
+
+      <!-- Logic Architecture Pipeline Flow -->
+      <div class="anim-item anim-delay-2 glass-panel p-5 rounded-xl border border-slate-800 flex-1 flex flex-col justify-between">
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs mb-4">
+          <!-- Step 1 -->
+          <div class="p-3 rounded-xl bg-slate-900/90 border border-slate-800 flex flex-col justify-between transition hover:border-brand-500/40">
+            <div>
+              <div class="flex items-center justify-between text-brand-400 font-bold mb-2">
+                <span>Filter 1</span>
+                <span class="text-[10px] bg-brand-500/20 px-1.5 py-0.5 rounded">Workday</span>
+              </div>
+              <h4 class="font-bold text-white mb-1">Hari Kerja DU/DI</h4>
+              <p class="text-slate-400 text-[11px] leading-relaxed">
+                Mengecek apakah hari ini hari kerja mitra (5 hari mengabaikan Sabtu-Minggu; 6 hari mengabaikan Minggu).
+              </p>
+            </div>
+            <div class="mt-3 text-[10px] text-emerald-400 font-mono">Bukan Kerja → Skip</div>
+          </div>
+
+          <!-- Step 2 -->
+          <div class="p-3 rounded-xl bg-slate-900/90 border border-slate-800 flex flex-col justify-between transition hover:border-amber-500/40">
+            <div>
+              <div class="flex items-center justify-between text-amber-400 font-bold mb-2">
+                <span>Filter 2</span>
+                <span class="text-[10px] bg-amber-500/20 px-1.5 py-0.5 rounded">Holiday</span>
+              </div>
+              <h4 class="font-bold text-white mb-1">Kalender Hari Libur</h4>
+              <p class="text-slate-400 text-[11px] leading-relaxed">
+                Memeriksa database hari libur sekolah & libur nasional via <code class="text-amber-300">HolidayService</code>.
+              </p>
+            </div>
+            <div class="mt-3 text-[10px] text-emerald-400 font-mono">Hari Libur → Skip</div>
+          </div>
+
+          <!-- Step 3 -->
+          <div class="p-3 rounded-xl bg-slate-900/90 border border-slate-800 flex flex-col justify-between transition hover:border-blue-500/40">
+            <div>
+              <div class="flex items-center justify-between text-blue-400 font-bold mb-2">
+                <span>Filter 3</span>
+                <span class="text-[10px] bg-blue-500/20 px-1.5 py-0.5 rounded">Requests</span>
+              </div>
+              <h4 class="font-bold text-white mb-1">Permohonan Sah</h4>
+              <p class="text-slate-400 text-[11px] leading-relaxed">
+                Mengecek apakah siswa memiliki permohonan izin/sakit/dinas berstatus disetujui (<code class="text-blue-300">approved</code>).
+              </p>
+            </div>
+            <div class="mt-3 text-[10px] text-emerald-400 font-mono">Ada Izin → Skip</div>
+          </div>
+
+          <!-- Step 4 -->
+          <div class="p-3 rounded-xl bg-slate-900/90 border border-slate-800 flex flex-col justify-between transition hover:border-rose-500/40">
+            <div>
+              <div class="flex items-center justify-between text-rose-400 font-bold mb-2">
+                <span>Eksekusi</span>
+                <span class="text-[10px] bg-rose-500/20 px-1.5 py-0.5 rounded">Mark Alfa</span>
+              </div>
+              <h4 class="font-bold text-white mb-1">Penandaan Alfa</h4>
+              <p class="text-slate-400 text-[11px] leading-relaxed">
+                Hanya siswa yang benar-benar tidak hadir tanpa keterangan yang dicatat sebagai status <strong>Alfa</strong>.
+              </p>
+            </div>
+            <div class="mt-3 text-[10px] text-rose-400 font-mono">Insert Record Atomic</div>
+          </div>
+        </div>
+
+        <!-- Scalability Technical Callout -->
+        <div class="p-4 rounded-xl bg-slate-900/80 border border-slate-800 text-xs">
+          <div class="flex items-center justify-between mb-2">
+            <span class="font-bold text-white flex items-center gap-2">
+              <svg class="w-4 h-4 text-emerald-400 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+              Optimasi Skalabilitas Beban Tinggi (High Volume Memory Efficiency)
+            </span>
+            <span class="text-slate-400 font-mono">Command: php artisan vokatrack:evaluate-absence</span>
+          </div>
+          <p class="text-slate-400 leading-relaxed">
+            Perintah ini menggunakan metode <code class="text-brand-300">chunkById(100)</code> dipadukan dengan teknik memoization array lokal untuk memeriksa hari libur dan permohonan. Beban kueri database ditekan seminimal mungkin sehingga mampu mengevaluasi seluruh siswa magang dalam hitungan detik tanpa kehabisan alokasi memori RAM (*No Out of Memory*).
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================== -->
+    <!-- SLIDE 16: KESIMPULAN, DAMPAK & VALUE PROPOSITION         -->
+    <!-- ======================================================== -->
+    <section id="slide-16" class="slide-wrapper slide-enter w-full max-w-7xl flex-col min-h-[78vh] justify-between" data-category="Kesimpulan & Nilai Tambah">
+      <div>
+        <div class="anim-item anim-delay-1 mb-5">
+          <span class="text-xs font-bold uppercase tracking-wider text-brand-400 bg-brand-500/10 px-3 py-1 rounded-full border border-brand-500/20">Executive Takeaways</span>
+          <h2 class="text-2xl sm:text-4xl font-extrabold text-white mt-1">Mengapa VokaTrack Pilihan Tepat untuk SMK?</h2>
+          <p class="text-slate-400 text-sm mt-1">Transformasi menyeluruh yang memberikan manfaat konkret bagi setiap pemangku kepentingan sekolah.</p>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div class="anim-item anim-delay-2 glass-panel p-4 rounded-xl border border-slate-800 text-left">
+            <div class="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold mb-3 shadow-inner">
+              90%
+            </div>
+            <h4 class="font-bold text-white text-sm">Efisiensi Administrasi</h4>
+            <p class="text-xs text-slate-400 mt-1.5 leading-relaxed">
+              Mengeliminasi tumpukan jurnal fisik, rekap presensi manual berhari-hari, dan birokrasi cetak berita acara supervisi.
+            </p>
+          </div>
+
+          <div class="anim-item anim-delay-3 glass-panel p-4 rounded-xl border border-slate-800 text-left">
+            <div class="w-8 h-8 rounded-lg bg-brand-500/20 text-brand-400 flex items-center justify-center font-bold mb-3 shadow-inner">
+              100%
+            </div>
+            <h4 class="font-bold text-white text-sm">Integritas Kehadiran</h4>
+            <p class="text-xs text-slate-400 mt-1.5 leading-relaxed">
+              Geofencing GPS presisi, verifikasi kamera selfie langsung WebRTC, dan filter anti-mock location menutup celah titip absen.
+            </p>
+          </div>
+
+          <div class="anim-item anim-delay-4 glass-panel p-4 rounded-xl border border-slate-800 text-left">
+            <div class="w-8 h-8 rounded-lg bg-rose-500/20 text-rose-400 flex items-center justify-center font-bold mb-3 shadow-inner">
+              Safe
+            </div>
+            <h4 class="font-bold text-white text-sm">Perlindungan Siswa</h4>
+            <p class="text-xs text-slate-400 mt-1.5 leading-relaxed">
+              Tombol Darurat SOS terisolasi memberikan ruang aman bagi siswa untuk melaporkan kendala bahaya dan pelecehan secara privat.
+            </p>
+          </div>
+
+          <div class="anim-item anim-delay-5 glass-panel p-4 rounded-xl border border-slate-800 text-left">
+            <div class="w-8 h-8 rounded-lg bg-purple-500/20 text-purple-400 flex items-center justify-center font-bold mb-3 shadow-inner">
+              Valid
+            </div>
+            <h4 class="font-bold text-white text-sm">Standar Akreditasi</h4>
+            <p class="text-xs text-slate-400 mt-1.5 leading-relaxed">
+              E-Sertifikat 2 halaman ber-QR code publik meningkatkan reputasi lulusan vokasi di mata dunia industri dan perekrut.
+            </p>
+          </div>
+        </div>
+
+        <!-- Final Vision Callout Banner -->
+        <div class="anim-item anim-delay-5 glass-panel p-5 rounded-2xl border border-brand-500/30 bg-gradient-to-r from-brand-950/40 via-indigo-950/30 to-slate-900 text-center shadow-2xl">
+          <h3 class="text-lg sm:text-xl font-extrabold text-white">VokaTrack Siap Digunakan Menuju Vokasi Unggul & Akuntabel</h3>
+          <p class="text-slate-300 text-xs sm:text-sm mt-1 max-w-2xl mx-auto">
+            Dirancang dengan arsitektur masa depan yang siap menampung seluruh konsentrasi keahlian, puluhan mitra industri, dan ratusan siswa secara simultan.
+          </p>
+          <div class="mt-4 flex flex-wrap justify-center gap-3">
+            <button onclick="goToSlide(1)" class="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs shadow-lg shadow-brand-600/30 transition active:scale-95">
+              ↺ Kembali ke Awal Presentasi
+            </button>
+            <button onclick="toggleGridModal()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs border border-slate-700 transition active:scale-95">
+              📑 Buka Indeks Semua Slide
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="anim-item anim-delay-5 pt-4 border-t border-slate-800 text-center text-xs text-slate-500 flex flex-wrap justify-between items-center">
+        <span>© 2026 VokaTrack SMK Internship Management System</span>
+        <span>Dokumentasi Rilis Versi 2.1.0-Production Ready</span>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- BOTTOM FLOATING CONTROLS (no-print) -->
+  <footer class="no-print h-14 border-t border-surface-border bg-slate-950/85 backdrop-blur-md px-4 flex items-center justify-between z-30 shrink-0 relative">
+    <!-- Left Navigation Keys Tip -->
+    <div class="hidden lg:flex items-center space-x-2 text-xs text-slate-400">
+      <span>Navigasi:</span>
+      <kbd class="px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-300 text-[10px]">←</kbd>
+      <kbd class="px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-300 text-[10px]">→</kbd>
+      <kbd class="px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-300 text-[10px]">Space</kbd>
+      <span class="mx-2 text-slate-600">|</span>
+      <span>Daftar Slide:</span>
+      <kbd class="px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-300 text-[10px]">M</kbd>
+      <span class="mx-2 text-slate-600">|</span>
+      <span>Fullscreen:</span>
+      <kbd class="px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-300 text-[10px]">F</kbd>
+    </div>
+
+    <!-- Center Slide Dots Indicator -->
+    <div id="slideDotsContainer" class="flex items-center space-x-1.5 overflow-x-auto max-w-md py-1">
+      <!-- Dots populated by JavaScript -->
+    </div>
+
+    <!-- Right Slide Action Buttons -->
+    <div class="flex items-center space-x-2">
+      <button onclick="prevSlide()" class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 text-xs font-medium transition flex items-center gap-1 active:scale-95 shadow-sm">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+        <span>Prev</span>
+      </button>
+      <button onclick="nextSlide()" class="px-3.5 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold transition flex items-center gap-1 shadow-md shadow-brand-600/30 active:scale-95">
+        <span>Next</span>
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+      </button>
+    </div>
+  </footer>
+
+  <!-- ======================================================== -->
+  <!-- MODAL OVERVIEW GRID SITEMAP (PRESS 'M')                  -->
+  <!-- ======================================================== -->
+  <div id="gridModal" class="no-print fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md hidden flex items-center justify-center p-4 sm:p-6 lg:p-8">
+    <div class="glass-panel w-full max-w-5xl max-h-[85vh] rounded-2xl border border-slate-800 flex flex-col shadow-2xl overflow-hidden animate-[fadeInUpItem_0.25s_ease-out]">
+      <!-- Modal Header -->
+      <div class="p-4 sm:p-5 border-b border-slate-800 flex items-center justify-between">
+        <div>
+          <h3 class="text-lg font-bold text-white flex items-center gap-2">
+            <span>📑 Indeks & Peta Navigasi Slide Presentasi</span>
+            <span class="text-xs font-normal text-slate-400">(Total 16 Slide)</span>
+          </h3>
+          <p class="text-xs text-slate-400 mt-0.5">Pilih salah satu slide untuk melompat langsung ke topik yang diinginkan.</p>
+        </div>
+        <button onclick="toggleGridModal()" class="p-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-800 transition active:scale-90">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <!-- Search & Filter bar -->
+      <div class="p-3 bg-slate-900/60 border-b border-slate-800 flex items-center gap-2">
+        <svg class="w-4 h-4 text-slate-400 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+        <input type="text" id="slideSearchInput" oninput="filterSlideGrid()" placeholder="Cari topik fitur (misal: GPS, SOS, Jurnal, Sertifikat, DU/DI, Cron)..." class="w-full bg-transparent text-xs text-slate-200 placeholder-slate-500 focus:outline-none">
+      </div>
+
+      <!-- Modal Body (Grid of Slides) -->
+      <div id="gridCardsContainer" class="p-4 sm:p-6 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <!-- Rendered dynamically by script -->
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="p-3 bg-slate-900/90 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
+        <span>Gunakan tombol <kbd class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300">Esc</kbd> atau klik di luar untuk menutup indeks.</span>
+        <span class="font-mono text-brand-400">VokaTrack Master Presentation</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT SLIDE ENGINE -->
+  <script>
+    const slidesData = [
+      { id: 1, title: "Cover & Visi Eksekutif", desc: "Pengantar platform VokaTrack, nilai keunggulan & transformasi vokasi", cat: "Pengantar & Visi" },
+      { id: 2, title: "Tantangan Riil vs Solusi", desc: "Masalah operasional konvensional vs kapabilitas modern VokaTrack", cat: "Latar Belakang & Masalah" },
+      { id: 3, title: "Arsitektur & 4 Pilar", desc: "Scalable, Modular, Mudah Maintenance, dan Konsistensi UI", cat: "Arsitektur & Prinsip" },
+      { id: 4, title: "Matriks Peran RBAC", desc: "Matriks hak akses komprehensif untuk 6 peran pemangku kepentingan", cat: "Hak Akses & RBAC" },
+      { id: 5, title: "Level 1: Admin - Master & Setup", desc: "Konfigurasi kop surat, jam kerja, rombel, guru, siswa & DU/DI", cat: "Level 1: Admin Sekolah" },
+      { id: 6, title: "Level 1: Admin - Operasional & Sertifikat", desc: "Kalender libur nasional, pengumuman, insiden & batch sertifikat", cat: "Level 1: Admin Sekolah" },
+      { id: 7, title: "Level 2: Kepala Sekolah", desc: "Executive analytics dashboard, matriks presensi bulanan & ekspor Excel", cat: "Level 2: Kepala Sekolah" },
+      { id: 8, title: "Level 3: Guru Pembimbing", desc: "Monitoring fake GPS, bulk approval, supervisi berita acara PDF & buku portofolio", cat: "Level 3: Guru Pembimbing" },
+      { id: 9, title: "Level 4: Pembimbing DU/DI", desc: "Monitoring shift industri, approval dinas luar/WFH & asesmen teknis", cat: "Level 4: Pembimbing DU/DI" },
+      { id: 10, title: "Level 5: Siswa PKL (Mobile)", desc: "WebRTC selfie camera, geofencing Haversine, jurnal multi-foto & sertifikat", cat: "Level 5: Siswa PKL" },
+      { id: 11, title: "Modul Keselamatan: Darurat SOS", desc: "Perlindungan siswa, 5 kategori insiden, dan privasi isolasi dari DU/DI", cat: "Keselamatan Siswa: SOS" },
+      { id: 12, title: "Inovasi: Peta Interaktif GIS", desc: "Visualisasi spasial OpenStreetMap & Leaflet untuk sebaran siswa & DU/DI", cat: "Inovasi: Peta Interaktif GIS" },
+      { id: 13, title: "Inovasi: Portal Pantau Orang Tua", desc: "Akses zero-login via token unik untuk transparansi orang tua/wali", cat: "Inovasi: Portal Orang Tua" },
+      { id: 14, title: "Level 6: Verifikasi Sertifikat QR", desc: "E-Sertifikat 2 halaman standar nasional & validasi publik anti-pemalsuan", cat: "Level 6: Verifikasi Sertifikat" },
+      { id: 15, title: "Otomasi: Cron Engine 23:59", desc: "Mesin evaluasi absensi harian cerdas dengan 4 lapis filter false-positive", cat: "Otomasi: Cron Engine" },
+      { id: 16, title: "Kesimpulan & Dampak", desc: "Efisiensi 90%, integritas 100%, standar akreditasi dan roadmap", cat: "Kesimpulan & Nilai Tambah" }
+    ];
+
+    let currentSlide = 1;
+    const totalSlides = slidesData.length;
+    let lastDirection = 1;
+
+    function initPresentation() {
+      document.getElementById('totalSlidesNum').textContent = totalSlides;
+      renderDots();
+      renderGridModal();
+      showSlide(currentSlide, 1);
+      setupSwipeGestures();
+    }
+
+    function showSlide(index, direction = 1) {
+      if (index < 1) index = 1;
+      if (index > totalSlides) index = totalSlides;
+      currentSlide = index;
+      lastDirection = direction;
+
+      // Update Slides Visibility & Direction-Aware Animation
+      for (let i = 1; i <= totalSlides; i++) {
+        const slideEl = document.getElementById(`slide-${i}`);
+        if (slideEl) {
+          if (i === currentSlide) {
+            slideEl.classList.remove('slide-enter', 'slide-active-forward', 'slide-active-backward');
+            slideEl.classList.add('slide-active');
+            
+            // Force browser DOM reflow to re-trigger CSS animations on children
+            void slideEl.offsetWidth;
+
+            if (direction >= 0) {
+              slideEl.classList.add('slide-active-forward');
+            } else {
+              slideEl.classList.add('slide-active-backward');
+            }
+          } else {
+            slideEl.classList.remove('slide-active', 'slide-active-forward', 'slide-active-backward');
+            slideEl.classList.add('slide-enter');
+          }
+        }
+      }
+
+      // Update Progress Bar with Smooth Percentage
+      const pct = (currentSlide / totalSlides) * 100;
+      document.getElementById('progressBar').style.width = `${pct}%`;
+
+      // Update Slide Counter
+      document.getElementById('currentSlideNum').textContent = currentSlide;
+
+      // Update Category Text
+      const slideInfo = slidesData.find(s => s.id === currentSlide);
+      if (slideInfo) {
+        document.getElementById('currentCategoryText').textContent = `${slideInfo.cat}: ${slideInfo.title}`;
+      }
+
+      // Update Dots Indicator
+      updateDots();
+
+      // Scroll viewport back to top on slide change
+      const mainEl = document.querySelector('main');
+      if (mainEl) mainEl.scrollTop = 0;
+    }
+
+    function nextSlide() {
+      if (currentSlide < totalSlides) {
+        showSlide(currentSlide + 1, 1);
+      }
+    }
+
+    function prevSlide() {
+      if (currentSlide > 1) {
+        showSlide(currentSlide - 1, -1);
+      }
+    }
+
+    function goToSlide(num) {
+      const dir = num >= currentSlide ? 1 : -1;
+      showSlide(num, dir);
+      closeGridModal();
+    }
+
+    function renderDots() {
+      const container = document.getElementById('slideDotsContainer');
+      container.innerHTML = '';
+      for (let i = 1; i <= totalSlides; i++) {
+        const dot = document.createElement('button');
+        dot.id = `dot-${i}`;
+        dot.className = `w-2 h-2 rounded-full transition-all duration-300 ${i === currentSlide ? 'w-5 bg-brand-400 shadow-md shadow-brand-500/50' : 'bg-slate-700 hover:bg-slate-500'}`;
+        dot.title = `Slide ${i}: ${slidesData[i-1].title}`;
+        dot.onclick = () => goToSlide(i);
+        container.appendChild(dot);
+      }
+    }
+
+    function updateDots() {
+      for (let i = 1; i <= totalSlides; i++) {
+        const dot = document.getElementById(`dot-${i}`);
+        if (dot) {
+          if (i === currentSlide) {
+            dot.className = 'w-5 h-2 rounded-full bg-brand-400 shadow-md shadow-brand-500/50 transition-all duration-300';
+          } else {
+            dot.className = 'w-2 h-2 rounded-full bg-slate-700 hover:bg-slate-500 transition-all duration-300';
+          }
+        }
+      }
+    }
+
+    function renderGridModal() {
+      const container = document.getElementById('gridCardsContainer');
+      container.innerHTML = '';
+      slidesData.forEach(slide => {
+        const card = document.createElement('div');
+        card.className = `p-3.5 rounded-xl border text-left cursor-pointer transition hover:scale-[1.02] flex flex-col justify-between ${slide.id === currentSlide ? 'bg-brand-950/50 border-brand-500/70 shadow-lg shadow-brand-500/15' : 'bg-slate-900/80 border-slate-800 hover:border-slate-700'}`;
+        card.onclick = () => goToSlide(slide.id);
+        card.setAttribute('data-search', `${slide.title} ${slide.desc} ${slide.cat}`.toLowerCase());
+        
+        card.innerHTML = `
+          <div>
+            <div class="flex items-center justify-between text-[11px] mb-1.5">
+              <span class="font-mono font-bold text-brand-400">Slide ${slide.id}</span>
+              <span class="px-2 py-0.5 rounded bg-slate-800 text-slate-400 text-[10px]">${slide.cat}</span>
+            </div>
+            <h4 class="font-bold text-white text-xs sm:text-sm line-clamp-1">${slide.title}</h4>
+            <p class="text-[11px] text-slate-400 mt-1 line-clamp-2">${slide.desc}</p>
+          </div>
+          <div class="mt-3 flex items-center justify-between text-[10px] text-slate-500 pt-2 border-t border-slate-800">
+            <span>Klik untuk membuka</span>
+            <span class="text-brand-400 font-semibold">→</span>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function filterSlideGrid() {
+      const query = document.getElementById('slideSearchInput').value.toLowerCase();
+      const cards = document.querySelectorAll('#gridCardsContainer > div');
+      cards.forEach(card => {
+        const text = card.getAttribute('data-search') || '';
+        if (text.includes(query)) {
+          card.style.display = 'flex';
+        } else {
+          card.style.display = 'none';
+        }
+      });
+    }
+
+    function toggleGridModal() {
+      const modal = document.getElementById('gridModal');
+      modal.classList.toggle('hidden');
+      if (!modal.classList.contains('hidden')) {
+        document.getElementById('slideSearchInput').focus();
+      }
+    }
+
+    function closeGridModal() {
+      document.getElementById('gridModal').classList.add('hidden');
+    }
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(err => {
+          console.log(`Fullscreen error: ${err.message}`);
+        });
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        }
+      }
+    }
+
+    // Keyboard Shortcuts
+    document.addEventListener('keydown', (e) => {
+      // If modal is open, let Escape close it
+      if (!document.getElementById('gridModal').classList.contains('hidden')) {
+        if (e.key === 'Escape') {
+          closeGridModal();
+        }
+        return;
+      }
+
+      if (e.key === 'ArrowRight' || e.key === 'Space') {
+        e.preventDefault();
+        nextSlide();
+      } else if (e.key === 'ArrowLeft' || e.key === 'Backspace') {
+        e.preventDefault();
+        prevSlide();
+      } else if (e.key === 'Home') {
+        e.preventDefault();
+        goToSlide(1);
+      } else if (e.key === 'End') {
+        e.preventDefault();
+        goToSlide(totalSlides);
+      } else if (e.key === 'm' || e.key === 'M') {
+        e.preventDefault();
+        toggleGridModal();
+      } else if (e.key === 'f' || e.key === 'F') {
+        e.preventDefault();
+        toggleFullscreen();
+      } else if (e.key === 'p' || e.key === 'P') {
+        // Print / export PDF mode
+        window.print();
+      }
+    });
+
+    // Mobile Touch Gesture Support
+    function setupSwipeGestures() {
+      let touchStartX = 0;
+      let touchEndX = 0;
+
+      const mainContainer = document.querySelector('main');
+      if (!mainContainer) return;
+
+      mainContainer.addEventListener('touchstart', (e) => {
+        touchStartX = e.changedTouches[0].screenX;
+      }, { passive: true });
+
+      mainContainer.addEventListener('touchend', (e) => {
+        touchEndX = e.changedTouches[0].screenX;
+        handleSwipe();
+      }, { passive: true });
+
+      function handleSwipe() {
+        const threshold = 45;
+        if (touchEndX < touchStartX - threshold) {
+          nextSlide(); // Swipe left -> next
+        }
+        if (touchEndX > touchStartX + threshold) {
+          prevSlide(); // Swipe right -> prev
+        }
+      }
+    }
+
+    // Initialize on load
+    window.addEventListener('DOMContentLoaded', initPresentation);
+  </script>
+</body>
+</html>

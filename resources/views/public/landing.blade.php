@@ -181,11 +181,19 @@
     <section class="border-y border-[#0B2B25]/10 bg-white/60">
         <div class="max-w-6xl mx-auto px-4 sm:px-6 py-8">
             <p class="text-center text-xs font-bold uppercase tracking-widest text-[#0B2B25]/50 mb-5">Satu platform, setiap pihak punya tampilan sendiri</p>
-            <ul class="reveal-stagger grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-center">
-                @foreach(['Siswa PKL' => 'Presensi & jurnal dari ponsel', 'Guru Pembimbing' => 'Verifikasi & supervisi', 'Pembimbing DU/DI' => 'Setujui jurnal & menilai', 'Admin Sekolah' => 'Plotting & master data', 'Kepala Sekolah' => 'Laporan eksekutif', 'Orang Tua' => 'Pantau lewat tautan aman'] as $role => $desc)
-                    <li class="card-lift rounded-2xl bg-white border border-[#0B2B25]/10 px-3 py-4" style="--i: {{ $loop->index }}">
-                        <div class="text-sm font-extrabold">{{ $role }}</div>
-                        <div class="text-[11px] text-[#0B2B25]/55 mt-1">{{ $desc }}</div>
+            <ul class="reveal-stagger grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3 text-center">
+                @foreach([
+                    'Siswa PKL' => 'Presensi & jurnal dari ponsel',
+                    'Guru Pembimbing' => 'Verifikasi & supervisi',
+                    'Pembimbing DU/DI' => 'Setujui jurnal & menilai',
+                    'Kepala Program Keahlian' => 'Monitoring & kelola jurusan',
+                    'Admin Sekolah' => 'Plotting & master data',
+                    'Kepala Sekolah' => 'Laporan eksekutif',
+                    'Orang Tua' => 'Pantau lewat tautan aman',
+                ] as $role => $desc)
+                    <li class="card-lift rounded-2xl bg-white border border-[#0B2B25]/10 px-2.5 sm:px-3 py-4 flex flex-col justify-center {{ $loop->last ? 'col-span-2 sm:col-span-1' : '' }}" style="--i: {{ $loop->index }}">
+                        <div class="text-sm font-extrabold leading-snug">{{ $role }}</div>
+                        <div class="text-[11px] text-[#0B2B25]/55 mt-1 leading-tight">{{ $desc }}</div>
                     </li>
                 @endforeach
             </ul>
