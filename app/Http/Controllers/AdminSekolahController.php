@@ -344,22 +344,10 @@ class AdminSekolahController extends Controller
     public function exportStudents(Request $request)
     {
         $schoolId = $this->getSchoolId();
-        $query = Student::whereHas('user', fn($q) => $q->where('school_id', $schoolId))
-            ->with(['user.profile', 'class.major', 'activePkl.company']);
-
-        if ($search = $request->query('search')) {
-            $query->where(function ($q) use ($search) {
-                $q->whereHas('user', fn($uq) => $uq->where('name', 'like', "%{$search}%")->orWhere('email', 'like', "%{$search}%"))
-                  ->orWhere('nisn', 'like', "%{$search}%")
-                  ->orWhere('nis', 'like', "%{$search}%")
-                  ->orWhereHas('class', fn($cq) => $cq->where('name', 'like', "%{$search}%"));
-            });
-        }
 
         $majorPart = 'Semua_Jurusan';
         if ($majorId = $request->query('major_id')) {
             if ($majorId !== 'all') {
-                $query->whereHas('class', fn($cq) => $cq->where('major_id', $majorId));
                 $major = Major::where('school_id', $schoolId)->find($majorId);
                 if ($major) {
                     $majorPart = Str::slug($major->name, '_');
@@ -370,7 +358,6 @@ class AdminSekolahController extends Controller
         $classPart = 'Semua_Kelas';
         if ($classId = $request->query('class_id')) {
             if ($classId !== 'all') {
-                $query->where('class_id', $classId);
                 $class = SchoolClass::where('school_id', $schoolId)->find($classId);
                 if ($class) {
                     $classPart = Str::slug($class->name, '_');
@@ -379,92 +366,7 @@ class AdminSekolahController extends Controller
         }
 
         $timestamp = date('Ymd_His');
-        $filename = "Akun_Akses_Siswa_{$majorPart}_{$classPart}_{$timestamp}.csv";
-
-        $headers = [
-            'Content-Type' => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
-            'Pragma' => 'no-cache',
-            'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
-            'Expires' => '0',
-        ];
-
-        $loginUrl = route('login');
-
-        $callback = function () use ($query, $loginUrl) {
-            $file = fopen('php://output', 'w');
-            // UTF-8 BOM untuk kompatibilitas penuh dengan Microsoft Excel
-            fputs($file, "\xEF\xBB\xBF");
-
-            // Header Kolom CSV
-            fputcsv($file, [
-                'No',
-                'Nama Lengkap',
-                'NISN (ID Login Utama)',
-                'NIS',
-                'Jurusan',
-                'Kelas / Rombel',
-                'Email Akun',
-                'Password Default',
-                'Status Akun',
-                'Tautan Login Siswa',
-                'Tautan Monitoring Orang Tua',
-                'Status Portal Ortu',
-                'Pesan Siap Kirim (WhatsApp Siswa & Ortu)',
-            ]);
-
-            $no = 1;
-            $query->chunk(150, function ($students) use ($file, $loginUrl, &$no) {
-                foreach ($students as $student) {
-                    $user = $student->user;
-                    $nisn = $student->nisn ?? '-';
-                    $nis = $student->nis ?? '-';
-                    $name = $user?->name ?? '-';
-                    $email = $user?->email ?? '-';
-                    $majorName = $student->class?->major?->name ?? '-';
-                    $className = $student->class?->name ?? '-';
-                    $status = ($user && $user->is_active) ? 'Aktif' : 'Nonaktif';
-                    $defaultPassword = 'password';
-
-                    if (empty($student->parent_token)) {
-                        $student->parent_token = Str::random(32);
-                        $student->save();
-                    }
-                    $parentUrl = route('parent.monitor', ['token' => $student->parent_token]);
-                    $portalStatus = ($student->is_parent_portal_active ?? true) ? 'Aktif' : 'Nonaktif';
-
-                    // Format pesan broadcast ramah WhatsApp untuk dibagikan ke siswa & orang tua
-                    $waMessage = "Halo {$name}, berikut adalah informasi akses sistem VokaTrack PKL Anda:\n\n"
-                               . "🔐 AKSES LOGIN SISWA:\n"
-                               . "• URL Login: {$loginUrl}\n"
-                               . "• Username / NISN: {$nisn}\n"
-                               . "• Password Default: {$defaultPassword}\n"
-                               . "• Jurusan / Kelas: {$majorName} / {$className}\n\n"
-                               . "👨‍👩‍👦 TAUTAN MONITORING ORANG TUA:\n"
-                               . "• URL Portal Ortu: {$parentUrl}\n"
-                               . "(Orang tua dapat memantau presensi, jurnal harian, dan penempatan PKL tanpa perlu login)\n\n"
-                               . "Catatan: Segera masuk ke aplikasi dan ganti kata sandi Anda di menu Profil demi keamanan akun.";
-
-                    fputcsv($file, [
-                        $no++,
-                        $name,
-                        $nisn !== '-' ? "\t" . $nisn : '-',
-                        $nis !== '-' ? "\t" . $nis : '-',
-                        $majorName,
-                        $className,
-                        $email,
-                        $defaultPassword,
-                        $status,
-                        $loginUrl,
-                        $parentUrl,
-                        $portalStatus,
-                        $waMessage,
-                    ]);
-                }
-            });
-
-            fclose($file);
-        };
+        $filename = "Akun_Akses_Siswa_{$majorPart}_{$classPart}_{$timestamp}";
 
         AuditLogService::log(
             'student_credentials_export',
@@ -472,7 +374,26 @@ class AdminSekolahController extends Controller
             "Mengekspor data akun dan akses siswa (Filter: {$majorPart}, {$classPart})."
         );
 
-        return response()->stream($callback, 200, $headers);
+        $filters = [
+            'search' => $request->query('search'),
+            'major_id' => $request->query('major_id'),
+            'class_id' => $request->query('class_id'),
+        ];
+
+        // Format CSV jika secara spesifik diminta
+        if ($request->query('format') === 'csv') {
+            return \Maatwebsite\Excel\Facades\Excel::download(
+                new \App\Exports\StudentCredentialsExport($schoolId, $filters),
+                "{$filename}.csv",
+                \Maatwebsite\Excel\Excel::CSV
+            );
+        }
+
+        // Default: Excel .xlsx profesional dengan multi-sheet & styling rapi
+        return \Maatwebsite\Excel\Facades\Excel::download(
+            new \App\Exports\StudentCredentialsExport($schoolId, $filters),
+            "{$filename}.xlsx"
+        );
     }
 
     public function storeStudent(Request $request)

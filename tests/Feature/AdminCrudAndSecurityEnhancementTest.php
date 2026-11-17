@@ -720,10 +720,14 @@ class AdminCrudAndSecurityEnhancementTest extends TestCase
             'nisn' => '0098765432',
         ]);
 
-        // 1. Export without filter (Semua Jurusan)
-        $resAll = $this->actingAs($this->adminUser)->get(route('adminsekolah.students.export'));
+        // 1. Export XLSX (default Excel)
+        $resXlsx = $this->actingAs($this->adminUser)->get(route('adminsekolah.students.export'));
+        $resXlsx->assertOk();
+        $this->assertStringContainsString('.xlsx', (string) $resXlsx->headers->get('content-disposition'));
+
+        // 2. Export CSV (for direct string assertions)
+        $resAll = $this->actingAs($this->adminUser)->get(route('adminsekolah.students.export', ['format' => 'csv']));
         $resAll->assertOk();
-        $resAll->assertHeader('content-type', 'text/csv; charset=UTF-8');
         $contentAll = $resAll->streamedContent();
         $this->assertStringContainsString('Ahmad RPL', $contentAll);
         $this->assertStringContainsString('Budi TKJ', $contentAll);
@@ -732,15 +736,15 @@ class AdminCrudAndSecurityEnhancementTest extends TestCase
         $this->assertStringContainsString('Tautan Monitoring Orang Tua', $contentAll);
         $this->assertStringContainsString('/pantau/', $contentAll);
 
-        // 2. Export filtered by Major 1 (RPL)
-        $resRpl = $this->actingAs($this->adminUser)->get(route('adminsekolah.students.export', ['major_id' => $major1->id]));
+        // 3. Export filtered by Major 1 (RPL)
+        $resRpl = $this->actingAs($this->adminUser)->get(route('adminsekolah.students.export', ['major_id' => $major1->id, 'format' => 'csv']));
         $resRpl->assertOk();
         $contentRpl = $resRpl->streamedContent();
         $this->assertStringContainsString('Ahmad RPL', $contentRpl);
         $this->assertStringNotContainsString('Budi TKJ', $contentRpl);
         $this->assertStringContainsString('Rekayasa Perangkat Lunak', $contentRpl);
 
-        // 3. Multi-tenant: Other school admin cannot see these students
+        // 4. Multi-tenant: Other school admin cannot see these students
         $otherSchool = School::create([
             'name' => 'SMK Luar',
             'npsn' => '99999999',
@@ -757,7 +761,7 @@ class AdminCrudAndSecurityEnhancementTest extends TestCase
             'role' => 'admin-sekolah',
             'is_active' => true,
         ]);
-        $resOther = $this->actingAs($otherAdmin)->get(route('adminsekolah.students.export'));
+        $resOther = $this->actingAs($otherAdmin)->get(route('adminsekolah.students.export', ['format' => 'csv']));
         $resOther->assertOk();
         $contentOther = $resOther->streamedContent();
         $this->assertStringNotContainsString('Ahmad RPL', $contentOther);

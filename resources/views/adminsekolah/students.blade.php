@@ -18,9 +18,9 @@
         </a>
         <a href="{{ route('adminsekolah.students.export', request()->only(['search', 'major_id', 'class_id'])) }}" 
            class="inline-flex items-center justify-center font-bold rounded-xl transition-all shadow-xs cursor-pointer bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-3 py-1.5 text-xs"
-           title="Unduh data login & password default siswa sesuai filter">
+           title="Unduh data login & password siswa sesuai filter dalam format Excel (.xlsx)">
             <svg class="w-4 h-4 mr-1.5 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-            <span>Ekspor Akun (CSV)</span>
+            <span>Ekspor Akun (Excel)</span>
         </a>
         <x-button type="button" variant="secondary" size="sm" onclick="document.getElementById('modal-import-student').classList.remove('hidden')">
             <svg class="w-4 h-4 mr-1.5 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
@@ -145,9 +145,9 @@
                     </span>
                     <a href="{{ route('adminsekolah.students.export', request()->only(['search', 'major_id', 'class_id'])) }}" 
                        class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-xs shrink-0 cursor-pointer"
-                       title="Unduh file CSV data akun & password siswa sesuai filter">
+                       title="Unduh file Excel (.xlsx) data akun & password siswa sesuai filter">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                        <span>Ekspor Akun Siswa</span>
+                        <span>Ekspor Akun Siswa (Excel)</span>
                     </a>
                 </div>
             </form>
