@@ -185,8 +185,9 @@ Route::middleware(['auth', 'IdentifyTenant', 'role:admin-sekolah'])->prefix('adm
     Route::delete('/students/{student}', [AdminSekolahController::class, 'destroyStudent'])->name('adminsekolah.students.destroy');
     Route::post('/students/import', [AdminSekolahController::class, 'importStudents'])->name('adminsekolah.students.import');
 
-    // Teachers
+    // Teachers & Excel Export
     Route::get('/teachers', [AdminSekolahController::class, 'teachers'])->name('adminsekolah.teachers');
+    Route::get('/teachers/export', [AdminSekolahController::class, 'exportTeachers'])->name('adminsekolah.teachers.export');
     Route::post('/teachers', [AdminSekolahController::class, 'storeTeacher'])->name('adminsekolah.teachers.store');
     Route::put('/teachers/{teacher}', [AdminSekolahController::class, 'updateTeacher'])->name('adminsekolah.teachers.update');
     Route::post('/teachers/{teacher}/reset-password', [AdminSekolahController::class, 'resetTeacherPassword'])->name('adminsekolah.teachers.reset-password');

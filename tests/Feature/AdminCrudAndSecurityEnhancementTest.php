@@ -947,4 +947,140 @@ class AdminCrudAndSecurityEnhancementTest extends TestCase
         $this->assertNotEquals($title2, $title3);
         $this->assertStringEndsWith('(2)', $title3);
     }
+
+    public function test_admin_excel_export_teachers_includes_sheets_filtered_per_major(): void
+    {
+        $majorRpl = Major::create(['school_id' => $this->school->id, 'name' => 'Rekayasa Perangkat Lunak', 'code' => 'RPL']);
+        $majorTkj = Major::create(['school_id' => $this->school->id, 'name' => 'Teknik Komputer Jaringan', 'code' => 'TKJ']);
+
+        // Teacher 1 -> RPL
+        $u1 = User::create([
+            'school_id' => $this->school->id,
+            'name' => 'Guru RPL Murni',
+            'email' => 'gururpl@test.com',
+            'password' => bcrypt('password'),
+            'role' => 'guru-pembimbing',
+        ]);
+        Profile::create(['user_id' => $u1->id, 'gender' => 'L', 'phone' => '0811111111']);
+        $t1 = Teacher::create(['user_id' => $u1->id, 'nip' => '198001012010011001']);
+        $t1->majors()->attach($majorRpl->id);
+
+        // Teacher 2 -> TKJ
+        $u2 = User::create([
+            'school_id' => $this->school->id,
+            'name' => 'Guru TKJ Murni',
+            'email' => 'gurutkj@test.com',
+            'password' => bcrypt('password'),
+            'role' => 'guru-pembimbing',
+        ]);
+        Profile::create(['user_id' => $u2->id, 'gender' => 'P', 'phone' => '0822222222']);
+        $t2 = Teacher::create(['user_id' => $u2->id, 'nip' => '198202022012022002']);
+        $t2->majors()->attach($majorTkj->id);
+
+        // Teacher 3 -> RPL & TKJ
+        $u3 = User::create([
+            'school_id' => $this->school->id,
+            'name' => 'Guru Dua Jurusan',
+            'email' => 'gurudua@test.com',
+            'password' => bcrypt('password'),
+            'role' => 'guru-pembimbing',
+        ]);
+        Profile::create(['user_id' => $u3->id, 'gender' => 'L', 'phone' => '0833333333']);
+        $t3 = Teacher::create(['user_id' => $u3->id, 'nip' => '198503032015031003']);
+        $t3->majors()->attach([$majorRpl->id, $majorTkj->id]);
+
+        // Teacher 4 -> Lintas Jurusan (no major attached)
+        $u4 = User::create([
+            'school_id' => $this->school->id,
+            'name' => 'Guru Lintas Jurusan',
+            'email' => 'gurulintas@test.com',
+            'password' => bcrypt('password'),
+            'role' => 'guru-pembimbing',
+        ]);
+        Profile::create(['user_id' => $u4->id, 'gender' => 'P', 'phone' => '0844444444']);
+        $t4 = Teacher::create(['user_id' => $u4->id, 'nip' => '199004042020042004']);
+
+        // 1. Export all teachers
+        $export = new \App\Exports\TeacherCredentialsExport($this->school->id);
+        $sheets = $export->sheets();
+
+        // Must contain: Data Akun Guru + Format Siap Kirim WA + RPL + TKJ + Lintas Jurusan (total 5 sheets)
+        $this->assertCount(5, $sheets);
+        $titles = array_map(fn($s) => $s->title(), $sheets);
+        $this->assertContains('Data Akun Guru', $titles);
+        $this->assertContains('Format Siap Kirim WA', $titles);
+        $this->assertContains('RPL - Rekayasa Perangkat Lunak', $titles);
+        $this->assertContains('TKJ - Teknik Komputer Jaringan', $titles);
+        $this->assertContains('Lintas Jurusan', $titles);
+
+        // Verify RPL Sheet content: Teacher 1 & 3, NOT Teacher 2 & 4
+        $rplSheet = collect($sheets)->first(fn($s) => $s->title() === 'RPL - Rekayasa Perangkat Lunak');
+        $this->assertInstanceOf(\App\Exports\Sheets\MajorTeachersSheet::class, $rplSheet);
+        $rplRows = $rplSheet->collection();
+        $this->assertTrue($rplRows->contains(fn($r) => in_array('Guru RPL Murni', (array) $r)));
+        $this->assertTrue($rplRows->contains(fn($r) => in_array('Guru Dua Jurusan', (array) $r)));
+        $this->assertFalse($rplRows->contains(fn($r) => in_array('Guru TKJ Murni', (array) $r)));
+        $this->assertFalse($rplRows->contains(fn($r) => in_array('Guru Lintas Jurusan', (array) $r)));
+
+        // Verify Lintas Sheet content: Teacher 4 only
+        $lintasSheet = collect($sheets)->first(fn($s) => $s->title() === 'Lintas Jurusan');
+        $this->assertInstanceOf(\App\Exports\Sheets\MajorTeachersSheet::class, $lintasSheet);
+        $lintasRows = $lintasSheet->collection();
+        $this->assertTrue($lintasRows->contains(fn($r) => in_array('Guru Lintas Jurusan', (array) $r)));
+        $this->assertFalse($lintasRows->contains(fn($r) => in_array('Guru RPL Murni', (array) $r)));
+
+        // 2. Export filtered specifically by RPL
+        $exportRpl = new \App\Exports\TeacherCredentialsExport($this->school->id, ['major' => $majorRpl->id]);
+        $sheetsRpl = $exportRpl->sheets();
+        $this->assertCount(3, $sheetsRpl); // Master + WA + RPL
+        $titlesRpl = array_map(fn($s) => $s->title(), $sheetsRpl);
+        $this->assertContains('RPL - Rekayasa Perangkat Lunak', $titlesRpl);
+        $this->assertNotContains('TKJ - Teknik Komputer Jaringan', $titlesRpl);
+        $this->assertNotContains('Lintas Jurusan', $titlesRpl);
+
+        // 3. Export filtered specifically by Lintas Jurusan
+        $exportLintas = new \App\Exports\TeacherCredentialsExport($this->school->id, ['major' => 'lintas']);
+        $sheetsLintas = $exportLintas->sheets();
+        $this->assertCount(3, $sheetsLintas); // Master + WA + Lintas Jurusan
+        $titlesLintas = array_map(fn($s) => $s->title(), $sheetsLintas);
+        $this->assertContains('Lintas Jurusan', $titlesLintas);
+        $this->assertNotContains('RPL - Rekayasa Perangkat Lunak', $titlesLintas);
+
+        // 4. HTTP Route download works (XLSX)
+        $resXlsx = $this->actingAs($this->adminUser)->get(route('adminsekolah.teachers.export'));
+        $resXlsx->assertOk();
+        $this->assertStringContainsString('.xlsx', (string) $resXlsx->headers->get('content-disposition'));
+
+        // 5. HTTP Route download works (CSV)
+        $resCsv = $this->actingAs($this->adminUser)->get(route('adminsekolah.teachers.export', ['format' => 'csv']));
+        $resCsv->assertOk();
+        $csvContent = $resCsv->streamedContent();
+        $this->assertStringContainsString('Guru RPL Murni', $csvContent);
+        $this->assertStringContainsString('Guru TKJ Murni', $csvContent);
+        $this->assertStringContainsString('198001012010011001', $csvContent);
+        $this->assertStringContainsString('password', $csvContent);
+
+        // 6. Multi-tenant isolation: other school admin cannot export these teachers
+        $otherSchool = School::create([
+            'name' => 'SMK Lain',
+            'npsn' => '88887777',
+            'address' => 'Jl. Lain',
+            'phone' => '022-123456',
+            'email' => 'admin@smklain.sch.id',
+            'is_active' => true,
+        ]);
+        $otherAdmin = User::create([
+            'school_id' => $otherSchool->id,
+            'name' => 'Admin Lain',
+            'email' => 'admin@smklain.sch.id',
+            'password' => bcrypt('password'),
+            'role' => 'admin-sekolah',
+            'is_active' => true,
+        ]);
+        $resOtherCsv = $this->actingAs($otherAdmin)->get(route('adminsekolah.teachers.export', ['format' => 'csv']));
+        $resOtherCsv->assertOk();
+        $otherCsvContent = $resOtherCsv->streamedContent();
+        $this->assertStringNotContainsString('Guru RPL Murni', $otherCsvContent);
+        $this->assertStringNotContainsString('Guru TKJ Murni', $otherCsvContent);
+    }
 }

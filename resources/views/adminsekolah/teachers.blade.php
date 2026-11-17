@@ -12,6 +12,12 @@
         subtitle="Guru yang bertugas membimbing di lapangan, memantau absensi real-time, memverifikasi jurnal tingkat dua, dan mengevaluasi nilai sekolah."
         badge="MANAJEMEN SEKOLAH"
     >
+        <a href="{{ route('adminsekolah.teachers.export', request()->only(['search', 'major'])) }}" 
+           class="inline-flex items-center justify-center font-bold rounded-xl transition-all shadow-xs cursor-pointer bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-3 py-1.5 text-xs"
+           title="Unduh data akun & login guru pembimbing lengkap dengan sheet per jurusan dalam format Excel (.xlsx)">
+            <svg class="w-4 h-4 mr-1.5 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            <span>Ekspor Akun (Excel)</span>
+        </a>
         <x-button type="button" variant="primary" size="sm" onclick="document.getElementById('modal-add-teacher').classList.remove('hidden')">
             <svg class="w-4 h-4 mr-1.5 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
             <span>+ Tambah Guru Pembimbing</span>
@@ -89,10 +95,21 @@
                             </option>
                         @endforeach
                     </select>
+                    @if(request()->filled('major') && request('major') !== 'all')
+                        <a href="{{ route('adminsekolah.teachers') }}" class="px-2.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold transition-colors">
+                            Reset
+                        </a>
+                    @endif
                 </form>
                 <span class="text-xs text-slate-500 font-semibold hidden md:inline ml-2">
                     {{ $teachers->total() }} Guru Terdaftar
                 </span>
+                <a href="{{ route('adminsekolah.teachers.export', request()->only(['search', 'major'])) }}" 
+                   class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-xs shrink-0 cursor-pointer ml-2"
+                   title="Unduh file Excel (.xlsx) data akun & password guru lengkap dengan sheet per jurusan">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    <span>Ekspor Akun Guru (Excel)</span>
+                </a>
             </div>
         </div>
 

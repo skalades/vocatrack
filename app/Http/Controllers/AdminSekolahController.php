@@ -820,6 +820,52 @@ class AdminSekolahController extends Controller
         return view('adminsekolah.teachers', compact('teachers', 'totalTeachers', 'totalPlotted', 'avgPlotted', 'activeTeachersCount', 'majors', 'selectedMajor'));
     }
 
+    public function exportTeachers(Request $request)
+    {
+        $schoolId = $this->getSchoolId();
+
+        $majorPart = 'Semua_Jurusan';
+        if ($major = $request->query('major')) {
+            if ($major === 'lintas') {
+                $majorPart = 'Lintas_Jurusan';
+            } elseif ($major !== 'all') {
+                $majorModel = Major::where('school_id', $schoolId)->find($major);
+                if ($majorModel) {
+                    $majorPart = Str::slug($majorModel->name, '_');
+                }
+            }
+        }
+
+        $timestamp = date('Ymd_His');
+        $filename = "Akun_Akses_Guru_{$majorPart}_{$timestamp}";
+
+        AuditLogService::log(
+            'teacher_credentials_export',
+            'export',
+            "Mengekspor data akun dan akses guru pembimbing (Filter: {$majorPart})."
+        );
+
+        $filters = [
+            'search' => $request->query('search'),
+            'major' => $request->query('major'),
+        ];
+
+        // Format CSV jika secara spesifik diminta
+        if ($request->query('format') === 'csv') {
+            return \Maatwebsite\Excel\Facades\Excel::download(
+                new \App\Exports\TeacherCredentialsExport($schoolId, $filters),
+                "{$filename}.csv",
+                \Maatwebsite\Excel\Excel::CSV
+            );
+        }
+
+        // Default: Excel .xlsx profesional dengan multi-sheet per jurusan & styling rapi
+        return \Maatwebsite\Excel\Facades\Excel::download(
+            new \App\Exports\TeacherCredentialsExport($schoolId, $filters),
+            "{$filename}.xlsx"
+        );
+    }
+
     public function storeTeacher(Request $request)
     {
         $schoolId = $this->getSchoolId();
