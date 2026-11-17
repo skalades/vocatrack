@@ -313,8 +313,19 @@ app.get('/', (req, res) => {
 </html>`);
 });
 
+// Tangani error global agar proses tidak pernah crash
+process.on('uncaughtException', (err) => {
+    console.error('[VokaTrack WA Gateway] Uncaught Exception:', err.message);
+});
+process.on('unhandledRejection', (reason) => {
+    console.error('[VokaTrack WA Gateway] Unhandled Rejection:', reason);
+});
+
 // Mulai Server dan Jalankan Baileys
-app.listen(PORT, () => {
+const server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`[VokaTrack WA Gateway] Web UI aktif di http://localhost:${PORT}`);
     connectToWhatsApp();
+});
+server.on('error', (err) => {
+    console.error(`[VokaTrack WA Gateway] Server error on port ${PORT}:`, err.message);
 });

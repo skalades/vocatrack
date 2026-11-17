@@ -26,7 +26,6 @@ class WhatsAppGatewayController extends Controller
 
     public function index(Request $request)
     {
-        $baseUrl = $this->getGatewayBaseUrl();
         $token = config('services.whatsapp.token', 'vokatrack-secret-key-2026');
         $provider = config('services.whatsapp.provider', 'custom');
 
@@ -36,62 +35,79 @@ class WhatsAppGatewayController extends Controller
         $connectedUser = null;
         $error = null;
 
-        try {
-            $response = Http::timeout(2)->get("{$baseUrl}/status");
-            if ($response->successful()) {
-                $isServiceRunning = true;
-                $data = $response->json();
-                $connectionStatus = $data['status'] ?? 'disconnected';
-                $connectedUser = $data['user'] ?? null;
-                $error = $data['error'] ?? null;
+        $tryUrls = array_unique([
+            $this->getGatewayBaseUrl(),
+            'http://127.0.0.1:3000',
+            'http://localhost:3000',
+        ]);
 
-                // Jika sedang menunggu scan, ambil data QR code
-                if ($connectionStatus === 'waiting_scan') {
-                    $qrResponse = Http::timeout(2)->get("{$baseUrl}/qr-data");
-                    if ($qrResponse->successful()) {
-                        $qrCodeDataUrl = $qrResponse->json('qr');
+        $activeBaseUrl = 'http://127.0.0.1:3000';
+
+        foreach ($tryUrls as $url) {
+            try {
+                $response = Http::timeout(3)->get("{$url}/status");
+                if ($response->successful()) {
+                    $isServiceRunning = true;
+                    $activeBaseUrl = $url;
+                    $data = $response->json();
+                    $connectionStatus = $data['status'] ?? 'disconnected';
+                    $connectedUser = $data['user'] ?? null;
+                    $error = $data['error'] ?? null;
+
+                    if ($connectionStatus === 'waiting_scan') {
+                        $qrResponse = Http::timeout(3)->get("{$url}/qr-data");
+                        if ($qrResponse->successful()) {
+                            $qrCodeDataUrl = $qrResponse->json('qr');
+                        }
                     }
+                    break;
                 }
+            } catch (\Throwable $e) {
+                $error = 'Service gateway lokal tidak merespons: ' . $e->getMessage();
             }
-        } catch (\Throwable $e) {
-            $isServiceRunning = false;
-            $error = 'Service gateway lokal tidak merespons (port 3000).';
         }
 
-        return view('superadmin.whatsapp', compact(
-            'isServiceRunning',
-            'connectionStatus',
-            'qrCodeDataUrl',
-            'connectedUser',
-            'error',
-            'provider',
-            'baseUrl'
-        ));
+        return view('superadmin.whatsapp', [
+            'isServiceRunning' => $isServiceRunning,
+            'connectionStatus' => $connectionStatus,
+            'qrCodeDataUrl' => $qrCodeDataUrl,
+            'connectedUser' => $connectedUser,
+            'error' => $error,
+            'provider' => $provider,
+            'baseUrl' => $activeBaseUrl,
+        ]);
     }
 
     public function ajaxStatus(): JsonResponse
     {
-        $baseUrl = $this->getGatewayBaseUrl();
-        try {
-            $response = Http::timeout(2)->get("{$baseUrl}/status");
-            if ($response->successful()) {
-                $data = $response->json();
-                $status = $data['status'] ?? 'disconnected';
-                $qr = null;
-                if ($status === 'waiting_scan') {
-                    $qrRes = Http::timeout(2)->get("{$baseUrl}/qr-data");
-                    if ($qrRes->successful()) {
-                        $qr = $qrRes->json('qr');
+        $tryUrls = array_unique([
+            $this->getGatewayBaseUrl(),
+            'http://127.0.0.1:3000',
+            'http://localhost:3000',
+        ]);
+
+        foreach ($tryUrls as $url) {
+            try {
+                $response = Http::timeout(3)->get("{$url}/status");
+                if ($response->successful()) {
+                    $data = $response->json();
+                    $status = $data['status'] ?? 'disconnected';
+                    $qr = null;
+                    if ($status === 'waiting_scan') {
+                        $qrRes = Http::timeout(3)->get("{$url}/qr-data");
+                        if ($qrRes->successful()) {
+                            $qr = $qrRes->json('qr');
+                        }
                     }
+                    return response()->json([
+                        'running' => true,
+                        'status' => $status,
+                        'user' => $data['user'] ?? null,
+                        'qr' => $qr,
+                    ]);
                 }
-                return response()->json([
-                    'running' => true,
-                    'status' => $status,
-                    'user' => $data['user'] ?? null,
-                    'qr' => $qr,
-                ]);
-            }
-        } catch (\Throwable $e) {}
+            } catch (\Throwable $e) {}
+        }
 
         return response()->json([
             'running' => false,

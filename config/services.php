@@ -46,9 +46,9 @@ return [
     ],
 
     'whatsapp' => [
-        'provider' => env('WHATSAPP_GATEWAY_PROVIDER', 'log'),
-        'token' => env('WHATSAPP_GATEWAY_TOKEN'),
-        'url' => env('WHATSAPP_GATEWAY_URL'),
+        'provider' => env('WHATSAPP_GATEWAY_PROVIDER', 'custom'),
+        'token' => env('WHATSAPP_GATEWAY_TOKEN', 'vokatrack-secret-key-2026'),
+        'url' => env('WHATSAPP_GATEWAY_URL', 'http://127.0.0.1:3000/send-message'),
         'enabled' => env('WHATSAPP_GATEWAY_ENABLED', true),
     ],
 
