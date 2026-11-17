@@ -472,7 +472,15 @@
                 </tr>
                 <tr>
                     <td style="text-align: center;">2</td>
-                    <td>Keterampilan Teknis & Penguasaan Kompetensi Kejuruan</td>
+                    <td>
+                        <strong>Keterampilan Teknis & Penguasaan Kompetensi Kejuruan</strong>
+                        @if(isset($learningObjectives) && $learningObjectives->isNotEmpty())
+                            <div style="font-size: 7.5pt; color: #475569; margin-top: 2px; line-height: 1.3;">
+                                <strong style="color: #0f766e;">Capaian Kurikulum Merdeka ({{ $student->class->major->code ?? 'Keahlian' }}):</strong>
+                                {{ $learningObjectives->pluck('code')->implode(', ') }} &bull; {{ $learningObjectives->take(3)->pluck('title')->implode('; ') }}@if($learningObjectives->count() > 3) (dan {{ $learningObjectives->count() - 3 }} elemen lainnya)@endif
+                            </div>
+                        @endif
+                    </td>
                     <td style="text-align: center; font-weight: bold;">{{ number_format($gradeTechnical['score'], 1) }}</td>
                     <td style="text-align: center;">{{ $gradeTechnical['letter'] }}</td>
                     <td style="text-align: center;">{{ $gradeTechnical['predicate'] }}</td>

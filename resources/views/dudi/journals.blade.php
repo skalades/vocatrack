@@ -267,6 +267,17 @@
                                     {{ $pj->activity_description }}
                                 </div>
 
+                                @if($pj->learningObjectives->isNotEmpty())
+                                    <div class="flex flex-wrap gap-1.5 pt-1">
+                                        @foreach($pj->learningObjectives as $cp)
+                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200/70" title="{{ $cp->title }}">
+                                                <strong class="font-mono text-[10px]">{{ $cp->code }}</strong>
+                                                <span class="truncate max-w-[220px]">{{ $cp->title }}</span>
+                                            </span>
+                                        @endforeach
+                                    </div>
+                                @endif
+
                                 @if($pj->photos->isNotEmpty())
                                     <div class="flex items-center gap-2 overflow-x-auto pt-1">
                                         @foreach($pj->photos as $ph)
@@ -384,6 +395,15 @@
                                     <p class="text-xs text-slate-800 line-clamp-2 leading-relaxed">
                                         {{ $j->activity_description }}
                                     </p>
+                                    @if($j->learningObjectives->isNotEmpty())
+                                        <div class="flex flex-wrap gap-1 mt-1.5">
+                                            @foreach($j->learningObjectives as $cp)
+                                                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200/70 font-mono" title="{{ $cp->title }}">
+                                                    {{ $cp->code }}
+                                                </span>
+                                            @endforeach
+                                        </div>
+                                    @endif
                                     @if($j->photos->isNotEmpty())
                                         <span class="inline-flex items-center gap-1 text-[10px] text-indigo-700 font-bold mt-1">
                                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
@@ -472,6 +492,20 @@
                         {{ $j->activity_description }}
                     </div>
                 </div>
+
+                @if($j->learningObjectives->isNotEmpty())
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Capaian Pembelajaran (CP) Terkait:</label>
+                        <div class="flex flex-wrap gap-2">
+                            @foreach($j->learningObjectives as $cp)
+                                <div class="p-2 rounded-xl bg-emerald-50/80 border border-emerald-200/80 text-xs text-emerald-950 flex items-center gap-2">
+                                    <span class="px-1.5 py-0.5 rounded bg-emerald-700 text-white font-mono font-bold text-[10px]">{{ $cp->code }}</span>
+                                    <span class="font-semibold">{{ $cp->title }}</span>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
 
                 @if($j->photos->isNotEmpty())
                     <div>

@@ -8,6 +8,7 @@ use App\Models\Certificate;
 use App\Models\Company;
 use App\Models\IncidentReport;
 use App\Models\Invoice;
+use App\Models\LearningObjective;
 use App\Models\Major;
 use App\Models\PklPeriod;
 use App\Models\Profile;
@@ -173,8 +174,8 @@ class AdminSekolahController extends Controller
     {
         $schoolId = $this->getSchoolId();
         $majors = Major::where('school_id', $schoolId)
-            ->with(['headTeacher.user'])
-            ->withCount('classes')
+            ->with(['headTeacher.user', 'learningObjectives'])
+            ->withCount(['classes', 'learningObjectives'])
             ->get();
         $classes = SchoolClass::where('school_id', $schoolId)->with('major')->get();
         $teachers = Teacher::whereHas('user', fn($q) => $q->where('school_id', $schoolId)->where('is_active', true))
@@ -250,6 +251,73 @@ class AdminSekolahController extends Controller
 
         $major->delete();
         return back()->with('success', 'Jurusan berhasil dihapus.');
+    }
+
+    public function storeMajorCompetency(Request $request, Major $major)
+    {
+        $schoolId = $this->getSchoolId();
+        abort_if($major->school_id !== $schoolId, 403);
+
+        $validated = $request->validate([
+            'code' => ['required', 'string', 'max:30'],
+            'title' => ['required', 'string', 'max:255'],
+            'element_name' => ['nullable', 'string', 'max:100'],
+            'description' => ['nullable', 'string'],
+            'target_hours' => ['nullable', 'integer', 'min:0'],
+            'sort_order' => ['nullable', 'integer', 'min:0'],
+        ]);
+
+        LearningObjective::create([
+            'school_id' => $schoolId,
+            'major_id' => $major->id,
+            'code' => strtoupper($validated['code']),
+            'title' => $validated['title'],
+            'element_name' => $validated['element_name'] ?? 'Keterampilan Teknis Kejuruan',
+            'description' => $validated['description'] ?? null,
+            'target_hours' => $validated['target_hours'] ?? 0,
+            'sort_order' => $validated['sort_order'] ?? 0,
+            'is_active' => $request->boolean('is_active', true),
+        ]);
+
+        return back()->with('success', 'Capaian Pembelajaran (CP) berhasil ditambahkan ke jurusan ' . $major->code . '.');
+    }
+
+    public function updateMajorCompetency(Request $request, LearningObjective $learningObjective)
+    {
+        $schoolId = $this->getSchoolId();
+        abort_if($learningObjective->school_id !== $schoolId, 403);
+
+        $validated = $request->validate([
+            'code' => ['required', 'string', 'max:30'],
+            'title' => ['required', 'string', 'max:255'],
+            'element_name' => ['nullable', 'string', 'max:100'],
+            'description' => ['nullable', 'string'],
+            'target_hours' => ['nullable', 'integer', 'min:0'],
+            'sort_order' => ['nullable', 'integer', 'min:0'],
+            'is_active' => ['nullable', 'boolean'],
+        ]);
+
+        $learningObjective->update([
+            'code' => strtoupper($validated['code']),
+            'title' => $validated['title'],
+            'element_name' => $validated['element_name'] ?? 'Keterampilan Teknis Kejuruan',
+            'description' => $validated['description'] ?? null,
+            'target_hours' => $validated['target_hours'] ?? 0,
+            'sort_order' => $validated['sort_order'] ?? 0,
+            'is_active' => $request->has('is_active') ? $request->boolean('is_active') : $learningObjective->is_active,
+        ]);
+
+        return back()->with('success', 'Data Capaian Pembelajaran berhasil diperbarui.');
+    }
+
+    public function destroyMajorCompetency(LearningObjective $learningObjective)
+    {
+        $schoolId = $this->getSchoolId();
+        abort_if($learningObjective->school_id !== $schoolId, 403);
+
+        $learningObjective->delete();
+
+        return back()->with('success', 'Capaian Pembelajaran berhasil dihapus.');
     }
 
     public function storeClass(Request $request)

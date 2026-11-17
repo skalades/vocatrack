@@ -543,7 +543,7 @@ class TeacherController extends Controller
         $spklIds = $studentPkls->pluck('id');
 
         $query = Journal::whereIn('student_pkl_id', $spklIds)
-            ->with(['studentPkl.student.user', 'studentPkl.student.class', 'studentPkl.company', 'photos', 'approvals.approver']);
+            ->with(['studentPkl.student.user', 'studentPkl.student.class', 'studentPkl.company', 'photos', 'approvals.approver', 'learningObjectives']);
 
         if ($request->filled('student_pkl_id')) {
             $query->where('student_pkl_id', $request->student_pkl_id);

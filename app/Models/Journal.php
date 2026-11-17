@@ -6,6 +6,7 @@ use App\Traits\BelongsToSchool;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Journal extends Model
@@ -48,5 +49,10 @@ class Journal extends Model
     public function approvals(): HasMany
     {
         return $this->hasMany(JournalApproval::class)->orderBy('created_at', 'desc');
+    }
+
+    public function learningObjectives(): BelongsToMany
+    {
+        return $this->belongsToMany(LearningObjective::class, 'journal_learning_objective');
     }
 }

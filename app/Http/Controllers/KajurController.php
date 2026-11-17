@@ -7,6 +7,7 @@ use App\Models\Attendance;
 use App\Models\Company;
 use App\Models\IncidentReport;
 use App\Models\Journal;
+use App\Models\LearningObjective;
 use App\Models\Major;
 use App\Models\PklPeriod;
 use App\Models\Profile;
@@ -431,7 +432,7 @@ class KajurController extends Controller
 
         $query = Journal::where('school_id', $schoolId)
             ->whereIn('student_id', $studentIds)
-            ->with(['student.schoolClass', 'student.studentPkl.teacher.user', 'photos']);
+            ->with(['student.schoolClass', 'student.studentPkl.teacher.user', 'photos', 'learningObjectives']);
 
         if ($request->filled('class_id')) {
             $query->whereHas('student', fn($q) => $q->where('class_id', $request->class_id));
@@ -547,5 +548,88 @@ class KajurController extends Controller
         $records = $query->paginate(20)->withQueryString();
 
         return view('kajur.grades', compact('major', 'classes', 'records'));
+    }
+
+    public function competencies(Request $request)
+    {
+        $major = $this->getHeadedMajor();
+        $learningObjectives = LearningObjective::where('major_id', $major->id)
+            ->withCount('journals')
+            ->orderBy('sort_order')
+            ->orderBy('code')
+            ->get();
+
+        return view('kajur.competencies', compact('major', 'learningObjectives'));
+    }
+
+    public function storeCompetency(Request $request)
+    {
+        $schoolId = $this->getSchoolId();
+        $major = $this->getHeadedMajor();
+
+        $validated = $request->validate([
+            'code' => ['required', 'string', 'max:30'],
+            'title' => ['required', 'string', 'max:255'],
+            'element_name' => ['nullable', 'string', 'max:100'],
+            'description' => ['nullable', 'string'],
+            'target_hours' => ['nullable', 'integer', 'min:0'],
+            'sort_order' => ['nullable', 'integer', 'min:0'],
+        ]);
+
+        LearningObjective::create([
+            'school_id' => $schoolId,
+            'major_id' => $major->id,
+            'code' => strtoupper($validated['code']),
+            'title' => $validated['title'],
+            'element_name' => $validated['element_name'] ?? 'Keterampilan Teknis Kejuruan',
+            'description' => $validated['description'] ?? null,
+            'target_hours' => $validated['target_hours'] ?? 0,
+            'sort_order' => $validated['sort_order'] ?? 0,
+            'is_active' => $request->boolean('is_active', true),
+        ]);
+
+        return back()->with('success', 'Capaian Pembelajaran (CP) berhasil ditambahkan.');
+    }
+
+    public function updateCompetency(Request $request, LearningObjective $learningObjective)
+    {
+        $schoolId = $this->getSchoolId();
+        $major = $this->getHeadedMajor();
+
+        abort_if($learningObjective->major_id !== $major->id || $learningObjective->school_id !== $schoolId, 403);
+
+        $validated = $request->validate([
+            'code' => ['required', 'string', 'max:30'],
+            'title' => ['required', 'string', 'max:255'],
+            'element_name' => ['nullable', 'string', 'max:100'],
+            'description' => ['nullable', 'string'],
+            'target_hours' => ['nullable', 'integer', 'min:0'],
+            'sort_order' => ['nullable', 'integer', 'min:0'],
+            'is_active' => ['nullable', 'boolean'],
+        ]);
+
+        $learningObjective->update([
+            'code' => strtoupper($validated['code']),
+            'title' => $validated['title'],
+            'element_name' => $validated['element_name'] ?? 'Keterampilan Teknis Kejuruan',
+            'description' => $validated['description'] ?? null,
+            'target_hours' => $validated['target_hours'] ?? 0,
+            'sort_order' => $validated['sort_order'] ?? 0,
+            'is_active' => $request->has('is_active') ? $request->boolean('is_active') : $learningObjective->is_active,
+        ]);
+
+        return back()->with('success', 'Data Capaian Pembelajaran berhasil diperbarui.');
+    }
+
+    public function destroyCompetency(LearningObjective $learningObjective)
+    {
+        $schoolId = $this->getSchoolId();
+        $major = $this->getHeadedMajor();
+
+        abort_if($learningObjective->major_id !== $major->id || $learningObjective->school_id !== $schoolId, 403);
+
+        $learningObjective->delete();
+
+        return back()->with('success', 'Capaian Pembelajaran berhasil dihapus.');
     }
 }

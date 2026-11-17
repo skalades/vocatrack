@@ -14,16 +14,13 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        $this->call([
+        $seeders = [
             // Sekolah 1: SMKN 2 Garut
             SchoolSeeder::class,
             MajorAndClassSeeder::class,
             UserAndRoleSeeder::class,
-            CompanyAndSupervisorSeeder::class,
-            PklPeriodAndPlottingSeeder::class,
-            PklActivitySeeder::class,
-            AnnouncementSeeder::class,
             PsptPklSeeder::class,
+            AnnouncementSeeder::class,
 
             // Sekolah 2: SMKN 1 Garut
             Smkn1GarutSeeder::class,
@@ -36,6 +33,13 @@ class DatabaseSeeder extends Seeder
 
             // Sekolah 4: SMKN 04 Bombana (tenant baru, Trial 7 Hari mulai hari ini)
             Smkn4BombanaSeeder::class,
-        ]);
+        ];
+
+        // Seeder Geologi Pertambangan opsional jika berkas ada di environment lokal/server
+        if (class_exists(\Database\Seeders\GeologiPertambanganPklSeeder::class)) {
+            array_splice($seeders, 3, 0, [\Database\Seeders\GeologiPertambanganPklSeeder::class]);
+        }
+
+        $this->call($seeders);
     }
 }

@@ -8,6 +8,7 @@ use App\Models\Certificate;
 use App\Models\IncidentReport;
 use App\Models\Journal;
 use App\Models\JournalPhoto;
+use App\Models\LearningObjective;
 use App\Models\StudentPkl;
 use App\Services\AnnouncementService;
 use App\Services\AttendanceService;
@@ -426,7 +427,7 @@ class StudentController extends Controller
         ];
 
         if ($spkl) {
-            $query = Journal::with(['photos', 'approvals.approver'])
+            $query = Journal::with(['photos', 'approvals.approver', 'learningObjectives'])
                 ->where('student_pkl_id', $spkl->id);
 
             // Filter berdasarkan status
@@ -464,13 +465,22 @@ class StudentController extends Controller
                 ->paginate($perPage)
                 ->withQueryString();
 
-            $todayJournal = Journal::with('photos')
+            $todayJournal = Journal::with(['photos', 'learningObjectives'])
                 ->where('student_pkl_id', $spkl->id)
                 ->where('date', $today)
                 ->first();
         }
 
-        return view('student.journals', compact('spkl', 'student', 'journals', 'todayJournal', 'statusCounts', 'currentWeek', 'weeklyDays'));
+        $learningObjectives = collect();
+        if ($student && $student->class?->major_id) {
+            $learningObjectives = LearningObjective::where('major_id', $student->class->major_id)
+                ->where('is_active', true)
+                ->orderBy('sort_order')
+                ->orderBy('code')
+                ->get();
+        }
+
+        return view('student.journals', compact('spkl', 'student', 'journals', 'todayJournal', 'statusCounts', 'currentWeek', 'weeklyDays', 'learningObjectives'));
     }
 
     public function storeJournal(Request $request)
@@ -554,6 +564,11 @@ class StudentController extends Controller
             });
         } catch (ValidationException $e) {
             return $this->journalErrorResponse($request, $e->errors());
+        }
+
+        if ($request->has('learning_objective_ids')) {
+            $loIds = array_filter((array) $request->input('learning_objective_ids', []));
+            $journal->learningObjectives()->sync($loIds);
         }
 
         if ($request->hasFile('photos')) {

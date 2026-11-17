@@ -39,4 +39,9 @@ class Major extends Model
     {
         return $this->belongsToMany(Teacher::class, 'major_teacher')->withTimestamps();
     }
+
+    public function learningObjectives(): HasMany
+    {
+        return $this->hasMany(LearningObjective::class)->orderBy('sort_order')->orderBy('code');
+    }
 }

@@ -220,7 +220,7 @@ class CertificateService
         $certificate->loadMissing([
             'school.settings',
             'studentPkl.student.user',
-            'studentPkl.student.class.major',
+            'studentPkl.student.class.major.learningObjectives',
             'studentPkl.company',
             'studentPkl.assessment',
             'studentPkl.teacher.user',
@@ -361,6 +361,7 @@ class CertificateService
             'kopLine1' => $kopLine1,
             'kopLine2' => $kopLine2,
             'schoolCity' => $schoolCity,
+            'learningObjectives' => $certificate->studentPkl?->student?->class?->major?->learningObjectives ?? collect(),
         ])->setPaper('a4', 'landscape');
     }
 }

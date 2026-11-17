@@ -122,6 +122,27 @@
                                 </div>
                             </div>
                             <div class="flex items-center gap-1.5 shrink-0">
+                                <button type="button" 
+                                        onclick="openMajorCompetenciesModal({{ json_encode([
+                                            'id' => $m->id,
+                                            'code' => $m->code,
+                                            'name' => $m->name,
+                                            'store_url' => route('adminsekolah.majors.competencies.store', $m),
+                                            'competencies' => $m->learningObjectives->map(fn($lo) => [
+                                                'id' => $lo->id,
+                                                'code' => $lo->code,
+                                                'title' => $lo->title,
+                                                'element_name' => $lo->element_name,
+                                                'target_hours' => $lo->target_hours,
+                                                'is_active' => $lo->is_active,
+                                                'delete_url' => route('adminsekolah.competencies.destroy', $lo),
+                                            ]),
+                                        ]) }})"
+                                        class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200/80 hover:bg-emerald-100 transition-colors cursor-pointer"
+                                        title="Kelola Capaian Pembelajaran (CP) Jurusan {{ $m->code }}">
+                                    <svg class="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                    <span>{{ $m->learning_objectives_count }} CP</span>
+                                </button>
                                 <x-badge variant="indigo" size="sm">
                                     {{ $m->classes_count }} Rombel
                                 </x-badge>
@@ -430,8 +451,122 @@
     </div>
 </div>
 
+<!-- Modal Kelola Capaian Pembelajaran Jurusan (Admin Sekolah) -->
+<div id="modal-major-competencies" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-2xl w-full p-6 space-y-5 shadow-2xl border border-slate-200 max-h-[90vh] flex flex-col">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-4 shrink-0">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 font-black text-sm flex items-center justify-center shrink-0">
+                    <span id="cp-modal-badge">CP</span>
+                </div>
+                <div>
+                    <h3 class="text-base font-extrabold text-slate-900 tracking-tight" id="cp-modal-title">Capaian Pembelajaran Jurusan</h3>
+                    <p class="text-xs text-slate-500 font-medium">Standarisasi tujuan pembelajaran & elemen kompetensi PKL</p>
+                </div>
+            </div>
+            <button type="button" onclick="document.getElementById('modal-major-competencies').classList.add('hidden')" class="p-1.5 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+
+        <div class="overflow-y-auto space-y-4 flex-1 pr-1">
+            <!-- List of Existing CPs -->
+            <div>
+                <span class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Daftar Capaian Pembelajaran Terdaftar:</span>
+                <div id="cp-modal-list" class="space-y-2">
+                    <!-- Populated dynamically via JS -->
+                </div>
+                <div id="cp-modal-empty" class="hidden p-4 rounded-2xl bg-slate-50 text-center text-xs text-slate-400 border border-slate-100">
+                    Belum ada Capaian Pembelajaran terdaftar untuk jurusan ini.
+                </div>
+            </div>
+
+            <!-- Form Tambah CP Baru -->
+            <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
+                <span class="block text-xs font-extrabold text-slate-900 uppercase tracking-wider">+ Tambah Capaian Pembelajaran Baru</span>
+                <form id="cp-store-form" method="POST" class="space-y-3">
+                    @csrf
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-700 mb-1">Kode CP *</label>
+                            <input type="text" name="code" required placeholder="Contoh: CP-01" class="w-full text-xs px-3 py-2 rounded-xl bg-white border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 font-mono text-slate-900">
+                        </div>
+                        <div class="sm:col-span-2">
+                            <label class="block text-[11px] font-bold text-slate-700 mb-1">Judul Capaian Pembelajaran *</label>
+                            <input type="text" name="title" required placeholder="Contoh: Pemetaan Geologi Lapangan" class="w-full text-xs px-3 py-2 rounded-xl bg-white border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 font-medium text-slate-900">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-700 mb-1">Elemen Kurikulum Merdeka</label>
+                            <input type="text" name="element_name" placeholder="Contoh: Geologi Lapangan & Navigasi" class="w-full text-xs px-3 py-2 rounded-xl bg-white border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 font-medium text-slate-900">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-700 mb-1">Target Durasi Jam (JP)</label>
+                            <input type="number" name="target_hours" value="0" min="0" class="w-full text-xs px-3 py-2 rounded-xl bg-white border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 font-mono text-slate-900">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-700 mb-1">Deskripsi & Indikator Kinerja</label>
+                        <textarea name="description" rows="2" placeholder="Uraikan indikator keberhasilan capaian kompetensi ini..." class="w-full text-xs px-3 py-2 rounded-xl bg-white border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 text-slate-900"></textarea>
+                    </div>
+                    <div class="flex justify-end pt-1">
+                        <x-button type="submit" variant="primary" size="sm">
+                            + Simpan Capaian Pembelajaran
+                        </x-button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="flex justify-end pt-3 border-t border-slate-100 shrink-0">
+            <x-button type="button" variant="secondary" size="md" onclick="document.getElementById('modal-major-competencies').classList.add('hidden')">
+                Tutup
+            </x-button>
+        </div>
+    </div>
+</div>
+
 @push('scripts')
 <script>
+    function openMajorCompetenciesModal(data) {
+        document.getElementById('cp-modal-badge').textContent = data.code;
+        document.getElementById('cp-modal-title').textContent = 'Capaian Pembelajaran — ' + data.name + ' (' + data.code + ')';
+        document.getElementById('cp-store-form').action = data.store_url;
+
+        const list = document.getElementById('cp-modal-list');
+        const empty = document.getElementById('cp-modal-empty');
+        list.innerHTML = '';
+
+        if (!data.competencies || data.competencies.length === 0) {
+            empty.classList.remove('hidden');
+        } else {
+            empty.classList.add('hidden');
+            data.competencies.forEach(cp => {
+                const div = document.createElement('div');
+                div.className = 'p-3 rounded-2xl bg-white border border-slate-200 flex items-center justify-between gap-3 hover:border-emerald-300 transition-colors';
+                div.innerHTML = `
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        <span class="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200/80 font-mono font-bold text-xs shrink-0">${cp.code}</span>
+                        <div class="min-w-0">
+                            <span class="font-bold text-slate-900 text-xs block truncate">${cp.title}</span>
+                            <span class="text-[11px] text-slate-400 block truncate">${cp.element_name || 'Kompetensi Kejuruan'} &bull; ${cp.target_hours} JP</span>
+                        </div>
+                    </div>
+                    <form action="${cp.delete_url}" method="POST" onsubmit="return confirm('Hapus Capaian Pembelajaran ${cp.code}?')" class="shrink-0">
+                        <input type="hidden" name="_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="_method" value="DELETE">
+                        <button type="submit" class="p-1 text-slate-400 hover:text-rose-600 transition-colors" title="Hapus CP">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                        </button>
+                    </form>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        document.getElementById('modal-major-competencies').classList.remove('hidden');
+    }
     function openEditMajorModal(data) {
         document.getElementById('edit-major-form').action = data.update_url;
         document.getElementById('edit-major-code').value = data.code;

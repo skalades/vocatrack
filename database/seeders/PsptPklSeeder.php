@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Company;
+use App\Models\LearningObjective;
 use App\Models\Major;
 use App\Models\PklPeriod;
 use App\Models\Profile;
@@ -68,6 +69,68 @@ class PsptPklSeeder extends Seeder
                 'academic_year' => '2026/2027',
             ]
         );
+
+        // 3.5. Capaian Pembelajaran (CP) Kurikulum Merdeka Jurusan PSPT
+        $psptLearningObjectives = [
+            [
+                'code' => 'PSPT-CP01',
+                'title' => 'Pra-Produksi & Riset Manajemen Program Televisi',
+                'element_name' => 'Manajemen Pra-Produksi',
+                'description' => 'Menyusun treatment naskah, breakdown teknis produksi, storyboard, rundown program, dan koordinasi departemen.',
+                'target_hours' => 80,
+                'sort_order' => 1,
+            ],
+            [
+                'code' => 'PSPT-CP02',
+                'title' => 'Tata Kamera & Pencahayaan Studio Multi-Camera System',
+                'element_name' => 'Kamera & Pencahayaan',
+                'description' => 'Mengoperasikan kamera studio/ENG, komposisi shot broadcast, setup sistem 3-point lighting dan tata cahaya panggung.',
+                'target_hours' => 140,
+                'sort_order' => 2,
+            ],
+            [
+                'code' => 'PSPT-CP03',
+                'title' => 'Tata Suara & Audio Mixing Siaran Langsung (Live Broadcast)',
+                'element_name' => 'Audio & Tata Suara',
+                'description' => 'Instalasi mikrofon wireless/lavalier, mixing audio broadcast multi-track, monitoring level audio, dan reduksi noise.',
+                'target_hours' => 100,
+                'sort_order' => 3,
+            ],
+            [
+                'code' => 'PSPT-CP04',
+                'title' => 'Master Control Room (MCR) & Video Switching Multi-Channel',
+                'element_name' => 'Master Control & Switching',
+                'description' => 'Mengoperasikan switcher video siaran langsung, routing sinyal broadcast, integrasi CG, video server, dan teleprompter.',
+                'target_hours' => 120,
+                'sort_order' => 4,
+            ],
+            [
+                'code' => 'PSPT-CP05',
+                'title' => 'Pascaproduksi, Video Editing Digital & Mastering Transmisi',
+                'element_name' => 'Editing & Pascaproduksi',
+                'description' => 'Melakukan editing offline/online, audio sweetener, color grading standar broadcast EBU/ITU, dan export master DCP/Web.',
+                'target_hours' => 120,
+                'sort_order' => 5,
+            ],
+        ];
+
+        foreach ($psptLearningObjectives as $cp) {
+            LearningObjective::updateOrCreate(
+                [
+                    'school_id' => $school->id,
+                    'major_id' => $majorPspt->id,
+                    'code' => $cp['code'],
+                ],
+                [
+                    'title' => $cp['title'],
+                    'element_name' => $cp['element_name'],
+                    'description' => $cp['description'],
+                    'target_hours' => $cp['target_hours'],
+                    'sort_order' => $cp['sort_order'],
+                    'is_active' => true,
+                ]
+            );
+        }
 
         // 4. Guru Pembimbing Kejuruan PSPT
         $teacherUser1 = User::firstOrCreate(

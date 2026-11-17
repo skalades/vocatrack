@@ -85,31 +85,31 @@
                     <span id="min-char-hint" class="text-[11px] text-slate-400">Minimal 50 karakter uraian kegiatan teknis.</span>
                 </div>
 
-                <!-- Kompetensi yang dipelajari (Selectable Chips) -->
-                <div class="flex flex-col gap-1.5">
-                    <span class="text-sm font-bold text-[#10211D]">Kompetensi yang dipelajari</span>
-                    <div class="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 custom-scrollbar">
-                        <button type="button" onclick="toggleCompetencyChip(this, 'Instalasi jaringan')" 
-                                class="competency-chip shrink-0 min-h-[40px] px-3.5 rounded-full font-bold text-xs border border-[#CBD5CA] bg-white text-[#10211D] hover:border-[#0B2B25] active:scale-95 transition-all cursor-pointer">
-                            Instalasi jaringan
-                        </button>
-                        <button type="button" onclick="toggleCompetencyChip(this, 'Konfigurasi switch')" 
-                                class="competency-chip shrink-0 min-h-[40px] px-3.5 rounded-full font-bold text-xs border border-[#CBD5CA] bg-white text-[#10211D] hover:border-[#0B2B25] active:scale-95 transition-all cursor-pointer">
-                            Konfigurasi switch
-                        </button>
-                        <button type="button" onclick="toggleCompetencyChip(this, 'Dokumentasi')" 
-                                class="competency-chip shrink-0 min-h-[40px] px-3.5 rounded-full font-bold text-xs border border-[#CBD5CA] bg-white text-[#10211D] hover:border-[#0B2B25] active:scale-95 transition-all cursor-pointer">
-                            Dokumentasi
-                        </button>
-                        <button type="button" onclick="toggleCompetencyChip(this, 'Troubleshooting')" 
-                                class="competency-chip shrink-0 min-h-[40px] px-3.5 rounded-full font-bold text-xs border border-[#CBD5CA] bg-white text-[#10211D] hover:border-[#0B2B25] active:scale-95 transition-all cursor-pointer">
-                            Troubleshooting
-                        </button>
-                        <button type="button" onclick="toggleCompetencyChip(this, 'Maintenance server')" 
-                                class="competency-chip shrink-0 min-h-[40px] px-3.5 rounded-full font-bold text-xs border border-[#CBD5CA] bg-white text-[#10211D] hover:border-[#0B2B25] active:scale-95 transition-all cursor-pointer">
-                            Maintenance server
-                        </button>
+                <!-- Capaian Pembelajaran / Elemen Kompetensi Terkait -->
+                <div class="flex flex-col gap-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm font-bold text-[#10211D]">Capaian Pembelajaran (CP) Terkait</span>
+                        <span class="text-[11px] text-slate-400">Pilih satu atau lebih</span>
                     </div>
+                    @if(isset($learningObjectives) && $learningObjectives->isNotEmpty())
+                        <div class="flex gap-2 overflow-x-auto pb-1.5 -mx-4 px-4 custom-scrollbar">
+                            @foreach($learningObjectives as $lo)
+                                @php
+                                    $isSelected = ($todayJournal && $todayJournal->learningObjectives->contains('id', $lo->id)) || in_array($lo->id, (array) old('learning_objective_ids', []));
+                                @endphp
+                                <label class="lo-chip shrink-0 min-h-[38px] px-3.5 py-1.5 rounded-full font-bold text-xs border transition-all cursor-pointer select-none flex items-center gap-1.5 {{ $isSelected ? 'bg-[#0B2B25] text-white border-[#0B2B25] shadow-xs' : 'border-[#CBD5CA] bg-white text-[#10211D] hover:border-[#0B2B25]' }}"
+                                       title="{{ $lo->title }} ({{ $lo->element_name }})">
+                                    <input type="checkbox" name="learning_objective_ids[]" value="{{ $lo->id }}" {{ $isSelected ? 'checked' : '' }} class="hidden" onchange="handleLoChipChange(this)">
+                                    <span class="font-mono text-[11px] opacity-80">{{ $lo->code }}</span>
+                                    <span class="max-w-[200px] truncate">{{ $lo->title }}</span>
+                                </label>
+                            @endforeach
+                        </div>
+                    @else
+                        <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-100 text-slate-400 text-xs">
+                            Belum ada Capaian Pembelajaran aktif untuk jurusan ini. Tuliskan uraian kegiatan langsung pada kolom di atas.
+                        </div>
+                    @endif
                 </div>
 
                 <!-- Photo Attachment Row -->
@@ -194,6 +194,12 @@
                         'reviewer_name' => $journal->approvals->first()?->approver?->name ?? 'Pembimbing',
                         'reviewer_notes' => $journal->approvals->first()?->notes,
                         'photos' => $journal->photos->map(fn($p) => $p->photo_url)->toArray(),
+                        'learning_objectives' => $journal->learningObjectives->map(fn($lo) => [
+                            'id' => $lo->id,
+                            'code' => $lo->code,
+                            'title' => $lo->title,
+                            'element_name' => $lo->element_name,
+                        ])->toArray(),
                         'is_editable' => in_array($journal->status, ['draft', 'revision']),
                     ];
                 @endphp
@@ -213,15 +219,27 @@
                         <span class="font-bold text-sm text-[#10211D] block truncate leading-tight group-hover:text-[#0F7A66] transition-colors">
                             {{ Str::limit($journal->activity_description, 40) }}
                         </span>
-                        <span class="text-xs text-[#5A6B65] block truncate mt-0.5">
-                            @if($isApproved)
-                                Disetujui oleh Pembimbing
-                            @elseif($isRevision)
-                                <span class="text-amber-700 font-semibold">Perlu Revisi</span>
-                            @else
-                                Menunggu Review
+                        <div class="flex items-center gap-1.5 mt-1 flex-wrap">
+                            @if($journal->learningObjectives->isNotEmpty())
+                                @foreach($journal->learningObjectives->take(2) as $cp)
+                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200/60 font-mono">
+                                        {{ $cp->code }}
+                                    </span>
+                                @endforeach
+                                @if($journal->learningObjectives->count() > 2)
+                                    <span class="text-[10px] text-slate-400 font-bold">+{{ $journal->learningObjectives->count() - 2 }}</span>
+                                @endif
                             @endif
-                        </span>
+                            <span class="text-xs text-[#5A6B65] truncate">
+                                @if($isApproved)
+                                    Disetujui
+                                @elseif($isRevision)
+                                    <span class="text-amber-700 font-semibold">Perlu Revisi</span>
+                                @else
+                                    Menunggu Review
+                                @endif
+                            </span>
+                        </div>
                     </div>
 
                     <!-- Status Pill & Chevron -->
@@ -310,6 +328,12 @@
                 </div>
             </div>
 
+            <!-- Capaian Pembelajaran Terkait -->
+            <div id="jd-lo-section" class="space-y-1.5 hidden">
+                <span class="text-[11px] font-bold text-[#5A6B65] uppercase tracking-wider block">Capaian Pembelajaran (CP) Terkait</span>
+                <div id="jd-lo-list" class="flex flex-wrap gap-1.5"></div>
+            </div>
+
             <!-- Dokumentasi Foto -->
             <div id="jd-photos-section" class="space-y-1.5 hidden">
                 <span class="text-[11px] font-bold text-[#5A6B65] uppercase tracking-wider block">Foto Dokumentasi</span>
@@ -327,10 +351,6 @@
                 <span>Edit Jurnal Ini</span>
             </button>
             <button type="button" onclick="closeJournalDetail()" class="flex-1 h-11 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs sm:text-sm font-bold active:scale-[0.98] transition-all cursor-pointer">
-                Tutup
-            </button>
-        </div>
-            <button type="button" onclick="closeJournalDetail()" class="flex-1 min-h-[44px] py-2.5 px-4 rounded-2xl bg-slate-100 hover:bg-slate-200 active:scale-[0.98] text-[#10211D] text-xs font-bold flex items-center justify-center transition-all cursor-pointer">
                 Tutup
             </button>
         </div>
@@ -364,23 +384,16 @@
         updateCounter();
     }
 
-    // Competency Chip Click handler
-    function toggleCompetencyChip(btn, label) {
-        const isSelected = btn.classList.contains('bg-[#0B2B25]');
-        if (isSelected) {
-            btn.className = 'competency-chip shrink-0 min-h-[40px] px-3.5 rounded-full font-bold text-xs border border-[#CBD5CA] bg-white text-[#10211D] hover:border-[#0B2B25] active:scale-95 transition-all cursor-pointer';
+    // Learning Objective (CP) Chip Selection Handler
+    function handleLoChipChange(input) {
+        const label = input.closest('label');
+        if (!label) return;
+        if (input.checked) {
+            label.classList.remove('border-[#CBD5CA]', 'bg-white', 'text-[#10211D]');
+            label.classList.add('bg-[#0B2B25]', 'text-white', 'border-[#0B2B25]', 'shadow-xs');
         } else {
-            btn.className = 'competency-chip shrink-0 min-h-[40px] px-3.5 rounded-full font-bold text-xs border border-[#0B2B25] bg-[#0B2B25] text-white active:scale-95 transition-all cursor-pointer shadow-xs';
-            
-            // Append competency label to textarea if not already present
-            if (textarea && !textarea.value.includes(label)) {
-                if (textarea.value.trim().length > 0) {
-                    textarea.value += ' · ' + label;
-                } else {
-                    textarea.value = label + ': ';
-                }
-                updateCounter();
-            }
+            label.classList.remove('bg-[#0B2B25]', 'text-white', 'border-[#0B2B25]', 'shadow-xs');
+            label.classList.add('border-[#CBD5CA]', 'bg-white', 'text-[#10211D]');
         }
     }
 
@@ -438,6 +451,24 @@
                 photosSection.classList.remove('hidden');
             } else {
                 photosSection.classList.add('hidden');
+            }
+
+            // Capaian Pembelajaran (CP) Tagged
+            const loSection = document.getElementById('jd-lo-section');
+            const loList = document.getElementById('jd-lo-list');
+            if (loList) {
+                loList.innerHTML = '';
+                if (data.learning_objectives && data.learning_objectives.length > 0) {
+                    data.learning_objectives.forEach(lo => {
+                        const span = document.createElement('span');
+                        span.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200/80';
+                        span.innerHTML = `<strong class="font-mono text-[11px]">${lo.code}</strong> <span>${lo.title}</span>`;
+                        loList.appendChild(span);
+                    });
+                    loSection.classList.remove('hidden');
+                } else {
+                    loSection.classList.add('hidden');
+                }
             }
 
             // Edit button (for draft or revision status)

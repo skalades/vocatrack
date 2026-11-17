@@ -172,6 +172,9 @@ Route::middleware(['auth', 'IdentifyTenant', 'role:admin-sekolah'])->prefix('adm
     Route::post('/classes', [AdminSekolahController::class, 'storeClass'])->name('adminsekolah.classes.store');
     Route::put('/classes/{schoolClass}', [AdminSekolahController::class, 'updateClass'])->name('adminsekolah.classes.update');
     Route::delete('/classes/{schoolClass}', [AdminSekolahController::class, 'destroyClass'])->name('adminsekolah.classes.destroy');
+    Route::post('/majors/{major}/competencies', [AdminSekolahController::class, 'storeMajorCompetency'])->name('adminsekolah.majors.competencies.store');
+    Route::put('/competencies/{learningObjective}', [AdminSekolahController::class, 'updateMajorCompetency'])->name('adminsekolah.competencies.update');
+    Route::delete('/competencies/{learningObjective}', [AdminSekolahController::class, 'destroyMajorCompetency'])->name('adminsekolah.competencies.destroy');
 
     // Students & Excel Import & Export
     Route::get('/students', [AdminSekolahController::class, 'students'])->name('adminsekolah.students');
@@ -343,6 +346,12 @@ Route::middleware(['auth', 'IdentifyTenant', 'is-kajur'])->prefix('kajur')->grou
     // Supervisi Guru & Nilai
     Route::get('/supervisions', [KajurController::class, 'supervisions'])->name('kajur.supervisions');
     Route::get('/grades', [KajurController::class, 'grades'])->name('kajur.grades');
+
+    // Capaian Pembelajaran (CP) / Elemen Kompetensi
+    Route::get('/competencies', [KajurController::class, 'competencies'])->name('kajur.competencies');
+    Route::post('/competencies', [KajurController::class, 'storeCompetency'])->name('kajur.competencies.store');
+    Route::put('/competencies/{learningObjective}', [KajurController::class, 'updateCompetency'])->name('kajur.competencies.update');
+    Route::delete('/competencies/{learningObjective}', [KajurController::class, 'destroyCompetency'])->name('kajur.competencies.destroy');
 });
 
 // 5. Pembimbing DU/DI Routes
