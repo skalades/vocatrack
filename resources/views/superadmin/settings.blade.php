@@ -217,6 +217,7 @@
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1.5">Penyedia WhatsApp</label>
                         <select name="wa_provider" class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 font-bold text-slate-900">
+                            <option value="custom" {{ ($waSettings['wa_provider'] ?? '') === 'custom' ? 'selected' : '' }}>Gateway Mandiri / Self-Hosted (Baileys)</option>
                             <option value="fonnte" {{ ($waSettings['wa_provider'] ?? '') === 'fonnte' ? 'selected' : '' }}>Fonnte API (Indonesia)</option>
                             <option value="wablas" {{ ($waSettings['wa_provider'] ?? '') === 'wablas' ? 'selected' : '' }}>Wablas Official</option>
                             <option value="twilio" {{ ($waSettings['wa_provider'] ?? '') === 'twilio' ? 'selected' : '' }}>Twilio WhatsApp</option>
@@ -237,9 +238,15 @@
                     <span class="text-[10px] text-slate-400 mt-1 block">Formulir "Ajukan Demo" di landing page meneruskan pemohon ke nomor ini lewat WhatsApp.</span>
                 </div>
 
-                <div class="p-3 rounded-2xl bg-amber-50 border border-amber-200 text-[11px] font-medium text-amber-800">
-                    Konfigurasi WhatsApp Gateway dan driver Storage cloud saat ini hanya disimpan sebagai pra-konfigurasi.
-                    Pengiriman WhatsApp belum terhubung dan media tetap disimpan di server lokal sampai migrasi storage dijalankan.
+                <div class="p-3.5 rounded-2xl bg-indigo-50 border border-indigo-200 text-xs font-medium text-indigo-900 flex flex-wrap items-center justify-between gap-3">
+                    <div class="flex items-center gap-2">
+                        <svg class="w-5 h-5 text-indigo-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        <span>Gunakan Gateway WhatsApp Mandiri (Self-Hosted Baileys) untuk bebas biaya langganan pihak ketiga.</span>
+                    </div>
+                    <a href="{{ route('superadmin.whatsapp') }}" class="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs transition-colors shadow-sm inline-flex items-center gap-1.5 cursor-pointer">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/></svg>
+                        <span>Buka Layar Scan QR WhatsApp</span>
+                    </a>
                 </div>
 
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">

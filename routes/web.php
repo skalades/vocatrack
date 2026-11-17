@@ -23,6 +23,7 @@ use App\Http\Controllers\SuperAdmin\SchoolRequestController;
 use App\Http\Controllers\SuperAdmin\SettingController as SuperAdminSettingController;
 use App\Http\Controllers\SuperAdmin\SystemHealthController;
 use App\Http\Controllers\SuperAdmin\TenantController;
+use App\Http\Controllers\SuperAdmin\WhatsAppGatewayController;
 use App\Http\Controllers\SupervisorController;
 use App\Http\Controllers\TeacherController;
 use Illuminate\Support\Facades\Route;
@@ -114,6 +115,12 @@ Route::middleware(['auth', 'role:super-admin'])->prefix('super-admin')->group(fu
     Route::delete('/system/delete-job/{id}', [SystemHealthController::class, 'deleteFailedJob'])->name('superadmin.system.delete-job');
     Route::post('/system/flush-jobs', [SystemHealthController::class, 'flushFailedJobs'])->name('superadmin.system.flush-jobs');
     Route::post('/system/clear-cache', [SystemHealthController::class, 'clearSystemCache'])->name('superadmin.system.clear-cache');
+
+    // WhatsApp Gateway Mandiri (Baileys)
+    Route::get('/whatsapp', [WhatsAppGatewayController::class, 'index'])->name('superadmin.whatsapp');
+    Route::get('/whatsapp/status', [WhatsAppGatewayController::class, 'ajaxStatus'])->name('superadmin.whatsapp.status');
+    Route::post('/whatsapp/test', [WhatsAppGatewayController::class, 'testSend'])->name('superadmin.whatsapp.test');
+    Route::post('/whatsapp/logout', [WhatsAppGatewayController::class, 'logout'])->name('superadmin.whatsapp.logout');
 
     // Database Backups & Pemulihan (Restore)
     Route::get('/backups', [BackupController::class, 'backups'])->name('superadmin.backups');
