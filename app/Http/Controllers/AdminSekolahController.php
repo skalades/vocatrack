@@ -26,6 +26,7 @@ use App\Services\HolidayService;
 use App\Services\IncidentReportService;
 use App\Services\SubscriptionService;
 use App\Services\TenantProvisioningService;
+use App\Services\WhatsAppGatewayService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -316,6 +317,12 @@ class AdminSekolahController extends Controller
             });
         }
 
+        if ($majorId = $request->query('major_id')) {
+            if ($majorId !== 'all') {
+                $query->whereHas('class', fn($cq) => $cq->where('major_id', $majorId));
+            }
+        }
+
         if ($classId = $request->query('class_id')) {
             if ($classId !== 'all') {
                 $query->where('class_id', $classId);
@@ -324,13 +331,14 @@ class AdminSekolahController extends Controller
 
         $students = $query->latest()->paginate(15)->withQueryString();
         $classes = SchoolClass::where('school_id', $schoolId)->with('major')->get();
+        $majors = Major::where('school_id', $schoolId)->orderBy('name')->get();
 
         // Exact DB metrics across the entire school (Scalable)
         $totalStudents = Student::whereHas('user', fn($q) => $q->where('school_id', $schoolId))->count();
         $totalPlotted = StudentPkl::where('school_id', $schoolId)->whereIn('status', ['assigned', 'active'])->distinct('student_id')->count('student_id');
         $totalUnplotted = max(0, $totalStudents - $totalPlotted);
 
-        return view('adminsekolah.students', compact('students', 'classes', 'totalStudents', 'totalPlotted', 'totalUnplotted'));
+        return view('adminsekolah.students', compact('students', 'classes', 'majors', 'totalStudents', 'totalPlotted', 'totalUnplotted'));
     }
 
     public function storeStudent(Request $request)
@@ -659,11 +667,14 @@ class AdminSekolahController extends Controller
             'major_ids.*' => [Rule::exists('majors', 'id')->where('school_id', $schoolId)],
         ]);
 
-        DB::transaction(function () use ($request, $schoolId) {
+        $normalizedPhone = WhatsAppGatewayService::normalizePhoneNumber($request->phone);
+
+        DB::transaction(function () use ($request, $schoolId, $normalizedPhone) {
             $user = User::create([
                 'school_id' => $schoolId,
                 'name' => $request->name,
                 'email' => $request->email,
+                'wa_number' => $normalizedPhone,
                 'password' => Hash::make('password'),
                 'role' => 'guru-pembimbing',
                 'is_active' => true,
@@ -672,7 +683,7 @@ class AdminSekolahController extends Controller
             Profile::create([
                 'user_id' => $user->id,
                 'gender' => 'L',
-                'phone' => $request->phone,
+                'phone' => $normalizedPhone ?: $request->phone,
             ]);
 
             $teacher = Teacher::create([
@@ -702,15 +713,18 @@ class AdminSekolahController extends Controller
             'major_ids.*' => [Rule::exists('majors', 'id')->where('school_id', $schoolId)],
         ]);
 
-        DB::transaction(function () use ($request, $teacher) {
+        $normalizedPhone = WhatsAppGatewayService::normalizePhoneNumber($request->phone);
+
+        DB::transaction(function () use ($request, $teacher, $normalizedPhone) {
             $teacher->user->update([
                 'name' => $request->name,
                 'email' => $request->email,
+                'wa_number' => $normalizedPhone,
             ]);
 
             $teacher->user->profile()->updateOrCreate(
                 ['user_id' => $teacher->user_id],
-                ['phone' => $request->phone]
+                ['phone' => $normalizedPhone ?: $request->phone]
             );
 
             $teacher->update([

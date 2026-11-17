@@ -146,7 +146,7 @@ class WhatsAppGatewayService
                 return false;
             }
 
-            // Provider custom / webhook generic
+            // Provider custom / webhook generic (Baileys self-hosted)
             $apiUrl = $url ?: '';
             if ($apiUrl) {
                 $response = Http::timeout(10)
@@ -156,7 +156,13 @@ class WhatsAppGatewayService
                         'message' => $message,
                     ]);
 
-                return $response->successful();
+                if ($response->successful()) {
+                    Log::info("[WhatsAppGateway Custom] Sukses terkirim ke {$phone}");
+                    return true;
+                }
+
+                Log::error("[WhatsAppGateway Custom] Gagal kirim ke {$phone}: HTTP {$response->status()} - {$response->body()}");
+                return false;
             }
 
             Log::warning("[WhatsAppGateway] Provider '{$provider}' tidak dikenal.");

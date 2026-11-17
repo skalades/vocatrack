@@ -4,6 +4,7 @@ namespace App\Channels;
 
 use App\Services\WhatsAppGatewayService;
 use Illuminate\Notifications\Notification;
+use Illuminate\Support\Facades\Log;
 
 class WhatsAppChannel
 {
@@ -22,6 +23,9 @@ class WhatsAppChannel
 
         $waNumber = $notifiable->formatted_wa_number ?? $notifiable->wa_number ?? $notifiable->profile?->phone ?? null;
         if (blank($waNumber)) {
+            $name = $notifiable->name ?? 'User #' . ($notifiable->id ?? 'unknown');
+            $role = $notifiable->role ?? 'unknown';
+            Log::warning("[WhatsAppChannel] Dilewati: {$name} (Role: {$role}) belum memiliki nomor WhatsApp/telepon valid.");
             return;
         }
 
@@ -32,15 +36,20 @@ class WhatsAppChannel
                 : 'general';
 
             if (!$notifiable->wantsWhatsAppNotification($type)) {
+                Log::info("[WhatsAppChannel] Notifikasi ke {$waNumber} diabaikan sesuai preferensi pengguna tipe: {$type}.");
                 return;
             }
         }
 
         $message = $notification->toWhatsApp($notifiable);
         if (blank($message)) {
+            Log::warning("[WhatsAppChannel] Konten teks pesan WhatsApp kosong untuk user #{$notifiable->id}.");
             return;
         }
 
-        $this->gateway->sendMessage($waNumber, $message);
+        $sent = $this->gateway->sendMessage($waNumber, $message);
+        if (!$sent) {
+            Log::warning("[WhatsAppChannel] Gagal mengirim pesan notifikasi ke nomor {$waNumber} (User: " . ($notifiable->name ?? $notifiable->id) . ").");
+        }
     }
 }

@@ -39,6 +39,7 @@
             <p class="text-center text-sm leading-relaxed text-[#F0C4BF] max-w-[320px] mx-auto mt-1">
                 Presensi tidak bisa dilanjutkan. Nonaktifkan lokasi palsu di perangkat ini, lalu coba lagi.
             </p>
+            <p id="fake-gps-reason-text" class="hidden text-center text-xs font-semibold text-[#FF8A80] mt-1.5 bg-black/30 px-3 py-1.5 rounded-xl border border-red-500/25 max-w-[340px] mx-auto"></p>
 
             <!-- Card 1: Hasil Pemeriksaan Perangkat -->
             <div class="mt-3 bg-white/7 border border-white/14 rounded-[22px] p-3.5 flex flex-col gap-3">
@@ -108,7 +109,7 @@
                     class="w-full h-14 rounded-[28px] bg-white text-[#2A0A08] font-extrabold text-[15.5px] shadow-lg hover:bg-slate-100 active:scale-95 transition-all cursor-pointer">
                 Sudah dinonaktifkan, coba lagi
             </button>
-            <a href="tel:{{ $spkl->teacher->user->phone ?? '08123456789' }}"
+            <a href="tel:{{ $spkl?->teacher?->user?->formatted_wa_number ?: ($spkl?->teacher?->user?->profile?->phone ?? '08123456789') }}"
                class="w-full h-12 rounded-[25px] border-1.5 border-white/40 text-white font-bold text-[14.5px] flex items-center justify-center gap-2 hover:bg-white/10 active:scale-95 transition-all">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
@@ -124,11 +125,21 @@
 </div>
 
 <script>
-    window.openFakeGpsModal = function() {
+    window.openFakeGpsModal = function(reason) {
         const modal = document.getElementById('fake-gps-alert-modal');
         if (modal) {
             modal.classList.remove('hidden');
             document.body.style.overflow = 'hidden';
+
+            const reasonEl = document.getElementById('fake-gps-reason-text');
+            if (reasonEl) {
+                if (reason) {
+                    reasonEl.textContent = 'Alasan: ' + reason;
+                    reasonEl.classList.remove('hidden');
+                } else {
+                    reasonEl.classList.add('hidden');
+                }
+            }
         }
     };
 

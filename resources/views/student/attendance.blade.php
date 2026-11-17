@@ -255,9 +255,9 @@
 <script>
     let videoStream = null;
     let currentFacingMode = 'user'; // front camera default
-    let userCoords = { latitude: null, longitude: null, accuracy: null, isMocked: 0 };
+    let userCoords = { latitude: null, longitude: null, accuracy: null, isMocked: 0, mockReason: null };
     let cameraStatus = 'loading'; // 'loading', 'ready', 'denied'
-    let gpsStatus = 'searching';   // 'searching', 'locked', 'weak_accuracy', 'denied', 'unavailable'
+    let gpsStatus = 'searching';   // 'searching', 'locked', 'weak_accuracy', 'denied', 'unavailable', 'fake_gps'
     
     const targetLat = {{ $companyLat }};
     const targetLng = {{ $companyLng }};
@@ -275,7 +275,7 @@
         return Math.round(R * c);
     }
 
-    // Update Shutter button visual feedback depending on Readiness & Distance
+    // Update Shutter button visual feedback depending on Readiness, Distance, & Mock GPS
     function updateShutterVisuals() {
         const shutterBtn = document.getElementById('shutter-btn');
         const shutterCore = document.getElementById('shutter-btn-core');
@@ -288,18 +288,26 @@
             isWithin = (dist <= targetRadius);
         }
 
-        const isReady = (cameraStatus === 'ready') && (gpsStatus === 'locked') && isWithin;
+        const isReady = (cameraStatus === 'ready') && (gpsStatus === 'locked') && isWithin && !userCoords.isMocked;
 
-        if (isReady) {
-            shutterBtn.classList.remove('opacity-40', 'border-slate-500', 'shadow-none');
+        if (userCoords.isMocked || gpsStatus === 'fake_gps') {
+            shutterBtn.disabled = true;
+            shutterBtn.classList.add('opacity-50', 'border-rose-500', 'shadow-[0_0_20px_rgba(255,90,77,0.3)]');
+            shutterBtn.classList.remove('opacity-40', 'border-slate-500', 'border-[#C6F26B]', 'shadow-none', 'shadow-[0_0_20px_rgba(198,242,107,0.3)]');
+            shutterCore.classList.add('bg-rose-500');
+            shutterCore.classList.remove('bg-white', 'bg-slate-400');
+        } else if (isReady) {
+            shutterBtn.disabled = false;
+            shutterBtn.classList.remove('opacity-40', 'opacity-50', 'border-slate-500', 'border-rose-500', 'shadow-none');
             shutterBtn.classList.add('border-[#C6F26B]', 'shadow-[0_0_20px_rgba(198,242,107,0.3)]');
-            shutterCore.classList.remove('bg-slate-400');
+            shutterCore.classList.remove('bg-slate-400', 'bg-rose-500');
             shutterCore.classList.add('bg-white');
         } else {
+            shutterBtn.disabled = false;
             shutterBtn.classList.add('opacity-40', 'border-slate-500', 'shadow-none');
-            shutterBtn.classList.remove('border-[#C6F26B]', 'shadow-[0_0_20px_rgba(198,242,107,0.3)]');
+            shutterBtn.classList.remove('opacity-50', 'border-rose-500', 'border-[#C6F26B]', 'shadow-[0_0_20px_rgba(198,242,107,0.3)]');
             shutterCore.classList.add('bg-slate-400');
-            shutterCore.classList.remove('bg-white');
+            shutterCore.classList.remove('bg-white', 'bg-rose-500');
         }
     }
 
@@ -326,7 +334,10 @@
 
         // GPS Badge
         if (gpsDot && gpsText) {
-            if (gpsStatus === 'locked') {
+            if (gpsStatus === 'fake_gps' || userCoords.isMocked) {
+                gpsDot.className = 'w-2 h-2 rounded-full bg-rose-500 animate-pulse';
+                gpsText.textContent = 'GPS: Lokasi Palsu';
+            } else if (gpsStatus === 'locked') {
                 gpsDot.className = 'w-2 h-2 rounded-full bg-[#C6F26B]';
                 gpsText.textContent = `GPS: Terkunci (±${userCoords.accuracy}m)`;
             } else if (gpsStatus === 'weak_accuracy') {
@@ -347,7 +358,11 @@
 
     // Handle clicks on location status bar to guide users
     function handleLocationBarClick() {
-        if (gpsStatus === 'denied') {
+        if (gpsStatus === 'fake_gps' || userCoords.isMocked) {
+            if (window.openFakeGpsModal) {
+                window.openFakeGpsModal(userCoords.mockReason || 'Lokasi palsu terdeteksi pada perangkat');
+            }
+        } else if (gpsStatus === 'denied') {
             window.showPermissionGuideModal('location');
         } else if (gpsStatus === 'weak_accuracy') {
             window.showPermissionGuideModal('location-accuracy');
@@ -368,6 +383,17 @@
             const inside = dist <= targetRadius;
             window.vtAlert({
                 tone: inside ? 'location' : 'warning',
+                eyebrow: 'Informasi lokasi',
+                title: inside ? 'Di dalam radius kantor' : 'Di luar radius kantor',
+                details: [
+                    ['Jarak ke DU/DI', `±${Number(dist).toLocaleString('id-ID')} m`],
+                    ['Toleransi', `${Number(targetRadius).toLocaleString('id-ID')} m`],
+                    ['Akurasi GPS', `±${Math.round(userCoords.accuracy)} m`],
+                    ['Status', inside ? 'Bisa presensi' : 'Belum bisa'],
+                ],
+            });
+        }
+    }
                 eyebrow: 'Informasi lokasi',
                 title: inside ? 'Di dalam radius kantor' : 'Di luar radius kantor',
                 details: [
@@ -501,8 +527,10 @@
         }
 
         // 4. Guard: Anti-Fake GPS
-        if (userCoords.isMocked) {
-            if (window.openFakeGpsModal) window.openFakeGpsModal();
+        if (userCoords.isMocked || gpsStatus === 'fake_gps') {
+            if (window.openFakeGpsModal) {
+                window.openFakeGpsModal(userCoords.mockReason || 'Lokasi palsu terdeteksi pada perangkat');
+            }
             return;
         }
 
@@ -579,13 +607,249 @@
         form.submit();
     }
 
-    // Geolocation watcher with realtime distance calculation & iPhone Precise Location detection
-    function watchStudentLocation() {
+    // Anti-Fake GPS & Geolocation Spoofing Detector
+    const AntiFakeGpsGuard = {
+        sampleHistory: [],
+        storageKey: 'vt_last_geo_fix',
+
+        evaluate(pos) {
+            const now = Date.now();
+            const coords = (pos && pos.coords) ? pos.coords : {};
+            const lat = coords.latitude;
+            const lng = coords.longitude;
+            const accuracy = Math.round(coords.accuracy !== undefined ? coords.accuracy : 0);
+
+            // Vector 0: Manual / Test Query Parameter (?test_fake_gps=1 or ?mock=1)
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('test_fake_gps') === '1' || urlParams.get('mock') === '1') {
+                return {
+                    isMock: true,
+                    reason: 'Mode Simulasi Fake GPS aktif (?test_fake_gps=1)',
+                    code: 'SIMULATED_TEST'
+                };
+            }
+
+            // Vector 1: Native Mock Location / Android Mock Provider flags
+            const hasMockFlag = Boolean(
+                pos.mocked ||
+                pos.isMocked ||
+                coords.mocked ||
+                coords.isMock ||
+                coords.isFromMockProvider
+            );
+            if (hasMockFlag) {
+                return {
+                    isMock: true,
+                    reason: 'Penyedia lokasi tiruan (Mock Location Provider) terdeteksi aktif pada perangkat',
+                    code: 'MOCK_PROVIDER_FLAG'
+                };
+            }
+
+            // Vector 2: Zero or Negative Accuracy Sensor Anomaly
+            if (accuracy <= 0 && (lat !== 0 || lng !== 0)) {
+                return {
+                    isMock: true,
+                    reason: 'Akurasi sensor GPS tidak wajar (0 meter), terindikasi perangkat lunak tiruan',
+                    code: 'ZERO_ACCURACY'
+                };
+            }
+
+            // Vector 3: Automation / DevTools Webdriver Emulation
+            if (navigator.webdriver) {
+                return {
+                    isMock: true,
+                    reason: 'Otomatisasi peramban (Webdriver / DevTools sensor override) terdeteksi',
+                    code: 'WEBDRIVER_AUTOMATION'
+                };
+            }
+
+            // Vector 4: Null Island check (0,0)
+            if (lat === 0 && lng === 0) {
+                return {
+                    isMock: true,
+                    reason: 'Koordinat lokasi tidak valid (Null Island 0,0)',
+                    code: 'NULL_ISLAND'
+                };
+            }
+
+            // Vector 5: Teleportation / Impossible Speed Anomaly (Δd / Δt)
+            const prevSample = this.sampleHistory.length > 0
+                ? this.sampleHistory[this.sampleHistory.length - 1]
+                : this.getLastKnownFromStorage();
+
+            if (prevSample && prevSample.lat !== null && prevSample.lng !== null && prevSample.time) {
+                const dtSeconds = Math.max(1, (now - prevSample.time) / 1000);
+                // Only inspect if previous sample was within last 30 minutes (1800s)
+                if (dtSeconds < 1800) {
+                    const distJumpM = calculateDistanceM(prevSample.lat, prevSample.lng, lat, lng);
+                    const speedMps = distJumpM / dtSeconds;
+
+                    // If distance jump > 250m and speed > 45 m/s (~162 km/h), flag instant teleportation
+                    if (distJumpM > 250 && speedMps > 45) {
+                        const speedKmh = Math.round(speedMps * 3.6);
+                        return {
+                            isMock: true,
+                            reason: `Lompatan posisi tidak realistis terdeteksi (${distJumpM}m dalam ${Math.round(dtSeconds)} detik, kecepatan ${speedKmh} km/jam)`,
+                            code: 'TELEPORTATION'
+                        };
+                    }
+                }
+            }
+
+            // Record clean sample to history (keep last 10 samples)
+            this.sampleHistory.push({ lat, lng, accuracy, time: now });
+            if (this.sampleHistory.length > 10) {
+                this.sampleHistory.shift();
+            }
+
+            // Store clean sample in localStorage for cross-session teleportation guard
+            this.saveLastKnownToStorage(lat, lng, now);
+
+            return { isMock: false, reason: null, code: 'CLEAN' };
+        },
+
+        getLastKnownFromStorage() {
+            try {
+                const raw = localStorage.getItem(this.storageKey);
+                if (raw) return JSON.parse(raw);
+            } catch (e) {
+                // Ignore storage read errors
+            }
+            return null;
+        },
+
+        saveLastKnownToStorage(lat, lng, time) {
+            try {
+                localStorage.setItem(this.storageKey, JSON.stringify({ lat, lng, time }));
+            } catch (e) {
+                // Ignore storage write errors
+            }
+        },
+
+        reset() {
+            this.sampleHistory = [];
+        }
+    };
+
+    function handleLocationUpdate(pos) {
         const distEl = document.getElementById('selfie-distance-text');
         const radiusBadge = document.getElementById('selfie-radius-badge');
         const accEl = document.getElementById('selfie-accuracy-text');
         const locContainer = document.getElementById('location-bar-container');
         const locIcon = document.getElementById('location-bar-icon');
+        const formIsMocked = document.getElementById('form-is-mocked');
+
+        const evalResult = AntiFakeGpsGuard.evaluate(pos);
+        if (evalResult.isMock) {
+            userCoords.latitude = pos.coords ? pos.coords.latitude : null;
+            userCoords.longitude = pos.coords ? pos.coords.longitude : null;
+            userCoords.accuracy = Math.round((pos.coords && pos.coords.accuracy) ? pos.coords.accuracy : 0);
+            userCoords.isMocked = 1;
+            userCoords.mockReason = evalResult.reason;
+
+            gpsStatus = 'fake_gps';
+            if (formIsMocked) formIsMocked.value = '1';
+
+            if (distEl) distEl.textContent = 'Lokasi palsu terdeteksi · Presensi diblokir';
+            if (radiusBadge) {
+                radiusBadge.textContent = 'Fake GPS';
+                radiusBadge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-rose-500 text-white shadow-xs';
+            }
+            if (locContainer) locContainer.className = 'flex items-center justify-between min-h-[52px] rounded-[22px] bg-rose-950/40 px-4 py-2 border border-rose-500/40 my-1 transition-all cursor-pointer hover:bg-rose-950/50';
+            if (locIcon) locIcon.setAttribute('stroke', '#FF5A4D');
+            if (accEl) accEl.textContent = `±${userCoords.accuracy} m (Tiruan)`;
+
+            updateStatusBadges();
+            updateShutterVisuals();
+
+            if (window.openFakeGpsModal) {
+                window.openFakeGpsModal(evalResult.reason);
+            }
+            return;
+        }
+
+        // Clean real GPS fix
+        userCoords.latitude = pos.coords.latitude;
+        userCoords.longitude = pos.coords.longitude;
+        userCoords.accuracy = Math.round(pos.coords.accuracy);
+        userCoords.isMocked = 0;
+        userCoords.mockReason = null;
+        if (formIsMocked) formIsMocked.value = '0';
+
+        if (accEl) accEl.textContent = `±${userCoords.accuracy} m`;
+
+        // Check iPhone / WebKit Precise Location Threshold (80m)
+        if (userCoords.accuracy > 80) {
+            gpsStatus = 'weak_accuracy';
+            if (distEl) distEl.textContent = `Akurasi Rendah (±${userCoords.accuracy}m) · Ketuk Bantuan`;
+            if (radiusBadge) {
+                radiusBadge.textContent = 'Akurasi Lemah';
+                radiusBadge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-[#FFF1D6] text-[#7A4B00] shadow-xs';
+            }
+            if (locContainer) locContainer.className = 'flex items-center justify-between min-h-[52px] rounded-[22px] bg-[#FFF1D6]/15 px-4 py-2 border border-[#FFF1D6]/35 my-1 transition-all cursor-pointer hover:bg-[#FFF1D6]/20';
+            if (locIcon) locIcon.setAttribute('stroke', '#F59E0B');
+        } else {
+            gpsStatus = 'locked';
+            const dist = calculateDistanceM(userCoords.latitude, userCoords.longitude, targetLat, targetLng);
+
+            if (dist <= targetRadius) {
+                if (distEl) distEl.textContent = `${dist} m dari kantor (Batas: ${targetRadius} m)`;
+                if (radiusBadge) {
+                    radiusBadge.textContent = 'Di Dalam Radius';
+                    radiusBadge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-[#C6F26B] text-[#0B2B25] shadow-xs';
+                }
+                if (locContainer) locContainer.className = 'flex items-center justify-between min-h-[52px] rounded-[22px] bg-white/[0.08] px-4 py-2 border border-white/10 my-1 transition-all cursor-pointer hover:bg-white/[0.12]';
+                if (locIcon) locIcon.setAttribute('stroke', '#C6F26B');
+            } else {
+                if (distEl) distEl.textContent = `${dist} m dari kantor (Batas: ${targetRadius} m)`;
+                if (radiusBadge) {
+                    radiusBadge.textContent = `Luar Radius (${dist}m)`;
+                    radiusBadge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-[#FFF1D6] text-[#7A4B00] shadow-xs';
+                }
+                if (locContainer) locContainer.className = 'flex items-center justify-between min-h-[52px] rounded-[22px] bg-[#FFF1D6]/15 px-4 py-2 border border-[#FFF1D6]/35 my-1 transition-all cursor-pointer hover:bg-[#FFF1D6]/20';
+                if (locIcon) locIcon.setAttribute('stroke', '#F59E0B');
+            }
+        }
+
+        updateStatusBadges();
+        updateShutterVisuals();
+    }
+
+    function handleLocationError(err) {
+        const distEl = document.getElementById('selfie-distance-text');
+        const radiusBadge = document.getElementById('selfie-radius-badge');
+        const locContainer = document.getElementById('location-bar-container');
+        const locIcon = document.getElementById('location-bar-icon');
+
+        userCoords.latitude = null;
+        userCoords.longitude = null;
+
+        if (err.code === 1) { // PERMISSION_DENIED
+            gpsStatus = 'denied';
+            if (distEl) distEl.textContent = 'Izin Lokasi Ditolak · Ketuk Bantuan';
+            if (radiusBadge) {
+                radiusBadge.textContent = 'Izin Ditolak';
+                radiusBadge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-rose-500 text-white shadow-xs';
+            }
+            if (locContainer) locContainer.className = 'flex items-center justify-between min-h-[52px] rounded-[22px] bg-rose-950/40 px-4 py-2 border border-rose-500/40 my-1 transition-all cursor-pointer hover:bg-rose-950/50';
+            if (locIcon) locIcon.setAttribute('stroke', '#FF5A4D');
+        } else if (err.code === 2) { // POSITION_UNAVAILABLE
+            gpsStatus = 'unavailable';
+            if (distEl) distEl.textContent = 'Sinyal GPS Tidak Tersedia';
+        } else { // TIMEOUT
+            gpsStatus = 'searching';
+            if (distEl) distEl.textContent = 'Mencari sinyal satelit GPS...';
+        }
+
+        updateStatusBadges();
+        updateShutterVisuals();
+    }
+
+    let locationWatchId = null;
+
+    // Geolocation watcher with realtime distance calculation & iPhone Precise Location detection
+    function watchStudentLocation() {
+        const distEl = document.getElementById('selfie-distance-text');
 
         if (!navigator.geolocation) {
             gpsStatus = 'unavailable';
@@ -595,92 +859,63 @@
             return;
         }
 
-        navigator.geolocation.watchPosition(
-            (pos) => {
-                userCoords.latitude = pos.coords.latitude;
-                userCoords.longitude = pos.coords.longitude;
-                userCoords.accuracy = Math.round(pos.coords.accuracy);
-                // pos.mocked exists on Android; on iOS it is undefined, handled safely
-                userCoords.isMocked = (pos.mocked || userCoords.accuracy === 0) ? 1 : 0;
+        if (locationWatchId !== null) {
+            navigator.geolocation.clearWatch(locationWatchId);
+        }
 
-                // Trigger Fake GPS Screen if mock location is active
-                if (userCoords.isMocked) {
-                    if (window.openFakeGpsModal) window.openFakeGpsModal();
-                    return;
-                }
-
-                if (accEl) accEl.textContent = `±${userCoords.accuracy} m`;
-
-                // Check iPhone / WebKit Precise Location Threshold (80m)
-                if (userCoords.accuracy > 80) {
-                    gpsStatus = 'weak_accuracy';
-                    if (distEl) distEl.textContent = `Akurasi Rendah (±${userCoords.accuracy}m) · Ketuk Bantuan`;
-                    if (radiusBadge) {
-                        radiusBadge.textContent = 'Akurasi Lemah';
-                        radiusBadge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-[#FFF1D6] text-[#7A4B00] shadow-xs';
-                    }
-                    if (locContainer) locContainer.className = 'flex items-center justify-between min-h-[52px] rounded-[22px] bg-[#FFF1D6]/15 px-4 py-2 border border-[#FFF1D6]/35 my-1 transition-all cursor-pointer hover:bg-[#FFF1D6]/20';
-                    if (locIcon) locIcon.setAttribute('stroke', '#F59E0B');
-                } else {
-                    gpsStatus = 'locked';
-                    const dist = calculateDistanceM(userCoords.latitude, userCoords.longitude, targetLat, targetLng);
-
-                    if (dist <= targetRadius) {
-                        if (distEl) distEl.textContent = `${dist} m dari kantor (Batas: ${targetRadius} m)`;
-                        if (radiusBadge) {
-                            radiusBadge.textContent = 'Di Dalam Radius';
-                            radiusBadge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-[#C6F26B] text-[#0B2B25] shadow-xs';
-                        }
-                        if (locContainer) locContainer.className = 'flex items-center justify-between min-h-[52px] rounded-[22px] bg-white/[0.08] px-4 py-2 border border-white/10 my-1 transition-all cursor-pointer hover:bg-white/[0.12]';
-                        if (locIcon) locIcon.setAttribute('stroke', '#C6F26B');
-                    } else {
-                        if (distEl) distEl.textContent = `${dist} m dari kantor (Batas: ${targetRadius} m)`;
-                        if (radiusBadge) {
-                            radiusBadge.textContent = `Luar Radius (${dist}m)`;
-                            radiusBadge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-[#FFF1D6] text-[#7A4B00] shadow-xs';
-                        }
-                        if (locContainer) locContainer.className = 'flex items-center justify-between min-h-[52px] rounded-[22px] bg-[#FFF1D6]/15 px-4 py-2 border border-[#FFF1D6]/35 my-1 transition-all cursor-pointer hover:bg-[#FFF1D6]/20';
-                        if (locIcon) locIcon.setAttribute('stroke', '#F59E0B');
-                    }
-                }
-
-                updateStatusBadges();
-                updateShutterVisuals();
-            },
-            (err) => {
-                userCoords.latitude = null;
-                userCoords.longitude = null;
-
-                if (err.code === 1) { // PERMISSION_DENIED
-                    gpsStatus = 'denied';
-                    if (distEl) distEl.textContent = 'Izin Lokasi Ditolak · Ketuk Bantuan';
-                    if (radiusBadge) {
-                        radiusBadge.textContent = 'Izin Ditolak';
-                        radiusBadge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-rose-500 text-white shadow-xs';
-                    }
-                    if (locContainer) locContainer.className = 'flex items-center justify-between min-h-[52px] rounded-[22px] bg-rose-950/40 px-4 py-2 border border-rose-500/40 my-1 transition-all cursor-pointer hover:bg-rose-950/50';
-                    if (locIcon) locIcon.setAttribute('stroke', '#FF5A4D');
-                } else if (err.code === 2) { // POSITION_UNAVAILABLE
-                    gpsStatus = 'unavailable';
-                    if (distEl) distEl.textContent = 'Sinyal GPS Tidak Tersedia';
-                } else { // TIMEOUT
-                    gpsStatus = 'searching';
-                    if (distEl) distEl.textContent = 'Mencari sinyal satelit GPS...';
-                }
-
-                updateStatusBadges();
-                updateShutterVisuals();
-            },
+        locationWatchId = navigator.geolocation.watchPosition(
+            (pos) => handleLocationUpdate(pos),
+            (err) => handleLocationError(err),
             { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
         );
     }
+
+    // Exposed helpers for modal retry and tester simulation
+    window.triggerLocationCheck = function() {
+        AntiFakeGpsGuard.reset();
+        userCoords.isMocked = 0;
+        userCoords.mockReason = null;
+        gpsStatus = 'searching';
+
+        const distEl = document.getElementById('selfie-distance-text');
+        if (distEl) distEl.textContent = 'Mengalibrasi ulang sinyal GPS...';
+        updateStatusBadges();
+        updateShutterVisuals();
+
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (pos) => handleLocationUpdate(pos),
+                (err) => handleLocationError(err),
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+        }
+    };
+
+    window.simulateFakeGps = function(reason = 'Simulasi pengujian Fake GPS aktif') {
+        const dummyPos = {
+            coords: {
+                latitude: targetLat,
+                longitude: targetLng,
+                accuracy: 0,
+                mocked: true
+            },
+            mocked: true
+        };
+        handleLocationUpdate(dummyPos);
+    };
 
     document.addEventListener('DOMContentLoaded', function() {
         @if(!$todayAttendance)
             startLiveCamera();
             watchStudentLocation();
-            updateStatusBadges();
-            updateShutterVisuals();
+
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('test_fake_gps') === '1' || urlParams.get('mock') === '1') {
+                window.simulateFakeGps('Mode Uji / Simulasi Deteksi Fake GPS Aktif (?test_fake_gps=1)');
+            } else {
+                updateStatusBadges();
+                updateShutterVisuals();
+            }
         @endif
     });
 </script>

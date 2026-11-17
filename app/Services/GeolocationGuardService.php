@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Company;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 class GeolocationGuardService
@@ -69,21 +70,56 @@ class GeolocationGuardService
      */
     public function detectMockLocation(array $data, ?string $userAgent = null): bool
     {
-        // 1. Explicit client flag (supported by modern mobile web / Android WebView wrappers)
+        // 1. Explicit client flag (supported by client anti-spoof guard or Android WebView/Cordova wrappers)
         if (!empty($data['is_mocked']) || !empty($data['is_mock_detected'])) {
+            Log::warning('[GeolocationGuard] Mock location flagged by client', [
+                'latitude' => $data['latitude'] ?? null,
+                'longitude' => $data['longitude'] ?? null,
+                'accuracy' => $data['accuracy'] ?? null,
+                'user_agent' => $userAgent,
+            ]);
             return true;
         }
 
-        // 2. Suspicious 0-meter accuracy with non-zero lat/lng (typical fake GPS app artifact)
-        if (isset($data['accuracy']) && (float) $data['accuracy'] === 0.0 && !empty($data['latitude'])) {
+        // 2. Suspicious 0-meter or negative accuracy with non-zero lat/lng (typical fake GPS app artifact)
+        if (isset($data['accuracy']) && (float) $data['accuracy'] <= 0.0 && !empty($data['latitude'])) {
+            Log::warning('[GeolocationGuard] Mock location detected via zero or negative accuracy', [
+                'accuracy' => $data['accuracy'],
+                'latitude' => $data['latitude'] ?? null,
+                'longitude' => $data['longitude'] ?? null,
+            ]);
             return true;
         }
 
-        // 3. Obvious emulator / developer instrumentation artifacts in User Agent if present
+        // 3. Implausibly corrupt accuracy value (> 10,000 meters)
+        if (isset($data['accuracy']) && (float) $data['accuracy'] > 10000.0) {
+            Log::warning('[GeolocationGuard] Mock location detected via implausible accuracy', [
+                'accuracy' => $data['accuracy'],
+            ]);
+            return true;
+        }
+
+        // 4. Null Island coordinates (0.0, 0.0)
+        if (isset($data['latitude'], $data['longitude']) && (float) $data['latitude'] === 0.0 && (float) $data['longitude'] === 0.0) {
+            Log::warning('[GeolocationGuard] Mock location detected via Null Island coordinates (0,0)');
+            return true;
+        }
+
+        // 5. Obvious emulator / developer instrumentation artifacts in User Agent if present
         if ($userAgent) {
             $uaLower = strtolower($userAgent);
-            if (str_contains($uaLower, 'fakegps') || str_contains($uaLower, 'mocklocation')) {
-                return true;
+            $emulatorKeywords = [
+                'fakegps', 'mocklocation', 'bluestacks', 'nox', 'genymotion',
+                'headlesstron', 'selenium', 'puppeteer', 'phantomjs', 'playwright',
+            ];
+            foreach ($emulatorKeywords as $keyword) {
+                if (str_contains($uaLower, $keyword)) {
+                    Log::warning('[GeolocationGuard] Mock location detected via emulator User-Agent signature', [
+                        'keyword' => $keyword,
+                        'user_agent' => $userAgent,
+                    ]);
+                    return true;
+                }
             }
         }
 

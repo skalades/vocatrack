@@ -153,7 +153,7 @@ class EmergencySosMultiChannelTest extends TestCase
         $channels = $notification->via($this->teacherUser);
 
         $this->assertContains('database', $channels);
-        $this->assertContains('mail', $channels);
+        $this->assertNotContains('mail', $channels, 'SOS sengaja ditiadakan dari email agar tidak terhambat kendala SMTP');
         $this->assertContains(WhatsAppChannel::class, $channels);
 
         $waMessage = $notification->toWhatsApp($this->teacherUser);

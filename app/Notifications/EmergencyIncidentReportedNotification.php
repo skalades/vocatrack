@@ -20,7 +20,9 @@ class EmergencyIncidentReportedNotification extends Notification
 
     public function via(object $notifiable): array
     {
-        return ['database', 'mail', WhatsAppChannel::class];
+        // SOS darurat secara khusus hanya disalurkan via database (portal alert) dan WhatsApp (real-time chat)
+        // Mail sengaja ditiadakan agar pengiriman SOS tidak terhambat bila ada kendala SMTP
+        return ['database', WhatsAppChannel::class];
     }
 
     public function getNotificationType(): string
@@ -51,15 +53,27 @@ class EmergencyIncidentReportedNotification extends Notification
         $studentName = $this->incidentReport->studentPkl?->student?->user?->name ?? 'Siswa PKL';
         $companyName = $this->incidentReport->studentPkl?->company?->name ?? 'DU/DI Terkait';
         $urgencyLabel = strtoupper($this->incidentReport->urgency);
-        $url = route('guru.incidents', ['incident_id' => $this->incidentReport->id]);
+        $teacherName = $this->incidentReport->studentPkl?->teacher?->user?->name;
 
-        return "🚨 *[VokaTrack — LAPORAN DARURAT SOS]*\n"
+        $isAdmin = ($notifiable->role ?? null) === 'admin-sekolah';
+        $url = $isAdmin
+            ? route('adminsekolah.incidents')
+            : route('guru.incidents', ['incident_id' => $this->incidentReport->id]);
+
+        $text = "🚨 *[VokaTrack — LAPORAN DARURAT SOS]*\n"
             . "Tingkat: *{$urgencyLabel}*\n"
             . "Siswa: {$studentName}\n"
             . "DU/DI: {$companyName}\n"
+            . "Guru Pembimbing: " . ($teacherName ?: '⚠️ Belum dialokasikan') . "\n"
             . "Subjek: {$this->incidentReport->subject}\n"
             . "Keterangan: {$this->incidentReport->description}\n\n"
             . "Tinjau di portal:\n{$url}";
+
+        if ($isAdmin && empty($teacherName)) {
+            $text .= "\n\n⚠️ *Perhatian Admin Sekolah:* Siswa ini belum dialokasikan Guru Pembimbing di sistem. Mohon segera ambil tindakan darurat.";
+        }
+
+        return $text;
     }
 
     public function toArray(object $notifiable): array

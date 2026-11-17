@@ -13,6 +13,7 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -150,6 +151,11 @@ class IncidentReportService
         $teacherUser = $spkl->teacher?->user;
         if ($teacherUser) {
             $teacherUser->notify($notification);
+            if (empty($teacherUser->formatted_wa_number)) {
+                Log::warning("[IncidentReportService] SOS Darurat #{$report->id}: Guru pembimbing ({$teacherUser->name}) belum memiliki nomor WhatsApp terdaftar. Notifikasi WhatsApp hanya terkirim jika nomor terdaftar.");
+            }
+        } else {
+            Log::warning("[IncidentReportService] SOS Darurat #{$report->id}: Siswa {$spkl->student?->user?->name} belum dialokasikan Guru Pembimbing (teacher_id NULL). Peringatan dialihkan ke Admin Sekolah.");
         }
 
         // 2. Notify school admins

@@ -138,7 +138,11 @@ class GeolocationAndNotificationTest extends TestCase
         // 2. Mock GPS detection
         $this->assertTrue($service->detectMockLocation(['is_mocked' => 1]));
         $this->assertTrue($service->detectMockLocation(['accuracy' => 0.0, 'latitude' => -6.2]));
-        $this->assertFalse($service->detectMockLocation(['accuracy' => 20.0, 'latitude' => -6.2]));
+        $this->assertTrue($service->detectMockLocation(['accuracy' => -5.0, 'latitude' => -6.2]));
+        $this->assertTrue($service->detectMockLocation(['latitude' => 0.0, 'longitude' => 0.0]));
+        $this->assertTrue($service->detectMockLocation(['accuracy' => 15000.0]));
+        $this->assertTrue($service->detectMockLocation(['accuracy' => 20.0, 'latitude' => -6.2], 'Mozilla/5.0 (Linux; Android 10; FakeGPS App)'));
+        $this->assertFalse($service->detectMockLocation(['accuracy' => 20.0, 'latitude' => -6.2], 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X)'));
     }
 
     public function test_checkin_blocks_weak_gps_accuracy_over_threshold(): void
