@@ -93,9 +93,8 @@ async function connectToWhatsApp() {
                 lastError = lastDisconnect?.error?.message || 'Koneksi terputus';
                 connectedUser = null;
 
-                const isQrTimeout = lastDisconnect?.error?.message?.includes('QR refs attempts ended');
-                if (statusCode === 408 && isQrTimeout) {
-                    console.log('[VokaTrack WA Gateway] QR Code kedaluwarsa (5x belum di-scan). Reset sesi QR baru...');
+                if (statusCode === 408) {
+                    console.log('[VokaTrack WA Gateway] QR Code kedaluwarsa / timeout. Mengambil QR Code baru dalam 2 detik...');
                     try {
                         fs.rmSync(AUTH_DIR, { recursive: true, force: true });
                     } catch (e) {}
