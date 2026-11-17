@@ -51,6 +51,10 @@ class PlatformSetting extends Model
         Cache::forget("platform_setting_{$key}");
         Cache::forget("platform_system_logo_url");
 
+        if (in_array($key, ['system_logo', 'platform_name', 'platform_tagline'])) {
+            static::syncPwaManifest();
+        }
+
         return $setting;
     }
 
@@ -101,6 +105,10 @@ class PlatformSetting extends Model
 
         Cache::forget("platform_setting_{$key}");
         Cache::forget("platform_system_logo_url");
+
+        if (in_array($key, ['system_logo', 'platform_name', 'platform_tagline'])) {
+            static::syncPwaManifest();
+        }
     }
 
     /**
@@ -121,6 +129,50 @@ class PlatformSetting extends Model
             });
         } catch (\Throwable) {
             return asset('images/logo.png');
+        }
+    }
+
+    /**
+     * Sinkronkan manifest PWA (manifest.webmanifest) dengan logo dan nama platform sistem.
+     * Bila superadmin telah mengunggah logo kustom, gunakan logo tersebut.
+     */
+    public static function syncPwaManifest(): void
+    {
+        try {
+            $logoUrl = static::getLogoUrl();
+            $appName = static::get('platform_name', 'VokaTrack');
+            $description = static::get('platform_tagline', 'Presensi selfie, jurnal harian, dan laporan PKL untuk siswa SMK.');
+
+            $manifest = [
+                'id' => '/siswa/beranda',
+                'name' => "{$appName} Siswa — Presensi & Jurnal PKL",
+                'short_name' => $appName,
+                'description' => $description,
+                'lang' => 'id',
+                'start_url' => '/siswa/beranda?source=pwa',
+                'scope' => '/',
+                'display' => 'standalone',
+                'orientation' => 'portrait',
+                'background_color' => '#F1F4EC',
+                'theme_color' => '#0B2B25',
+                'categories' => ['education', 'productivity'],
+                'icons' => [
+                    ['src' => $logoUrl, 'sizes' => '192x192', 'type' => 'image/png', 'purpose' => 'any'],
+                    ['src' => $logoUrl, 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'any'],
+                    ['src' => $logoUrl, 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'maskable'],
+                    ['src' => '/icons/icon-192.png', 'sizes' => '192x192', 'type' => 'image/png', 'purpose' => 'any'],
+                    ['src' => '/icons/icon-512.png', 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'any'],
+                ],
+                'shortcuts' => [
+                    ['name' => 'Presensi', 'url' => '/siswa/absensi', 'icons' => [['src' => $logoUrl, 'sizes' => '192x192']]],
+                    ['name' => 'Jurnal Harian', 'url' => '/siswa/jurnal', 'icons' => [['src' => $logoUrl, 'sizes' => '192x192']]],
+                ],
+            ];
+
+            $manifestPath = public_path('manifest.webmanifest');
+            @file_put_contents($manifestPath, json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('PlatformSetting: Gagal sinkronisasi PWA manifest: ' . $e->getMessage());
         }
     }
 }

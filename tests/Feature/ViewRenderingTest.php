@@ -167,4 +167,26 @@ class ViewRenderingTest extends TestCase
             $this->actingAs($student)->get(route('notifications.index'))->assertStatus(200)->assertSee('Pusat Pemberitahuan');
         }
     }
+
+    public function test_error_views_render_with_brand_theme(): void
+    {
+        $v503 = view('errors.503')->render();
+        $this->assertStringContainsString('Sistem Sedang Dalam Pemeliharaan', $v503);
+        $this->assertStringContainsString('bg-[#F1F4EC]', $v503);
+        $this->assertStringContainsString('text-[#C6F26B]', $v503);
+        $this->assertStringContainsString('Kembali ke Beranda', $v503);
+
+        $v404 = view('errors.404')->render();
+        $this->assertStringContainsString('Halaman Tidak Ditemukan', $v404);
+        $this->assertStringContainsString('bg-[#F1F4EC]', $v404);
+
+        $v403 = view('errors.403', ['exception' => new \Exception('Akses Dibatasi')])->render();
+        $this->assertStringContainsString('Akses Dibatasi atau Ditolak', $v403);
+
+        $v419 = view('errors.419')->render();
+        $this->assertStringContainsString('Sesi Keamanan Kedaluwarsa', $v419);
+
+        $v500 = view('errors.500')->render();
+        $this->assertStringContainsString('Terjadi Gangguan pada Server', $v500);
+    }
 }

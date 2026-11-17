@@ -553,17 +553,24 @@ function bindInstallPrompt() {
         deferred = e;
         if (dismissed() || document.getElementById('vt-install-chip')) return;
 
+        const appLogo = document.body?.dataset?.appLogo || '/icons/icon-192.png';
+        const appName = document.body?.dataset?.appName || 'VokaTrack';
+
         const chip = document.createElement('div');
         chip.id = 'vt-install-chip';
         chip.className = 'fixed top-4 left-1/2 -translate-x-1/2 z-35 w-[calc(100%-32px)] max-w-[380px] bg-white text-[#10211D] border border-slate-200/90 rounded-2xl shadow-[0_12px_32px_rgba(0,0,0,0.18)] p-3 flex items-center gap-3 backdrop-blur-md transition-all duration-300 animate-in fade-in slide-in-from-top-2';
         chip.innerHTML = `
-            <img src="/icons/icon-192.png" alt="" class="w-10 h-10 rounded-xl shrink-0 shadow-xs">
+            <div class="w-10 h-10 rounded-xl bg-[#0B2B25]/5 p-1 flex items-center justify-center shrink-0 border border-slate-200/60 overflow-hidden">
+                <img src="${appLogo}" alt="${appName}" class="w-full h-full object-contain">
+            </div>
             <div class="flex-1 min-w-0">
-                <p class="text-xs font-bold text-[#10211D]">Pasang VokaTrack di HP</p>
+                <p class="text-xs font-bold text-[#10211D]">Pasang ${appName} di HP</p>
                 <p class="text-[11px] text-[#5A6B65]">Buka lebih cepat & tetap bisa isi jurnal tanpa sinyal.</p>
             </div>
-            <button type="button" data-install="yes" class="px-3 h-9 rounded-xl bg-[#0B2B25] hover:bg-[#12382F] active:scale-95 text-white text-[11px] font-bold transition-all cursor-pointer">Pasang</button>
-            <button type="button" data-install="no" aria-label="Tutup" class="w-7 h-7 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 active:scale-90 flex items-center justify-center transition-all cursor-pointer">✕</button>`;
+            <button type="button" data-install="yes" class="px-3 h-9 rounded-xl bg-[#0B2B25] hover:bg-[#12382F] active:scale-95 text-[#C6F26B] text-[11px] font-bold transition-all cursor-pointer">Pasang</button>
+            <button type="button" data-install="no" aria-label="Tutup" class="w-7 h-7 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 active:scale-90 flex items-center justify-center transition-all cursor-pointer">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>`;
         body.appendChild(chip);
 
         const syncModalVisibility = () => {

@@ -31,6 +31,16 @@ use Illuminate\Support\Facades\Route;
 // Guest Routes
 Route::get('/', [LandingController::class, 'index'])->name('landing');
 
+// PWA Web Manifest (Tersinkronisasi otomatis dengan logo & identitas sistem)
+Route::get('/manifest.webmanifest', function () {
+    \App\Models\PlatformSetting::syncPwaManifest();
+    $manifest = json_decode(@file_get_contents(public_path('manifest.webmanifest')), true) ?: [];
+    return response()->json($manifest, 200, [
+        'Content-Type' => 'application/manifest+json; charset=utf-8',
+        'Cache-Control' => 'no-cache, private',
+    ]);
+})->name('pwa.manifest');
+
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [AuthController::class, 'login'])->name('login.post');
 Route::match(['get', 'post'], '/logout', [AuthController::class, 'logout'])->name('logout');

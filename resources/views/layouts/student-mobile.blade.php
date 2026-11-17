@@ -8,13 +8,13 @@
     <link rel="icon" type="image/png" href="{{ $systemLogo ?? asset('images/logo.png') }}">
 
     <!-- PWA: dapat dipasang di HP & tetap bisa mengisi jurnal tanpa sinyal -->
-    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="manifest" href="/manifest.webmanifest?v={{ substr(md5($systemLogo ?? 'v1'), 0, 8) }}">
     <meta name="theme-color" content="#0B2B25">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="VokaTrack">
-    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+    <meta name="apple-mobile-web-app-title" content="{{ $systemName ?? 'VokaTrack' }}">
+    <link rel="apple-touch-icon" href="{{ $systemLogo ?? asset('icons/apple-touch-icon.png') }}">
 
     <!-- Google Fonts: Plus Jakarta Sans & Space Grotesk -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -46,6 +46,8 @@
 </head>
 <body data-app="student"
       data-user-id="{{ auth()->id() }}"
+      data-app-logo="{{ $systemLogo ?? asset('images/logo.png') }}"
+      data-app-name="{{ $systemName ?? 'VokaTrack' }}"
       data-journal-store-url="{{ route('student.journal.store') }}"
       data-app-timezone="{{ config('app.timezone') }}"
       class="min-h-screen bg-slate-200/80 antialiased selection:bg-[#C6F26B] selection:text-[#0B2B25] flex justify-center">

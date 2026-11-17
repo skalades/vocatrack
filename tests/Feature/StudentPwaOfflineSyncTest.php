@@ -168,8 +168,36 @@ class StudentPwaOfflineSyncTest extends TestCase
         $html = $this->actingAs($this->studentUser)->get(route('student.journals'))->assertOk()->getContent();
 
         $this->assertStringContainsString('rel="manifest"', $html);
+        $this->assertStringContainsString('data-app-logo=', $html);
         $this->assertStringContainsString('data-user-id="' . $this->studentUser->id . '"', $html);
         $this->assertStringContainsString('data-journal-store-url=', $html);
         $this->assertStringContainsString('id="offline-journal-queue"', $html);
+    }
+
+    public function test_pwa_manifest_route_and_branding_sync_with_superadmin_logo(): void
+    {
+        \Illuminate\Support\Facades\Storage::fake('public');
+
+        // 1. Default logo
+        $response = $this->get('/manifest.webmanifest')->assertOk();
+        $this->assertStringContainsString('application/manifest+json', $response->headers->get('Content-Type'));
+        $data = $response->json();
+        $this->assertNotEmpty($data['icons']);
+
+        // 2. Custom logo upload by superadmin
+        $fakeFile = \Illuminate\Http\UploadedFile::fake()->image('custom_logo.png', 200, 200);
+        $path = $fakeFile->storeAs('branding', 'custom_logo.png', 'public');
+        \App\Models\PlatformSetting::set('system_logo', $path);
+
+        $this->artisan('vokatrack:sync-pwa')->assertSuccessful();
+
+        $responseCustom = $this->get('/manifest.webmanifest')->assertOk();
+        $customData = $responseCustom->json();
+        $iconSources = array_column($customData['icons'], 'src');
+        $this->assertStringContainsString('custom_logo.png', $iconSources[0]);
+
+        // 3. Reset logo
+        \App\Models\PlatformSetting::forget('system_logo');
+        $this->artisan('vokatrack:sync-pwa')->assertSuccessful();
     }
 }

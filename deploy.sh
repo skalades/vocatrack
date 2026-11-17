@@ -42,6 +42,7 @@ php artisan optimize
 php artisan view:cache
 php artisan event:cache
 php artisan storage:link --quiet || true
+php artisan vokatrack:sync-pwa || true
 
 echo "🔒 [7/7] Menyesuaikan Izin File (Ownership & Permissions)..."
 chown -R www:www storage bootstrap/cache public/build 2>/dev/null || true

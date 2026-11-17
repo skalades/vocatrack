@@ -143,6 +143,9 @@ class SettingController extends Controller
             PlatformSetting::set('system_logo', $path);
         }
 
+        // Pastikan manifest PWA selalu tersinkronisasi dengan perubahan branding
+        PlatformSetting::syncPwaManifest();
+
         AuditLogService::log(
             'settings_update',
             'settings',
