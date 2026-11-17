@@ -679,4 +679,88 @@ class AdminCrudAndSecurityEnhancementTest extends TestCase
             'teacher_id' => $teacher1->id,
         ]);
     }
+
+    public function test_admin_can_export_students_credentials_filtered_by_major(): void
+    {
+        $major1 = Major::create(['school_id' => $this->school->id, 'name' => 'Rekayasa Perangkat Lunak', 'code' => 'RPL']);
+        $major2 = Major::create(['school_id' => $this->school->id, 'name' => 'Teknik Komputer Jaringan', 'code' => 'TKJ']);
+
+        $class1 = SchoolClass::create(['school_id' => $this->school->id, 'major_id' => $major1->id, 'name' => 'XII RPL 1', 'academic_year' => '2026/2027']);
+        $class2 = SchoolClass::create(['school_id' => $this->school->id, 'major_id' => $major2->id, 'name' => 'XII TKJ 1', 'academic_year' => '2026/2027']);
+
+        // Student in Major 1
+        $u1 = User::create([
+            'school_id' => $this->school->id,
+            'name' => 'Ahmad RPL',
+            'email' => 'ahmad.rpl@test.sch.id',
+            'password' => \Illuminate\Support\Facades\Hash::make('password'),
+            'role' => 'siswa',
+            'is_active' => true,
+        ]);
+        $st1 = Student::create([
+            'user_id' => $u1->id,
+            'class_id' => $class1->id,
+            'nis' => '1001',
+            'nisn' => '0012345678',
+        ]);
+
+        // Student in Major 2
+        $u2 = User::create([
+            'school_id' => $this->school->id,
+            'name' => 'Budi TKJ',
+            'email' => 'budi.tkj@test.sch.id',
+            'password' => \Illuminate\Support\Facades\Hash::make('password'),
+            'role' => 'siswa',
+            'is_active' => true,
+        ]);
+        $st2 = Student::create([
+            'user_id' => $u2->id,
+            'class_id' => $class2->id,
+            'nis' => '1002',
+            'nisn' => '0098765432',
+        ]);
+
+        // 1. Export without filter (Semua Jurusan)
+        $resAll = $this->actingAs($this->adminUser)->get(route('adminsekolah.students.export'));
+        $resAll->assertOk();
+        $resAll->assertHeader('content-type', 'text/csv; charset=UTF-8');
+        $contentAll = $resAll->streamedContent();
+        $this->assertStringContainsString('Ahmad RPL', $contentAll);
+        $this->assertStringContainsString('Budi TKJ', $contentAll);
+        $this->assertStringContainsString('password', $contentAll);
+        $this->assertStringContainsString('0012345678', $contentAll);
+        $this->assertStringContainsString('Tautan Monitoring Orang Tua', $contentAll);
+        $this->assertStringContainsString('/pantau/', $contentAll);
+
+        // 2. Export filtered by Major 1 (RPL)
+        $resRpl = $this->actingAs($this->adminUser)->get(route('adminsekolah.students.export', ['major_id' => $major1->id]));
+        $resRpl->assertOk();
+        $contentRpl = $resRpl->streamedContent();
+        $this->assertStringContainsString('Ahmad RPL', $contentRpl);
+        $this->assertStringNotContainsString('Budi TKJ', $contentRpl);
+        $this->assertStringContainsString('Rekayasa Perangkat Lunak', $contentRpl);
+
+        // 3. Multi-tenant: Other school admin cannot see these students
+        $otherSchool = School::create([
+            'name' => 'SMK Luar',
+            'npsn' => '99999999',
+            'address' => 'Jl. Pendidikan No. 1',
+            'phone' => '021-123456',
+            'email' => 'admin@smkluar.sch.id',
+            'is_active' => true,
+        ]);
+        $otherAdmin = User::create([
+            'school_id' => $otherSchool->id,
+            'name' => 'Other Admin',
+            'email' => 'otheradmin@luar.sch.id',
+            'password' => \Illuminate\Support\Facades\Hash::make('password'),
+            'role' => 'admin-sekolah',
+            'is_active' => true,
+        ]);
+        $resOther = $this->actingAs($otherAdmin)->get(route('adminsekolah.students.export'));
+        $resOther->assertOk();
+        $contentOther = $resOther->streamedContent();
+        $this->assertStringNotContainsString('Ahmad RPL', $contentOther);
+        $this->assertStringNotContainsString('Budi TKJ', $contentOther);
+    }
 }

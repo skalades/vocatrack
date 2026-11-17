@@ -265,23 +265,31 @@
 
 <!-- Modal Detail Jurnal Siswa -->
 <div id="modal-journal-detail" onclick="if(event.target === this) closeJournalDetail()" 
-     class="hidden fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-3.5 sm:p-4 animate-in fade-in duration-200">
-    <div class="bg-white w-full max-w-sm sm:max-w-md rounded-3xl shadow-2xl max-h-[86vh] flex flex-col border border-slate-100 overflow-hidden my-auto transform animate-in zoom-in-95 duration-200">
+     class="hidden fixed inset-0 z-[85] bg-slate-900/60 backdrop-blur-xs flex flex-col justify-start sm:justify-center items-center p-3 pt-14 sm:pt-16 transition-all">
+    <div class="bg-white w-full max-w-[400px] rounded-3xl shadow-2xl max-h-[85vh] flex flex-col border border-slate-200/80 overflow-hidden my-auto transform animate-in zoom-in-95 duration-200">
         
         <!-- Modal Sticky Header -->
-        <div class="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between gap-2 shrink-0 bg-white">
-            <div class="flex items-center gap-2 min-w-0">
-                <span id="jd-status-badge" class="text-[11px] font-bold px-2.5 py-0.5 rounded-full shrink-0"></span>
-                <span id="jd-date" class="text-xs font-bold text-[#10211D] truncate"></span>
+        <div class="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between shrink-0 bg-white">
+            <div class="flex items-center space-x-2.5 min-w-0 flex-1 pr-2">
+                <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-[#EBF6F0] text-[#0F7A66] flex items-center justify-center font-bold text-xs shrink-0">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                </div>
+                <div class="min-w-0 flex-1">
+                    <h3 class="text-xs sm:text-sm font-extrabold text-[#10211D] truncate leading-tight font-space">Detail Jurnal PKL</h3>
+                    <div class="flex items-center gap-1.5 mt-0.5 truncate">
+                        <span id="jd-date" class="text-[10px] sm:text-[11px] text-slate-400 font-medium truncate"></span>
+                        <span id="jd-status-badge" class="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0"></span>
+                    </div>
+                </div>
             </div>
-            <button type="button" onclick="closeJournalDetail()" title="Tutup" 
-                    class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-500 hover:text-slate-800 flex items-center justify-center shrink-0 transition-colors cursor-pointer">
-                <svg class="w-4 h-4 stroke-[2.5]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+            <button type="button" onclick="closeJournalDetail()" aria-label="Tutup" 
+                    class="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer shrink-0">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
         </div>
 
         <!-- Modal Body (Scrollable) -->
-        <div class="overflow-y-auto px-5 py-4 space-y-4 custom-scrollbar flex-1">
+        <div class="overflow-y-auto p-4 sm:p-5 space-y-3.5 custom-scrollbar flex-1">
             
             <!-- Reviewer Feedback Callout (if any) -->
             <div id="jd-reviewer-card" class="hidden p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 space-y-1">
@@ -311,13 +319,17 @@
         </div>
 
         <!-- Modal Footer -->
-        <div class="p-3.5 sm:p-4 bg-white border-t border-slate-100 shrink-0 flex items-center gap-2">
-            <button type="button" id="jd-edit-btn" class="hidden flex-1 min-h-[44px] py-2.5 px-4 rounded-2xl bg-[#0B2B25] hover:bg-[#12382F] active:scale-[0.98] text-white text-xs font-bold shadow-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer">
+        <div class="p-4 pt-3 bg-white border-t border-slate-100 shrink-0 flex items-center gap-2.5">
+            <button type="button" id="jd-edit-btn" class="hidden flex-1 h-11 rounded-2xl bg-[#0B2B25] hover:bg-[#12382F] active:scale-[0.98] text-white text-xs sm:text-sm font-bold shadow-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>
                 </svg>
                 <span>Edit Jurnal Ini</span>
             </button>
+            <button type="button" onclick="closeJournalDetail()" class="flex-1 h-11 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs sm:text-sm font-bold active:scale-[0.98] transition-all cursor-pointer">
+                Tutup
+            </button>
+        </div>
             <button type="button" onclick="closeJournalDetail()" class="flex-1 min-h-[44px] py-2.5 px-4 rounded-2xl bg-slate-100 hover:bg-slate-200 active:scale-[0.98] text-[#10211D] text-xs font-bold flex items-center justify-center transition-all cursor-pointer">
                 Tutup
             </button>

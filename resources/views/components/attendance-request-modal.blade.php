@@ -1,18 +1,24 @@
-<!-- Modal Quick Request (Centered Modal Dialog) -->
-<div id="request-modal" onclick="if(event.target === this) closeRequestModal()" class="hidden fixed inset-0 z-[60] bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-3.5 sm:p-4 animate-in fade-in duration-200">
-    <div class="bg-white w-full max-w-sm sm:max-w-md rounded-3xl p-5 sm:p-6 shadow-2xl max-h-[88vh] overflow-y-auto border border-slate-100 animate-in zoom-in-95 duration-200 space-y-4 my-auto custom-scrollbar">
+<!-- Modal Quick Request (Floating Top/Centered Modal Dialog) -->
+<div id="request-modal" onclick="if(event.target === this) closeRequestModal()" class="hidden fixed inset-0 z-[85] bg-slate-900/60 backdrop-blur-xs flex flex-col justify-start sm:justify-center items-center p-3 pt-14 sm:pt-16 transition-all">
+    <div class="bg-white w-full max-w-[400px] rounded-3xl shadow-2xl max-h-[85vh] flex flex-col border border-slate-200/80 overflow-hidden animate-in zoom-in-95 duration-200">
 
-        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
-            <div>
-                <h3 class="text-sm font-extrabold text-[#0B2B25] tracking-tight font-space" id="modal-req-title">Pengajuan Presensi Khusus</h3>
-                <p id="modal-req-hint" class="text-[11px] text-[#0F7A66] font-semibold mt-0.5">Approval: Guru Pembimbing</p>
+        <!-- Header -->
+        <div class="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between shrink-0 bg-white">
+            <div class="flex items-center space-x-2.5 min-w-0 flex-1 pr-2">
+                <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-[#EBF6F0] text-[#0F7A66] flex items-center justify-center font-bold text-xs shrink-0">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                </div>
+                <div class="min-w-0 flex-1">
+                    <h3 class="text-xs sm:text-sm font-extrabold text-[#10211D] truncate leading-tight font-space" id="modal-req-title">Pengajuan Presensi Khusus</h3>
+                    <p id="modal-req-hint" class="text-[10px] sm:text-[11px] text-slate-400 font-medium truncate mt-0.5 leading-tight">Approval: Guru Pembimbing</p>
+                </div>
             </div>
-            <button type="button" onclick="closeRequestModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 hover:text-slate-800 transition-colors cursor-pointer">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+            <button type="button" onclick="closeRequestModal()" aria-label="Tutup" class="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer shrink-0">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
         </div>
 
-        <form action="{{ route('student.request.store') }}" method="POST" enctype="multipart/form-data" class="space-y-3.5">
+        <form action="{{ route('student.request.store') }}" method="POST" enctype="multipart/form-data" class="p-4 sm:p-5 space-y-3.5 overflow-y-auto flex-1 custom-scrollbar">
             @csrf
             <input type="hidden" name="type" id="modal-req-type" value="izin">
 
@@ -48,11 +54,11 @@
                 <p class="text-[10px] text-slate-400 mt-1">Format: JPG, PNG, atau WEBP (Maksimal 2MB)</p>
             </div>
 
-            <div class="flex items-center space-x-2 pt-2 border-t border-slate-100">
-                <button type="button" onclick="closeRequestModal()" class="flex-1 py-3 rounded-2xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 cursor-pointer transition-colors active:scale-95">
+            <div class="flex items-center gap-2.5 pt-2 border-t border-slate-100">
+                <button type="button" onclick="closeRequestModal()" class="flex-1 h-11 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs sm:text-sm font-bold cursor-pointer transition-all active:scale-[0.98]">
                     Batal
                 </button>
-                <button type="submit" class="flex-1 py-3 rounded-2xl bg-[#0B2B25] hover:bg-[#12382F] text-white text-xs font-bold shadow-md shadow-[#0B2B25]/20 cursor-pointer transition-all active:scale-95">
+                <button type="submit" class="flex-1 h-11 rounded-2xl bg-[#0B2B25] hover:bg-[#12382F] text-white text-xs sm:text-sm font-bold shadow-xs cursor-pointer transition-all active:scale-[0.98]">
                     Ajukan Permohonan
                 </button>
             </div>
