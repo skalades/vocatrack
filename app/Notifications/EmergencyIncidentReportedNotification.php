@@ -20,9 +20,14 @@ class EmergencyIncidentReportedNotification extends Notification
 
     public function via(object $notifiable): array
     {
-        // SOS darurat secara khusus hanya disalurkan via database (portal alert) dan WhatsApp (real-time chat)
-        // Mail sengaja ditiadakan agar pengiriman SOS tidak terhambat bila ada kendala SMTP
-        return ['database', WhatsAppChannel::class];
+        // Notifikasi darurat SOS: pesan WhatsApp dikhususkan HANYA untuk Guru Pembimbing
+        // Admin sekolah menerima notifikasi in-app database, kecuali jika bertindak sebagai fallback darurat
+        $role = $notifiable->role ?? null;
+        if ($role === 'guru-pembimbing' || !empty($notifiable->is_emergency_fallback)) {
+            return ['database', WhatsAppChannel::class];
+        }
+
+        return ['database'];
     }
 
     public function getNotificationType(): string

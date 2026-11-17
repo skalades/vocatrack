@@ -1,6 +1,7 @@
 @php
     $studentUser = auth()->user();
     $activeSos = null;
+    $currentSpkl = null;
     if ($studentUser && $studentUser->student) {
         $spklIds = $studentUser->student->studentPkls()->pluck('id');
         $activeSos = \App\Models\IncidentReport::whereIn('student_pkl_id', $spklIds)
@@ -8,7 +9,14 @@
             ->with(['followups.user', 'studentPkl.company', 'studentPkl.teacher.user'])
             ->latest()
             ->first();
+        $currentSpkl = $studentUser->student->studentPkls()
+            ->with(['teacher.user', 'company'])
+            ->latest()
+            ->first();
     }
+    $teacherName = $activeSos?->studentPkl?->teacher?->user?->name 
+        ?? $currentSpkl?->teacher?->user?->name 
+        ?? 'Guru Pembimbing';
 @endphp
 
 <style>
@@ -243,14 +251,10 @@
             <!-- Recipient Dispatch Info Card -->
             <div class="bg-white/15 rounded-[22px] p-4 flex flex-col gap-2.5 backdrop-blur-xs">
                 <div class="flex items-center gap-3">
-                    <div class="flex shrink-0">
-                        <span class="w-[34px] h-[34px] rounded-full bg-white text-[#B42318] border-2 border-[#B42318] flex items-center justify-center text-xs font-bold">GP</span>
-                        <span class="w-[34px] h-[34px] rounded-full bg-white text-[#B42318] border-2 border-[#B42318] flex items-center justify-center text-xs font-bold -ml-2.5">DU</span>
-                        <span class="w-[34px] h-[34px] rounded-full bg-white text-[#B42318] border-2 border-[#B42318] flex items-center justify-center text-xs font-bold -ml-2.5">WL</span>
-                    </div>
+                    <span class="w-[34px] h-[34px] rounded-full bg-white text-[#B42318] border-2 border-[#B42318] flex items-center justify-center text-xs font-black shadow-sm shrink-0">GP</span>
                     <div class="min-w-0">
-                        <span class="text-[13.5px] font-bold block leading-tight">Dikirim ke 3 kontak darurat</span>
-                        <span class="text-xs text-[#FFE1DD]">Guru pembimbing, DUDI, dan wali siswa</span>
+                        <span class="text-[13.5px] font-bold block leading-tight">Dikirim ke WhatsApp Guru Pembimbing</span>
+                        <span class="text-xs text-[#FFE1DD] truncate block">{{ $teacherName }}</span>
                     </div>
                 </div>
                 <div class="flex items-center gap-2 text-xs text-[#FFE1DD] pt-1 border-t border-white/10">
@@ -287,7 +291,7 @@
 
             <p class="text-center text-sm text-[#FFE1DD] max-w-[310px]">
                 Kategori: <strong id="sos-display-cat" class="text-white font-bold">Kecelakaan kerja</strong>.<br>
-                Lokasi langsung dan notifikasi darurat akan segera disiarkan.
+                Lokasi langsung dan notifikasi darurat akan segera dikirim ke Guru Pembimbing.
             </p>
 
             <div class="w-full flex flex-col gap-2 mt-4">
@@ -318,7 +322,7 @@
                 </div>
                 <h2 class="font-space font-bold text-3xl mt-4">SOS terkirim</h2>
                 <p class="text-sm text-[#FFE1DD] mt-1 max-w-[320px]">
-                    Kategori: <strong id="sos-sent-cat-label" class="text-white">Kecelakaan kerja</strong>. Tetap di tempat yang aman, pihak sekolah dan DU/DI sedang dihubungi.
+                    Kategori: <strong id="sos-sent-cat-label" class="text-white">Kecelakaan kerja</strong>. Tetap di tempat yang aman, Guru Pembimbing sedang dihubungi via WhatsApp.
                 </p>
             </div>
 
@@ -333,32 +337,12 @@
                     <span class="text-xs text-[#5A6B65]">Baru saja</span>
                 </div>
 
-                <!-- Recipient 1: Guru -->
+                <!-- Recipient: Guru Pembimbing Only -->
                 <div class="flex items-center gap-3">
                     <span class="w-9 h-9 rounded-full bg-[#FBE4E1] text-[#B42318] flex items-center justify-center font-bold text-xs shrink-0">GP</span>
                     <div class="flex-1 min-w-0">
-                        <span class="font-bold text-sm block leading-tight">Guru Pembimbing</span>
-                        <span class="text-xs text-[#5A6B65]">Sekolah asal</span>
-                    </div>
-                    <span class="bg-[#DDF3EC] text-[#0B5E4E] rounded-full px-2.5 py-1 text-xs font-bold">Terkirim</span>
-                </div>
-
-                <!-- Recipient 2: DU/DI -->
-                <div class="flex items-center gap-3">
-                    <span class="w-9 h-9 rounded-full bg-[#FBE4E1] text-[#B42318] flex items-center justify-center font-bold text-xs shrink-0">DU</span>
-                    <div class="flex-1 min-w-0">
-                        <span class="font-bold text-sm block leading-tight">Pembimbing DU/DI</span>
-                        <span class="text-xs text-[#5A6B65]">Mitra industri</span>
-                    </div>
-                    <span class="bg-[#DDF3EC] text-[#0B5E4E] rounded-full px-2.5 py-1 text-xs font-bold">Terkirim</span>
-                </div>
-
-                <!-- Recipient 3: Wali -->
-                <div class="flex items-center gap-3">
-                    <span class="w-9 h-9 rounded-full bg-[#FBE4E1] text-[#B42318] flex items-center justify-center font-bold text-xs shrink-0">WL</span>
-                    <div class="flex-1 min-w-0">
-                        <span class="font-bold text-sm block leading-tight">Wali Siswa</span>
-                        <span class="text-xs text-[#5A6B65]">Orang tua</span>
+                        <span class="font-bold text-sm block leading-tight">{{ $teacherName }}</span>
+                        <span class="text-xs text-[#5A6B65]">Guru Pembimbing · WhatsApp</span>
                     </div>
                     <span class="bg-[#DDF3EC] text-[#0B5E4E] rounded-full px-2.5 py-1 text-xs font-bold">Terkirim</span>
                 </div>

@@ -158,13 +158,16 @@ class IncidentReportService
             Log::warning("[IncidentReportService] SOS Darurat #{$report->id}: Siswa {$spkl->student?->user?->name} belum dialokasikan Guru Pembimbing (teacher_id NULL). Peringatan dialihkan ke Admin Sekolah.");
         }
 
-        // 2. Notify school admins
+        // 2. Notify school admins (in-app portal alert; WhatsApp only if teacher is unassigned)
         $admins = User::where('school_id', $spkl->school_id)
             ->where('role', 'admin-sekolah')
             ->where('is_active', true)
             ->get();
 
         foreach ($admins as $admin) {
+            if (!$teacherUser) {
+                $admin->is_emergency_fallback = true;
+            }
             $admin->notify($notification);
         }
     }
