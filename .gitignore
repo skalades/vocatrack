@@ -27,3 +27,7 @@ Homestead.json
 Homestead.yaml
 Thumbs.db
 *video_work/
+/output_presentasi/
+/PLAN-VIDEO.md
+/render_video.ps1
+/video_narasi.json
