@@ -1,4 +1,9 @@
 require('dotenv').config();
+const dns = require('dns');
+try {
+    dns.setDefaultResultOrder('ipv4first');
+} catch (e) {}
+
 const express = require('express');
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, Browsers, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
 const pino = require('pino');
@@ -61,7 +66,7 @@ async function connectToWhatsApp() {
             browser: Browsers.ubuntu('Chrome'),
             connectTimeoutMs: 60000,
             defaultQueryTimeoutMs: 60000,
-            keepAliveIntervalMs: 25000,
+            keepAliveIntervalMs: 30000,
             syncFullHistory: false
         });
 
@@ -88,9 +93,14 @@ async function connectToWhatsApp() {
                 lastError = lastDisconnect?.error?.message || 'Koneksi terputus';
                 connectedUser = null;
 
-                if (statusCode === 408) {
-                    console.log('[VokaTrack WA Gateway] QR Code kedaluwarsa / timeout. Mengambil QR Code baru dalam 2 detik...');
-                    // Reset AUTH_DIR agar QR counter di-reset WhatsApp dan tidak terjadi infinite loop
+                const isQrTimeout = lastDisconnect?.error?.message?.includes('QR refs attempts ended');
+                if (statusCode === 408 && isQrTimeout) {
+                    console.log('[VokaTrack WA Gateway] QR Code kedaluwarsa (5x belum di-scan). Reset sesi QR baru...');
+                    try {
+                        fs.rmSync(AUTH_DIR, { recursive: true, force: true });
+                    } catch (e) {}
+                } else if (statusCode === 401 || statusCode === DisconnectReason.loggedOut) {
+                    console.log('[VokaTrack WA Gateway] Sesi telah logout. Silakan scan ulang.');
                     try {
                         fs.rmSync(AUTH_DIR, { recursive: true, force: true });
                     } catch (e) {}
@@ -100,7 +110,7 @@ async function connectToWhatsApp() {
 
                 connectionStatus = 'connecting';
                 isConnecting = false;
-                setTimeout(connectToWhatsApp, 2000);
+                setTimeout(connectToWhatsApp, 3000);
             } else if (connection === 'open') {
                 connectionStatus = 'connected';
                 qrCodeDataUrl = null;
