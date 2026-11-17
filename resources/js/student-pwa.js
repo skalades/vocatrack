@@ -269,15 +269,17 @@ async function syncQueue({ includeFailed = false } = {}) {
 // UI: banner koneksi, toast, panel antrean
 // ---------------------------------------------------------------------------
 
+let bannerDismissed = false;
+
 function ensureBanner() {
     let el = document.getElementById('vt-connection-banner');
     if (!el) {
         el = document.createElement('div');
         el.id = 'vt-connection-banner';
         el.setAttribute('role', 'status');
-        el.className = 'hidden sticky top-0 z-[45] px-4 py-2 text-[11.5px] font-bold flex items-center gap-2 shadow-sm';
+        el.className = 'hidden';
         const container = document.querySelector('[data-student-shell]') || body;
-        container.prepend(el);
+        container.appendChild(el);
     }
     return el;
 }
@@ -287,14 +289,37 @@ async function renderQueueUi() {
     const pending = items.filter((q) => q.status === 'pending').length;
     const banner = ensureBanner();
 
+    if (bannerDismissed) {
+        banner.className = 'hidden';
+        banner.innerHTML = '';
+        renderQueuePanel(items);
+        return;
+    }
+
+    const onCamera = Boolean(document.getElementById('shutter-btn') && !document.getElementById('shutter-btn').closest('.hidden'));
+    const posClass = onCamera
+        ? 'fixed top-4 left-1/2 -translate-x-1/2 z-40'
+        : 'fixed bottom-24 left-1/2 -translate-x-1/2 z-40';
+    const baseClass = `${posClass} w-[calc(100%-32px)] max-w-[360px] rounded-2xl px-3.5 py-2.5 text-[11.5px] font-bold flex items-center justify-between gap-2.5 shadow-[0_12px_32px_rgba(0,0,0,0.2)] transition-all duration-300 backdrop-blur-md`;
+
     if (!navigator.onLine) {
-        banner.className = 'sticky top-0 z-[45] px-4 py-2 text-[11.5px] font-bold flex items-center gap-2 shadow-sm bg-amber-400 text-slate-950';
-        banner.innerHTML = `<span class="w-2 h-2 rounded-full bg-slate-950 shrink-0"></span>
-            <span class="flex-1">Offline — jurnal tetap bisa ditulis${pending ? ` · ${pending} menunggu dikirim` : ''}. Presensi perlu internet.</span>`;
+        banner.className = `${baseClass} bg-amber-400 text-slate-950 border border-amber-500/40`;
+        banner.innerHTML = `<div class="flex items-center gap-2.5 min-w-0 flex-1">
+            <span class="w-2.5 h-2.5 rounded-full bg-slate-950 shrink-0"></span>
+            <span class="leading-tight flex-1">Offline — jurnal tetap bisa ditulis${pending ? ` · <strong>${pending}</strong> antrean` : ''}. Presensi perlu internet.</span>
+        </div>
+        <button type="button" data-close-banner aria-label="Tutup notifikasi" class="shrink-0 w-6 h-6 rounded-full bg-slate-950/10 hover:bg-slate-950/20 active:scale-90 flex items-center justify-center transition-colors cursor-pointer">
+            <svg class="w-3.5 h-3.5 text-slate-950" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>`;
     } else if (pending > 0) {
-        banner.className = 'sticky top-0 z-[45] px-4 py-2 text-[11.5px] font-bold flex items-center gap-2 shadow-sm bg-[#0F7A66] text-white';
-        banner.innerHTML = `<span class="w-2 h-2 rounded-full bg-[#C6F26B] shrink-0 ${syncing ? 'animate-ping' : ''}"></span>
-            <span class="flex-1">${syncing ? 'Mengirim' : 'Menunggu kirim'} ${pending} jurnal offline…</span>`;
+        banner.className = `${baseClass} bg-[#0B2B25] text-white border border-[#C6F26B]/30`;
+        banner.innerHTML = `<div class="flex items-center gap-2.5 min-w-0 flex-1">
+            <span class="w-2.5 h-2.5 rounded-full bg-[#C6F26B] shrink-0 ${syncing ? 'animate-ping' : ''}"></span>
+            <span class="leading-tight flex-1 text-[#F1F4EC]">${syncing ? 'Mengirim' : 'Menunggu kirim'} ${pending} jurnal offline…</span>
+        </div>
+        <button type="button" data-close-banner aria-label="Tutup notifikasi" class="shrink-0 w-6 h-6 rounded-full bg-white/10 hover:bg-white/20 active:scale-90 flex items-center justify-center transition-colors cursor-pointer">
+            <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>`;
     } else {
         banner.className = 'hidden';
         banner.innerHTML = '';
@@ -343,6 +368,17 @@ function renderQueuePanel(items) {
 
 function bindQueuePanelActions() {
     document.addEventListener('click', async (e) => {
+        const closeBtn = e.target.closest?.('[data-close-banner]');
+        if (closeBtn) {
+            bannerDismissed = true;
+            const banner = document.getElementById('vt-connection-banner');
+            if (banner) {
+                banner.className = 'hidden';
+                banner.innerHTML = '';
+            }
+            return;
+        }
+
         const btn = e.target.closest?.('[data-queue-action]');
         if (!btn) return;
         const action = btn.dataset.queueAction;
@@ -560,8 +596,8 @@ bindInstallPrompt();
 
 renderQueueUi().then(() => syncQueue());
 
-window.addEventListener('online', () => { renderQueueUi(); syncQueue(); });
-window.addEventListener('offline', () => renderQueueUi());
+window.addEventListener('online', () => { bannerDismissed = false; renderQueueUi(); syncQueue(); });
+window.addEventListener('offline', () => { bannerDismissed = false; renderQueueUi(); });
 document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') syncQueue();
 });
