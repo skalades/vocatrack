@@ -74,7 +74,7 @@ async function connectToWhatsApp() {
             version,
             auth: state,
             logger: pino({ level: 'silent' }), // Silent agar terminal tetap bersih dan rapi
-            printQRInTerminal: true,
+            printQRInTerminal: false,
             browser: Browsers.ubuntu('Chrome'),
             connectTimeoutMs: 60000,
             defaultQueryTimeoutMs: 60000,
@@ -91,9 +91,14 @@ async function connectToWhatsApp() {
                 connectionStatus = 'waiting_scan';
                 lastError = null;
                 try {
+                    // Generate QR untuk Web UI
                     qrCodeDataUrl = await QRCode.toDataURL(qr, { width: 300, margin: 2 });
-                    console.log('\n[VokaTrack WA Gateway] >>> QR CODE BARU TERSEDIA <<<');
-                    console.log('[VokaTrack WA Gateway] Buka https://vocatrack.nadirlabs.net/super-admin/whatsapp untuk scan di web');
+                    // Cetak QR langsung di terminal (manual, karena printQRInTerminal deprecated)
+                    const qrTerminal = await QRCode.toString(qr, { type: 'terminal', small: true });
+                    console.log('\n========== SCAN QR CODE BERIKUT ==========');
+                    console.log(qrTerminal);
+                    console.log('===========================================');
+                    console.log('[VokaTrack WA Gateway] Atau buka: https://vocatrack.nadirlabs.net/super-admin/whatsapp');
                 } catch (err) {
                     console.error('[VokaTrack WA Gateway] Gagal generate QR:', err);
                 }
