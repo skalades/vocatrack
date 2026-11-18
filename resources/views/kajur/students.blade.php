@@ -73,7 +73,7 @@
                             @endphp
                             <tr class="hover:bg-slate-50/80 transition-colors">
                                 <td class="py-3 px-6">
-                                    <div class="font-bold text-slate-900">{{ $s->name }}</div>
+                                    <div class="font-bold text-slate-900">{{ $s->user?->name ?? $s->name ?? 'Siswa' }}</div>
                                     <div class="text-[11px] text-slate-400 font-mono">NISN: {{ $s->nisn }} &bull; NIS: {{ $s->nis ?? '-' }}</div>
                                 </td>
                                 <td class="py-3 px-4">
@@ -110,7 +110,7 @@
                                     <button type="button" 
                                             onclick="openAssignPlottingModal({{ json_encode([
                                                 'student_id' => $s->id,
-                                                'student_name' => $s->name,
+                                                'student_name' => $s->user?->name ?? $s->name ?? 'Siswa',
                                                 'class_name' => $s->schoolClass?->name ?? '-',
                                                 'company_id' => $spkl?->company_id,
                                                 'teacher_id' => $spkl?->teacher_id,

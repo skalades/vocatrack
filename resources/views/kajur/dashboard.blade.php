@@ -200,14 +200,14 @@
                             <div class="py-3.5 first:pt-0 last:pb-0 flex items-start justify-between gap-3">
                                 <div class="min-w-0 space-y-1">
                                     <div class="flex items-center gap-2">
-                                        <span class="font-bold text-slate-900 text-xs sm:text-sm">{{ $inc->student->name }}</span>
+                                        <span class="font-bold text-slate-900 text-xs sm:text-sm">{{ $inc->studentPkl?->student?->user?->name ?? $inc->student?->name ?? 'Siswa' }}</span>
                                         <x-badge :variant="$inc->status === 'resolved' ? 'emerald' : 'rose'" size="xs">
                                             {{ strtoupper($inc->status) }}
                                         </x-badge>
                                     </div>
-                                    <p class="text-xs text-slate-600 line-clamp-1 font-medium">{{ $inc->title }}</p>
+                                    <p class="text-xs text-slate-600 line-clamp-1 font-medium">{{ $inc->subject }}</p>
                                     <div class="text-[11px] text-slate-400">
-                                        {{ $inc->company?->name ?? 'DU/DI' }} &bull; {{ $inc->created_at->diffForHumans() }}
+                                        {{ $inc->studentPkl?->company?->name ?? $inc->company?->name ?? 'DU/DI' }} &bull; {{ $inc->created_at->diffForHumans() }}
                                     </div>
                                 </div>
                             </div>

@@ -60,10 +60,14 @@ class KajurController extends Controller
 
         $totalCompanies = $major->companies()->count();
 
+        $spklIds = StudentPkl::where('school_id', $schoolId)
+            ->whereIn('student_id', $studentIds)
+            ->pluck('id');
+
         // Absensi siswa jurusan hari ini
         $today = Carbon::today()->toDateString();
         $todayAttendances = Attendance::where('school_id', $schoolId)
-            ->whereIn('student_id', $studentIds)
+            ->whereIn('student_pkl_id', $spklIds)
             ->whereDate('date', $today)
             ->get();
 
@@ -73,8 +77,8 @@ class KajurController extends Controller
 
         // Jurnal pending review guru untuk siswa jurusan
         $pendingJournalsCount = Journal::where('school_id', $schoolId)
-            ->whereIn('student_id', $studentIds)
-            ->where('status', 'pending_teacher')
+            ->whereIn('student_pkl_id', $spklIds)
+            ->where('status', 'review_guru')
             ->count();
 
         // Siswa bimbingan pribadi (jika Kajur juga bertindak sebagai Guru Pembimbing)
@@ -83,13 +87,13 @@ class KajurController extends Controller
             ? StudentPkl::where('school_id', $schoolId)->where('teacher_id', $myTeacherId)->where('status', 'active')->count()
             : 0;
         $myPendingJournalsCount = $myTeacherId
-            ? Journal::where('school_id', $schoolId)->whereHas('studentPkl', fn($q) => $q->where('teacher_id', $myTeacherId))->where('status', 'pending_teacher')->count()
+            ? Journal::where('school_id', $schoolId)->whereHas('studentPkl', fn($q) => $q->where('teacher_id', $myTeacherId))->where('status', 'review_guru')->count()
             : 0;
 
         // Insiden kendala kerja terbaru pada siswa jurusan
         $recentIncidents = IncidentReport::where('school_id', $schoolId)
-            ->whereIn('student_id', $studentIds)
-            ->with(['student.user', 'company'])
+            ->whereIn('student_pkl_id', $spklIds)
+            ->with(['studentPkl.student.user', 'studentPkl.company'])
             ->latest()
             ->take(5)
             ->get();
@@ -306,13 +310,17 @@ class KajurController extends Controller
         if ($request->filled('search')) {
             $search = '%' . trim($request->search) . '%';
             $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', $search)
+                $q->whereHas('user', fn($uq) => $uq->where('name', 'like', $search))
                   ->orWhere('nisn', 'like', $search)
                   ->orWhere('nis', 'like', $search);
             });
         }
 
-        $students = $query->orderBy('name')->paginate(20)->withQueryString();
+        $students = $query->join('users', 'students.user_id', '=', 'users.id')
+            ->orderBy('users.name')
+            ->select('students.*')
+            ->paginate(20)
+            ->withQueryString();
 
         // Data pendukung untuk modal plotting
         $companies = $major->companies()->orderBy('name')->get();
@@ -383,16 +391,19 @@ class KajurController extends Controller
         $classes = $major->classes()->orderBy('name')->get();
         $classIds = $classes->pluck('id');
         $studentIds = Student::whereIn('class_id', $classIds)->pluck('id');
+        $spklIds = StudentPkl::where('school_id', $schoolId)
+            ->whereIn('student_id', $studentIds)
+            ->pluck('id');
 
         $selectedDate = $request->input('date', Carbon::today()->toDateString());
 
         $attendancesQuery = Attendance::where('school_id', $schoolId)
-            ->whereIn('student_id', $studentIds)
+            ->whereIn('student_pkl_id', $spklIds)
             ->whereDate('date', $selectedDate)
-            ->with(['student.schoolClass', 'student.studentPkl.company', 'student.studentPkl.teacher.user']);
+            ->with(['studentPkl.student.user', 'studentPkl.student.schoolClass', 'studentPkl.company', 'studentPkl.teacher.user']);
 
         if ($request->filled('class_id')) {
-            $attendancesQuery->whereHas('student', fn($q) => $q->where('class_id', $request->class_id));
+            $attendancesQuery->whereHas('studentPkl.student', fn($q) => $q->where('class_id', $request->class_id));
         }
 
         if ($request->filled('status')) {
@@ -429,13 +440,16 @@ class KajurController extends Controller
         $classes = $major->classes()->orderBy('name')->get();
         $classIds = $classes->pluck('id');
         $studentIds = Student::whereIn('class_id', $classIds)->pluck('id');
+        $spklIds = StudentPkl::where('school_id', $schoolId)
+            ->whereIn('student_id', $studentIds)
+            ->pluck('id');
 
         $query = Journal::where('school_id', $schoolId)
-            ->whereIn('student_id', $studentIds)
-            ->with(['student.schoolClass', 'student.studentPkl.teacher.user', 'photos', 'learningObjectives']);
+            ->whereIn('student_pkl_id', $spklIds)
+            ->with(['studentPkl.student.user', 'studentPkl.student.schoolClass', 'studentPkl.teacher.user', 'photos', 'learningObjectives']);
 
         if ($request->filled('class_id')) {
-            $query->whereHas('student', fn($q) => $q->where('class_id', $request->class_id));
+            $query->whereHas('studentPkl.student', fn($q) => $q->where('class_id', $request->class_id));
         }
 
         if ($request->filled('status')) {
@@ -449,8 +463,8 @@ class KajurController extends Controller
         $journals = $query->latest('date')->paginate(20)->withQueryString();
 
         $pendingCount = Journal::where('school_id', $schoolId)
-            ->whereIn('student_id', $studentIds)
-            ->where('status', 'pending_teacher')
+            ->whereIn('student_pkl_id', $spklIds)
+            ->where('status', 'review_guru')
             ->count();
 
         return view('kajur.journals', compact(

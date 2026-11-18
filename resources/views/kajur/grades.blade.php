@@ -76,7 +76,7 @@
                             @endphp
                             <tr class="hover:bg-slate-50/80 transition-colors">
                                 <td class="py-3 px-6">
-                                    <div class="font-bold text-slate-900">{{ $r->student->name }}</div>
+                                    <div class="font-bold text-slate-900">{{ $r->student?->user?->name ?? $r->student?->name ?? 'Siswa' }}</div>
                                     <div class="text-[11px] text-slate-400 font-mono">NISN: {{ $r->student->nisn }}</div>
                                 </td>
                                 <td class="py-3 px-4">

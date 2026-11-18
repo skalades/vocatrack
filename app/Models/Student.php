@@ -59,6 +59,11 @@ class Student extends Model
         return route('parent.monitor', ['token' => $this->parent_token]);
     }
 
+    public function getNameAttribute(): ?string
+    {
+        return $this->user?->name;
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

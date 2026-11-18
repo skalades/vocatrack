@@ -100,24 +100,25 @@
                     <tbody class="divide-y divide-slate-100 text-xs">
                         @foreach($attendances as $a)
                             @php
-                                $spkl = $a->student->studentPkl;
+                                $spkl = $a->studentPkl;
+                                $student = $spkl?->student ?? $a->student;
                             @endphp
                             <tr class="hover:bg-slate-50/80 transition-colors">
                                 <td class="py-3 px-6">
-                                    <div class="font-bold text-slate-900">{{ $a->student->name }}</div>
-                                    <div class="text-[11px] text-slate-400 font-mono">NISN: {{ $a->student->nisn }}</div>
+                                    <div class="font-bold text-slate-900">{{ $student?->user?->name ?? $student?->name ?? 'Siswa' }}</div>
+                                    <div class="text-[11px] text-slate-400 font-mono">NISN: {{ $student?->nisn ?? '-' }}</div>
                                 </td>
                                 <td class="py-3 px-4">
                                     <span class="inline-flex items-center px-2 py-0.5 rounded-md font-semibold text-slate-700 bg-slate-100 text-[11px]">
-                                        {{ $a->student->schoolClass?->name ?? '-' }}
+                                        {{ $student?->schoolClass?->name ?? '-' }}
                                     </span>
                                 </td>
                                 <td class="py-3 px-4">
                                     <span class="font-medium text-slate-900">{{ $spkl?->company?->name ?? '-' }}</span>
                                 </td>
                                 <td class="py-3 px-4 font-mono text-slate-700">
-                                    <div>In: {{ $a->check_in_at ? \Carbon\Carbon::parse($a->check_in_at)->format('H:i') : '-' }}</div>
-                                    <div class="text-slate-400">Out: {{ $a->check_out_at ? \Carbon\Carbon::parse($a->check_out_at)->format('H:i') : '-' }}</div>
+                                    <div>In: {{ $a->checkin_time ? \Carbon\Carbon::parse($a->checkin_time)->format('H:i') : '-' }}</div>
+                                    <div class="text-slate-400">Out: {{ $a->checkout_time ? \Carbon\Carbon::parse($a->checkout_time)->format('H:i') : '-' }}</div>
                                 </td>
                                 <td class="py-3 px-4 text-center">
                                     <x-badge :variant="match($a->status) {

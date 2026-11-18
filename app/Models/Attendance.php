@@ -50,4 +50,26 @@ class Attendance extends Model
     {
         return $this->belongsTo(StudentPkl::class);
     }
+
+    public function student(): \Illuminate\Database\Eloquent\Relations\HasOneThrough
+    {
+        return $this->hasOneThrough(
+            Student::class,
+            StudentPkl::class,
+            'id',
+            'id',
+            'student_pkl_id',
+            'student_id'
+        );
+    }
+
+    public function getCheckInAtAttribute(): ?string
+    {
+        return $this->checkin_time;
+    }
+
+    public function getCheckOutAtAttribute(): ?string
+    {
+        return $this->checkout_time;
+    }
 }

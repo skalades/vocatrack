@@ -73,36 +73,43 @@
                     </thead>
                     <tbody class="divide-y divide-slate-100 text-xs">
                         @foreach($journals as $j)
+                            @php
+                                $spkl = $j->studentPkl;
+                                $student = $spkl?->student ?? $j->student;
+                            @endphp
                             <tr class="hover:bg-slate-50/80 transition-colors">
                                 <td class="py-3 px-6">
-                                    <div class="font-bold text-slate-900">{{ $j->student->name }}</div>
-                                    <div class="text-[11px] text-slate-400">{{ $j->student->schoolClass?->name ?? '-' }}</div>
+                                    <div class="font-bold text-slate-900">{{ $student?->user?->name ?? $student?->name ?? 'Siswa' }}</div>
+                                    <div class="text-[11px] text-slate-400">{{ $student?->schoolClass?->name ?? '-' }}</div>
                                 </td>
                                 <td class="py-3 px-4 font-mono text-slate-700 whitespace-nowrap">
                                     {{ \Carbon\Carbon::parse($j->date)->isoFormat('D MMM Y') }}
                                 </td>
                                 <td class="py-3 px-6">
                                     <p class="text-slate-800 line-clamp-2 leading-relaxed font-medium">
-                                        {{ $j->activity ?? $j->content ?? '-' }}
+                                        {{ $j->activity_description ?? $j->activity ?? $j->content ?? '-' }}
                                     </p>
                                 </td>
                                 <td class="py-3 px-4 text-center whitespace-nowrap">
                                     <x-badge :variant="match($j->status) {
                                         'approved' => 'emerald',
-                                        'pending_teacher' => 'amber',
-                                        'pending_dudi' => 'blue',
-                                        default => 'rose'
+                                        'review_guru', 'pending_teacher' => 'amber',
+                                        'submitted', 'pending_dudi' => 'blue',
+                                        'revision' => 'rose',
+                                        default => 'slate'
                                     }" size="xs">
                                         {{ match($j->status) {
                                             'approved' => 'Disetujui',
-                                            'pending_teacher' => 'Menunggu Guru',
-                                            'pending_dudi' => 'Menunggu DU/DI',
-                                            default => 'Ditolak'
+                                            'review_guru', 'pending_teacher' => 'Menunggu Guru',
+                                            'submitted', 'pending_dudi' => 'Menunggu DU/DI',
+                                            'revision' => 'Perlu Revisi',
+                                            'draft' => 'Draft',
+                                            default => ucfirst($j->status)
                                         } }}
                                     </x-badge>
                                 </td>
                                 <td class="py-3 px-6 text-slate-600 whitespace-nowrap">
-                                    {{ $j->student->studentPkl?->teacher?->user->name ?? '-' }}
+                                    {{ $spkl?->teacher?->user->name ?? '-' }}
                                 </td>
                             </tr>
                         @endforeach

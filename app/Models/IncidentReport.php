@@ -44,6 +44,30 @@ class IncidentReport extends Model
         return $this->belongsTo(StudentPkl::class);
     }
 
+    public function student(): \Illuminate\Database\Eloquent\Relations\HasOneThrough
+    {
+        return $this->hasOneThrough(
+            Student::class,
+            StudentPkl::class,
+            'id',
+            'id',
+            'student_pkl_id',
+            'student_id'
+        );
+    }
+
+    public function company(): \Illuminate\Database\Eloquent\Relations\HasOneThrough
+    {
+        return $this->hasOneThrough(
+            Company::class,
+            StudentPkl::class,
+            'id',
+            'id',
+            'student_pkl_id',
+            'company_id'
+        );
+    }
+
     public function handler(): BelongsTo
     {
         return $this->belongsTo(User::class, 'handler_id');
