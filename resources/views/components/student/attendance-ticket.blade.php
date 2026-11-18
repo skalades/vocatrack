@@ -1,4 +1,4 @@
-@props(['attendance', 'spkl', 'student', 'dayNumber' => 27])
+@props(['attendance', 'spkl', 'student', 'dayNumber' => 27, 'todayJournal' => null])
 
 @php
     $studentName = auth()->user()->name ?? 'Siswa';
@@ -9,6 +9,14 @@
     $companyName = $spkl->company->name ?? 'Kantor PKL';
     $distanceText = $attendance && $attendance->is_within_radius !== false ? '38 m' : 'Luar Radius';
     $isMock = $attendance->is_mock_detected ?? false;
+
+    // Cek apakah jurnal untuk hari ini sudah terisi
+    $hasTodayJournal = $todayJournal !== null;
+    if (!$hasTodayJournal && $spkl) {
+        $hasTodayJournal = \App\Models\Journal::where('student_pkl_id', $spkl->id)
+            ->whereDate('date', $dateObj->toDateString())
+            ->exists();
+    }
 @endphp
 
 <!-- Screen 3: Presensi Berhasil (Ticket Receipt Screen) -->
@@ -312,31 +320,49 @@
         </div>
 
         <!-- Action CTAs -->
-        <div class="w-full max-w-[350px] flex flex-col gap-2 mt-5">
-            <a href="{{ route('student.journals') }}" 
-               class="flex items-center justify-between h-[60px] rounded-[30px] bg-[#0B2B25] hover:bg-[#12382F] text-white px-2 pl-6 shadow-[0_8px_20px_rgba(11,43,37,0.25)] active:scale-95 transition-all">
-                <span class="font-bold text-base">Isi Jurnal Hari Ini</span>
-                <span class="w-11 h-11 rounded-full bg-[#C6F26B] text-[#0B2B25] flex items-center justify-center shrink-0">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M5 12h14M12 5l7 7-7 7"/>
-                    </svg>
-                </span>
-            </a>
+        <div class="w-full max-w-[350px] flex flex-col gap-2.5 mt-5">
+            @if(!$hasTodayJournal)
+                <a href="{{ route('student.journals') }}" 
+                   class="flex items-center justify-between h-[60px] rounded-[30px] bg-[#0B2B25] hover:bg-[#12382F] text-white px-2 pl-6 shadow-[0_8px_20px_rgba(11,43,37,0.25)] active:scale-95 transition-all">
+                    <span class="font-bold text-base">Isi Jurnal Hari Ini</span>
+                    <span class="w-11 h-11 rounded-full bg-[#C6F26B] text-[#0B2B25] flex items-center justify-center shrink-0">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M5 12h14M12 5l7 7-7 7"/>
+                        </svg>
+                    </span>
+                </a>
+            @else
+                <div class="flex items-center justify-between h-[54px] rounded-[27px] bg-[#EAF7EE] border border-[#BDE8C6] px-4 text-[#0F6848] shadow-xs">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        <span class="w-7 h-7 rounded-full bg-[#10B981] text-white flex items-center justify-center shrink-0">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="20 6 9 17 4 12"/>
+                            </svg>
+                        </span>
+                        <span class="text-xs font-bold truncate">Jurnal hari ini sudah terisi</span>
+                    </div>
+                    <a href="{{ route('student.journals') }}" class="text-xs font-bold underline hover:text-[#0B4B34] shrink-0">
+                        Lihat Jurnal
+                    </a>
+                </div>
+            @endif
 
             <a href="{{ route('student.home') }}" 
-               class="flex items-center justify-center h-12 rounded-[24px] text-sm font-bold text-[#10211D] hover:bg-black/5 active:scale-95 transition-all">
+               class="flex items-center justify-center h-12 rounded-[24px] {{ $hasTodayJournal ? 'bg-[#0B2B25] hover:bg-[#12382F] text-white shadow-xs' : 'text-[#10211D] hover:bg-black/5' }} text-sm font-bold active:scale-95 transition-all">
                 Kembali ke Beranda
             </a>
         </div>
 
-        <!-- Shift checkout reminder -->
-        <div class="flex items-center gap-2 text-xs text-[#5A6B65] mt-2">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="10"/>
-                <polyline points="12 6 12 12 16 14"/>
-            </svg>
-            <span>Pengingat: presensi pulang aktif pukul 16.00 WIB</span>
-        </div>
+        <!-- Shift checkout reminder (hanya jika belum presensi pulang) -->
+        @if(!$attendance || !$attendance->checkout_time)
+            <div class="flex items-center gap-2 text-xs text-[#5A6B65] mt-2">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"/>
+                    <polyline points="12 6 12 12 16 14"/>
+                </svg>
+                <span>Pengingat: presensi pulang aktif pukul 16.00 WIB</span>
+            </div>
+        @endif
     </div>
 
 </div>

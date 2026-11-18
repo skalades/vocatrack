@@ -85,11 +85,11 @@ class StudentController extends Controller
 
         if ($spkl) {
             $todayAttendance = Attendance::where('student_pkl_id', $spkl->id)
-                ->where('date', $today)
+                ->whereDate('date', $today)
                 ->first();
 
             $todayJournal = Journal::where('student_pkl_id', $spkl->id)
-                ->where('date', $today)
+                ->whereDate('date', $today)
                 ->first();
 
             $dayStatus = $attendanceService->getDayAttendanceStatus($spkl);
@@ -172,6 +172,7 @@ class StudentController extends Controller
         $today = Carbon::today()->toDateString();
 
         $todayAttendance = null;
+        $todayJournal = null;
         $history = collect();
         $pendingRequests = collect();
         $dayStatus = null;
@@ -184,7 +185,11 @@ class StudentController extends Controller
 
         if ($spkl) {
             $todayAttendance = Attendance::where('student_pkl_id', $spkl->id)
-                ->where('date', $today)
+                ->whereDate('date', $today)
+                ->first();
+
+            $todayJournal = Journal::where('student_pkl_id', $spkl->id)
+                ->whereDate('date', $today)
                 ->first();
 
             $history = Attendance::where('student_pkl_id', $spkl->id)
@@ -202,7 +207,7 @@ class StudentController extends Controller
         $isPklStarted = (bool) ($spkl?->company?->is_pkl_started ?? false);
         $mode = $request->query('mode', (!$todayAttendance ? 'checkin' : ($request->has('checkout') ? 'checkout' : 'ticket')));
 
-        return view('student.attendance', compact('spkl', 'student', 'todayAttendance', 'history', 'pendingRequests', 'dayStatus', 'dayNumber', 'isPklStarted', 'mode'));
+        return view('student.attendance', compact('spkl', 'student', 'todayAttendance', 'todayJournal', 'history', 'pendingRequests', 'dayStatus', 'dayNumber', 'isPklStarted', 'mode'));
     }
 
     public function checkin(Request $request, AttendanceService $attendanceService)

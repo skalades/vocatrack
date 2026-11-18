@@ -73,6 +73,7 @@
             :spkl="$spkl" 
             :student="$student" 
             :dayNumber="$dayNumber ?? 27" 
+            :todayJournal="$todayJournal ?? null"
         />
 
         <!-- Secondary Section: Presensi Pulang & Permohonan Khusus -->
