@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Announcement extends Model
 {
@@ -46,9 +47,23 @@ class Announcement extends Model
         return $this->belongsTo(Major::class, 'target_major_id');
     }
 
+    public function reads(): HasMany
+    {
+        return $this->hasMany(AnnouncementRead::class);
+    }
+
     public function scopeActive(Builder $query): Builder
     {
         return $query->where('is_active', true);
+    }
+
+    public function scopeUnreadForUser(Builder $query, User $user): Builder
+    {
+        return $query->active()
+            ->forUser($user)
+            ->whereDoesntHave('reads', function (Builder $q) use ($user) {
+                $q->where('user_id', $user->id);
+            });
     }
 
     public function scopePinnedFirst(Builder $query): Builder

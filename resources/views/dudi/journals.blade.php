@@ -26,11 +26,22 @@
         $pendingDudi = $stats['pending_dudi'] ?? 0;
         $approvedLevel1 = $stats['approved_level1'] ?? 0;
         $revisionCount = $stats['revision'] ?? 0;
+        $companyOptOut = auth()->user()->supervisor?->company && !auth()->user()->supervisor->company->requires_industry_approval;
         // Pasang relasi induk agar $pj->studentPkl tidak memicu lazy loading
         $allPendingJournals = $studentPkls->flatMap(
             fn ($sp) => $sp->journals->where('status', 'submitted')->each(fn ($j) => $j->setRelation('studentPkl', $sp))
         );
     @endphp
+
+    @if($companyOptOut)
+        <div class="p-4 rounded-2xl bg-amber-50 border border-amber-200/80 flex items-start gap-3 text-amber-900 text-xs leading-relaxed">
+            <svg class="w-5 h-5 text-amber-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <div>
+                <span class="font-bold text-amber-950 block">Alur Verifikasi Jurnal: Langsung ke Guru Pembimbing</span>
+                <span>Admin sekolah telah mengatur bahwa mitra industri Anda tidak diwajibkan memvalidasi jurnal harian siswa. Seluruh jurnal harian siswa bimbingan langsung diteruskan ke Guru Pembimbing untuk diverifikasi. Halaman ini dapat digunakan sebagai arsip pemantauan aktivitas lapangan.</span>
+            </div>
+        </div>
+    @endif
 
     <!-- Top KPI Metrics -->
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">

@@ -27,9 +27,18 @@ class Company extends Model
         'override_hours',
         'custom_work_hours',
         'work_days',
+        'requires_industry_approval',
+        'is_pkl_started',
+    ];
+
+    protected $attributes = [
+        'is_pkl_started' => false,
+        'requires_industry_approval' => true,
     ];
 
     protected $casts = [
+        'requires_industry_approval' => 'boolean',
+        'is_pkl_started' => 'boolean',
         'gps_enabled' => 'boolean',
         'override_hours' => 'boolean',
         'custom_work_hours' => 'array',

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Announcement;
+use App\Models\AnnouncementRead;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -65,6 +66,34 @@ class AnnouncementService
             ->pinnedFirst()
             ->limit($limit)
             ->get();
+    }
+
+    /**
+     * Get unread announcements for automatic popup queue on home.
+     */
+    public function getUnreadForUser(User $user): Collection
+    {
+        return Announcement::query()
+            ->with(['author.profile', 'major'])
+            ->unreadForUser($user)
+            ->pinnedFirst()
+            ->get();
+    }
+
+    /**
+     * Mark an announcement as read by a user.
+     */
+    public function markAsRead(Announcement $announcement, User $user): AnnouncementRead
+    {
+        return AnnouncementRead::firstOrCreate(
+            [
+                'announcement_id' => $announcement->id,
+                'user_id' => $user->id,
+            ],
+            [
+                'read_at' => now(),
+            ]
+        );
     }
 
     /**

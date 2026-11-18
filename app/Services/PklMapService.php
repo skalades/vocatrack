@@ -146,7 +146,9 @@ class PklMapService
                 } else {
                     $checkinTime = '-';
                     $isWithinRadius = null;
-                    if ($isPast) {
+                    if (!$company->is_pkl_started) {
+                        $status = 'belum_mulai';
+                    } elseif ($isPast) {
                         $status = 'alfa';
                     } elseif ($isToday) {
                         $status = $isPastAlfaCutoff ? 'alfa' : 'belum_absen';
@@ -183,6 +185,12 @@ class PklMapService
                 $pinStatus = 'gray';
                 $pinLabel = 'Belum Ada Siswa Aktif';
                 $pinDetail = 'Tidak ada penugasan siswa aktif di industri ini.';
+                $pinColor = '#94a3b8'; // Slate-400
+                $grayCount++;
+            } elseif (!$company->is_pkl_started) {
+                $pinStatus = 'gray';
+                $pinLabel = 'PKL Belum Dimulai';
+                $pinDetail = "{$totalStudents} Siswa (Jadwal PKL Belum Dimulai).";
                 $pinColor = '#94a3b8'; // Slate-400
                 $grayCount++;
             } elseif ($alfaCount > 0 || $companyHasOpenIncident) {

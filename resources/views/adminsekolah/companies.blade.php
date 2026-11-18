@@ -173,9 +173,19 @@
                                 @endif
                             </td>
                             <td class="py-3.5 px-4">
-                                <span class="font-semibold text-slate-800">
+                                <span class="font-semibold text-slate-800 block">
                                     {{ $cp->work_days === '6_days' ? '6 Hari (Sen-Sab)' : '5 Hari (Sen-Jum)' }}
                                 </span>
+                                <div class="flex items-center gap-1.5 flex-wrap mt-1">
+                                    <span class="inline-flex items-center text-[10px] {{ $cp->is_pkl_started ? 'text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200/60' : 'text-slate-600 font-bold bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200' }}" title="{{ $cp->is_pkl_started ? 'Pelaksanaan PKL Sudah Mulai: Seluruh kewajiban aktif' : 'Belum Mulai PKL: Siswa dianulir dari kewajiban presensi & tidak dicatat alfa' }}">
+                                        <span class="w-1.5 h-1.5 rounded-full {{ $cp->is_pkl_started ? 'bg-emerald-500' : 'bg-slate-400' }} mr-1 shrink-0"></span>
+                                        {{ $cp->is_pkl_started ? 'Sudah Mulai' : 'Belum Mulai' }}
+                                    </span>
+                                    <span class="inline-flex items-center text-[10px] {{ $cp->requires_industry_approval ? 'text-slate-500 font-medium' : 'text-amber-700 font-bold bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200/60' }}" title="{{ $cp->requires_industry_approval ? 'Verifikasi jurnal 2 tingkat: Mentor DU/DI lalu Guru Pembimbing' : 'Industri tidak memverifikasi: Jurnal langsung diverifikasi Guru Pembimbing' }}">
+                                        <span class="w-1.5 h-1.5 rounded-full {{ $cp->requires_industry_approval ? 'bg-emerald-500' : 'bg-amber-500' }} mr-1 shrink-0"></span>
+                                        {{ $cp->requires_industry_approval ? 'Alur DU/DI & Guru' : 'Verifikasi Guru' }}
+                                    </span>
+                                </div>
                             </td>
                             <td class="py-3.5 px-4">
                                 @forelse($cp->supervisors as $sup)
@@ -201,6 +211,8 @@
                                         'contact_person' => $cp->contact_person,
                                         'phone' => $cp->phone,
                                         'work_days' => $cp->work_days,
+                                        'requires_industry_approval' => (bool) $cp->requires_industry_approval,
+                                        'is_pkl_started' => (bool) $cp->is_pkl_started,
                                         'gps_enabled' => (bool) $cp->gps_enabled,
                                         'latitude' => $cp->latitude,
                                         'longitude' => $cp->longitude,
@@ -401,6 +413,36 @@
                 </div>
             </div>
 
+            <!-- Status Pelaksanaan PKL Section -->
+            <div class="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/80 space-y-2">
+                <div class="flex items-center justify-between">
+                    <div class="pr-3">
+                        <span class="text-xs font-bold text-slate-900 block">Status Pelaksanaan PKL</span>
+                        <span class="text-[11px] text-slate-500 font-medium">Jika dicentang, siswa wajib menjalankan seluruh kewajiban presensi & jurnal. Jika belum mulai (posisi off), siswa dianulir/belum diwajibkan absen dan tidak akan tercatat sebagai alfa pada sistem.</span>
+                    </div>
+                    <label class="flex items-center space-x-2 cursor-pointer select-none shrink-0">
+                        <input type="checkbox" name="is_pkl_started" value="1" id="add-check-is-pkl-started"
+                               class="w-4 h-4 rounded text-emerald-600 border-slate-300 focus:ring-emerald-500/20 cursor-pointer">
+                        <span class="text-xs text-emerald-700 font-bold">Sudah Mulai</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Verifikasi Jurnal Harian Section -->
+            <div class="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/80 space-y-2">
+                <div class="flex items-center justify-between">
+                    <div class="pr-3">
+                        <span class="text-xs font-bold text-slate-900 block">Verifikasi Jurnal oleh Industri</span>
+                        <span class="text-[11px] text-slate-500 font-medium">Jika industri tidak berkenan / sibuk, jangan centang opsi ini agar verifikasi jurnal langsung dilakukan oleh Guru Pembimbing.</span>
+                    </div>
+                    <label class="flex items-center space-x-2 cursor-pointer select-none shrink-0">
+                        <input type="checkbox" name="requires_industry_approval" value="1" id="add-check-requires-industry-approval" checked
+                               class="w-4 h-4 rounded text-indigo-600 border-slate-300 focus:ring-indigo-500/20 cursor-pointer">
+                        <span class="text-xs text-indigo-700 font-bold">Aktifkan</span>
+                    </label>
+                </div>
+            </div>
+
             <!-- Initial Supervisor Account -->
             <div class="p-4 rounded-2xl bg-indigo-50/70 border border-indigo-100 space-y-2.5">
                 <div class="flex items-center space-x-2">
@@ -585,6 +627,36 @@
                             <input type="number" name="radius_meters" id="edit-radius-in" value="100" min="10" max="5000" 
                                    class="w-full text-xs p-2 rounded-xl bg-white border border-slate-200 font-bold text-slate-800">
                         </div>
+                    </div>
+                </div>
+
+                <!-- Status Pelaksanaan PKL Section -->
+                <div class="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/80 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <div class="pr-3">
+                            <span class="text-xs font-bold text-slate-900 block">Status Pelaksanaan PKL</span>
+                            <span class="text-[11px] text-slate-500 font-medium">Jika dicentang, siswa wajib menjalankan seluruh kewajiban presensi & jurnal. Jika belum mulai (posisi off), siswa dianulir/belum diwajibkan absen dan tidak akan tercatat sebagai alfa pada sistem.</span>
+                        </div>
+                        <label class="flex items-center space-x-2 cursor-pointer select-none shrink-0">
+                            <input type="checkbox" name="is_pkl_started" value="1" id="edit-check-is-pkl-started"
+                                   class="w-4 h-4 rounded text-emerald-600 border-slate-300 focus:ring-emerald-500/20 cursor-pointer">
+                            <span class="text-xs text-emerald-700 font-bold">Sudah Mulai</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Verifikasi Jurnal Harian Section -->
+                <div class="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/80 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <div class="pr-3">
+                            <span class="text-xs font-bold text-slate-900 block">Verifikasi Jurnal oleh Industri</span>
+                            <span class="text-[11px] text-slate-500 font-medium">Jika industri tidak berkenan / sibuk, jangan centang opsi ini agar verifikasi jurnal siswa langsung dilakukan oleh Guru Pembimbing.</span>
+                        </div>
+                        <label class="flex items-center space-x-2 cursor-pointer select-none shrink-0">
+                            <input type="checkbox" name="requires_industry_approval" value="1" id="edit-check-requires-industry-approval" 
+                                   class="w-4 h-4 rounded text-indigo-600 border-slate-300 focus:ring-indigo-500/20 cursor-pointer">
+                            <span class="text-xs text-indigo-700 font-bold">Aktifkan</span>
+                        </label>
                     </div>
                 </div>
 
@@ -1103,6 +1175,16 @@
         document.getElementById('edit-contact-person').value = data.contact_person || '';
         document.getElementById('edit-phone').value = data.phone || '';
         document.getElementById('edit-work-days').value = data.work_days || '5_days';
+
+        const isPklStartedCheck = document.getElementById('edit-check-is-pkl-started');
+        if (isPklStartedCheck) {
+            isPklStartedCheck.checked = Boolean(data.is_pkl_started);
+        }
+
+        const industryApprovalCheck = document.getElementById('edit-check-requires-industry-approval');
+        if (industryApprovalCheck) {
+            industryApprovalCheck.checked = data.requires_industry_approval !== undefined ? !!data.requires_industry_approval : true;
+        }
 
         const gpsCheck = document.getElementById('edit-check-gps');
         gpsCheck.checked = !!data.gps_enabled;

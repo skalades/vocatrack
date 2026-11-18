@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Announcement;
+use App\Models\AnnouncementRead;
 use App\Models\Major;
 use App\Services\AnnouncementService;
 use Illuminate\Http\Request;
@@ -284,7 +285,11 @@ class AnnouncementController extends Controller
             'umum' => (clone $baseQuery)->where('category', 'umum')->count(),
         ];
 
-        return view('student.announcements', compact('announcements', 'filters', 'categoryCounts', 'spkl'));
+        $readAnnouncementIds = AnnouncementRead::where('user_id', $user->id)
+            ->pluck('announcement_id')
+            ->toArray();
+
+        return view('student.announcements', compact('announcements', 'filters', 'categoryCounts', 'spkl', 'readAnnouncementIds'));
     }
 
     /**
@@ -293,8 +298,13 @@ class AnnouncementController extends Controller
     public function show(Announcement $announcement)
     {
         // Must belong to user's school
-        if ($announcement->school_id !== Auth::user()->school_id) {
+        $user = Auth::user();
+        if ($announcement->school_id !== $user->school_id) {
             abort(404);
+        }
+
+        if ($user->role === 'siswa') {
+            $this->announcementService->markAsRead($announcement, $user);
         }
 
         $announcement->load(['author.profile', 'major']);
@@ -319,6 +329,25 @@ class AnnouncementController extends Controller
         }
 
         return view('components.announcement-detail', compact('announcement'));
+    }
+
+    /**
+     * Mark announcement as read for the authenticated student.
+     */
+    public function markAsRead(Announcement $announcement)
+    {
+        $user = Auth::user();
+        if ($announcement->school_id !== $user->school_id) {
+            abort(403, 'Aksi tidak diizinkan.');
+        }
+
+        $this->announcementService->markAsRead($announcement, $user);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Pengumuman telah ditandai sebagai dibaca.',
+            'announcement_id' => $announcement->id,
+        ]);
     }
 
     /**

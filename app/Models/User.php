@@ -119,4 +119,9 @@ class User extends Authenticatable
     {
         return $this->hasOne(Supervisor::class);
     }
+
+    public function announcementReads(): HasMany
+    {
+        return $this->hasMany(AnnouncementRead::class);
+    }
 }

@@ -92,6 +92,13 @@
                                 <span class="text-slate-400">Siswa Aktif:</span>
                                 <span class="font-extrabold text-emerald-700">{{ $c->active_students_count }} Siswa</span>
                             </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-slate-400">Status PKL:</span>
+                                <span class="inline-flex items-center text-[10.5px] {{ $c->is_pkl_started ? 'text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200/60' : 'text-slate-600 font-bold bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200' }}">
+                                    <span class="w-1.5 h-1.5 rounded-full {{ $c->is_pkl_started ? 'bg-emerald-500' : 'bg-slate-400' }} mr-1 shrink-0"></span>
+                                    {{ $c->is_pkl_started ? 'Sudah Mulai' : 'Belum Mulai' }}
+                                </span>
+                            </div>
                         </div>
                     </div>
 
@@ -104,6 +111,8 @@
                                     'contact_person' => $c->contact_person,
                                     'phone' => $c->phone,
                                     'work_days' => $c->work_days,
+                                    'requires_industry_approval' => (bool) $c->requires_industry_approval,
+                                    'is_pkl_started' => (bool) $c->is_pkl_started,
                                     'gps_enabled' => $c->gps_enabled,
                                     'latitude' => $c->latitude,
                                     'longitude' => $c->longitude,
@@ -210,6 +219,34 @@
                         <label class="block font-bold text-slate-600 mb-1">Radius Toleransi (Meter)</label>
                         <input type="number" name="radius_meters" value="100" min="10" max="5000" class="w-full p-2 bg-white rounded-lg border border-slate-200 font-mono text-xs">
                     </div>
+                </div>
+            </div>
+
+            <!-- Status Pelaksanaan PKL -->
+            <div class="pt-3 border-t border-slate-100">
+                <div class="flex items-center justify-between">
+                    <div class="pr-3">
+                        <label class="text-xs font-bold text-slate-700 block">Status Pelaksanaan PKL</label>
+                        <span class="text-[11px] text-slate-500 font-medium">Jika diaktifkan, siswa wajib menjalankan seluruh kewajiban sistem. Jika mati (posisi off), siswa dianulir/belum diwajibkan absen dan tidak tercatat alfa.</span>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer shrink-0">
+                        <input type="checkbox" name="is_pkl_started" value="1" class="sr-only peer">
+                        <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Verifikasi Jurnal oleh Industri -->
+            <div class="pt-3 border-t border-slate-100">
+                <div class="flex items-center justify-between">
+                    <div class="pr-3">
+                        <label class="text-xs font-bold text-slate-700 block">Verifikasi Jurnal oleh Industri</label>
+                        <span class="text-[11px] text-slate-500 font-medium">Jika industri sibuk / tidak berkenan memverifikasi, matikan opsi ini agar jurnal langsung diverifikasi Guru Pembimbing.</span>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer shrink-0">
+                        <input type="checkbox" name="requires_industry_approval" value="1" checked class="sr-only peer">
+                        <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
+                    </label>
                 </div>
             </div>
 
@@ -331,6 +368,34 @@
                 </div>
             </div>
 
+            <!-- Status Pelaksanaan PKL Edit -->
+            <div class="pt-3 border-t border-slate-100">
+                <div class="flex items-center justify-between">
+                    <div class="pr-3">
+                        <label class="text-xs font-bold text-slate-700 block">Status Pelaksanaan PKL</label>
+                        <span class="text-[11px] text-slate-500 font-medium">Jika diaktifkan, siswa wajib menjalankan seluruh kewajiban sistem. Jika mati (posisi off), siswa dianulir/belum diwajibkan absen dan tidak tercatat alfa.</span>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer shrink-0">
+                        <input type="checkbox" name="is_pkl_started" value="1" id="edit-is-pkl-started" class="sr-only peer">
+                        <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Verifikasi Jurnal oleh Industri Edit -->
+            <div class="pt-3 border-t border-slate-100">
+                <div class="flex items-center justify-between">
+                    <div class="pr-3">
+                        <label class="text-xs font-bold text-slate-700 block">Verifikasi Jurnal oleh Industri</label>
+                        <span class="text-[11px] text-slate-500 font-medium">Jika industri sibuk / tidak berkenan memverifikasi, matikan opsi ini agar jurnal langsung diverifikasi Guru Pembimbing.</span>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer shrink-0">
+                        <input type="checkbox" name="requires_industry_approval" value="1" id="edit-requires-industry-approval" class="sr-only peer">
+                        <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
+                    </label>
+                </div>
+            </div>
+
             <div class="flex items-center justify-end space-x-2.5 pt-4 border-t border-slate-100">
                 <x-button type="button" variant="secondary" size="md" onclick="document.getElementById('modal-edit-company').classList.add('hidden')">
                     Batal
@@ -353,6 +418,16 @@
         document.getElementById('edit-phone').value = data.phone;
         document.getElementById('edit-work-days').value = data.work_days;
         
+        const pklStartedToggle = document.getElementById('edit-is-pkl-started');
+        if (pklStartedToggle) {
+            pklStartedToggle.checked = Boolean(data.is_pkl_started);
+        }
+
+        const industryToggle = document.getElementById('edit-requires-industry-approval');
+        if (industryToggle) {
+            industryToggle.checked = data.requires_industry_approval !== undefined ? Boolean(data.requires_industry_approval) : true;
+        }
+
         const gpsToggle = document.getElementById('edit-gps-toggle');
         gpsToggle.checked = Boolean(data.gps_enabled);
         document.getElementById('edit-gps-inputs').classList.toggle('hidden', !gpsToggle.checked);

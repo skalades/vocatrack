@@ -278,6 +278,7 @@ Route::middleware(['auth', 'IdentifyTenant', 'role:siswa'])->prefix('siswa')->gr
     Route::get('/pengumuman', [AnnouncementController::class, 'studentIndex'])->name('student.announcements');
     Route::get('/pengumuman/latest/check', [AnnouncementController::class, 'latestForStudent'])->name('student.announcements.latest');
     Route::get('/pengumuman/{announcement}', [AnnouncementController::class, 'show'])->name('student.announcements.show');
+    Route::post('/pengumuman/{announcement}/read', [AnnouncementController::class, 'markAsRead'])->name('student.announcements.read');
 });
 
 // 4. Guru Pembimbing Routes

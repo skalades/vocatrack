@@ -122,6 +122,27 @@ class StudentController extends Controller
         // Pengumuman tersaring berdasarkan peran & jurusan siswa
         $announcements = $announcementService->getLatestForUser(Auth::user(), 6);
 
+        // Pengumuman belum dibaca untuk popup antrean beranda
+        $unreadAnnouncements = $announcementService->getUnreadForUser(Auth::user())
+            ->map(function ($ann) {
+                return [
+                    'id' => $ann->id,
+                    'title' => $ann->title,
+                    'content' => $ann->content,
+                    'category' => $ann->category,
+                    'category_label' => $ann->category_label,
+                    'category_badge' => $ann->category_badge_variant,
+                    'target_scope' => $ann->target_scope_description,
+                    'major_name' => $ann->major?->name,
+                    'image_url' => $ann->image_url,
+                    'author_name' => $ann->author?->name ?? 'Pihak Sekolah',
+                    'author_role' => $ann->author?->role ?? '-',
+                    'published_at' => $ann->published_at ? $ann->published_at->isoFormat('dddd, D MMMM Y • HH:mm') : $ann->created_at->isoFormat('dddd, D MMMM Y • HH:mm'),
+                    'is_pinned' => (bool) $ann->is_pinned,
+                ];
+            })
+            ->values();
+
         $dayNumber = 27;
         $currentWeek = 6;
         if ($spkl && $spkl->start_date) {
@@ -135,10 +156,12 @@ class StudentController extends Controller
 
         $completedJournalsCount = $spkl ? Journal::where('student_pkl_id', $spkl->id)->whereIn('status', ['submitted', 'review_guru', 'approved'])->count() : 18;
         $targetJournalsCount = max($completedJournalsCount, 20);
+        $isPklStarted = (bool) ($spkl?->company?->is_pkl_started ?? false);
 
         return view('student.home', compact(
-            'spkl', 'student', 'todayAttendance', 'todayJournal', 'stats', 'announcements', 
-            'dayStatus', 'dayNumber', 'currentWeek', 'attendanceRate', 'completedJournalsCount', 'targetJournalsCount'
+            'spkl', 'student', 'todayAttendance', 'todayJournal', 'stats', 'announcements', 'unreadAnnouncements',
+            'dayStatus', 'dayNumber', 'currentWeek', 'attendanceRate', 'completedJournalsCount', 'targetJournalsCount',
+            'isPklStarted'
         ));
     }
 
@@ -176,7 +199,9 @@ class StudentController extends Controller
             $dayStatus = $attendanceService->getDayAttendanceStatus($spkl);
         }
 
-        return view('student.attendance', compact('spkl', 'student', 'todayAttendance', 'history', 'pendingRequests', 'dayStatus', 'dayNumber'));
+        $isPklStarted = (bool) ($spkl?->company?->is_pkl_started ?? false);
+
+        return view('student.attendance', compact('spkl', 'student', 'todayAttendance', 'history', 'pendingRequests', 'dayStatus', 'dayNumber', 'isPklStarted'));
     }
 
     public function checkin(Request $request, AttendanceService $attendanceService)
@@ -184,6 +209,14 @@ class StudentController extends Controller
         $spkl = $this->getStudentPkl(true);
         if (!$spkl) {
             return back()->withErrors(['time' => 'Anda tidak memiliki penugasan PKL aktif untuk melakukan presensi.']);
+        }
+
+        if (!$spkl->company?->is_pkl_started) {
+            $msg = 'Pelaksanaan PKL di ' . ($spkl->company->name ?? 'perusahaan ini') . ' belum resmi dimulai. Anda belum diwajibkan melakukan presensi.';
+            if ($request->wantsJson()) {
+                return response()->json(['message' => $msg, 'errors' => ['time' => [$msg]]], 422);
+            }
+            return back()->withErrors(['time' => $msg]);
         }
 
         $request->validate([
@@ -480,7 +513,9 @@ class StudentController extends Controller
                 ->get();
         }
 
-        return view('student.journals', compact('spkl', 'student', 'journals', 'todayJournal', 'statusCounts', 'currentWeek', 'weeklyDays', 'learningObjectives'));
+        $isPklStarted = (bool) ($spkl?->company?->is_pkl_started ?? false);
+
+        return view('student.journals', compact('spkl', 'student', 'journals', 'todayJournal', 'statusCounts', 'currentWeek', 'weeklyDays', 'learningObjectives', 'isPklStarted'));
     }
 
     public function storeJournal(Request $request)
@@ -490,35 +525,51 @@ class StudentController extends Controller
             return $this->journalErrorResponse($request, ['date' => 'Anda tidak memiliki penugasan PKL aktif untuk mengisi jurnal.']);
         }
 
+        if (!$spkl->company?->is_pkl_started) {
+            return $this->journalErrorResponse($request, [
+                'date' => 'Pelaksanaan PKL di ' . ($spkl->company->name ?? 'perusahaan ini') . ' belum resmi dimulai. Pengisian jurnal belum diwajibkan.'
+            ]);
+        }
+
         $desc = $request->input('activity_description') ?? $request->input('description');
         if ($desc) {
             $request->merge(['activity_description' => $desc]);
         }
 
+        $hasCompressed = $request->filled('compressed_photos') && count(array_filter((array) $request->input('compressed_photos'))) > 0;
+        $photoRules = $hasCompressed
+            ? ['nullable']
+            : ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'];
+
         $request->validate([
             'date' => ['required', 'date', 'before_or_equal:today'],
             'activity_description' => ['required', 'string', 'min:50'],
-            'photos.*' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'photos.*' => $photoRules,
             'compressed_photos.*' => ['nullable', 'string'],
             'action_type' => ['nullable', 'in:draft,submit'],
             'is_draft' => ['nullable', 'boolean'],
         ], [
             'date.before_or_equal' => 'Tanggal jurnal tidak boleh melebihi hari ini.',
             'activity_description.min' => 'Uraian kegiatan minimal harus 50 karakter.',
+            'photos.*.image' => 'Berkas foto jurnal harus berupa gambar valid.',
+            'photos.*.mimes' => 'Format foto jurnal harus berupa JPG, JPEG, PNG, atau WebP.',
+            'photos.*.max' => 'Ukuran foto jurnal tidak boleh lebih dari 5 MB per berkas.',
         ]);
 
+        $requiresIndustry = $spkl->company?->requires_industry_approval ?? true;
         $isDraft = $request->boolean('is_draft') || ($request->input('action_type') === 'draft');
-        $status = $isDraft ? 'draft' : 'submitted';
+        $status = $isDraft ? 'draft' : ($requiresIndustry ? 'submitted' : 'review_guru');
 
         try {
-            $journal = DB::transaction(function () use ($spkl, $request, $status) {
+            $journal = DB::transaction(function () use ($spkl, $request, $status, $requiresIndustry) {
                 $existing = Journal::where('student_pkl_id', $spkl->id)
                     ->whereDate('date', $request->date)
                     ->lockForUpdate()
                     ->first();
 
                 if ($existing) {
-                    if (in_array($existing->status, ['review_guru', 'approved'])) {
+                    $hasApprovals = $existing->approvals()->where('status', 'approved')->exists();
+                    if ($existing->status === 'approved' || ($requiresIndustry && $existing->status === 'review_guru') || $hasApprovals) {
                         throw ValidationException::withMessages([
                             'date' => 'Jurnal untuk tanggal ini sudah dalam tahap review pembimbing atau telah disetujui, sehingga tidak dapat disunting kembali.',
                         ]);
@@ -547,7 +598,8 @@ class StudentController extends Controller
                             ->lockForUpdate()
                             ->firstOrFail();
 
-                        if (in_array($existing->status, ['review_guru', 'approved'])) {
+                        $hasApprovals = $existing->approvals()->where('status', 'approved')->exists();
+                        if ($existing->status === 'approved' || ($requiresIndustry && $existing->status === 'review_guru') || $hasApprovals) {
                             throw ValidationException::withMessages([
                                 'date' => 'Jurnal untuk tanggal ini sudah dalam tahap review atau telah disetujui.',
                             ]);
@@ -572,25 +624,7 @@ class StudentController extends Controller
             $journal->learningObjectives()->sync($loIds);
         }
 
-        if ($request->hasFile('photos')) {
-            $totalSize = 0;
-            foreach ($request->file('photos') as $photo) {
-                $totalSize += $photo->getSize();
-            }
-
-            if (!app(StorageQuotaService::class)->canUpload($spkl->school, $totalSize)) {
-                return $this->journalErrorResponse($request, ['photos' => 'Kapasitas penyimpanan sekolah Anda telah penuh. Tidak dapat mengunggah foto jurnal. Hubungi admin sekolah.']);
-            }
-
-            foreach ($request->file('photos') as $photo) {
-                $path = app(SecureFileService::class)->storeUploadedFile($photo, 'schools/' . $spkl->school_id . '/journals/' . date('Y'));
-                JournalPhoto::create([
-                    'journal_id' => $journal->id,
-                    'photo_path' => $path,
-                ]);
-            }
-            app(StorageQuotaService::class)->recordUpload($spkl->school, $totalSize);
-        } elseif ($request->filled('compressed_photos')) {
+        if ($hasCompressed) {
             $compressedPhotos = array_filter((array) $request->input('compressed_photos'));
             $photosToSave = [];
             $totalSize = 0;
@@ -640,11 +674,33 @@ class StudentController extends Controller
                 }
                 app(StorageQuotaService::class)->recordUpload($spkl->school, $totalSize);
             }
+        } elseif ($request->hasFile('photos')) {
+            $totalSize = 0;
+            foreach ($request->file('photos') as $photo) {
+                if (!$photo->isValid()) continue;
+                $totalSize += $photo->getSize();
+            }
+
+            if (!app(StorageQuotaService::class)->canUpload($spkl->school, $totalSize)) {
+                return $this->journalErrorResponse($request, ['photos' => 'Kapasitas penyimpanan sekolah Anda telah penuh. Tidak dapat mengunggah foto jurnal. Hubungi admin sekolah.']);
+            }
+
+            foreach ($request->file('photos') as $photo) {
+                if (!$photo->isValid()) continue;
+                $path = app(SecureFileService::class)->storeUploadedFile($photo, 'schools/' . $spkl->school_id . '/journals/' . date('Y'));
+                JournalPhoto::create([
+                    'journal_id' => $journal->id,
+                    'photo_path' => $path,
+                ]);
+            }
+            app(StorageQuotaService::class)->recordUpload($spkl->school, $totalSize);
         }
 
-        $msg = ($status === 'submitted')
-            ? 'Jurnal berhasil diajukan untuk review Pembimbing DU/DI!'
-            : 'Jurnal harian tersimpan sebagai draft.';
+        $msg = match($status) {
+            'draft' => 'Jurnal harian tersimpan sebagai draft.',
+            'review_guru' => 'Jurnal berhasil diajukan langsung untuk review Guru Pembimbing!',
+            default => 'Jurnal berhasil diajukan untuk review Pembimbing DU/DI!',
+        };
 
         // Sinkronisasi jurnal offline dari PWA mengirim Accept: application/json.
         if ($request->expectsJson()) {
@@ -680,16 +736,23 @@ class StudentController extends Controller
             abort(403);
         }
 
-        return DB::transaction(function () use ($journal) {
+        return DB::transaction(function () use ($journal, $spkl) {
             $lockedJournal = Journal::where('id', $journal->id)->lockForUpdate()->firstOrFail();
 
             if (!in_array($lockedJournal->status, ['draft', 'revision'])) {
                 return back()->with('error', 'Status jurnal saat ini tidak dapat disubmit ulang.');
             }
 
-            $lockedJournal->update(['status' => 'submitted']);
+            $requiresIndustry = $spkl->company?->requires_industry_approval ?? true;
+            $newStatus = $requiresIndustry ? 'submitted' : 'review_guru';
 
-            return back()->with('success', 'Jurnal berhasil disubmit dan menunggu approval DU/DI.');
+            $lockedJournal->update(['status' => $newStatus]);
+
+            $msg = $requiresIndustry
+                ? 'Jurnal berhasil disubmit dan menunggu approval DU/DI.'
+                : 'Jurnal berhasil disubmit dan diteruskan langsung ke Guru Pembimbing.';
+
+            return back()->with('success', $msg);
         });
     }
 

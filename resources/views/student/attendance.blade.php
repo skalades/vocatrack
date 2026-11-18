@@ -32,6 +32,24 @@
             </a>
         </div>
 
+    @elseif(!$isPklStarted)
+        <!-- Case: Pelaksanaan PKL Belum Dimulai -->
+        <div class="p-6 pt-10 text-center bg-white rounded-[26px] m-5 border border-slate-200 shadow-sm">
+            <div class="w-16 h-16 rounded-full bg-[#E0EBF5] text-[#1E5680] flex items-center justify-center mx-auto shadow-xs">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6l4 2"/>
+                </svg>
+            </div>
+            <h2 class="font-space font-bold text-lg text-[#10211D] mt-4">Pelaksanaan PKL Belum Dimulai</h2>
+            <p class="text-xs text-[#5A6B65] mt-1.5 max-w-[290px] mx-auto leading-relaxed">
+                Jadwal PKL di <strong>{{ $companyName }}</strong> belum resmi dimulai oleh pihak sekolah/industri. Anda <strong>dianulir dari kewajiban presensi</strong> dan tidak akan tercatat sebagai alfa.
+            </p>
+            <a href="{{ route('student.home') }}" class="inline-block mt-5 px-6 py-2.5 rounded-full bg-[#0B2B25] text-white text-xs font-bold shadow-xs">
+                Kembali ke Beranda
+            </a>
+        </div>
+
     @elseif($todayAttendance)
         <!-- ========================================================
              SCREEN 3: PRESENSI BERHASIL / BUKTI PRESENSI MASUK

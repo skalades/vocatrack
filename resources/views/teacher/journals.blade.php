@@ -26,7 +26,7 @@
         $pendingGuru = $stats['pending_guru'] ?? 0;
         $approvedCount = $stats['approved'] ?? 0;
         $revisionCount = $stats['revision'] ?? 0;
-        $allPendingJournals = $studentPkls->flatMap->journals->where('status', 'review_guru');
+        $allPendingJournals = $studentPkls->flatMap->journals->filter(fn($j) => $j->status === 'review_guru' || ($j->status === 'submitted' && !($j->studentPkl->company->requires_industry_approval ?? true)));
     @endphp
 
     <!-- Top KPI Metrics -->
@@ -118,7 +118,7 @@
         @forelse($studentPkls as $sp)
             @php
                 $sJournals = $sp->journals ?? collect();
-                $sPending = $sJournals->where('status', 'review_guru')->count();
+                $sPending = $sJournals->filter(fn($j) => $j->status === 'review_guru' || ($j->status === 'submitted' && !($sp->company->requires_industry_approval ?? true)))->count();
                 $sApproved = $sJournals->where('status', 'approved')->count();
                 $sRevision = $sJournals->where('status', 'revision')->count();
             @endphp
@@ -178,7 +178,7 @@
                 <div id="student-journals-{{ $sp->id }}" class="hidden border-t border-slate-100 bg-slate-50/50 p-4 sm:p-5 space-y-3">
                     @forelse($sJournals as $sj)
                         @php
-                            $isPendingItem = $sj->status === 'review_guru';
+                            $isPendingItem = $sj->status === 'review_guru' || ($sj->status === 'submitted' && !($sp->company->requires_industry_approval ?? true));
                         @endphp
                         <div class="bg-white p-4 rounded-xl border border-slate-200/70 shadow-2xs flex flex-col md:flex-row md:items-start justify-between gap-4 hover:border-slate-300 transition-colors">
                             <div class="space-y-2 flex-1 min-w-0">
@@ -376,7 +376,10 @@
                         @forelse($journals as $j)
                             <tr class="hover:bg-slate-50/70 transition-colors group">
                                 <td class="py-3 px-3 text-center">
-                                    @if($j->status === 'review_guru')
+                                    @php
+                    $canReviewModal = ($j->status === 'review_guru') || ($j->status === 'submitted' && !($j->studentPkl->company->requires_industry_approval ?? true));
+                @endphp
+                @if($canReviewModal)
                                         <input type="checkbox" value="{{ $j->id }}" class="bulk-checkbox-teacher-journals rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
                                     @else
                                         <span class="w-1.5 h-1.5 rounded-full bg-slate-300 inline-block" title="Hanya jurnal berstatus butuh review yang dapat dipilih"></span>
@@ -432,10 +435,13 @@
                                 </td>
 
                                 <!-- Action Button -->
+                                @php
+                                    $canReview = ($j->status === 'review_guru') || ($j->status === 'submitted' && !($j->studentPkl->company->requires_industry_approval ?? true));
+                                @endphp
                                 <td class="py-3 px-4 text-center whitespace-nowrap table-sticky-right">
                                     <button type="button" onclick="openJournalModal('{{ $j->id }}')" 
-                                            class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all {{ $j->status === 'review_guru' ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-xs' : 'bg-slate-100 hover:bg-slate-200 text-slate-700' }}">
-                                        {{ $j->status === 'review_guru' ? 'Tinjau' : 'Detail' }}
+                                            class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all {{ $canReview ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-xs' : 'bg-slate-100 hover:bg-slate-200 text-slate-700' }}">
+                                        {{ $canReview ? 'Tinjau' : 'Detail' }}
                                     </button>
                                 </td>
                             </tr>
@@ -562,7 +568,10 @@
                     </div>
                 @endif
 
-                @if($j->status === 'review_guru')
+                @php
+                    $canReviewModal = ($j->status === 'review_guru') || ($j->status === 'submitted' && !($j->studentPkl->company->requires_industry_approval ?? true));
+                @endphp
+                @if($canReviewModal)
                     <form action="{{ route('guru.journals.process', $j->id) }}" method="POST" class="pt-2 border-t border-slate-100 space-y-3">
                         @csrf
                         <div>

@@ -66,6 +66,17 @@
         </div>
 
         <!-- Today's Journal Form Card -->
+        @if(!$isPklStarted)
+            <div class="mt-4 p-4 rounded-3xl bg-[#F4FAF6] border border-[#D5EADB] text-[#0B2B25] flex items-center gap-3">
+                <span class="w-8 h-8 rounded-full bg-[#E0EBF5] text-[#1E5680] flex items-center justify-center shrink-0 font-bold">
+                    ℹ
+                </span>
+                <div class="text-xs leading-relaxed text-[#36504A]">
+                    <strong>Pelaksanaan PKL Belum Dimulai:</strong> Jadwal PKL di {{ $spkl->company->name ?? 'industri' }} belum resmi dimulai. Pengisian jurnal harian saat ini dianulir / belum diwajibkan.
+                </div>
+            </div>
+        @endif
+
         <div class="mt-5 bg-white rounded-[26px] p-4 flex flex-col gap-3 shadow-[0_10px_30px_rgba(11,43,37,0.1)] border border-slate-100">
             
             <form action="{{ route('student.journal.store') }}" method="POST" enctype="multipart/form-data" id="journal-main-form" class="flex flex-col gap-3">
@@ -144,14 +155,14 @@
                 </div>
 
                 <!-- Simpan Jurnal CTA Button -->
-                <button type="submit" 
-                        class="mt-2 flex items-center justify-center gap-2.5 h-14 rounded-[28px] bg-[#0B2B25] hover:bg-[#12382F] text-white font-bold text-[15.5px] shadow-[0_8px_20px_rgba(11,43,37,0.2)] active:scale-95 transition-all cursor-pointer">
-                    <span class="w-[26px] h-[26px] rounded-full bg-[#C6F26B] text-[#0B2B25] flex items-center justify-center shrink-0">
+                <button type="submit" {{ !$isPklStarted ? 'disabled' : '' }}
+                        class="mt-2 flex items-center justify-center gap-2.5 h-14 rounded-[28px] bg-[#0B2B25] hover:bg-[#12382F] text-white font-bold text-[15.5px] shadow-[0_8px_20px_rgba(11,43,37,0.2)] active:scale-95 transition-all {{ !$isPklStarted ? 'opacity-50 cursor-not-allowed pointer-events-none' : 'cursor-pointer' }}">
+                    <span class="w-[26px] h-[26px] rounded-full {{ !$isPklStarted ? 'bg-slate-400 text-white' : 'bg-[#C6F26B] text-[#0B2B25]' }} flex items-center justify-center shrink-0">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
                             <polyline points="20 6 9 17 4 12"/>
                         </svg>
                     </span>
-                    <span>Simpan Jurnal</span>
+                    <span>{{ !$isPklStarted ? 'PKL Belum Dimulai' : 'Simpan Jurnal' }}</span>
                 </button>
             </form>
 
@@ -513,15 +524,24 @@
                 hiddenBase64.value = result.dataUrl;
             }
 
-            // 3. Masukkan file terkompresi ke input.files via DataTransfer
+            // 3. Masukkan file terkompresi ke input.files via DataTransfer bila didukung browser
+            let fileAssigned = false;
             if (result.file && window.DataTransfer) {
                 try {
                     const dt = new DataTransfer();
                     dt.items.add(result.file);
                     input.files = dt.files;
+                    fileAssigned = true;
                 } catch (dtErr) {
+                    fileAssigned = false;
                     console.warn('DataTransfer assignment fallback to base64:', dtErr);
                 }
+            }
+
+            // Bila DataTransfer tidak didukung / gagal di browser mobile, kosongkan input berkas asli
+            // agar form mengirimkan foto terkompresi via base64 (compressed_photos) secara mulus
+            if (!fileAssigned && hiddenBase64 && hiddenBase64.value) {
+                input.value = '';
             }
 
             // 4. Update helper text with size savings badge

@@ -103,7 +103,9 @@ class TeacherController extends Controller
             }
 
             $state = 'belum';
-            if ($att) {
+            if ($company && !$company->is_pkl_started) {
+                $state = 'belum_mulai';
+            } elseif ($att) {
                 $state = $att->status;
             } elseif ($isSchoolHoliday) {
                 $state = 'libur';
@@ -226,8 +228,12 @@ class TeacherController extends Controller
                 'last_checkin' => $lastCheckins->get($sp->id) ? Carbon::parse($lastCheckins->get($sp->id)) : null,
                 'journal_total' => $journalTotal,
                 'journal_approved' => $jrCount(['approved']),
-                'journal_review_guru' => $jrCount(['review_guru']),
-                'journal_at_dudi' => $jrCount(['submitted']),
+                'journal_review_guru' => $sp->journals->filter(function($j) use ($sp) {
+                    return ($j->status === 'review_guru') || ($j->status === 'submitted' && !$sp->company->requires_industry_approval);
+                })->count(),
+                'journal_at_dudi' => $sp->journals->filter(function($j) use ($sp) {
+                    return ($j->status === 'submitted' && $sp->company->requires_industry_approval);
+                })->count(),
                 'journal_revision' => $jrCount(['revision']),
                 'days_since_journal' => $daysSinceJournal,
                 'teacher_scored' => $assessment && $assessment->score_teacher_report !== null,
@@ -256,18 +262,31 @@ class TeacherController extends Controller
             ->count();
 
         $pendingJournalsList = Journal::whereIn('student_pkl_id', $spklIds)
-            ->where('status', 'review_guru')
+            ->where(function($q) {
+                $q->where('status', 'review_guru')
+                  ->orWhere(function($sub) {
+                      $sub->where('status', 'submitted')
+                          ->whereHas('studentPkl.company', fn($c) => $c->where('requires_industry_approval', false));
+                  });
+            })
             ->with(['studentPkl.student.user', 'studentPkl.company'])
             ->oldest('date')
             ->take(4)
             ->get();
         $pendingJournals = Journal::whereIn('student_pkl_id', $spklIds)
-            ->where('status', 'review_guru')
+            ->where(function($q) {
+                $q->where('status', 'review_guru')
+                  ->orWhere(function($sub) {
+                      $sub->where('status', 'submitted')
+                          ->whereHas('studentPkl.company', fn($c) => $c->where('requires_industry_approval', false));
+                  });
+            })
             ->count();
 
         // Jurnal tertahan di DU/DI > 2 hari (perlu didorong ke pembimbing industri)
         $stuckAtDudi = Journal::whereIn('student_pkl_id', $spklIds)
             ->where('status', 'submitted')
+            ->whereHas('studentPkl.company', fn($c) => $c->where('requires_industry_approval', true))
             ->where('updated_at', '<', $now->copy()->subDays(2))
             ->with(['studentPkl.company', 'studentPkl.supervisor.user'])
             ->get()
@@ -565,7 +584,7 @@ class TeacherController extends Controller
             });
         }
 
-        $journals = $query->orderByRaw("CASE WHEN status = 'review_guru' THEN 1 ELSE 2 END")
+        $journals = $query->orderByRaw("CASE WHEN status = 'review_guru' THEN 1 WHEN status = 'submitted' THEN 2 ELSE 3 END")
             ->orderBy('date', 'desc')
             ->paginate(15)
             ->withQueryString();
@@ -573,7 +592,13 @@ class TeacherController extends Controller
         $baseStatsQuery = Journal::whereIn('student_pkl_id', $spklIds);
         $stats = [
             'total' => (clone $baseStatsQuery)->count(),
-            'pending_guru' => (clone $baseStatsQuery)->where('status', 'review_guru')->count(),
+            'pending_guru' => (clone $baseStatsQuery)->where(function($q) {
+                $q->where('status', 'review_guru')
+                  ->orWhere(function($sub) {
+                      $sub->where('status', 'submitted')
+                          ->whereHas('studentPkl.company', fn($c) => $c->where('requires_industry_approval', false));
+                  });
+            })->count(),
             'approved' => (clone $baseStatsQuery)->where('status', 'approved')->count(),
             'revision' => (clone $baseStatsQuery)->where('status', 'revision')->count(),
         ];

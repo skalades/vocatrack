@@ -50,6 +50,12 @@ class EvaluateDailyAbsence extends Command
                         continue;
                     }
 
+                    // 0. Check whether company has started PKL
+                    // Jika belum mulai, siswa dianulir / belum diwajibkan absen dan tidak dicatat alfa
+                    if (!$company->is_pkl_started) {
+                        continue;
+                    }
+
                     // 1. Check school holiday status (memoized O(1) lookup per school)
                     if (!array_key_exists($spkl->school_id, $holidaySchoolCache)) {
                         $holidaySchoolCache[$spkl->school_id] = $holidayService->isHoliday($spkl->school_id, $today);

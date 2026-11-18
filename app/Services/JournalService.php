@@ -28,9 +28,14 @@ class JournalService
                 $nextStatus = 'review_guru';
                 $roleLevel = 'pembimbing-dudi';
             } elseif ($approver->hasRole('guru-pembimbing')) {
-                if ($lockedJournal->status !== 'review_guru') {
+                $requiresIndustry = $lockedJournal->studentPkl?->company?->requires_industry_approval ?? true;
+                $allowedStatuses = $requiresIndustry ? ['review_guru'] : ['submitted', 'review_guru'];
+
+                if (!in_array($lockedJournal->status, $allowedStatuses)) {
                     throw ValidationException::withMessages([
-                        'status' => 'Jurnal harus disetujui Pembimbing DU/DI terlebih dahulu sebelum dapat disetujui Guru.'
+                        'status' => $requiresIndustry
+                            ? 'Jurnal harus disetujui Pembimbing DU/DI terlebih dahulu sebelum dapat disetujui Guru.'
+                            : 'Status jurnal saat ini tidak valid untuk disetujui Guru (status saat ini: ' . $lockedJournal->status . ').'
                     ]);
                 }
                 $nextStatus = 'approved';
@@ -150,7 +155,10 @@ class JournalService
                         $skipped++;
                         continue;
                     }
-                    if ($journal->status !== 'review_guru') {
+                    $requiresIndustry = $journal->studentPkl?->company?->requires_industry_approval ?? true;
+                    $allowedStatuses = $requiresIndustry ? ['review_guru'] : ['submitted', 'review_guru'];
+
+                    if (!in_array($journal->status, $allowedStatuses)) {
                         $skipped++;
                         continue;
                     }

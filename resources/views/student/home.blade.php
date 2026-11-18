@@ -225,7 +225,24 @@
             </div>
 
             <!-- Primary Action CTA Button -->
-            @if(!$todayAttendance)
+            @if($spkl && !$spkl->company?->is_pkl_started)
+                <!-- Banner Status PKL Belum Dimulai -->
+                <div class="mt-3.5 p-4 rounded-3xl bg-[#F4FAF6] border border-[#D5EADB] text-[#0B2B25] flex flex-col gap-2.5">
+                    <div class="flex items-center justify-between">
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#E0EBF5] text-[#1E5680] text-xs font-extrabold">
+                            <span class="w-2 h-2 rounded-full bg-[#1E5680]"></span>
+                            PKL Belum Dimulai
+                        </span>
+                        <span class="text-[11px] font-bold text-[#0F7A66] bg-[#DDF3EC] px-2.5 py-0.5 rounded-full">Bebas Presensi</span>
+                    </div>
+                    <p class="text-xs leading-relaxed text-[#36504A]">
+                        Jadwal PKL di <strong>{{ $spkl->company->name }}</strong> belum resmi dimulai oleh pihak sekolah/industri. Anda <strong>dianulir dari seluruh kewajiban presensi & jurnal</strong>, dan status kehadiran Anda aman (tidak tercatat sebagai alfa).
+                    </p>
+                    <div class="h-11 rounded-2xl bg-[#EEF3F1] border border-[#CBD5CA]/60 flex items-center justify-center text-xs font-bold text-[#5A6B65] select-none">
+                        Kewajiban Presensi & Jurnal Belum Aktif
+                    </div>
+                </div>
+            @elseif(!$todayAttendance)
                 <!-- Button to open Camera Verification -->
                 <a href="{{ route('student.attendance') }}" 
                    class="mt-3.5 flex items-center justify-between h-[60px] rounded-[30px] bg-[#0B2B25] hover:bg-[#12382F] text-white px-2 pl-6 shadow-[0_8px_20px_rgba(11,43,37,0.25)] active:scale-95 transition-all group">
@@ -372,6 +389,9 @@
         @endif
     </div>
 </div>
+
+<!-- Modal Detail Pengumuman Popup Otomatis (Queue Chaining) -->
+<x-student.announcement-modal />
 
 @push('scripts')
 <script src="{{ asset('vendor/leaflet/leaflet.js') }}" onerror="this.onerror=null;this.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'"></script>
@@ -633,6 +653,140 @@
     document.addEventListener('DOMContentLoaded', function() {
         initStudentLiveMap();
         refreshStudentLocation();
+    });
+
+    // Auto-popup unread announcements queue for student homepage
+    document.addEventListener('DOMContentLoaded', function() {
+        const rawUnread = @json($unreadAnnouncements ?? []);
+        const studentUserId = {{ Auth::id() }};
+        const storageKey = 'vt_read_announcements_' + studentUserId;
+
+        if (!rawUnread || rawUnread.length === 0) {
+            return;
+        }
+
+        let storedReadIds = [];
+        try {
+            storedReadIds = JSON.parse(localStorage.getItem(storageKey) || '[]');
+        } catch (e) {
+            storedReadIds = [];
+        }
+
+        // Double safeguard: filter out announcements already read according to localStorage
+        const activeQueue = rawUnread.filter(item => !storedReadIds.includes(item.id));
+        if (activeQueue.length === 0) {
+            return;
+        }
+
+        let currentIndex = 0;
+
+        const catStyles = {
+            penting:  { text: 'text-[#BA1A1A]', bg: 'bg-[#FFEDEA]', dot: 'bg-[#BA1A1A]' },
+            kegiatan: { text: 'text-[#0F7A66]', bg: 'bg-[#DDF3EC]', dot: 'bg-[#0F7A66]' },
+            akademik: { text: 'text-[#555F71]', bg: 'bg-[#EEF3F1]', dot: 'bg-[#555F71]' },
+            libur:    { text: 'text-[#7A4B00]', bg: 'bg-[#FFF1D6]', dot: 'bg-[#7A4B00]' },
+            dudi:     { text: 'text-[#2D4DB3]', bg: 'bg-[#E3EAFF]', dot: 'bg-[#2D4DB3]' },
+            umum:     { text: 'text-[#36504A]', bg: 'bg-[#EEF3F1]', dot: 'bg-[#36504A]' }
+        };
+
+        function renderQueueModal(item, idx, total) {
+            const modal = document.getElementById('announcement-modal');
+            const titleEl = document.getElementById('modal-title');
+            const contentEl = document.getElementById('modal-content');
+            const authorEl = document.getElementById('modal-author');
+            const targetEl = document.getElementById('modal-target');
+            const dateEl = document.getElementById('modal-date');
+            const majorBadge = document.getElementById('modal-major-badge');
+            const catBadge = document.getElementById('modal-category-badge');
+            const queueIndicator = document.getElementById('modal-queue-indicator');
+            const imgContainer = document.getElementById('modal-image-container');
+            const img = document.getElementById('modal-image');
+
+            if (!modal) return;
+
+            if (titleEl) titleEl.textContent = item.title;
+            if (contentEl) contentEl.textContent = item.content;
+            if (authorEl) authorEl.textContent = item.author_name;
+            if (targetEl) targetEl.textContent = item.target_scope;
+            if (dateEl) dateEl.textContent = item.published_at;
+
+            if (majorBadge) {
+                if (item.major_name) {
+                    majorBadge.textContent = item.major_name;
+                    majorBadge.classList.remove('hidden');
+                } else {
+                    majorBadge.classList.add('hidden');
+                }
+            }
+
+            if (catBadge) {
+                const style = catStyles[item.category] || catStyles.umum;
+                catBadge.className = `inline-flex items-center gap-1.5 h-6 px-2.5 rounded-full text-[11px] font-bold ${style.bg} ${style.text}`;
+                catBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full ${style.dot}"></span><span>${item.category_label || 'Umum'}</span>`;
+            }
+
+            if (imgContainer && img) {
+                if (item.image_url) {
+                    img.src = item.image_url;
+                    imgContainer.classList.remove('hidden');
+                } else {
+                    imgContainer.classList.add('hidden');
+                    img.removeAttribute('src');
+                }
+            }
+
+            if (queueIndicator) {
+                if (total > 1) {
+                    queueIndicator.textContent = `${idx + 1} dari ${total}`;
+                    queueIndicator.classList.remove('hidden');
+                } else {
+                    queueIndicator.classList.add('hidden');
+                }
+            }
+
+            modal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+
+        window.handleAnnouncementModalClose = function() {
+            if (currentIndex < activeQueue.length) {
+                const currentItem = activeQueue[currentIndex];
+
+                // 1. Mark in localStorage immediately
+                try {
+                    const currentRead = JSON.parse(localStorage.getItem(storageKey) || '[]');
+                    if (!currentRead.includes(currentItem.id)) {
+                        currentRead.push(currentItem.id);
+                        localStorage.setItem(storageKey, JSON.stringify(currentRead));
+                    }
+                } catch (e) {}
+
+                // 2. Mark on server in background
+                fetch(`/siswa/pengumuman/${currentItem.id}/read`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json'
+                    }
+                }).catch(err => console.warn('Failed to mark announcement read:', err));
+
+                currentIndex++;
+            }
+
+            if (currentIndex < activeQueue.length) {
+                // Open next announcement in queue immediately
+                renderQueueModal(activeQueue[currentIndex], currentIndex, activeQueue.length);
+            } else {
+                // All announcements in queue finished
+                const modal = document.getElementById('announcement-modal');
+                if (modal) modal.classList.add('hidden');
+                document.body.style.overflow = '';
+            }
+        };
+
+        // Trigger opening of first announcement
+        renderQueueModal(activeQueue[0], 0, activeQueue.length);
     });
 </script>
 @endpush
