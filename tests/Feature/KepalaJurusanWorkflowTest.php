@@ -366,4 +366,111 @@ class KepalaJurusanWorkflowTest extends TestCase
         $response->assertOk();
         $this->assertTrue(str_contains($response->headers->get('content-type'), 'text/csv'));
     }
+
+    public function test_kajur_can_view_attendance_monitoring_with_search()
+    {
+        $this->actingAs($this->kajurUser);
+
+        $studentUser = User::create([
+            'school_id' => $this->school->id,
+            'name' => 'Carrel Munjid',
+            'email' => 'carrel@siswa.sch.id',
+            'password' => bcrypt('password123'),
+            'role' => 'siswa',
+        ]);
+        $student = Student::create([
+            'user_id' => $studentUser->id,
+            'class_id' => $this->classRpl->id,
+            'nis' => '10099',
+            'nisn' => '0083191727',
+        ]);
+
+        $company = Company::create([
+            'school_id' => $this->school->id,
+            'name' => 'PT Pertamina Geothermal',
+            'address' => 'Area Geothermal',
+            'contact_person' => 'Staff',
+            'phone' => '0812345678',
+        ]);
+        $company->majors()->attach($this->majorRpl->id);
+
+        $spkl = StudentPkl::create([
+            'school_id' => $this->school->id,
+            'student_id' => $student->id,
+            'pkl_period_id' => $this->period->id,
+            'company_id' => $company->id,
+            'teacher_id' => $this->kajurTeacher->id,
+            'status' => 'active',
+            'start_date' => now()->subMonth(),
+            'end_date' => now()->addMonths(2),
+        ]);
+
+        \App\Models\Attendance::create([
+            'school_id' => $this->school->id,
+            'student_pkl_id' => $spkl->id,
+            'date' => now()->toDateString(),
+            'checkin_time' => '12:50:00',
+            'checkin_lat' => -7.12345,
+            'checkin_lng' => 110.12345,
+            'is_within_radius' => true,
+            'accuracy_meters' => 15,
+            'status' => 'hadir',
+        ]);
+
+        $response = $this->get(route('kajur.attendance', ['search' => 'Carrel']));
+        $response->assertOk();
+        $response->assertSee('Carrel Munjid');
+        $response->assertSee('0083191727');
+        $response->assertSee('PT Pertamina Geothermal');
+        $response->assertSee('12:50');
+        $response->assertSee('Dalam Radius');
+    }
+
+    public function test_kajur_can_reset_student_password_in_their_major()
+    {
+        $this->actingAs($this->kajurUser);
+
+        $studentUser = User::create([
+            'school_id' => $this->school->id,
+            'name' => 'Muhammad Adzka',
+            'email' => 'adzka@siswa.sch.id',
+            'password' => bcrypt('oldpassword123'),
+            'role' => 'siswa',
+        ]);
+        $student = Student::create([
+            'user_id' => $studentUser->id,
+            'class_id' => $this->classRpl->id,
+            'nis' => '10098',
+            'nisn' => '0095803728',
+        ]);
+
+        $response = $this->post(route('kajur.students.reset-password', $student));
+        $response->assertRedirect();
+        $response->assertSessionHas('temporary_credential');
+
+        $studentUser->refresh();
+        $this->assertFalse(\Illuminate\Support\Facades\Hash::check('oldpassword123', $studentUser->password));
+    }
+
+    public function test_kajur_cannot_reset_student_password_of_another_major()
+    {
+        $this->actingAs($this->kajurUser);
+
+        $tkjStudentUser = User::create([
+            'school_id' => $this->school->id,
+            'name' => 'Siswa Lain',
+            'email' => 'lain@siswa.sch.id',
+            'password' => bcrypt('oldpassword123'),
+            'role' => 'siswa',
+        ]);
+        $tkjStudent = Student::create([
+            'user_id' => $tkjStudentUser->id,
+            'class_id' => $this->classTkj->id,
+            'nis' => '10097',
+            'nisn' => '0095803799',
+        ]);
+
+        $response = $this->post(route('kajur.students.reset-password', $tkjStudent));
+        $response->assertStatus(403);
+    }
 }
