@@ -6,6 +6,7 @@
     $studentName = auth()->user()->name ?? 'Raka Pratama';
     $firstName = explode(' ', trim($studentName))[0];
     $companyName = $spkl->company->name ?? 'Kantor PKL';
+    $isGpsEnabled = (bool) ($spkl->company->gps_enabled ?? false);
     $companyLat = $spkl->company->latitude ?? -6.200000;
     $companyLng = $spkl->company->longitude ?? 106.816666;
     $companyRadius = $spkl->company->radius_meters ?? 100;
@@ -194,13 +195,15 @@
                     </span>
                     <div class="flex flex-col min-w-0">
                         <span class="text-[13px] font-bold text-white truncate">{{ $companyName }}</span>
-                        <span id="selfie-distance-text" class="text-[11px] text-[#A9C2B9] truncate">Menghitung jarak ke kantor...</span>
+                        <span id="selfie-distance-text" class="text-[11px] text-[#A9C2B9] truncate">
+                            {{ $isGpsEnabled ? 'Menghitung jarak ke kantor...' : 'Bebas Radius (Geofence Nonaktif)' }}
+                        </span>
                     </div>
                 </div>
 
                 <div class="flex flex-col items-end shrink-0 pl-2">
-                    <span id="selfie-radius-badge" class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-white/10 text-white">
-                        Memeriksa
+                    <span id="selfie-radius-badge" class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide {{ $isGpsEnabled ? 'bg-white/10 text-white' : 'bg-[#C6F26B] text-[#0B2B25]' }}">
+                        {{ $isGpsEnabled ? 'Memeriksa' : 'Bebas Radius' }}
                     </span>
                     <span id="selfie-accuracy-text" class="text-[10px] text-[#A9C2B9] mt-0.5">±-- m</span>
                 </div>
@@ -234,7 +237,11 @@
 
             <!-- Disclaimer Info -->
             <p class="text-center text-[11px] text-[#A9C2B9] leading-tight mb-1">
-                Presensi hanya berlaku di lokasi DU/DI. Untuk tugas luar, gunakan menu <strong>Dinas Luar</strong> di Beranda.
+                @if($isGpsEnabled)
+                    Presensi hanya berlaku di lokasi DU/DI. Untuk tugas luar, gunakan menu <strong>Dinas Luar</strong> di Beranda.
+                @else
+                    Presensi bebas radius aktif untuk DU/DI ini. Anda dapat presensi dari lokasi penugasan mana pun.
+                @endif
             </p>
 
             <!-- Hidden Check-in Submission Form -->
@@ -261,6 +268,7 @@
     let cameraStatus = 'loading'; // 'loading', 'ready', 'denied'
     let gpsStatus = 'searching';   // 'searching', 'locked', 'weak_accuracy', 'denied', 'unavailable', 'fake_gps'
     
+    const isGpsEnabled = {{ $isGpsEnabled ? 'true' : 'false' }};
     const targetLat = {{ $companyLat }};
     const targetLng = {{ $companyLng }};
     const targetRadius = {{ $companyRadius }};
@@ -284,13 +292,18 @@
         if (!shutterBtn || !shutterCore) return;
 
         const hasRealCoords = userCoords.latitude !== null && userCoords.longitude !== null;
-        let isWithin = false;
-        if (hasRealCoords) {
-            const dist = calculateDistanceM(userCoords.latitude, userCoords.longitude, targetLat, targetLng);
-            isWithin = (dist <= targetRadius);
+        let isWithin = true;
+        if (isGpsEnabled) {
+            if (hasRealCoords) {
+                const dist = calculateDistanceM(userCoords.latitude, userCoords.longitude, targetLat, targetLng);
+                isWithin = (dist <= targetRadius);
+            } else {
+                isWithin = false;
+            }
         }
 
-        const isReady = (cameraStatus === 'ready') && (gpsStatus === 'locked') && isWithin && !userCoords.isMocked;
+        const isGpsReady = !isGpsEnabled || (gpsStatus === 'locked' && isWithin);
+        const isReady = (cameraStatus === 'ready') && isGpsReady && !userCoords.isMocked;
 
         if (userCoords.isMocked || gpsStatus === 'fake_gps') {
             shutterBtn.disabled = true;
@@ -339,6 +352,9 @@
             if (gpsStatus === 'fake_gps' || userCoords.isMocked) {
                 gpsDot.className = 'w-2 h-2 rounded-full bg-rose-500 animate-pulse';
                 gpsText.textContent = 'GPS: Lokasi Palsu';
+            } else if (!isGpsEnabled) {
+                gpsDot.className = 'w-2 h-2 rounded-full bg-[#C6F26B]';
+                gpsText.textContent = userCoords.accuracy ? `GPS: Bebas Radius (±${userCoords.accuracy}m)` : 'GPS: Bebas Radius';
             } else if (gpsStatus === 'locked') {
                 gpsDot.className = 'w-2 h-2 rounded-full bg-[#C6F26B]';
                 gpsText.textContent = `GPS: Terkunci (±${userCoords.accuracy}m)`;
@@ -498,7 +514,7 @@
         }
 
         // 2. Guard: Geolocation Real Readings
-        if (userCoords.latitude === null || userCoords.longitude === null) {
+        if (isGpsEnabled && (userCoords.latitude === null || userCoords.longitude === null)) {
             if (gpsStatus === 'denied') {
                 window.showPermissionGuideModal('location');
             } else {
@@ -512,7 +528,7 @@
         }
 
         // 3. Guard: GPS Accuracy Threshold (iOS Precise Location check)
-        if (userCoords.accuracy > 80) {
+        if (isGpsEnabled && userCoords.accuracy > 80) {
             window.showPermissionGuideModal('location-accuracy');
             return;
         }
@@ -526,24 +542,26 @@
         }
 
         // 5. Guard: Outside Radius Rejection (Direct to Homepage Dinas Luar)
-        const dist = calculateDistanceM(userCoords.latitude, userCoords.longitude, targetLat, targetLng);
-        if (dist > targetRadius) {
-            window.vtDialog({
-                tone: 'danger',
-                eyebrow: 'Presensi ditolak',
-                title: 'Anda di luar radius DU/DI',
-                message: 'Presensi selfie hanya berlaku jika Anda hadir langsung di lokasi penugasan.',
-                details: [
-                    ['Jarak Anda', `${Number(dist).toLocaleString('id-ID')} m`],
-                    ['Batas toleransi', `${Number(targetRadius).toLocaleString('id-ID')} m`],
-                ],
-                hint: 'Sedang ditugaskan di luar kantor (Dinas Luar / WFH)? Ajukan lewat menu "Dinas Luar" di Beranda.',
-                confirmText: 'Kembali ke Beranda',
-                cancelText: 'Tetap di sini',
-            }).then((ok) => {
-                if (ok) window.location.href = "{{ route('student.home') }}";
-            });
-            return;
+        if (isGpsEnabled) {
+            const dist = calculateDistanceM(userCoords.latitude, userCoords.longitude, targetLat, targetLng);
+            if (dist > targetRadius) {
+                window.vtDialog({
+                    tone: 'danger',
+                    eyebrow: 'Presensi ditolak',
+                    title: 'Anda di luar radius DU/DI',
+                    message: 'Presensi selfie hanya berlaku jika Anda hadir langsung di lokasi penugasan.',
+                    details: [
+                        ['Jarak Anda', `${Number(dist).toLocaleString('id-ID')} m`],
+                        ['Batas toleransi', `${Number(targetRadius).toLocaleString('id-ID')} m`],
+                    ],
+                    hint: 'Sedang ditugaskan di luar kantor (Dinas Luar / WFH)? Ajukan lewat menu "Dinas Luar" di Beranda.',
+                    confirmText: 'Kembali ke Beranda',
+                    cancelText: 'Tetap di sini',
+                }).then((ok) => {
+                    if (ok) window.location.href = "{{ route('student.home') }}";
+                });
+                return;
+            }
         }
 
         // Visual flash feedback
@@ -770,7 +788,7 @@
         if (accEl) accEl.textContent = `±${userCoords.accuracy} m`;
 
         // Check iPhone / WebKit Precise Location Threshold (80m)
-        if (userCoords.accuracy > 80) {
+        if (isGpsEnabled && userCoords.accuracy > 80) {
             gpsStatus = 'weak_accuracy';
             if (distEl) distEl.textContent = `Akurasi Rendah (±${userCoords.accuracy}m) · Ketuk Bantuan`;
             if (radiusBadge) {
@@ -783,7 +801,15 @@
             gpsStatus = 'locked';
             const dist = calculateDistanceM(userCoords.latitude, userCoords.longitude, targetLat, targetLng);
 
-            if (dist <= targetRadius) {
+            if (!isGpsEnabled) {
+                if (distEl) distEl.textContent = `Bebas Radius (${dist} m dari kantor DU/DI)`;
+                if (radiusBadge) {
+                    radiusBadge.textContent = 'Bebas Radius';
+                    radiusBadge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-[#C6F26B] text-[#0B2B25] shadow-xs';
+                }
+                if (locContainer) locContainer.className = 'flex items-center justify-between min-h-[52px] rounded-[22px] bg-white/[0.08] px-4 py-2 border border-white/10 my-1 transition-all cursor-pointer hover:bg-white/[0.12]';
+                if (locIcon) locIcon.setAttribute('stroke', '#C6F26B');
+            } else if (dist <= targetRadius) {
                 if (distEl) distEl.textContent = `${dist} m dari kantor (Batas: ${targetRadius} m)`;
                 if (radiusBadge) {
                     radiusBadge.textContent = 'Di Dalam Radius';
@@ -815,7 +841,16 @@
         userCoords.latitude = null;
         userCoords.longitude = null;
 
-        if (err.code === 1) { // PERMISSION_DENIED
+        if (!isGpsEnabled) {
+            gpsStatus = 'locked';
+            if (distEl) distEl.textContent = 'Bebas Radius · Presensi Siap';
+            if (radiusBadge) {
+                radiusBadge.textContent = 'Bebas Radius';
+                radiusBadge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide bg-[#C6F26B] text-[#0B2B25] shadow-xs';
+            }
+            if (locContainer) locContainer.className = 'flex items-center justify-between min-h-[52px] rounded-[22px] bg-white/[0.08] px-4 py-2 border border-white/10 my-1 transition-all cursor-pointer hover:bg-white/[0.12]';
+            if (locIcon) locIcon.setAttribute('stroke', '#C6F26B');
+        } else if (err.code === 1) { // PERMISSION_DENIED
             gpsStatus = 'denied';
             if (distEl) distEl.textContent = 'Izin Lokasi Ditolak · Ketuk Bantuan';
             if (radiusBadge) {
@@ -843,8 +878,13 @@
         const distEl = document.getElementById('selfie-distance-text');
 
         if (!navigator.geolocation) {
-            gpsStatus = 'unavailable';
-            if (distEl) distEl.textContent = 'GPS tidak didukung peramban ini';
+            if (!isGpsEnabled) {
+                gpsStatus = 'locked';
+                if (distEl) distEl.textContent = 'Bebas Radius · Presensi Siap';
+            } else {
+                gpsStatus = 'unavailable';
+                if (distEl) distEl.textContent = 'GPS tidak didukung peramban ini';
+            }
             updateStatusBadges();
             updateShutterVisuals();
             return;

@@ -183,6 +183,31 @@ class GeolocationAndNotificationTest extends TestCase
         Carbon::setTestNow();
     }
 
+    public function test_checkin_when_gps_enabled_is_false_allows_flexible_radius(): void
+    {
+        Carbon::setTestNow('2026-08-11 07:30:00');
+
+        // Turn OFF GPS validation for this company
+        $this->company->update(['gps_enabled' => false]);
+
+        // Student checks in far away (e.g. 50km away) without reason
+        $response = $this->actingAs($this->studentUser)
+            ->post(route('student.checkin'), [
+                'latitude' => -6.900000,
+                'longitude' => 107.600000,
+                'accuracy' => 20,
+            ]);
+
+        $response->assertRedirect();
+        $this->assertDatabaseHas('attendances', [
+            'student_pkl_id' => $this->spkl->id,
+            'is_within_radius' => 1,
+            'status' => 'hadir',
+        ]);
+
+        Carbon::setTestNow();
+    }
+
     public function test_journal_and_request_approval_dispatch_in_app_notifications(): void
     {
         // 1. Journal Approval Notification
