@@ -530,7 +530,7 @@ class KajurController extends Controller
 
         $query = StudentPkl::where('school_id', $schoolId)
             ->whereHas('student', fn($q) => $q->whereIn('class_id', $classIds))
-            ->with(['student.schoolClass', 'company', 'teacher.user', 'assessment']);
+            ->with(['student.user', 'student.schoolClass', 'company', 'teacher.user', 'assessment']);
 
         if ($request->filled('class_id')) {
             $query->whereHas('student', fn($q) => $q->where('class_id', $request->class_id));

@@ -48,6 +48,7 @@ class StudentPwaOfflineSyncTest extends TestCase
             'school_id' => $school->id, 'name' => 'PT Tambang Uji', 'address' => 'Bombana',
             'contact_person' => 'PIC', 'phone' => '0811', 'work_days' => '5_days',
             'latitude' => -4.6, 'longitude' => 121.9, 'radius_meters' => 100,
+            'is_pkl_started' => true,
         ]);
         $major = Major::create(['school_id' => $school->id, 'name' => 'Geologi Pertambangan', 'code' => 'GP']);
         $class = SchoolClass::create([

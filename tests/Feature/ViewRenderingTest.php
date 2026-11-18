@@ -102,6 +102,8 @@ class ViewRenderingTest extends TestCase
             $this->markTestSkipped('Siswa user not seeded');
         }
 
+        $user->student?->studentPkls()->first()?->company?->update(['is_pkl_started' => true]);
+
         $this->actingAs($user)->get(route('student.home'))->assertStatus(200)->assertSee('Portal Siswa PKL');
         $this->actingAs($user)->get(route('student.attendance'))->assertStatus(200)->assertSee('Check-In Hari Ini');
         $this->actingAs($user)->get(route('student.journals'))->assertStatus(200)->assertSee('Riwayat Jurnal');

@@ -84,6 +84,7 @@ class P1DataSafetyAndPrivacyTest extends TestCase
             'latitude' => -7.2,
             'longitude' => 107.9,
             'radius_meters' => 100,
+            'is_pkl_started' => true,
         ]);
         $this->otherCompany = Company::create([
             'school_id' => $this->school->id,
@@ -94,6 +95,7 @@ class P1DataSafetyAndPrivacyTest extends TestCase
             'latitude' => -7.3,
             'longitude' => 107.8,
             'radius_meters' => 100,
+            'is_pkl_started' => true,
         ]);
 
         $this->teacherUser = $this->makeUser('guru-pembimbing', 'guru@example.com');
@@ -373,6 +375,123 @@ class P1DataSafetyAndPrivacyTest extends TestCase
         ])->assertSessionHasErrors(['photo']);
 
         $this->assertSame(0, Attendance::withoutGlobalScopes()->count());
+        $this->assertSame([], Storage::disk(SecureFileService::DISK)->allFiles());
+    }
+
+    public function test_checkout_selfie_is_stored_privately_and_served_only_to_authorized_users(): void
+    {
+        Carbon::setTestNow(Carbon::today()->setTime(16, 30));
+
+        $attendance = Attendance::create([
+            'school_id' => $this->school->id,
+            'student_pkl_id' => $this->spkl->id,
+            'date' => Carbon::today()->toDateString(),
+            'checkin_time' => '07:30:00',
+            'status' => 'hadir',
+            'is_within_radius' => true,
+        ]);
+
+        $this->actingAs($this->studentUser)->postJson(route('student.checkout'), [
+            'latitude' => -7.2,
+            'longitude' => 107.9,
+            'accuracy' => 10,
+            'photo' => 'data:image/png;base64,' . self::TINY_PNG,
+            'checkout_notes' => 'Pulang kerja',
+        ])->assertOk();
+
+        $attendance->refresh();
+        $path = $attendance->checkout_photo_path;
+
+        $this->assertNotNull($path);
+        Storage::disk(SecureFileService::DISK)->assertExists($path);
+        Storage::disk(SecureFileService::LEGACY_DISK)->assertMissing($path);
+        $this->assertStringEndsWith('.png', $path);
+
+        $url = route('secure.file', ['type' => 'presensi-pulang', 'id' => $attendance->id]);
+        $this->assertSame($url, $attendance->checkout_photo_url);
+
+        auth()->logout();
+        $this->get($url)->assertRedirect(route('login'));
+
+        $this->actingAs($this->studentUser)->get($url)->assertOk()->assertHeader('X-Content-Type-Options', 'nosniff');
+        $this->actingAs($this->teacherUser)->get($url)->assertOk();
+        $this->actingAs($this->dudiUser)->get($url)->assertOk();
+        $this->actingAs($this->otherStudentUser)->get($url)->assertForbidden();
+        $this->actingAs($this->otherDudiUser)->get($url)->assertForbidden();
+    }
+
+    public function test_checkout_rejects_payload_that_is_not_a_real_image(): void
+    {
+        Carbon::setTestNow(Carbon::today()->setTime(16, 30));
+
+        $attendance = Attendance::create([
+            'school_id' => $this->school->id,
+            'student_pkl_id' => $this->spkl->id,
+            'date' => Carbon::today()->toDateString(),
+            'checkin_time' => '07:30:00',
+            'status' => 'hadir',
+            'is_within_radius' => true,
+        ]);
+
+        $this->actingAs($this->studentUser)->post(route('student.checkout'), [
+            'latitude' => -7.2,
+            'longitude' => 107.9,
+            'photo' => 'data:image/jpeg;base64,' . base64_encode('<html><script>alert(1)</script></html>'),
+        ])->assertSessionHasErrors(['photo']);
+
+        $attendance->refresh();
+        $this->assertNull($attendance->checkout_photo_path);
+        $this->assertSame([], Storage::disk(SecureFileService::DISK)->allFiles());
+    }
+
+    public function test_checkout_rejects_oversized_selfie_payload(): void
+    {
+        Carbon::setTestNow(Carbon::today()->setTime(16, 30));
+
+        $attendance = Attendance::create([
+            'school_id' => $this->school->id,
+            'student_pkl_id' => $this->spkl->id,
+            'date' => Carbon::today()->toDateString(),
+            'checkin_time' => '07:30:00',
+            'status' => 'hadir',
+            'is_within_radius' => true,
+        ]);
+
+        $this->actingAs($this->studentUser)->post(route('student.checkout'), [
+            'latitude' => -7.2,
+            'longitude' => 107.9,
+            'photo' => 'data:image/jpeg;base64,' . str_repeat('A', 1500 * 1024),
+        ])->assertSessionHasErrors(['photo']);
+
+        $attendance->refresh();
+        $this->assertNull($attendance->checkout_photo_path);
+        $this->assertSame([], Storage::disk(SecureFileService::DISK)->allFiles());
+    }
+
+    public function test_checkout_rejects_selfie_with_excessive_dimensions(): void
+    {
+        Carbon::setTestNow(Carbon::today()->setTime(16, 30));
+
+        $attendance = Attendance::create([
+            'school_id' => $this->school->id,
+            'student_pkl_id' => $this->spkl->id,
+            'date' => Carbon::today()->toDateString(),
+            'checkin_time' => '07:30:00',
+            'status' => 'hadir',
+            'is_within_radius' => true,
+        ]);
+
+        $ihdr = pack('N', 4000) . pack('N', 4000) . "\x08\x02\x00\x00\x00";
+        $png = "\x89PNG\r\n\x1a\n" . pack('N', 13) . 'IHDR' . $ihdr . pack('N', crc32('IHDR' . $ihdr));
+
+        $this->actingAs($this->studentUser)->post(route('student.checkout'), [
+            'latitude' => -7.2,
+            'longitude' => 107.9,
+            'photo' => 'data:image/png;base64,' . base64_encode($png),
+        ])->assertSessionHasErrors(['photo']);
+
+        $attendance->refresh();
+        $this->assertNull($attendance->checkout_photo_path);
         $this->assertSame([], Storage::disk(SecureFileService::DISK)->allFiles());
     }
 

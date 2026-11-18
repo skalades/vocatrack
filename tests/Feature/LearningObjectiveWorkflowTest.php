@@ -116,6 +116,7 @@ class LearningObjectiveWorkflowTest extends TestCase
             'phone' => '021-12345678',
             'address' => 'Nanggung, Bogor',
             'is_active' => true,
+            'is_pkl_started' => true,
         ]);
         $this->majorGp->companies()->attach($this->company->id);
 
