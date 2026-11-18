@@ -149,7 +149,10 @@ class BackupService
 
             foreach ($tables as $table) {
                 $rowCounts[$table] = 0;
-                DB::table($table)->orderBy('id')->chunk(self::CHUNK_SIZE, function ($chunk) use ($handle, $table, &$rowCounts) {
+                $query = DB::table($table);
+                $this->applyDeterministicOrder($query, $table);
+
+                $query->chunk(self::CHUNK_SIZE, function ($chunk) use ($handle, $table, &$rowCounts) {
                     $rows = $chunk->map(fn ($item) => (array) $item)->all();
                     $rowCounts[$table] += count($rows);
                     $payload = json_encode(['t' => $table, 'r' => $rows], JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_SUBSTITUTE);
@@ -423,6 +426,27 @@ class BackupService
                 [$sequence]
             );
         }
+    }
+
+    /**
+     * Terapkan urutan deterministik untuk chunking (mendukung tabel tanpa kolom 'id', misal pivot table).
+     */
+    protected function applyDeterministicOrder(\Illuminate\Database\Query\Builder $query, string $table): \Illuminate\Database\Query\Builder
+    {
+        $columns = Schema::getColumnListing($table);
+
+        if (in_array('id', $columns, true)) {
+            return $query->orderBy('id');
+        }
+
+        if (!empty($columns)) {
+            foreach ($columns as $column) {
+                $query->orderBy($column);
+            }
+            return $query;
+        }
+
+        return $query;
     }
 
     /**
