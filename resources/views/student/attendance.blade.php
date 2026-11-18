@@ -396,17 +396,6 @@
             });
         }
     }
-                eyebrow: 'Informasi lokasi',
-                title: inside ? 'Di dalam radius kantor' : 'Di luar radius kantor',
-                details: [
-                    ['Jarak ke DU/DI', `±${Number(dist).toLocaleString('id-ID')} m`],
-                    ['Toleransi', `${Number(targetRadius).toLocaleString('id-ID')} m`],
-                    ['Akurasi GPS', `±${Math.round(userCoords.accuracy)} m`],
-                    ['Status', inside ? 'Bisa presensi' : 'Belum bisa'],
-                ],
-            });
-        }
-    }
 
     function startLiveCamera() {
         const video = document.getElementById('webcam-feed');
