@@ -5,7 +5,7 @@ try {
 } catch (e) {}
 
 const express = require('express');
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, Browsers, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, Browsers, fetchLatestWaWebVersion, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
 const pino = require('pino');
 const QRCode = require('qrcode');
 const path = require('path');
@@ -56,7 +56,19 @@ async function connectToWhatsApp() {
 
     try {
         const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
-        const { version } = await fetchLatestBaileysVersion().catch(() => ({ version: [2, 3000, 1043857760] }));
+        let version;
+        try {
+            const waVersion = await fetchLatestWaWebVersion();
+            version = waVersion.version;
+            console.log(`[VokaTrack WA Gateway] Versi WhatsApp Web aktif: v${version.join('.')}`);
+        } catch (e) {
+            try {
+                const bVersion = await fetchLatestBaileysVersion();
+                version = bVersion.version;
+            } catch (err) {
+                version = [2, 3000, 1055185710];
+            }
+        }
 
         sock = makeWASocket({
             version,
@@ -94,13 +106,12 @@ async function connectToWhatsApp() {
                 connectedUser = null;
 
                 if (statusCode === 408) {
-                    console.log('[VokaTrack WA Gateway] QR Code kedaluwarsa / timeout. Cooldown 30 detik sebelum QR baru...');
-                    try {
-                        fs.rmSync(AUTH_DIR, { recursive: true, force: true });
-                    } catch (e) {}
+                    console.log('[VokaTrack WA Gateway] QR timeout (408). Reconnect tanpa hapus sesi...');
+                    // JANGAN hapus auth_info saat QR timeout — cukup reconnect ulang
                     connectionStatus = 'connecting';
+                    qrCodeDataUrl = null;
                     isConnecting = false;
-                    setTimeout(connectToWhatsApp, 30000); // 30 detik cooldown agar tidak di-throttle WA
+                    setTimeout(connectToWhatsApp, 5000); // 5 detik jeda
                     return;
                 } else if (statusCode === 401 || statusCode === DisconnectReason.loggedOut) {
                     console.log('[VokaTrack WA Gateway] Sesi telah logout. Silakan scan ulang.');
@@ -286,9 +297,13 @@ app.get('/', (req, res) => {
                     <p class="text-[11px] text-white/50">Halaman ini akan otomatis menyambung begitu QR Code berhasil di-scan.</p>
                 </div>
             ` : `
-                <div class="py-12 space-y-3">
-                    <div class="w-8 h-8 border-2 border-[#C6F26B] border-t-transparent rounded-full animate-spin mx-auto"></div>
-                    <p class="text-xs text-[#A9C2B9]">Sedang memuat engine WhatsApp... Mohon tunggu sebentar.</p>
+                <div class="py-12 space-y-3" id="connecting-state">
+                    <div class="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center mx-auto mb-2">
+                        <svg class="w-8 h-8 text-[#C6F26B]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4.5 12.75l6 6 9-13.5"/></svg>
+                    </div>
+                    <h2 class="text-base font-bold text-white">Engine Aktif — Menyiapkan QR Code...</h2>
+                    <p class="text-xs text-[#A9C2B9]">Sedang menghubungkan ke server WhatsApp dan mengambil QR code baru.</p>
+                    <p class="text-[11px] text-white/50">Mohon tunggu beberapa saat. Halaman ini akan otomatis menampilkan QR Code begitu server WhatsApp siap.</p>
                 </div>
             `)}
         </div>
@@ -299,18 +314,56 @@ app.get('/', (req, res) => {
     </div>
 
     <script>
-        // Auto refresh saat menunggu scan
+        // Live polling QR + status tanpa full reload
         let currentStatus = '${connectionStatus}';
-        if (currentStatus !== 'connected') {
-            const timer = setInterval(async () => {
-                try {
-                    const res = await fetch('/status');
-                    const data = await res.json();
-                    if (data.status !== currentStatus) {
-                        location.reload();
+
+        async function pollQR() {
+            try {
+                const res = await fetch('/qr-data');
+                const data = await res.json();
+
+                if (data.status !== currentStatus) {
+                    // Status berubah (connected / disconnected) → reload sekali
+                    location.reload();
+                    return;
+                }
+
+                if (data.status === 'waiting_scan' && data.qr) {
+                    // Update QR image tanpa reload halaman
+                    const imgEl = document.getElementById('qr-img');
+                    const areaEl = document.getElementById('content-area');
+
+                    if (imgEl) {
+                        imgEl.src = data.qr;
+                    } else {
+                        // Render kotak QR pertama kali jika belum ada
+                        areaEl.innerHTML = \`
+                            <div class="space-y-4">
+                                <p class="text-xs text-[#A9C2B9]">Scan QR Code ini menggunakan WhatsApp di HP Anda:<br>
+                                    <span class="text-white font-semibold">WhatsApp &gt; Perangkat Tertaut &gt; Tautkan Perangkat</span></p>
+                                <div class="inline-block p-3 bg-white rounded-2xl shadow-xl">
+                                    <img id="qr-img" src="\${data.qr}" alt="QR Code WhatsApp" class="w-64 h-64 mx-auto">
+                                </div>
+                                <p class="text-[11px] text-white/50">QR Code otomatis diperbarui. Halaman akan menyambung setelah berhasil di-scan.</p>
+                            </div>\`;
                     }
-                } catch (e) {}
-            }, 3000);
+                } else if (data.status === 'connecting') {
+                    const areaEl = document.getElementById('content-area');
+                    if (areaEl && !areaEl.querySelector('#qr-img')) {
+                        areaEl.innerHTML = \`
+                            <div class="py-12 space-y-3">
+                                <div class="w-8 h-8 border-2 border-[#C6F26B] border-t-transparent rounded-full animate-spin mx-auto"></div>
+                                <p class="text-xs text-[#A9C2B9]">Sedang memuat engine WhatsApp... Mohon tunggu sebentar.</p>
+                            </div>\`;
+                    }
+                }
+            } catch (e) {}
+        }
+
+        if (currentStatus !== 'connected') {
+            // Langsung cek QR saat halaman load
+            pollQR();
+            setInterval(pollQR, 5000);
         }
 
         async function sendTest() {
