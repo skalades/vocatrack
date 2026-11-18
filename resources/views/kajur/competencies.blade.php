@@ -138,28 +138,33 @@
                                     @endif
                                 </td>
                                 <td class="py-4 px-6 text-right">
-                                    <div class="flex items-center justify-end space-x-1.5">
-                                        <x-button type="button" variant="ghost" size="xs" 
-                                                  onclick='openEditCpModal(@json([
-                                                      "id" => $lo->id,
-                                                      "code" => $lo->code,
-                                                      "title" => $lo->title,
-                                                      "element_name" => $lo->element_name,
-                                                      "description" => $lo->description,
-                                                      "target_hours" => $lo->target_hours,
-                                                      "sort_order" => $lo->sort_order,
-                                                      "is_active" => $lo->is_active,
-                                                      "update_url" => route("kajur.competencies.update", $lo)
-                                                  ]))'>
-                                            <svg class="w-4 h-4 text-slate-500 hover:text-emerald-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
-                                        </x-button>
+                                    <div class="flex items-center justify-end space-x-1">
+                                        <button type="button" 
+                                                class="p-1.5 text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer"
+                                                title="Edit Capaian Pembelajaran"
+                                                data-cp="{{ json_encode([
+                                                    'id' => $lo->id,
+                                                    'code' => $lo->code,
+                                                    'title' => $lo->title,
+                                                    'element_name' => $lo->element_name,
+                                                    'description' => $lo->description,
+                                                    'target_hours' => $lo->target_hours,
+                                                    'sort_order' => $lo->sort_order,
+                                                    'is_active' => (bool) $lo->is_active,
+                                                    'update_url' => route('kajur.competencies.update', $lo),
+                                                ]) }}"
+                                                onclick="openEditCpModal(JSON.parse(this.dataset.cp))">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                                        </button>
 
-                                        <form action="{{ route('kajur.competencies.destroy', $lo) }}" method="POST" onsubmit="return confirm('Hapus Capaian Pembelajaran ini? Relasi pada jurnal siswa juga akan terhapus.');">
+                                        <form action="{{ route('kajur.competencies.destroy', $lo) }}" method="POST" onsubmit="return confirm('Hapus Capaian Pembelajaran ini? Relasi pada jurnal siswa juga akan terhapus.');" class="inline">
                                             @csrf
                                             @method('DELETE')
-                                            <x-button type="submit" variant="ghost" size="xs" class="text-rose-500 hover:text-rose-700 hover:bg-rose-50">
+                                            <button type="submit" 
+                                                    class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                                                    title="Hapus Capaian Pembelajaran">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                                            </x-button>
+                                            </button>
                                         </form>
                                     </div>
                                 </td>
