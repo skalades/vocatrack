@@ -301,4 +301,116 @@ class JournalWorkflowTest extends TestCase
         $this->assertNotNull($journal);
         $this->assertCount(1, $journal->photos);
     }
+
+    public function test_teacher_process_journal_preserves_active_tab(): void
+    {
+        $school = School::create([
+            'npsn' => '77777779',
+            'name' => 'SMK Journal Tab Test',
+            'address' => 'Bandung',
+            'phone' => '022-779',
+            'email' => 'smk9@journal.sch.id',
+            'is_active' => true,
+        ]);
+
+        $major = Major::create(['school_id' => $school->id, 'code' => 'GP', 'name' => 'Geologi']);
+        $class = SchoolClass::create([
+            'school_id' => $school->id,
+            'major_id' => $major->id,
+            'name' => 'XII GP 1',
+            'grade_level' => 'XII',
+            'academic_year' => '2026/2027',
+        ]);
+
+        $company = Company::create([
+            'school_id' => $school->id,
+            'name' => 'PT Geothermal',
+            'address' => 'Kamojang',
+            'contact_person' => 'PIC',
+            'phone' => '0814',
+            'work_days' => '5_days',
+            'is_pkl_started' => true,
+            'requires_industry_approval' => false,
+        ]);
+
+        $period = PklPeriod::create([
+            'school_id' => $school->id,
+            'name' => 'Periode 1',
+            'start_date' => '2026-01-01',
+            'end_date' => '2026-12-31',
+            'is_active' => true,
+        ]);
+
+        $teacherUser = User::create([
+            'school_id' => $school->id,
+            'name' => 'Guru Pembimbing Tab',
+            'email' => 'guru.tab@journal.sch.id',
+            'password' => 'secret123',
+            'role' => 'guru-pembimbing',
+            'is_active' => true,
+        ]);
+        $teacher = Teacher::create([
+            'user_id' => $teacherUser->id,
+            'nip' => '19876543210',
+        ]);
+
+        $studentUser = User::create([
+            'school_id' => $school->id,
+            'name' => 'Siswa Tab Test',
+            'email' => 'siswa.tab@journal.sch.id',
+            'password' => 'secret123',
+            'role' => 'siswa',
+            'is_active' => true,
+        ]);
+        $student = Student::create([
+            'user_id' => $studentUser->id,
+            'class_id' => $class->id,
+            'nis' => '88801',
+            'nisn' => '8880000001',
+        ]);
+
+        $spkl = StudentPkl::create([
+            'school_id' => $school->id,
+            'student_id' => $student->id,
+            'company_id' => $company->id,
+            'pkl_period_id' => $period->id,
+            'teacher_id' => $teacher->id,
+            'status' => 'active',
+            'start_date' => '2026-01-01',
+            'end_date' => '2026-12-31',
+        ]);
+
+        $journal = Journal::create([
+            'school_id' => $school->id,
+            'student_pkl_id' => $spkl->id,
+            'date' => Carbon::today()->toDateString(),
+            'activity_description' => 'Preparasi sampel batuan untuk XRF dan XRD.',
+            'status' => 'submitted',
+        ]);
+
+        // Simulasikan approve dari Antrean Butuh Validasi (tab=pending)
+        $response = $this->actingAs($teacherUser)
+            ->from(route('guru.journals', ['tab' => 'pending']))
+            ->post(route('guru.journals.process', $journal), [
+                'action' => 'approve',
+                'notes' => 'Kerja bagus.',
+                'tab' => 'pending',
+            ]);
+
+        $response->assertRedirect(route('guru.journals', ['tab' => 'pending']));
+        $response->assertSessionHas('active_tab', 'pending');
+        $this->assertEquals('approved', $journal->fresh()->status);
+
+        // Kunjungi kembali halaman guru.journals dengan session active_tab=pending
+        $pageResponse = $this->actingAs($teacherUser)
+            ->withSession(['active_tab' => 'pending'])
+            ->get(route('guru.journals'));
+
+        $pageResponse->assertStatus(200);
+        $content = $pageResponse->getContent();
+
+        // Verifikasi view-pending tidak memiliki class hidden, sedangkan view-students hidden
+        $this->assertStringContainsString('id="view-pending" class="space-y-4"', $content);
+        $this->assertStringContainsString('id="view-students" class="hidden space-y-4"', $content);
+    }
 }

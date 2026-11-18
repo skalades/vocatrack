@@ -76,20 +76,27 @@
         </x-stat-card>
     </div>
 
+    @php
+        $initialTab = session('active_tab') ?? request('tab') ?? 'students';
+        if (!in_array($initialTab, ['students', 'pending', 'table'], true)) {
+            $initialTab = 'students';
+        }
+    @endphp
+
     <!-- Segmented View Mode Controller -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-1.5 bg-slate-200/60 rounded-2xl border border-slate-200">
         <div class="flex items-center gap-1 overflow-x-auto p-0.5">
             <button type="button" id="tab-btn-students" onclick="switchJournalView('students')" 
-                    class="view-tab-btn inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all bg-indigo-600 text-white shadow-sm">
+                    class="view-tab-btn inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all {{ $initialTab === 'students' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-white text-slate-700 hover:bg-slate-50 border border-transparent' }}">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                 <span>Kelompok per Siswa</span>
-                <span class="px-1.5 py-0.2 rounded-full text-[10px] bg-white/20 text-white font-mono">
+                <span class="px-1.5 py-0.2 rounded-full text-[10px] {{ $initialTab === 'students' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600' }} font-mono">
                     {{ $studentPkls->count() }}
                 </span>
             </button>
 
             <button type="button" id="tab-btn-pending" onclick="switchJournalView('pending')" 
-                    class="view-tab-btn inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all bg-white text-slate-700 hover:bg-slate-50 border border-transparent">
+                    class="view-tab-btn inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all {{ $initialTab === 'pending' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-white text-slate-700 hover:bg-slate-50 border border-transparent' }}">
                 <svg class="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 <span>Antrean Butuh Validasi</span>
                 @if($pendingGuru > 0)
@@ -100,7 +107,7 @@
             </button>
 
             <button type="button" id="tab-btn-table" onclick="switchJournalView('table')" 
-                    class="view-tab-btn inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all bg-white text-slate-700 hover:bg-slate-50 border border-transparent">
+                    class="view-tab-btn inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all {{ $initialTab === 'table' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-white text-slate-700 hover:bg-slate-50 border border-transparent' }}">
                 <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                 <span>Tabel Lengkap</span>
             </button>
@@ -114,7 +121,7 @@
     <!-- ========================================================================= -->
     <!-- VIEW 1: KELOMPOK PER SISWA BIMBINGAN (SOLUSI SISWA BANYAK)              -->
     <!-- ========================================================================= -->
-    <div id="view-students" class="space-y-4">
+    <div id="view-students" class="{{ $initialTab === 'students' ? 'space-y-4' : 'hidden space-y-4' }}">
         @forelse($studentPkls as $sp)
             @php
                 $sJournals = $sp->journals ?? collect();
@@ -237,7 +244,7 @@
     <!-- ========================================================================= -->
     <!-- VIEW 2: ANTREAN BUTUH TINDAKAN (ACTION ITEMS QUEUE)                      -->
     <!-- ========================================================================= -->
-    <div id="view-pending" class="hidden space-y-4">
+    <div id="view-pending" class="{{ $initialTab === 'pending' ? 'space-y-4' : 'hidden space-y-4' }}">
         @if($allPendingJournals->isEmpty())
             <x-card class="text-center py-12">
                 <div class="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center mx-auto mb-3">
@@ -299,6 +306,7 @@
                             <div class="lg:w-80 shrink-0 bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3">
                                 <form action="{{ route('guru.journals.process', $pj->id) }}" method="POST" class="space-y-3">
                                     @csrf
+                                    <input type="hidden" name="tab" value="pending">
                                     <label class="block text-xs font-bold text-slate-900">Keputusan Evaluasi Guru</label>
                                     <textarea name="notes" rows="2" placeholder="Catatan evaluasi kurikulum atau alasan revisi..." 
                                               class="w-full text-xs p-2.5 rounded-xl bg-white border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-medium text-slate-800"></textarea>
@@ -325,7 +333,7 @@
     <!-- ========================================================================= -->
     <!-- VIEW 3: TABEL LENGKAP (PRECISION TABLE DENGAN LEBAR KOLOM TERKUNCI)       -->
     <!-- ========================================================================= -->
-    <div id="view-table" class="hidden space-y-4">
+    <div id="view-table" class="{{ $initialTab === 'table' ? 'space-y-4' : 'hidden space-y-4' }}">
         <!-- Search & Filter Controls -->
         <x-card>
             <form method="GET" action="{{ route('guru.journals') }}" class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
@@ -574,6 +582,7 @@
                 @if($canReviewModal)
                     <form action="{{ route('guru.journals.process', $j->id) }}" method="POST" class="pt-2 border-t border-slate-100 space-y-3">
                         @csrf
+                        <input type="hidden" name="tab" class="current-tab-input" value="{{ $initialTab }}">
                         <div>
                             <label class="block text-xs font-bold text-slate-900 mb-1.5">Catatan Evaluasi Kurikulum Sekolah:</label>
                             <textarea name="notes" rows="2" placeholder="Tuliskan catatan evaluasi kurikulum atau alasan revisi..." 
@@ -599,23 +608,78 @@
 
 <script>
     function switchJournalView(viewName) {
-        document.getElementById('view-students').classList.add('hidden');
-        document.getElementById('view-pending').classList.add('hidden');
-        document.getElementById('view-table').classList.add('hidden');
+        const validViews = ['students', 'pending', 'table'];
+        if (!validViews.includes(viewName)) {
+            viewName = 'students';
+        }
+
+        const viewStudents = document.getElementById('view-students');
+        const viewPending = document.getElementById('view-pending');
+        const viewTable = document.getElementById('view-table');
+
+        if (viewStudents) viewStudents.classList.add('hidden');
+        if (viewPending) viewPending.classList.add('hidden');
+        if (viewTable) viewTable.classList.add('hidden');
 
         document.querySelectorAll('.view-tab-btn').forEach(btn => {
             btn.classList.remove('bg-indigo-600', 'text-white', 'shadow-sm');
             btn.classList.add('bg-white', 'text-slate-700');
         });
 
-        document.getElementById('view-' + viewName).classList.remove('hidden');
+        const activeView = document.getElementById('view-' + viewName);
+        if (activeView) activeView.classList.remove('hidden');
 
         const activeBtn = document.getElementById('tab-btn-' + viewName);
         if (activeBtn) {
             activeBtn.classList.add('bg-indigo-600', 'text-white', 'shadow-sm');
             activeBtn.classList.remove('bg-white', 'text-slate-700');
         }
+
+        // Sync hidden tab inputs across dynamic forms and modals
+        document.querySelectorAll('.current-tab-input').forEach(input => {
+            input.value = viewName;
+        });
+
+        // Persist tab state in hash and localStorage
+        try {
+            if (window.history && window.history.replaceState) {
+                const url = new URL(window.location.href);
+                url.searchParams.set('tab', viewName);
+                url.hash = viewName;
+                window.history.replaceState(null, '', url.toString());
+            } else {
+                window.location.hash = viewName;
+            }
+            localStorage.setItem('active_journal_tab_guru', viewName);
+        } catch (e) {}
     }
+
+    // Auto-restore tab state on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        const serverTab = @json($initialTab);
+        const urlParams = new URLSearchParams(window.location.search);
+        const queryTab = urlParams.get('tab');
+        const hashTab = window.location.hash ? window.location.hash.replace('#', '') : null;
+        let storedTab = null;
+        try {
+            storedTab = localStorage.getItem('active_journal_tab_guru');
+        } catch (e) {}
+
+        const validTabs = ['students', 'pending', 'table'];
+        let targetTab = 'students';
+
+        if (serverTab && serverTab !== 'students' && validTabs.includes(serverTab)) {
+            targetTab = serverTab;
+        } else if (queryTab && validTabs.includes(queryTab)) {
+            targetTab = queryTab;
+        } else if (hashTab && validTabs.includes(hashTab)) {
+            targetTab = hashTab;
+        } else if (storedTab && validTabs.includes(storedTab)) {
+            targetTab = storedTab;
+        }
+
+        switchJournalView(targetTab);
+    });
 
     function toggleStudentJournals(spId) {
         const content = document.getElementById('student-journals-' + spId);

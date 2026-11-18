@@ -210,21 +210,24 @@ class SupervisorController extends Controller
         $request->validate([
             'action' => ['required', 'in:approve,revision'],
             'notes' => ['nullable', 'string', 'max:500'],
+            'tab' => ['nullable', 'string', 'in:students,pending,table'],
         ]);
+
+        $activeTab = $request->input('tab', 'pending');
 
         try {
             if ($request->action === 'approve') {
                 $journalService->approve($journal, Auth::user(), $request->notes);
-                return back()->with('success', 'Jurnal berhasil disetujui tingkat 1 (Diteruskan ke Guru Pembimbing).');
+                return back()->with('success', 'Jurnal berhasil disetujui tingkat 1 (Diteruskan ke Guru Pembimbing).')->with('active_tab', $activeTab);
             } else {
                 if (empty($request->notes)) {
-                    return back()->withErrors(['notes' => 'Catatan wajib diisi saat meminta revisi jurnal.']);
+                    return back()->withErrors(['notes' => 'Catatan wajib diisi saat meminta revisi jurnal.'])->with('active_tab', $activeTab);
                 }
                 $journalService->requestRevision($journal, Auth::user(), $request->notes);
-                return back()->with('success', 'Catatan revisi jurnal berhasil dikirimkan ke siswa.');
+                return back()->with('success', 'Catatan revisi jurnal berhasil dikirimkan ke siswa.')->with('active_tab', $activeTab);
             }
         } catch (\Exception $e) {
-            return back()->withErrors(['status' => $e->getMessage()]);
+            return back()->withErrors(['status' => $e->getMessage()])->with('active_tab', $activeTab);
         }
     }
 
@@ -235,10 +238,13 @@ class SupervisorController extends Controller
             'journal_ids.*' => ['integer', 'exists:journals,id'],
             'action' => ['required', 'in:approve,revision'],
             'notes' => ['nullable', 'string', 'max:500'],
+            'tab' => ['nullable', 'string', 'in:students,pending,table'],
         ]);
 
+        $activeTab = $request->input('tab', 'table');
+
         if ($request->action === 'revision' && empty($request->notes)) {
-            return back()->withErrors(['notes' => 'Catatan revisi wajib diisi untuk revisi massal.']);
+            return back()->withErrors(['notes' => 'Catatan revisi wajib diisi untuk revisi massal.'])->with('active_tab', $activeTab);
         }
 
         try {
@@ -250,9 +256,9 @@ class SupervisorController extends Controller
             );
 
             $actionText = ($request->action === 'approve') ? 'disetujui' : 'diminta revisi';
-            return back()->with('success', "Berhasil memproses massal: {$result['processed']} jurnal telah {$actionText} (Dilewati: {$result['skipped']}).");
+            return back()->with('success', "Berhasil memproses massal: {$result['processed']} jurnal telah {$actionText} (Dilewati: {$result['skipped']}).")->with('active_tab', $activeTab);
         } catch (\Exception $e) {
-            return back()->withErrors(['status' => $e->getMessage()]);
+            return back()->withErrors(['status' => $e->getMessage()])->with('active_tab', $activeTab);
         }
     }
 
