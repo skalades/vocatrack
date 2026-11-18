@@ -1,9 +1,19 @@
-@extends('layouts.app')
+@extends(\App\Services\DeviceService::teacherLayout())
 
 @section('page_title', 'Review Jurnal PKL (Tingkat 2 — Guru Pembimbing)')
 @section('page_subtitle', 'Verifikasi kesesuaian kurikulum kejuruan siswa setelah disetujui pihak industri')
 
 @section('content')
+@php
+    $initialTab = session('active_tab') ?? request('tab') ?? 'students';
+    if (!in_array($initialTab, ['students', 'pending', 'table'], true)) {
+        $initialTab = 'students';
+    }
+@endphp
+
+@if(\App\Services\DeviceService::isTeacherMobile())
+    @include('teacher.partials.journals-mobile')
+@else
 <div class="w-full space-y-6 animate-in fade-in duration-300">
 
     <!-- Enterprise Hero Banner -->
@@ -486,6 +496,7 @@
     />
 
 </div>
+@endif
 
 <!-- Universal Journal Detail Modal -->
 @foreach($journals as $j)

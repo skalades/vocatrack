@@ -1,9 +1,12 @@
-@extends('layouts.app')
+@extends(\App\Services\DeviceService::teacherLayout())
 
 @section('page_title', 'Verifikasi Permohonan Izin & Sakit')
 @section('page_subtitle', 'Tinjau dan setujui permohonan dispensasi presensi khusus siswa bimbingan')
 
 @section('content')
+@if(\App\Services\DeviceService::isTeacherMobile())
+    @include('teacher.partials.requests-mobile')
+@else
 <div class="w-full space-y-6">
 
     <!-- Enterprise Hero Banner -->
@@ -191,4 +194,5 @@
     />
 
 </div>
+@endif
 @endsection

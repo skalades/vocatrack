@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends(\App\Services\DeviceService::teacherLayout())
 
 @section('page_title', 'Penilaian Akademik PKL (Guru Pembimbing)')
 @section('page_subtitle', 'Pengisian nilai laporan akhir, bimbingan, dan evaluasi capaian kompetensi')

@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends(\App\Services\DeviceService::teacherLayout())
 
 @section('page_title', 'Pengumuman Bimbingan PKL')
 @section('page_subtitle', 'Sampaikan arahan, jadwal monitoring, dan instruksi penting kepada siswa bimbingan atau jurusan')

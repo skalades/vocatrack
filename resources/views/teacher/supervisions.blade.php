@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends(\App\Services\DeviceService::teacherLayout())
 
 @section('page_title', 'Supervisi & Berita Acara Kunjungan')
 @section('page_subtitle', 'Dokumentasi resmi kunjungan pembimbingan lapangan dan pencetakan Berita Acara standar Ditjen Vokasi')

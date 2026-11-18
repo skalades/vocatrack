@@ -209,6 +209,13 @@
 
                 <!-- 3. Guru Pembimbing & Kepala Jurusan Nav -->
                 @if($role === 'guru-pembimbing')
+                    @php
+                        $sbTeacher = auth()->user()?->teacher;
+                        $sbSpklIds = $sbTeacher ? $sbTeacher->studentPkls()->pluck('id') : collect();
+                        $sbPendingResets = $sbTeacher ? \App\Models\StudentPasswordResetRequest::where('teacher_id', $sbTeacher->id)->where('status', 'pending')->count() : 0;
+                        $sbPendingJournals = $sbSpklIds->isNotEmpty() ? \App\Models\Journal::whereIn('student_pkl_id', $sbSpklIds)->where('status', 'review_guru')->count() : 0;
+                        $sbPendingRequests = $sbSpklIds->isNotEmpty() ? \App\Models\AttendanceRequest::whereIn('student_pkl_id', $sbSpklIds)->where('status', 'pending')->count() : 0;
+                    @endphp
                     @if(auth()->user()->isKajur() && request()->is('kajur*'))
                         <!-- Context: Kepala Program Keahlian (Kajur) -->
                         <div class="text-[10px] font-extrabold text-emerald-400 uppercase tracking-widest px-3 pt-2 pb-1.5 flex items-center justify-between">
@@ -280,22 +287,33 @@
                                 <svg class="w-4 h-4 shrink-0 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
                                 <span class="truncate">Monitoring Absensi</span>
                             </div>
-                            @php
-                                $sbPendingResets = auth()->user()?->teacher ? \App\Models\StudentPasswordResetRequest::where('teacher_id', auth()->user()->teacher->id)->where('status', 'pending')->count() : 0;
-                            @endphp
                             @if($sbPendingResets > 0)
                                 <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-400 text-amber-950 shrink-0" title="{{ $sbPendingResets }} permohonan reset sandi siswa">
                                     {{ $sbPendingResets }}
                                 </span>
                             @endif
                         </a>
-                        <a href="{{ route('guru.requests') }}" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs transition-colors {{ request()->routeIs('guru.requests*') ? $activeClass : $inactiveClass }}">
-                            <svg class="w-4 h-4 shrink-0 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-                            <span>Izin & Sakit Siswa</span>
+                        <a href="{{ route('guru.requests') }}" class="flex items-center justify-between px-3 py-2.5 rounded-xl text-xs transition-colors {{ request()->routeIs('guru.requests*') ? $activeClass : $inactiveClass }}">
+                            <div class="flex items-center space-x-3 min-w-0">
+                                <svg class="w-4 h-4 shrink-0 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                                <span>Izin & Sakit Siswa</span>
+                            </div>
+                            @if($sbPendingRequests > 0)
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-400 text-amber-950 shrink-0" title="{{ $sbPendingRequests }} permohonan izin/sakit menunggu">
+                                    {{ $sbPendingRequests }}
+                                </span>
+                            @endif
                         </a>
-                        <a href="{{ route('guru.journals') }}" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs transition-colors {{ request()->routeIs('guru.journals*') ? $activeClass : $inactiveClass }}">
-                            <svg class="w-4 h-4 shrink-0 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                            <span>Review Jurnal (Tingkat 2)</span>
+                        <a href="{{ route('guru.journals') }}" class="flex items-center justify-between px-3 py-2.5 rounded-xl text-xs transition-colors {{ request()->routeIs('guru.journals*') ? $activeClass : $inactiveClass }}">
+                            <div class="flex items-center space-x-3 min-w-0">
+                                <svg class="w-4 h-4 shrink-0 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                <span>Review Jurnal (Tingkat 2)</span>
+                            </div>
+                            @if($sbPendingJournals > 0)
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-rose-500 text-white shrink-0" title="{{ $sbPendingJournals }} jurnal menunggu review guru">
+                                    {{ $sbPendingJournals }}
+                                </span>
+                            @endif
                         </a>
                         <a href="{{ route('guru.assessments') }}" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs transition-colors {{ request()->routeIs('guru.assessments*') ? $activeClass : $inactiveClass }}">
                             <svg class="w-4 h-4 shrink-0 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
@@ -482,6 +500,12 @@
                 </div>
 
                 <div class="flex items-center space-x-2 sm:space-x-3">
+                    @if($role === 'guru-pembimbing')
+                        <a href="{{ request()->fullUrlWithQuery(['view' => 'mobile']) }}" class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold text-[#0B2B25] bg-[#C6F26B]/80 hover:bg-[#C6F26B] border border-[#0B2B25]/20 shadow-2xs transition-all" title="Beralih ke Tampilan Mobile Guru">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                            <span class="hidden sm:inline">Mode Mobile</span>
+                        </a>
+                    @endif
                     <x-notification-center :isMobile="false" />
                     <button type="button" onclick="openWhatsAppContactModal()" class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-colors cursor-pointer" title="Nomor WhatsApp Notifikasi Darurat SOS">
                         <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
@@ -568,7 +592,7 @@
             </div>
 
             <!-- Content Area -->
-            <main class="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto animate-fade-in">
+            <main class="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto animate-fade-in {{ $role === 'guru-pembimbing' ? 'pb-28 lg:pb-8' : '' }}">
                 <div class="max-w-[1600px] mx-auto w-full">
                     <!-- Global Platform Announcements / Broadcasts -->
                     @php
@@ -598,6 +622,10 @@
                     @yield('content')
                 </div>
             </main>
+
+            @if($role === 'guru-pembimbing')
+                <x-teacher.nav-dock :pendingJournals="$sbPendingJournals ?? 0" :pendingRequests="$sbPendingRequests ?? 0" />
+            @endif
         </div>
     </div>
 

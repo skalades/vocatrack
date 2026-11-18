@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends(\App\Services\DeviceService::teacherLayout())
 
 @section('title', 'Dashboard Guru Pembimbing — VokaTrack')
 @section('hide_header', true)
@@ -34,6 +34,9 @@
 @endphp
 
 @section('content')
+@if(\App\Services\DeviceService::isTeacherMobile())
+    @include('teacher.partials.dashboard-mobile')
+@else
 <div class="w-full space-y-5">
     <h1 class="sr-only">Dashboard Guru Pembimbing</h1>
 
@@ -815,6 +818,7 @@
         </aside>
     </div>
 </div>
+@endif
 
 <!-- Modal Detail Pengumuman Dashboard -->
 <div id="modal-dashboard-announcement" onclick="if(event.target === this) closeDashboardAnnouncementModal()" class="hidden fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">

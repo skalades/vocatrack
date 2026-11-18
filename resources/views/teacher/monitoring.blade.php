@@ -1,9 +1,12 @@
-@extends('layouts.app')
+@extends(\App\Services\DeviceService::teacherLayout())
 
 @section('page_title', 'Monitoring Absensi Siswa Binaan')
 @section('page_subtitle', 'Pantau catatan jam masuk, jam pulang, dan status presensi harian siswa')
 
 @section('content')
+@if(\App\Services\DeviceService::isTeacherMobile())
+    @include('teacher.partials.monitoring-mobile')
+@else
 <div class="w-full space-y-6">
 
     <!-- Enterprise Hero Banner -->
@@ -136,7 +139,87 @@
 
     <!-- Table Card -->
     <x-card noPadding>
-        <div class="overflow-x-auto custom-scrollbar">
+        {{-- Mobile Responsive Card List (Visible on Mobile screens, hidden on Desktop) --}}
+        <div class="block lg:hidden p-3.5 space-y-3 bg-slate-50/50">
+            @forelse($attendances as $a)
+                @php
+                    $detailPayload = [
+                        'studentName' => $a->studentPkl->student->user->name ?? 'Siswa',
+                        'studentNisn' => $a->studentPkl->student->nisn ?? '-',
+                        'companyName' => $a->studentPkl->company->name ?? '-',
+                        'date' => \Carbon\Carbon::parse($a->date)->format('d/m/Y'),
+                        'checkinTime' => $a->checkin_time ? substr($a->checkin_time, 0, 5) : null,
+                        'checkoutTime' => $a->checkout_time ? substr($a->checkout_time, 0, 5) : null,
+                        'status' => $a->status,
+                        'photoUrl' => $a->checkin_photo_path ? $a->checkin_photo_url : null,
+                        'isWithinRadius' => $a->is_within_radius,
+                        'studentLat' => $a->checkin_lat ? (float) $a->checkin_lat : null,
+                        'studentLng' => $a->checkin_lng ? (float) $a->checkin_lng : null,
+                        'companyLat' => $a->studentPkl->company->latitude ? (float) $a->studentPkl->company->latitude : null,
+                        'companyLng' => $a->studentPkl->company->longitude ? (float) $a->studentPkl->company->longitude : null,
+                        'radiusMeters' => $a->studentPkl->company->radius_meters ?? null,
+                        'notes' => $a->checkout_notes ?? '',
+                    ];
+                @endphp
+                <div class="bg-white rounded-2xl border {{ $a->is_within_radius === false ? 'border-rose-200 bg-rose-50/20' : 'border-slate-200/80' }} p-3.5 shadow-2xs space-y-3 transition-all">
+                    <div class="flex items-start justify-between gap-2.5">
+                        <div class="flex items-center space-x-2.5 min-w-0">
+                            <div class="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-700 font-black text-xs flex items-center justify-center shrink-0">
+                                {{ substr($a->studentPkl->student->user->name ?? 'S', 0, 1) }}
+                            </div>
+                            <div class="min-w-0">
+                                <h4 class="font-extrabold text-slate-900 text-xs truncate">{{ $a->studentPkl->student->user->name }}</h4>
+                                <p class="text-[10px] text-slate-500 font-mono truncate">{{ $a->studentPkl->company->name ?? 'Mitra DU/DI' }}</p>
+                            </div>
+                        </div>
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 {{ $a->status === 'hadir' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : ($a->status === 'terlambat' ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-slate-100 text-slate-700') }}">
+                            <span class="w-1.5 h-1.5 rounded-full {{ $a->status === 'hadir' ? 'bg-emerald-500' : ($a->status === 'terlambat' ? 'bg-amber-500' : 'bg-slate-400') }}"></span>
+                            {{ ucfirst(str_replace('_', ' ', $a->status)) }}
+                        </span>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2 text-[11px] bg-slate-50 rounded-xl p-2.5 border border-slate-100">
+                        <div>
+                            <span class="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">Jam Masuk</span>
+                            <span class="font-mono font-bold text-slate-800">{{ $a->checkin_time ? substr($a->checkin_time, 0, 5) . ' WIB' : '—' }}</span>
+                        </div>
+                        <div>
+                            <span class="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">Jam Pulang</span>
+                            <span class="font-mono font-bold text-slate-800">{{ $a->checkout_time ? substr($a->checkout_time, 0, 5) . ' WIB' : '—' }}</span>
+                        </div>
+                    </div>
+
+                    @if($a->is_within_radius === false)
+                        <div class="flex items-center gap-1.5 text-[10px] font-bold text-rose-700 bg-rose-50 px-2.5 py-1.5 rounded-xl border border-rose-200">
+                            <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                            <span>Terdeteksi di luar radius kantor mitra</span>
+                        </div>
+                    @endif
+
+                    <div class="flex items-center justify-between pt-1 border-t border-slate-100">
+                        <span class="text-[10px] text-slate-400 font-mono">{{ \Carbon\Carbon::parse($a->date)->isoFormat('dddd, D MMM') }}</span>
+                        <div class="flex items-center gap-1.5">
+                            @if($a->checkin_photo_path)
+                                <button type="button" onclick="openImageLightbox('{{ $a->checkin_photo_url }}')" class="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors" title="Lihat Swafoto">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><circle cx="12" cy="13" r="4"/></svg>
+                                </button>
+                            @endif
+                            <button type="button" onclick='showAttendanceDetail(@json($detailPayload))' class="px-2.5 py-1 rounded-lg bg-[#0B2B25] hover:bg-[#12382F] text-[#C6F26B] font-extrabold text-[11px] inline-flex items-center gap-1 transition-all cursor-pointer">
+                                <span>Detail</span>
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            @empty
+                <div class="py-8">
+                    <x-empty-state title="Tidak Ada Data Kehadiran" description="Tidak ditemukan rekaman presensi pada filter ini." />
+                </div>
+            @endforelse
+        </div>
+
+        {{-- Desktop Table View (Visible on Desktop/Laptop screens, hidden on Mobile) --}}
+        <div class="hidden lg:block overflow-x-auto custom-scrollbar">
             <table class="w-full text-left text-xs min-w-[1100px]">
                 <thead class="bg-slate-50/80 text-slate-500 border-b border-slate-200/80 font-extrabold uppercase text-[10px] tracking-wider">
                     <tr>
@@ -305,4 +388,5 @@
     <x-attendance-detail-modal />
 
 </div>
+@endif
 @endsection

@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends(\App\Services\DeviceService::teacherLayout())
 
 @section('page_title', 'Peta Sebaran Siswa Bimbingan PKL')
 @section('page_subtitle', 'Visualisasi spasial persebaran lokasi magang DU/DI siswa binaan dan status kehadiran hari ini')

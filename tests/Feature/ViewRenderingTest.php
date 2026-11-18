@@ -118,7 +118,14 @@ class ViewRenderingTest extends TestCase
             $this->markTestSkipped('Guru user not seeded');
         }
 
-        $this->actingAs($user)->get(route('guru.dashboard'))->assertStatus(200)->assertSee('Dashboard Guru Pembimbing');
+        $dashRes = $this->actingAs($user)->get(route('guru.dashboard'));
+        $dashRes->assertStatus(200)->assertSee('Dashboard Guru Pembimbing');
+        $dashRes->assertSee('aria-label="Navigasi Cepat Guru"', false);
+        $dashRes->assertSee('Beranda');
+        $dashRes->assertSee('Presensi');
+        $dashRes->assertSee('Jurnal');
+        $dashRes->assertSee('Izin/Sakit');
+        $dashRes->assertSee('Menu');
         $this->actingAs($user)->get(route('guru.monitoring'))->assertStatus(200)->assertSee('Monitoring Presensi Siswa Binaan');
         $this->actingAs($user)->get(route('guru.requests'))->assertStatus(200)->assertSee('Verifikasi Izin & Sakit Siswa');
         $this->actingAs($user)->get(route('guru.journals'))->assertStatus(200)->assertSee('Review Jurnal PKL (Tingkat 2)');

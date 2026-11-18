@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends(\App\Services\DeviceService::teacherLayout())
 
 @section('page_title', 'Ekspor Laporan PDF Siswa PKL')
 @section('page_subtitle', 'Unduh dokumen laporan individu lengkap dengan kop dinas resmi sekolah dan lembar pengesahan')

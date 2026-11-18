@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends(\App\Services\DeviceService::teacherLayout())
 
 @section('page_title', 'Kendala & SOS Siswa Bimbingan')
 @section('page_subtitle', 'Kanal aduan privat, whistleblowing, dan keselamatan siswa di industri binaan')

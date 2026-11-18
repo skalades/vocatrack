@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends(\App\Services\DeviceService::teacherLayout())
 
 @section('page_title', 'Link Portal Monitoring Orang Tua Siswa')
 @section('page_subtitle', 'Generate dan kelola tautan pemantauan PKL untuk orang tua siswa bimbingan atau rombel binaan Anda, serta ekspor file untuk dibagikan')
