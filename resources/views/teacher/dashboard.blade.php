@@ -17,6 +17,7 @@
         'belum_telat' => ['label' => 'Belum · Lewat Jam','pill' => 'bg-orange-50 text-orange-700 border-orange-200',    'dot' => 'bg-orange-500'],
         'libur'       => ['label' => 'Libur Sekolah',    'pill' => 'bg-slate-50 text-slate-500 border-slate-200',       'dot' => 'bg-slate-300'],
         'libur_dudi'  => ['label' => 'Libur DU/DI',      'pill' => 'bg-slate-50 text-slate-500 border-slate-200',       'dot' => 'bg-slate-300'],
+        'belum_mulai' => ['label' => 'Belum Mulai PKL',  'pill' => 'bg-slate-100 text-slate-500 border-slate-200',      'dot' => 'bg-slate-400'],
     ];
     $urgencyMeta = [
         'critical' => ['label' => 'SOS',    'pill' => 'bg-[#B42318] text-white'],
@@ -121,9 +122,35 @@
                         <p class="text-[11px] font-bold uppercase tracking-wider text-[#A9C2B9]">Presensi hari ini</p>
                         <p class="font-space text-4xl font-bold leading-none"><span data-counter>{{ $todayPresentCount }}</span><span class="text-white/40 text-2xl">/{{ $expectedToday }}</span></p>
                         <p class="text-[11px] text-[#A9C2B9] font-medium">
-                            @if($isSchoolHoliday) Hari libur sekolah
-                            @elseif($expectedToday === 0) Tidak ada jadwal kerja hari ini
-                            @else {{ $todaySummary['belum'] }} belum · {{ $checkedOutCount }} sudah pulang
+                            @if($isSchoolHoliday)
+                                Hari libur sekolah
+                            @elseif($expectedToday === 0)
+                                @if(($todaySummary['belum_mulai'] ?? 0) > 0)
+                                    {{ $todaySummary['belum_mulai'] }} siswa belum mulai PKL
+                                @else
+                                    Tidak ada jadwal kerja hari ini
+                                @endif
+                            @else
+                                @php
+                                    $detailParts = [];
+                                    if ($todaySummary['belum'] > 0) {
+                                        $detailParts[] = $todaySummary['belum'] . ' belum masuk';
+                                    }
+                                    if ($todayPresentCount > 0) {
+                                        if ($checkedOutCount > 0 && ($stillAtOfficeCount ?? 0) > 0) {
+                                            $detailParts[] = $checkedOutCount . ' sudah pulang';
+                                            $detailParts[] = $stillAtOfficeCount . ' belum pulang';
+                                        } elseif ($checkedOutCount > 0 && ($stillAtOfficeCount ?? 0) === 0) {
+                                            $detailParts[] = 'semua sudah pulang (' . $checkedOutCount . ')';
+                                        } else {
+                                            $detailParts[] = $todayPresentCount . ' di lokasi';
+                                        }
+                                    }
+                                    if (($todaySummary['belum_mulai'] ?? 0) > 0) {
+                                        $detailParts[] = $todaySummary['belum_mulai'] . ' belum mulai PKL';
+                                    }
+                                @endphp
+                                {{ !empty($detailParts) ? implode(' · ', $detailParts) : 'Presensi tercatat' }}
                             @endif
                         </p>
                     </div>
@@ -295,7 +322,16 @@
                 </div>
 
                 <div class="px-5 pb-4 flex flex-wrap gap-1.5">
-                    @foreach([['hadir', 'Hadir', $todaySummary['hadir']], ['terlambat', 'Terlambat', $todaySummary['terlambat']], ['dinas_luar', 'Dinas/WFH', $todaySummary['tugas']], ['izin', 'Izin/Sakit', $todaySummary['izin_sakit']], ['alfa', 'Alfa', $todaySummary['alfa']], ['belum', 'Belum', $todaySummary['belum']], ['libur', 'Libur', $todaySummary['libur']]] as [$k, $lbl, $val])
+                    @foreach([
+                        ['hadir', 'Hadir', $todaySummary['hadir']],
+                        ['terlambat', 'Terlambat', $todaySummary['terlambat']],
+                        ['dinas_luar', 'Dinas/WFH', $todaySummary['tugas']],
+                        ['izin', 'Izin/Sakit', $todaySummary['izin_sakit']],
+                        ['alfa', 'Alfa', $todaySummary['alfa']],
+                        ['belum', 'Belum', $todaySummary['belum']],
+                        ['libur', 'Libur', $todaySummary['libur']],
+                        ['belum_mulai', 'Belum Mulai', $todaySummary['belum_mulai'] ?? 0]
+                    ] as [$k, $lbl, $val])
                         <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-bold {{ $val ? $stateMeta[$k]['pill'] : 'bg-white text-slate-400 border-slate-200' }}">
                             <span class="w-1.5 h-1.5 rounded-full {{ $val ? $stateMeta[$k]['dot'] : 'bg-slate-300' }}"></span>{{ $lbl }} <span class="font-space">{{ $val }}</span>
                         </span>
@@ -344,6 +380,8 @@
                                         <td class="px-3 py-3 whitespace-nowrap">
                                             @if($att && $att->checkin_time)
                                                 <span class="font-space font-bold text-slate-900">{{ $fmtTime($att->checkin_time) }}</span>
+                                            @elseif($row['state'] === 'belum_mulai')
+                                                <span class="text-slate-400 font-medium">Belum mulai</span>
                                             @else
                                                 <span class="text-slate-300">—</span>
                                                 @if($jamMasuk && in_array($row['state'], ['belum', 'belum_telat']))
@@ -354,6 +392,8 @@
                                         <td class="px-3 py-3 whitespace-nowrap">
                                             @if($att && $att->checkout_time)
                                                 <span class="font-space font-bold text-slate-900">{{ $fmtTime($att->checkout_time) }}</span>
+                                            @elseif($row['state'] === 'belum_mulai')
+                                                <span class="text-slate-400 font-medium">Belum mulai</span>
                                             @else
                                                 <span class="text-slate-300">—</span>
                                             @endif
@@ -510,9 +550,13 @@
                                         @if($s['journal_review_guru'])<a href="{{ route('guru.journals') }}" class="px-2 py-0.5 rounded-full bg-[#0B2B25] text-[#C6F26B]">{{ $s['journal_review_guru'] }} menunggu Anda</a>@endif
                                         @if($s['journal_at_dudi'])<span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">{{ $s['journal_at_dudi'] }} di DU/DI</span>@endif
                                         @if($s['journal_revision'])<span class="px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">{{ $s['journal_revision'] }} revisi</span>@endif
-                                        <span class="px-2 py-0.5 rounded-full {{ ($s['days_since_journal'] ?? 99) > 3 ? 'bg-orange-50 text-orange-700' : 'bg-slate-50 text-slate-500' }}">
-                                            {{ $s['days_since_journal'] === null ? 'Belum pernah isi' : ($s['days_since_journal'] === 0 ? 'Isi hari ini' : 'Terakhir ' . $s['days_since_journal'] . ' hari lalu') }}
-                                        </span>
+                                        @if(!$sp->company?->is_pkl_started)
+                                            <span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">PKL belum mulai</span>
+                                        @else
+                                            <span class="px-2 py-0.5 rounded-full {{ ($s['days_since_journal'] ?? 99) > 3 ? 'bg-orange-50 text-orange-700' : 'bg-slate-50 text-slate-500' }}">
+                                                {{ $s['days_since_journal'] === null ? 'Belum pernah isi' : ($s['days_since_journal'] === 0 ? 'Isi hari ini' : 'Terakhir ' . $s['days_since_journal'] . ' hari lalu') }}
+                                            </span>
+                                        @endif
                                     </div>
                                 </div>
 

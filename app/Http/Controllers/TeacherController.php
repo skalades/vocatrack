@@ -46,7 +46,7 @@ class TeacherController extends Controller
         $todayString = $today->toDateString();
 
         $studentPkls = StudentPkl::where('teacher_id', $teacher->id)
-            ->with(['student.user', 'student.class.major', 'company', 'supervisor.user', 'assessment', 'pklPeriod'])
+            ->with(['student.user', 'student.class.major', 'company', 'supervisor.user', 'assessment', 'pklPeriod', 'journals'])
             ->get();
 
         $spklIds = $studentPkls->pluck('id');
@@ -103,10 +103,10 @@ class TeacherController extends Controller
             }
 
             $state = 'belum';
-            if ($company && !$company->is_pkl_started) {
-                $state = 'belum_mulai';
-            } elseif ($att) {
+            if ($att) {
                 $state = $att->status;
+            } elseif ($company && !$company->is_pkl_started) {
+                $state = 'belum_mulai';
             } elseif ($isSchoolHoliday) {
                 $state = 'libur';
             } elseif (!$isWorkDay) {
@@ -136,14 +136,27 @@ class TeacherController extends Controller
             'belum' => $todayRows->whereIn('state', ['belum', 'belum_telat'])->count(),
             'belum_telat' => $todayRows->where('state', 'belum_telat')->count(),
             'libur' => $todayRows->whereIn('state', ['libur', 'libur_dudi'])->count(),
+            'belum_mulai' => $todayRows->where('state', 'belum_mulai')->count(),
         ];
         $todayPresentCount = $todayRows->whereIn('state', $presentStates)->count();
         $todayLateCount = $todaySummary['terlambat'];
-        $expectedToday = max(0, $totalStudents - $todaySummary['libur']);
-        $checkedOutCount = $todayAttendances->whereNotNull('checkout_time')->count();
+        $exemptCount = $todaySummary['libur'] + $todaySummary['belum_mulai'];
+        $expectedToday = max(0, $totalStudents - $exemptCount);
+
+        // Siswa yang hadir dan sudah tercatat jam pulang valid
+        $checkedOutCount = $todayRows->filter(function ($r) use ($presentStates) {
+            if (!in_array($r['state'], $presentStates, true)) {
+                return false;
+            }
+            $t = $r['attendance']?->checkout_time;
+            return !empty($t) && $t !== '00:00:00';
+        })->count();
+        $stillAtOfficeCount = max(0, $todayPresentCount - $checkedOutCount);
+        $belumMasukCount = $todaySummary['belum'];
+        $belumMulaiCount = $todaySummary['belum_mulai'];
 
         // Urutkan: yang perlu perhatian di atas
-        $stateOrder = ['belum_telat' => 0, 'alfa' => 1, 'pengajuan' => 2, 'terlambat' => 3, 'belum' => 4];
+        $stateOrder = ['belum_telat' => 0, 'alfa' => 1, 'pengajuan' => 2, 'terlambat' => 3, 'belum' => 4, 'belum_mulai' => 7];
         $todayRows = $todayRows->sortBy(fn ($r) => ($r['flagged'] ? -1 : ($stateOrder[$r['state']] ?? 5)))->values();
 
         // ---------- Peringatan lokasi (7 hari terakhir) ----------
@@ -211,10 +224,13 @@ class TeacherController extends Controller
             $journalTotal = $jrCount(['draft', 'submitted', 'review_guru', 'revision', 'approved']);
             $assessment = $sp->assessment;
 
+            $isPklStarted = (bool) ($sp->company?->is_pkl_started ?? false);
             $warnings = [];
             if ($attCount(['alfa']) >= 3) $warnings[] = $attCount(['alfa']) . 'x alfa';
-            if ($journalTotal === 0) $warnings[] = 'belum ada jurnal';
-            elseif ($daysSinceJournal !== null && $daysSinceJournal > 3) $warnings[] = 'jurnal ' . $daysSinceJournal . ' hari kosong';
+            if ($isPklStarted) {
+                if ($journalTotal === 0) $warnings[] = 'belum ada jurnal';
+                elseif ($daysSinceJournal !== null && $daysSinceJournal > 3) $warnings[] = 'jurnal ' . $daysSinceJournal . ' hari kosong';
+            }
             if ($openIncidentsBySpkl->get($sp->id)) $warnings[] = 'kendala terbuka';
 
             return [
@@ -367,6 +383,9 @@ class TeacherController extends Controller
             'todayLateCount',
             'expectedToday',
             'checkedOutCount',
+            'stillAtOfficeCount',
+            'belumMasukCount',
+            'belumMulaiCount',
             'flaggedAttendances',
             'flaggedTodayCount',
             'attendanceTrend',
