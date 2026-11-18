@@ -256,18 +256,48 @@
             @else
                 <!-- Already checked in today: Show status & checkout option -->
                 <div class="mt-3.5 flex flex-col gap-2">
-                    <a href="{{ route('student.attendance') }}" 
-                       class="flex items-center justify-between h-[60px] rounded-[30px] bg-[#0F7A66] hover:bg-[#0B5E4E] text-white px-2 pl-6 shadow-[0_8px_20px_rgba(15,122,102,0.25)] active:scale-95 transition-all group">
-                        <div class="flex flex-col text-left">
-                            <span class="font-bold text-sm">Presensi Masuk Tercatat</span>
-                            <span class="text-xs text-[#C6F26B] font-space">{{ \Carbon\Carbon::parse($todayAttendance->checkin_time)->format('H.i') }} WIB · Lihat Bukti Presensi</span>
-                        </div>
-                        <span class="w-11 h-11 rounded-full bg-white text-[#0B2B25] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
-                                <polyline points="20 6 9 17 4 12"/>
-                            </svg>
-                        </span>
-                    </a>
+                    @if(!$todayAttendance->checkout_time)
+                        @if(!empty($dayStatus['can_checkout']))
+                            <a href="{{ route('student.attendance', ['mode' => 'checkout']) }}" 
+                               class="flex items-center justify-between h-[60px] rounded-[30px] bg-[#0B2B25] hover:bg-[#12382F] text-white px-2 pl-6 shadow-[0_8px_20px_rgba(11,43,37,0.25)] active:scale-95 transition-all group">
+                                <div class="flex flex-col text-left">
+                                    <span class="font-bold text-sm text-[#C6F26B]">Presensi Pulang (Dibuka)</span>
+                                    <span class="text-xs text-white/80 font-medium">Ambil swafoto & verifikasi GPS kepulangan</span>
+                                </div>
+                                <span class="w-11 h-11 rounded-full bg-[#C6F26B] text-[#0B2B25] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>
+                                    </svg>
+                                </span>
+                            </a>
+                        @else
+                            <a href="{{ route('student.attendance') }}" 
+                               class="flex items-center justify-between h-[60px] rounded-[30px] bg-[#0F7A66] hover:bg-[#0B5E4E] text-white px-2 pl-6 shadow-[0_8px_20px_rgba(15,122,102,0.25)] active:scale-95 transition-all group">
+                                <div class="flex flex-col text-left">
+                                    <span class="font-bold text-sm">Presensi Masuk Tercatat</span>
+                                    <span class="text-xs text-[#C6F26B] font-space">{{ \Carbon\Carbon::parse($todayAttendance->checkin_time)->format('H.i') }} WIB · Pulang Buka {{ $dayStatus['checkout_start_time'] ?? '16.00' }} WIB</span>
+                                </div>
+                                <span class="w-11 h-11 rounded-full bg-white text-[#0B2B25] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="20 6 9 17 4 12"/>
+                                    </svg>
+                                </span>
+                            </a>
+                        @endif
+                    @else
+                        <a href="{{ route('student.attendance') }}" 
+                           class="flex items-center justify-between h-[60px] rounded-[30px] bg-[#0B2B25] hover:bg-[#12382F] text-white px-2 pl-6 shadow-[0_8px_20px_rgba(11,43,37,0.25)] active:scale-95 transition-all group">
+                            <div class="flex flex-col text-left">
+                                <span class="font-bold text-sm text-[#C6F26B]">Presensi Hari Ini Selesai</span>
+                                <span class="text-xs text-white/80 font-space">Masuk: {{ \Carbon\Carbon::parse($todayAttendance->checkin_time)->format('H.i') }} · Pulang: {{ \Carbon\Carbon::parse($todayAttendance->checkout_time)->format('H.i') }} WIB</span>
+                            </div>
+                            <span class="w-11 h-11 rounded-full bg-[#C6F26B] text-[#0B2B25] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="20 6 9 17 4 12"/>
+                                </svg>
+                            </span>
+                        </a>
+                    @endif
                 </div>
             @endif
 

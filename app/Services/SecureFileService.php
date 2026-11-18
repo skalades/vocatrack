@@ -32,6 +32,7 @@ class SecureFileService
     /** Tipe berkas yang dapat disajikan => [model, kolom path]. */
     public const TYPES = [
         'presensi' => [Attendance::class, 'checkin_photo_path'],
+        'presensi-pulang' => [Attendance::class, 'checkout_photo_path'],
         'jurnal' => [JournalPhoto::class, 'photo_path'],
         'permohonan' => [AttendanceRequest::class, 'attachment_path'],
         'kendala' => [IncidentReport::class, 'attachment_path'],

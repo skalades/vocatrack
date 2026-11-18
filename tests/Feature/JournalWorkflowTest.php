@@ -152,6 +152,7 @@ class JournalWorkflowTest extends TestCase
             'contact_person' => 'PIC',
             'phone' => '0812',
             'work_days' => '5_days',
+            'is_pkl_started' => true,
         ]);
 
         $period = PklPeriod::create([
@@ -210,5 +211,94 @@ class JournalWorkflowTest extends TestCase
 
         $photo = $journal->photos->first();
         \Illuminate\Support\Facades\Storage::disk('local')->assertExists($photo->photo_path);
+    }
+
+    public function test_student_journal_store_ignores_empty_photos_payload_when_compressed_is_present(): void
+    {
+        \Illuminate\Support\Facades\Storage::fake('local');
+
+        $school = School::create([
+            'npsn' => '77777778',
+            'name' => 'SMK Journal Empty File Test',
+            'address' => 'Bandung',
+            'phone' => '022-778',
+            'email' => 'smk8@journal.sch.id',
+            'is_active' => true,
+        ]);
+
+        $major = Major::create(['school_id' => $school->id, 'code' => 'TKJ', 'name' => 'TKJ']);
+        $class = SchoolClass::create([
+            'school_id' => $school->id,
+            'major_id' => $major->id,
+            'name' => 'XII TKJ 2',
+            'grade_level' => 'XII',
+            'academic_year' => '2026/2027',
+        ]);
+
+        $company = Company::create([
+            'school_id' => $school->id,
+            'name' => 'PT Jaringan Sukses',
+            'address' => 'Bandung',
+            'contact_person' => 'PIC',
+            'phone' => '0813',
+            'work_days' => '5_days',
+            'is_pkl_started' => true,
+        ]);
+
+        $period = PklPeriod::create([
+            'school_id' => $school->id,
+            'name' => 'Periode 1',
+            'start_date' => '2026-01-01',
+            'end_date' => '2026-12-31',
+            'is_active' => true,
+        ]);
+
+        $studentUser = User::create([
+            'school_id' => $school->id,
+            'name' => 'Siswa Empty Payload',
+            'email' => 'siswa.empty@sekolah.sch.id',
+            'password' => bcrypt('password'),
+            'role' => 'siswa',
+            'is_active' => true,
+        ]);
+        $student = Student::create(['user_id' => $studentUser->id, 'class_id' => $class->id, 'nis' => '503', 'nisn' => '5556667780']);
+
+        $guruUser = User::create([
+            'school_id' => $school->id,
+            'name' => 'Guru Pembimbing Empty',
+            'email' => 'guru.empty@sekolah.sch.id',
+            'password' => bcrypt('password'),
+            'role' => 'guru-pembimbing',
+            'is_active' => true,
+        ]);
+        $teacher = Teacher::create(['user_id' => $guruUser->id, 'nip' => '998878']);
+
+        $spkl = StudentPkl::create([
+            'school_id' => $school->id,
+            'student_id' => $student->id,
+            'company_id' => $company->id,
+            'pkl_period_id' => $period->id,
+            'teacher_id' => $teacher->id,
+            'status' => 'active',
+            'start_date' => '2026-01-01',
+            'end_date' => '2026-12-31',
+        ]);
+
+        $base64Png = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+
+        // Kirim request dengan compressed_photos dan photos berisi array string kosong / non-file dari browser
+        $response = $this->actingAs($studentUser)->post(route('student.journal.store'), [
+            'date' => Carbon::today()->toDateString(),
+            'activity_description' => 'Mengerjakan instalasi kabel jaringan LAN dan pengujian koneksi server lokal di lab sekolah.',
+            'compressed_photos' => [$base64Png],
+            'photos' => [''],
+        ]);
+
+        $response->assertRedirect();
+        $response->assertSessionHas('success');
+
+        $journal = Journal::where('student_pkl_id', $spkl->id)->first();
+        $this->assertNotNull($journal);
+        $this->assertCount(1, $journal->photos);
     }
 }

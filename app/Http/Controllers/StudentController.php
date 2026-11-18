@@ -165,7 +165,7 @@ class StudentController extends Controller
         ));
     }
 
-    public function attendance(AttendanceService $attendanceService)
+    public function attendance(Request $request, AttendanceService $attendanceService)
     {
         $spkl = $this->getStudentPkl(false);
         $student = Auth::user()->student?->load('class.major');
@@ -200,8 +200,9 @@ class StudentController extends Controller
         }
 
         $isPklStarted = (bool) ($spkl?->company?->is_pkl_started ?? false);
+        $mode = $request->query('mode', (!$todayAttendance ? 'checkin' : ($request->has('checkout') ? 'checkout' : 'ticket')));
 
-        return view('student.attendance', compact('spkl', 'student', 'todayAttendance', 'history', 'pendingRequests', 'dayStatus', 'dayNumber', 'isPklStarted'));
+        return view('student.attendance', compact('spkl', 'student', 'todayAttendance', 'history', 'pendingRequests', 'dayStatus', 'dayNumber', 'isPklStarted', 'mode'));
     }
 
     public function checkin(Request $request, AttendanceService $attendanceService)
@@ -243,59 +244,15 @@ class StudentController extends Controller
         }
 
         $photoPath = null;
+        $fileSize = 0;
         if ($request->filled('photo')) {
-            $base64Image = $request->input('photo');
-            
-            // Klien sudah mengompres swafoto (maks 800px, ~250KB). Server hanya melakukan
-            // pengecekan murah (panjang string + header gambar) tanpa resize/re-encode.
-            // 1.4MB base64 ≈ 1MB biner — longgar untuk perangkat lama, ketat untuk payload liar.
-            if (strlen($base64Image) > 1400 * 1024) {
-                return back()->withErrors(['photo' => 'Ukuran foto swafoto terlalu besar (maksimal 1MB). Silakan ambil ulang foto.']);
-            }
-
-            if (preg_match('/^data:image\/(\w+);base64,/', $base64Image, $typeMatch)) {
-                $rawType = strtolower($typeMatch[1]);
-                $allowedMimeMap = [
-                    'jpeg' => 'jpg',
-                    'jpg'  => 'jpg',
-                    'png'  => 'png',
-                    'webp' => 'webp',
-                ];
-
-                if (!isset($allowedMimeMap[$rawType])) {
-                    return back()->withErrors(['photo' => 'Format foto tidak valid. Gunakan format JPG, PNG, atau WEBP.']);
+            try {
+                [$photoPath, $fileSize] = $this->processSelfieUpload($request->input('photo'), $spkl, 'attendances');
+            } catch (ValidationException $e) {
+                if ($request->wantsJson()) {
+                    return response()->json(['message' => $e->getMessage(), 'errors' => $e->errors()], 422);
                 }
-
-                $extension = $allowedMimeMap[$rawType];
-                $cleanBase64 = substr($base64Image, strpos($base64Image, ',') + 1);
-                $imageData = base64_decode($cleanBase64, true);
-
-                if ($imageData === false) {
-                    return back()->withErrors(['photo' => 'Data gambar swafoto rusak atau tidak valid.']);
-                }
-
-                // Verifikasi isi berkas benar-benar gambar (jangan percaya prefix data URI dari klien).
-                $realMimeMap = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
-                $imageInfo = @getimagesizefromstring($imageData);
-                if ($imageInfo === false || !isset($realMimeMap[$imageInfo['mime'] ?? ''])) {
-                    return back()->withErrors(['photo' => 'Data gambar swafoto rusak atau tidak valid.']);
-                }
-                $extension = $realMimeMap[$imageInfo['mime']];
-
-                // Tolak dimensi berlebih (dibaca dari header, tanpa decode piksel).
-                if (($imageInfo[0] ?? 0) > 2000 || ($imageInfo[1] ?? 0) > 2000) {
-                    return back()->withErrors(['photo' => 'Resolusi foto swafoto terlalu besar. Silakan ambil ulang foto.']);
-                }
-
-                $fileSize = strlen($imageData);
-                if (!app(StorageQuotaService::class)->canUpload($spkl->school, $fileSize)) {
-                    return back()->withErrors(['photo' => 'Kapasitas penyimpanan sekolah Anda telah penuh. Tidak dapat mengunggah foto swafoto. Hubungi admin sekolah.']);
-                }
-
-                $fileName = 'schools/' . $spkl->school_id . '/attendances/' . date('Y') . '/' . Str::random(24) . '.' . $extension;
-                app(SecureFileService::class)->putContents($fileName, $imageData);
-                app(StorageQuotaService::class)->recordUpload($spkl->school, $fileSize);
-                $photoPath = $fileName;
+                return back()->withErrors($e->errors());
             }
         }
 
@@ -322,7 +279,7 @@ class StudentController extends Controller
             // Check-in ditolak: hapus selfie yang sudah terunggah dan kembalikan kuotanya.
             if ($photoPath) {
                 app(SecureFileService::class)->delete($photoPath);
-                app(StorageQuotaService::class)->recordDeletion($spkl->school, $fileSize ?? 0);
+                app(StorageQuotaService::class)->recordDeletion($spkl->school, $fileSize);
             }
 
             if ($request->wantsJson()) {
@@ -342,19 +299,141 @@ class StudentController extends Controller
             return back()->withErrors(['checkout' => 'Anda tidak memiliki penugasan PKL aktif.']);
         }
 
+        if (!$spkl->company?->is_pkl_started) {
+            $msg = 'Pelaksanaan PKL di ' . ($spkl->company->name ?? 'perusahaan ini') . ' belum resmi dimulai. Anda belum diwajibkan melakukan presensi pulang.';
+            if ($request->wantsJson()) {
+                return response()->json(['message' => $msg, 'errors' => ['checkout' => [$msg]]], 422);
+            }
+            return back()->withErrors(['checkout' => $msg]);
+        }
+
         $request->validate([
+            'latitude' => ['nullable', 'numeric'],
+            'longitude' => ['nullable', 'numeric'],
+            'accuracy' => ['nullable', 'numeric'],
+            'is_mocked' => ['nullable', 'boolean'],
+            'photo' => ['nullable', 'string'],
+            'reason' => ['nullable', 'string', 'max:255'],
             'checkout_notes' => ['nullable', 'string', 'max:255'],
+            'notes' => ['nullable', 'string', 'max:255'],
         ]);
 
+        if ($request->has('is_within_radius') && filter_var($request->input('is_within_radius'), FILTER_VALIDATE_BOOLEAN) === false) {
+            if (!$request->filled('reason') || strlen(trim($request->reason)) < 5) {
+                if ($request->wantsJson()) {
+                    return response()->json([
+                        'message' => 'Anda berada di luar radius lokasi penugasan DU/DI saat absen pulang. Wajib menyertakan alasan penugasan luar radius.',
+                        'errors' => ['reason' => ['Anda berada di luar radius lokasi penugasan DU/DI saat absen pulang. Wajib menyertakan alasan penugasan luar radius.']]
+                    ], 422);
+                }
+                throw ValidationException::withMessages([
+                    'reason' => 'Anda berada di luar radius lokasi penugasan DU/DI saat absen pulang. Wajib menyertakan alasan penugasan luar radius.',
+                ]);
+            }
+        }
+
+        $photoPath = null;
+        $fileSize = 0;
+        if ($request->filled('photo')) {
+            try {
+                [$photoPath, $fileSize] = $this->processSelfieUpload($request->input('photo'), $spkl, 'attendances');
+            } catch (ValidationException $e) {
+                if ($request->wantsJson()) {
+                    return response()->json(['message' => $e->getMessage(), 'errors' => $e->errors()], 422);
+                }
+                return back()->withErrors($e->errors());
+            }
+        }
+
         try {
-            $attendanceService->recordCheckOut($spkl, [
-                'checkout_notes' => $request->checkout_notes,
+            $attendance = $attendanceService->recordCheckOut($spkl, [
+                'latitude' => $request->latitude,
+                'longitude' => $request->longitude,
+                'accuracy' => $request->accuracy,
+                'is_mocked' => $request->boolean('is_mocked'),
+                'photo_path' => $photoPath,
+                'reason' => $request->reason,
+                'checkout_notes' => $request->checkout_notes ?? $request->notes,
             ]);
 
-            return back()->with('success', 'Check-out berhasil! Terima kasih atas dedikasi kerja hari ini.');
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Check-out pulang berhasil tercatat! Terima kasih atas dedikasi kerja hari ini.',
+                    'data' => $attendance,
+                ]);
+            }
+
+            return redirect()->route('student.attendance')->with('success', 'Check-out pulang berhasil tercatat! Terima kasih atas dedikasi kerja hari ini.');
         } catch (ValidationException $e) {
+            if ($photoPath) {
+                app(SecureFileService::class)->delete($photoPath);
+                app(StorageQuotaService::class)->recordDeletion($spkl->school, $fileSize);
+            }
+
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'errors' => $e->errors(),
+                ], 422);
+            }
             return back()->withErrors($e->errors());
         }
+    }
+
+    /**
+     * Helper to validate, quota-check, and store compressed selfie to private disk.
+     */
+    protected function processSelfieUpload(string $base64Image, StudentPkl $spkl, string $subfolder = 'attendances'): array
+    {
+        if (strlen($base64Image) > 1400 * 1024) {
+            throw ValidationException::withMessages(['photo' => 'Ukuran foto swafoto terlalu besar (maksimal 1MB). Silakan ambil ulang foto.']);
+        }
+
+        if (!preg_match('/^data:image\/(\w+);base64,/', $base64Image, $typeMatch)) {
+            throw ValidationException::withMessages(['photo' => 'Format foto tidak valid. Gunakan format JPG, PNG, atau WEBP.']);
+        }
+
+        $rawType = strtolower($typeMatch[1]);
+        $allowedMimeMap = [
+            'jpeg' => 'jpg',
+            'jpg'  => 'jpg',
+            'png'  => 'png',
+            'webp' => 'webp',
+        ];
+
+        if (!isset($allowedMimeMap[$rawType])) {
+            throw ValidationException::withMessages(['photo' => 'Format foto tidak valid. Gunakan format JPG, PNG, atau WEBP.']);
+        }
+
+        $cleanBase64 = substr($base64Image, strpos($base64Image, ',') + 1);
+        $imageData = base64_decode($cleanBase64, true);
+
+        if ($imageData === false) {
+            throw ValidationException::withMessages(['photo' => 'Data gambar swafoto rusak atau tidak valid.']);
+        }
+
+        $realMimeMap = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
+        $imageInfo = @getimagesizefromstring($imageData);
+        if ($imageInfo === false || !isset($realMimeMap[$imageInfo['mime'] ?? ''])) {
+            throw ValidationException::withMessages(['photo' => 'Data gambar swafoto rusak atau tidak valid.']);
+        }
+        $extension = $realMimeMap[$imageInfo['mime']];
+
+        if (($imageInfo[0] ?? 0) > 2000 || ($imageInfo[1] ?? 0) > 2000) {
+            throw ValidationException::withMessages(['photo' => 'Resolusi foto swafoto terlalu besar. Silakan ambil ulang foto.']);
+        }
+
+        $fileSize = strlen($imageData);
+        if (!app(StorageQuotaService::class)->canUpload($spkl->school, $fileSize)) {
+            throw ValidationException::withMessages(['photo' => 'Kapasitas penyimpanan sekolah Anda telah penuh. Tidak dapat mengunggah foto swafoto. Hubungi admin sekolah.']);
+        }
+
+        $fileName = 'schools/' . $spkl->school_id . '/' . $subfolder . '/' . date('Y') . '/' . Str::random(24) . '.' . $extension;
+        app(SecureFileService::class)->putContents($fileName, $imageData);
+        app(StorageQuotaService::class)->recordUpload($spkl->school, $fileSize);
+
+        return [$fileName, $fileSize];
     }
 
     public function storeRequest(Request $request)
@@ -536,24 +615,53 @@ class StudentController extends Controller
             $request->merge(['activity_description' => $desc]);
         }
 
-        $hasCompressed = $request->filled('compressed_photos') && count(array_filter((array) $request->input('compressed_photos'))) > 0;
-        $photoRules = $hasCompressed
-            ? ['nullable']
-            : ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'];
+        // Normalisasi foto: bersihkan entri kosong dari compressed_photos & photos
+        $compressedPhotos = array_values(array_filter((array) $request->input('compressed_photos', []), function ($val) {
+            return is_string($val) && strlen(trim($val)) > 30 && str_starts_with($val, 'data:image/');
+        }));
+        $hasCompressed = count($compressedPhotos) > 0;
 
-        $request->validate([
+        if ($hasCompressed) {
+            // Jika foto terkompresi base64 tersedia, abaikan payload berkas mentah agar tidak divalidasi ganda
+            $request->merge(['compressed_photos' => $compressedPhotos]);
+            $request->request->remove('photos');
+            $request->files->remove('photos');
+        } else {
+            // Bersihkan entri file yang tidak valid / kosong dari array photos (misal error UPLOAD_ERR_NO_FILE)
+            if ($request->hasFile('photos')) {
+                $validFiles = array_filter((array) $request->file('photos'), function ($file) {
+                    return $file instanceof \Illuminate\Http\UploadedFile && $file->isValid();
+                });
+                if (empty($validFiles)) {
+                    $request->files->remove('photos');
+                    $request->request->remove('photos');
+                } else {
+                    $request->files->set('photos', array_values($validFiles));
+                }
+            } else {
+                $request->request->remove('photos');
+            }
+        }
+
+        $validationRules = [
             'date' => ['required', 'date', 'before_or_equal:today'],
             'activity_description' => ['required', 'string', 'min:50'],
-            'photos.*' => $photoRules,
-            'compressed_photos.*' => ['nullable', 'string'],
             'action_type' => ['nullable', 'in:draft,submit'],
             'is_draft' => ['nullable', 'boolean'],
-        ], [
+        ];
+
+        if ($hasCompressed) {
+            $validationRules['compressed_photos.*'] = ['nullable', 'string'];
+        } elseif ($request->hasFile('photos')) {
+            $validationRules['photos.*'] = ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,heic,heif', 'max:10240'];
+        }
+
+        $request->validate($validationRules, [
             'date.before_or_equal' => 'Tanggal jurnal tidak boleh melebihi hari ini.',
             'activity_description.min' => 'Uraian kegiatan minimal harus 50 karakter.',
-            'photos.*.image' => 'Berkas foto jurnal harus berupa gambar valid.',
+            'photos.*.file' => 'Berkas foto jurnal tidak valid.',
             'photos.*.mimes' => 'Format foto jurnal harus berupa JPG, JPEG, PNG, atau WebP.',
-            'photos.*.max' => 'Ukuran foto jurnal tidak boleh lebih dari 5 MB per berkas.',
+            'photos.*.max' => 'Ukuran foto jurnal tidak boleh lebih dari 10 MB per berkas.',
         ]);
 
         $requiresIndustry = $spkl->company?->requires_industry_approval ?? true;

@@ -10,6 +10,7 @@
     $companyLat = $spkl->company->latitude ?? -6.200000;
     $companyLng = $spkl->company->longitude ?? 106.816666;
     $companyRadius = $spkl->company->radius_meters ?? 100;
+    $isCheckoutMode = ($todayAttendance && !$todayAttendance->checkout_time && ($mode === 'checkout' || request('mode') === 'checkout'));
 @endphp
 
 @section('content')
@@ -50,9 +51,9 @@
             </a>
         </div>
 
-    @elseif($todayAttendance)
+    @elseif($todayAttendance && !$isCheckoutMode)
         <!-- ========================================================
-             SCREEN 3: PRESENSI BERHASIL / BUKTI PRESENSI MASUK
+             SCREEN 3: PRESENSI BERHASIL / BUKTI PRESENSI MASUK & PULANG
              ======================================================== -->
         <x-student.attendance-ticket 
             :attendance="$todayAttendance" 
@@ -67,18 +68,28 @@
                 <!-- Presensi Pulang (Check-Out) Card -->
                 <div class="bg-white rounded-[24px] p-4 shadow-sm border border-slate-100 flex flex-col gap-2.5">
                     <div class="flex items-center justify-between">
-                        <span class="font-bold text-sm text-[#10211D]">Presensi Pulang</span>
-                        <span class="text-xs font-bold text-[#5A6B65]">Buka 16.00 WIB</span>
+                        <div class="flex flex-col">
+                            <span class="font-bold text-sm text-[#10211D]">Presensi Pulang</span>
+                            <span class="text-[11px] text-[#5A6B65]">Wajib swafoto kamera & verifikasi geofencing GPS</span>
+                        </div>
+                        <span class="text-xs font-bold {{ !empty($dayStatus['can_checkout']) ? 'text-[#0B5E4E] bg-[#DDF3EC]' : 'text-[#7A4B00] bg-[#FFF1D6]' }} px-2.5 py-1 rounded-full">
+                            {{ !empty($dayStatus['can_checkout']) ? 'Waktu Pulang Dibuka' : 'Buka ' . ($dayStatus['checkout_start_time'] ?? '16.00') . ' WIB' }}
+                        </span>
                     </div>
-                    <form action="{{ route('student.checkout') }}" method="POST" class="flex flex-col gap-2">
-                        @csrf
-                        <input type="text" name="notes" placeholder="Catatan capaian singkat hari ini (opsional)..." 
-                               class="w-full h-11 rounded-xl bg-[#F7F9F5] border border-[#CBD5CA] px-3 text-xs text-[#10211D] placeholder:text-slate-400 focus:outline-none focus:border-[#0F7A66]">
-                        <button type="submit" 
-                                class="w-full h-12 rounded-[24px] bg-[#0B2B25] hover:bg-[#12382F] text-white font-bold text-xs active:scale-95 transition-all flex items-center justify-center gap-2">
-                            <span>Check-Out Pulang</span>
-                        </button>
-                    </form>
+
+                    @if(!empty($dayStatus['can_checkout']))
+                        <a href="{{ route('student.attendance', ['mode' => 'checkout']) }}" 
+                           class="w-full h-12 rounded-[24px] bg-[#0B2B25] hover:bg-[#12382F] text-[#C6F26B] font-bold text-xs active:scale-95 transition-all flex items-center justify-center gap-2 shadow-xs">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                            <span>Ambil Swafoto & Presensi Pulang</span>
+                        </a>
+                    @else
+                        <div class="p-3 rounded-2xl bg-[#F7F9F5] border border-[#CBD5CA]/70 text-center">
+                            <span class="text-xs text-[#5A6B65] font-medium leading-relaxed">
+                                Presensi pulang dapat diambil mulai pukul <strong>{{ $dayStatus['checkout_start_time'] ?? '16.00' }} WIB</strong> setelah jam kerja selesai.
+                            </span>
+                        </div>
+                    @endif
                 </div>
             @endif
 
@@ -116,7 +127,7 @@
 
             <!-- Topbar Row -->
             <div class="flex items-center justify-between h-12">
-                <a href="{{ route('student.home') }}" aria-label="Kembali ke beranda"
+                <a href="{{ $isCheckoutMode ? route('student.attendance') : route('student.home') }}" aria-label="Kembali"
                    class="flex items-center justify-center w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer">
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M19 12H5M12 19l-7-7 7-7"/>
@@ -124,11 +135,15 @@
                 </a>
 
                 <div class="flex flex-col items-center">
-                    <h1 class="text-[17px] font-bold text-white tracking-tight">Verifikasi Selfie</h1>
-                    <span class="text-[11px] text-[#A9C2B9] font-medium leading-none">Check-In Hari Ini</span>
+                    <h1 class="text-[17px] font-bold text-white tracking-tight">
+                        {{ $isCheckoutMode ? 'Verifikasi Selfie Pulang' : 'Verifikasi Selfie' }}
+                    </h1>
+                    <span class="text-[11px] text-[#A9C2B9] font-medium leading-none">
+                        {{ $isCheckoutMode ? 'Check-Out Pulang' : 'Check-In Hari Ini' }}
+                    </span>
                 </div>
 
-                <a href="{{ route('student.home') }}" title="Batal & Kembali" class="text-xs font-bold text-[#A9C2B9] hover:text-white px-2 py-1">
+                <a href="{{ $isCheckoutMode ? route('student.attendance') : route('student.home') }}" title="Batal & Kembali" class="text-xs font-bold text-[#A9C2B9] hover:text-white px-2 py-1">
                     Batal
                 </a>
             </div>
@@ -227,6 +242,14 @@
                 </div>
             </div>
 
+            @if($isCheckoutMode)
+                <!-- Optional Checkout Notes Input -->
+                <div class="px-1 my-1">
+                    <input type="text" id="checkout-notes-input" placeholder="Catatan kepulangan / ringkasan kegiatan hari ini (opsional)..." 
+                           class="w-full h-11 rounded-2xl bg-white/10 border border-white/15 px-3.5 text-xs text-white placeholder:text-[#A9C2B9] focus:outline-none focus:border-[#C6F26B] transition-colors">
+                </div>
+            @endif
+
             <!-- Controls Row (Flash, Big Shutter, Flip Camera) -->
             <div class="flex items-center justify-center gap-8 pt-2 pb-1">
                 <!-- Flash Button -->
@@ -238,7 +261,7 @@
                 </button>
 
                 <!-- Big Shutter Button -->
-                <button type="button" id="shutter-btn" onclick="captureAndSubmitPresensi()" aria-label="Ambil foto dan kirim presensi"
+                <button type="button" id="shutter-btn" onclick="captureAndSubmitPresensi()" aria-label="{{ $isCheckoutMode ? 'Ambil foto dan check-out pulang' : 'Ambil foto dan kirim presensi' }}"
                         class="w-[84px] h-[84px] rounded-full border-4 border-[#C6F26B] flex items-center justify-center active:scale-90 transition-all cursor-pointer group shadow-[0_0_20px_rgba(198,242,107,0.3)]">
                     <span id="shutter-btn-core" class="w-[62px] h-[62px] rounded-full bg-white group-hover:scale-95 transition-transform"></span>
                 </button>
@@ -262,8 +285,8 @@
                 @endif
             </p>
 
-            <!-- Hidden Check-in Submission Form -->
-            <form id="checkin-form" action="{{ route('student.checkin') }}" method="POST" class="hidden">
+            <!-- Hidden Check-in / Check-out Submission Form -->
+            <form id="attendance-submission-form" action="{{ $isCheckoutMode ? route('student.checkout') : route('student.checkin') }}" method="POST" class="hidden">
                 @csrf
                 <input type="hidden" name="photo" id="form-photo-base64">
                 <input type="hidden" name="latitude" id="form-latitude">
@@ -271,6 +294,10 @@
                 <input type="hidden" name="accuracy" id="form-accuracy">
                 <input type="hidden" name="is_mocked" id="form-is-mocked" value="0">
                 <input type="hidden" name="reason" id="form-reason" value="">
+                <input type="hidden" name="is_within_radius" id="form-is-within-radius" value="1">
+                @if($isCheckoutMode)
+                    <input type="hidden" name="checkout_notes" id="form-checkout-notes" value="">
+                @endif
             </form>
 
         </div>
@@ -287,6 +314,7 @@
     let gpsStatus = 'searching';   // 'searching', 'locked', 'weak_accuracy', 'denied', 'unavailable', 'fake_gps'
     
     const isGpsEnabled = {{ $isGpsEnabled ? 'true' : 'false' }};
+    const isCheckoutMode = {{ $isCheckoutMode ? 'true' : 'false' }};
     const targetLat = {{ $companyLat }};
     const targetLng = {{ $companyLng }};
     const targetRadius = {{ $companyRadius }};
@@ -506,7 +534,7 @@
     function captureAndSubmitPresensi() {
         const video = document.getElementById('webcam-feed');
         const canvas = document.getElementById('snapshot-canvas');
-        const form = document.getElementById('checkin-form');
+        const form = document.getElementById('attendance-submission-form') || document.getElementById('checkin-form');
         const photoInput = document.getElementById('form-photo-base64');
         const shutterBtn = document.getElementById('shutter-btn');
 
@@ -559,26 +587,44 @@
             return;
         }
 
-        // 5. Guard: Outside Radius Rejection (Direct to Homepage Dinas Luar)
+        // 5. Guard: Outside Radius Check
         if (isGpsEnabled) {
             const dist = calculateDistanceM(userCoords.latitude, userCoords.longitude, targetLat, targetLng);
             if (dist > targetRadius) {
-                window.vtDialog({
-                    tone: 'danger',
-                    eyebrow: 'Presensi ditolak',
-                    title: 'Anda di luar radius DU/DI',
-                    message: 'Presensi selfie hanya berlaku jika Anda hadir langsung di lokasi penugasan.',
-                    details: [
-                        ['Jarak Anda', `${Number(dist).toLocaleString('id-ID')} m`],
-                        ['Batas toleransi', `${Number(targetRadius).toLocaleString('id-ID')} m`],
-                    ],
-                    hint: 'Sedang ditugaskan di luar kantor (Dinas Luar / WFH)? Ajukan lewat menu "Dinas Luar" di Beranda.',
-                    confirmText: 'Kembali ke Beranda',
-                    cancelText: 'Tetap di sini',
-                }).then((ok) => {
-                    if (ok) window.location.href = "{{ route('student.home') }}";
-                });
-                return;
+                if (isCheckoutMode) {
+                    const reason = prompt(`Anda berada di luar radius lokasi kantor DU/DI (${Number(dist).toLocaleString('id-ID')} m). Tuliskan alasan kepulangan dari luar kantor (minimal 5 karakter):`);
+                    if (!reason || reason.trim().length < 5) {
+                        window.vtAlert({
+                            tone: 'warning',
+                            title: 'Alasan Wajib Diisi',
+                            message: 'Presensi pulang di luar radius penugasan DU/DI wajib menyertakan alasan minimal 5 karakter.',
+                        });
+                        return;
+                    }
+                    document.getElementById('form-reason').value = reason.trim();
+                    const radiusEl = document.getElementById('form-is-within-radius');
+                    if (radiusEl) radiusEl.value = '0';
+                } else {
+                    window.vtDialog({
+                        tone: 'danger',
+                        eyebrow: 'Presensi ditolak',
+                        title: 'Anda di luar radius DU/DI',
+                        message: 'Presensi selfie hanya berlaku jika Anda hadir langsung di lokasi penugasan.',
+                        details: [
+                            ['Jarak Anda', `${Number(dist).toLocaleString('id-ID')} m`],
+                            ['Batas toleransi', `${Number(targetRadius).toLocaleString('id-ID')} m`],
+                        ],
+                        hint: 'Sedang ditugaskan di luar kantor (Dinas Luar / WFH)? Ajukan lewat menu "Dinas Luar" di Beranda.',
+                        confirmText: 'Kembali ke Beranda',
+                        cancelText: 'Tetap di sini',
+                    }).then((ok) => {
+                        if (ok) window.location.href = "{{ route('student.home') }}";
+                    });
+                    return;
+                }
+            } else {
+                const radiusEl = document.getElementById('form-is-within-radius');
+                if (radiusEl) radiusEl.value = '1';
             }
         }
 
@@ -618,7 +664,17 @@
         document.getElementById('form-longitude').value = userCoords.longitude;
         document.getElementById('form-accuracy').value = userCoords.accuracy;
         document.getElementById('form-is-mocked').value = userCoords.isMocked ? 1 : 0;
-        document.getElementById('form-reason').value = '';
+        if (!document.getElementById('form-reason').value) {
+            document.getElementById('form-reason').value = '';
+        }
+
+        if (isCheckoutMode) {
+            const notesInput = document.getElementById('checkout-notes-input');
+            const formNotes = document.getElementById('form-checkout-notes');
+            if (notesInput && formNotes) {
+                formNotes.value = notesInput.value.trim();
+            }
+        }
 
         // Stop camera stream
         if (videoStream) {
@@ -954,7 +1010,7 @@
     };
 
     document.addEventListener('DOMContentLoaded', function() {
-        @if(!$todayAttendance)
+        @if(!$todayAttendance || $isCheckoutMode)
             startLiveCamera();
             watchStudentLocation();
 

@@ -90,13 +90,35 @@ class AttendanceService
         });
     }
 
-    public function recordCheckOut(StudentPkl $spkl, array $data): Attendance
+    public function recordCheckOut(StudentPkl $spkl, array $data, ?GeolocationGuardService $geoGuard = null): Attendance
     {
         $today = Carbon::today()->toDateString();
         $now = Carbon::now();
 
-        // Atomic check-out with pessimistic lock
-        return DB::transaction(function () use ($spkl, $today, $now, $data) {
+        $company = $spkl->company;
+        $geoGuard = $geoGuard ?? app(GeolocationGuardService::class);
+
+        // 1. Evaluate GPS, accuracy & anti-fake GPS guard for check-out
+        $isWithinRadius = null;
+        $accuracyMeters = null;
+        $isMockDetected = false;
+
+        if (isset($data['latitude']) || isset($data['longitude']) || ($company && $company->gps_enabled)) {
+            $geoEval = $geoGuard->evaluateCheckinLocation($company, $data, request()?->userAgent());
+            $isWithinRadius = $geoEval['is_within_radius'];
+            $accuracyMeters = $geoEval['accuracy_meters'];
+            $isMockDetected = $geoEval['is_mock_detected'];
+
+            // Enforce reason when outside radius
+            if (!$isWithinRadius && (empty($data['reason']) || strlen(trim($data['reason'])) < 5)) {
+                throw ValidationException::withMessages([
+                    'reason' => 'Anda berada di luar radius lokasi DU/DI saat absen pulang. Silakan sertakan alasan penugasan luar radius.',
+                ]);
+            }
+        }
+
+        // 2. Atomic check-out with pessimistic lock
+        return DB::transaction(function () use ($spkl, $today, $now, $data, $isWithinRadius, $accuracyMeters, $isMockDetected) {
             $attendance = Attendance::where('student_pkl_id', $spkl->id)
                 ->whereDate('date', $today)
                 ->lockForUpdate()
@@ -119,6 +141,12 @@ class AttendanceService
 
             // Jangan timpa catatan check-in (alasan luar radius & flag Fake GPS) — itu bukti audit.
             $notes = $attendance->checkout_notes;
+            if ($isWithinRadius === false && !empty($data['reason'])) {
+                $notes = ($notes ? $notes . ' | ' : '') . 'Alasan Pulang Luar Radius: ' . $data['reason'];
+            }
+            if ($isMockDetected) {
+                $notes = ($notes ? $notes . ' | ' : '') . '[FLAG PULANG] Indikasi Fake GPS Terdeteksi';
+            }
             $studentNote = trim((string) ($data['checkout_notes'] ?? ''));
             if ($studentNote !== '') {
                 $notes = ($notes ? $notes . ' | ' : '') . 'Catatan Pulang: ' . $studentNote;
@@ -126,6 +154,12 @@ class AttendanceService
 
             $attendance->update([
                 'checkout_time' => $now->toTimeString(),
+                'checkout_photo_path' => $data['photo_path'] ?? null,
+                'checkout_lat' => $data['latitude'] ?? null,
+                'checkout_lng' => $data['longitude'] ?? null,
+                'is_checkout_within_radius' => $isWithinRadius,
+                'checkout_accuracy_meters' => $accuracyMeters,
+                'is_checkout_mock_detected' => $isMockDetected,
                 'checkout_notes' => $notes,
             ]);
 

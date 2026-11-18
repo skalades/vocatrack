@@ -168,31 +168,48 @@
         </div>
 
         <h1 class="ticket-title-reveal font-space font-bold text-[27px] leading-tight text-[#0B2B25] mt-4">
-            Presensi masuk tercatat
+            {{ $attendance && $attendance->checkout_time ? 'Presensi hari ini selesai' : 'Presensi masuk tercatat' }}
         </h1>
         <p class="ticket-sub-reveal text-sm font-medium text-[#1F3B30] mt-1">
-            Selamat bekerja, {{ $firstName }}. Hari ke-{{ $dayNumber }} PKL.
+            {{ $attendance && $attendance->checkout_time ? "Terima kasih atas dedikasi Anda hari ini, {$firstName}." : "Selamat bekerja, {$firstName}. Hari ke-{$dayNumber} PKL." }}
         </p>
 
         <!-- Perforated Ticket Card with Slide-Up Entrance -->
         <div class="ticket-card-reveal relative w-full max-w-[350px] mt-6 bg-white rounded-[28px] shadow-[0_12px_32px_rgba(11,43,37,0.14)] text-left overflow-hidden border border-slate-100">
             <!-- Upper Ticket Section -->
             <div class="p-4.5 flex flex-col gap-3.5">
-                <!-- Verified Selfie Row -->
+                <!-- Verified Selfie Row (Single or Dual for Check-in & Check-out) -->
                 <div class="flex items-center gap-3">
-                    <div class="relative w-16 h-16 rounded-[18px] bg-[#12382F] overflow-hidden shrink-0 flex items-center justify-center border border-slate-200">
-                        @if($attendance && $attendance->checkin_photo_path)
-                            <img src="{{ $attendance->checkin_photo_url }}" alt="Selfie" class="w-full h-full object-cover">
-                        @else
-                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#C6F26B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                                <circle cx="12" cy="7" r="4"/>
-                            </svg>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <!-- Check-in Photo -->
+                        <div class="relative w-14 h-14 rounded-[16px] bg-[#12382F] overflow-hidden flex items-center justify-center border border-slate-200" title="Swafoto Masuk">
+                            @if($attendance && $attendance->checkin_photo_path)
+                                <img src="{{ $attendance->checkin_photo_url }}" alt="Swafoto Masuk" class="w-full h-full object-cover">
+                            @else
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#C6F26B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                                    <circle cx="12" cy="7" r="4"/>
+                                </svg>
+                            @endif
+                            <span class="absolute bottom-0 inset-x-0 bg-[#0B2B25]/85 text-[9px] text-[#C6F26B] font-bold text-center leading-tight py-0.5">Masuk</span>
+                        </div>
+
+                        @if($attendance && $attendance->checkout_photo_path)
+                            <!-- Check-out Photo -->
+                            <div class="relative w-14 h-14 rounded-[16px] bg-[#12382F] overflow-hidden flex items-center justify-center border border-slate-200" title="Swafoto Pulang">
+                                <img src="{{ $attendance->checkout_photo_url }}" alt="Swafoto Pulang" class="w-full h-full object-cover">
+                                <span class="absolute bottom-0 inset-x-0 bg-[#0B2B25]/85 text-[9px] text-[#C6F26B] font-bold text-center leading-tight py-0.5">Pulang</span>
+                            </div>
                         @endif
                     </div>
+
                     <div class="flex-1 min-w-0">
-                        <span class="font-bold text-[15px] text-[#10211D] block leading-tight">Selfie terverifikasi</span>
-                        <span class="text-xs text-[#5A6B65] mt-0.5 block">Wajah cocok dengan profil · 98%</span>
+                        <span class="font-bold text-[14px] text-[#10211D] block leading-tight">
+                            {{ $attendance && $attendance->checkout_time ? 'Swafoto Pulang & Masuk Lengkap' : 'Selfie Masuk Terverifikasi' }}
+                        </span>
+                        <span class="text-xs text-[#5A6B65] mt-0.5 block">
+                            {{ $attendance && $attendance->checkout_time ? 'Kehadiran harian tuntas tervalidasi' : 'Wajah cocok dengan profil · 98%' }}
+                        </span>
                     </div>
                     <span class="w-7 h-7 rounded-full bg-[#C6F26B] text-[#0B2B25] flex items-center justify-center shrink-0">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
@@ -207,35 +224,50 @@
                 <div class="grid grid-cols-2 gap-y-3.5 gap-x-3">
                     <div>
                         <span class="text-xs text-[#5A6B65] font-semibold block">Waktu masuk</span>
-                        <span class="font-space font-bold text-[22px] leading-tight text-[#10211D]">
+                        <span class="font-space font-bold text-[20px] leading-tight text-[#10211D]">
                             {{ $timeStr }} <span class="text-xs font-bold text-[#5A6B65] font-sans">WIB</span>
                         </span>
                     </div>
                     <div>
-                        <span class="text-xs text-[#5A6B65] font-semibold block mb-0.5">Status</span>
+                        <span class="text-xs text-[#5A6B65] font-semibold block">Waktu pulang</span>
+                        @if($attendance && $attendance->checkout_time)
+                            <span class="font-space font-bold text-[20px] leading-tight text-[#0B5E4E]">
+                                {{ \Carbon\Carbon::parse($attendance->checkout_time)->format('H.i') }} <span class="text-xs font-bold text-[#5A6B65] font-sans">WIB</span>
+                            </span>
+                        @else
+                            <span class="text-xs font-bold text-slate-400 block pt-1">Belum check-out</span>
+                        @endif
+                    </div>
+                    <div>
+                        <span class="text-xs text-[#5A6B65] font-semibold block mb-0.5">Status kehadiran</span>
                         @if(($attendance->status ?? 'hadir') === 'terlambat')
-                            <span class="inline-flex items-center gap-1.5 bg-[#FFF1D6] text-[#7A4B00] rounded-full px-2.5 py-1 text-xs font-bold">
+                            <span class="inline-flex items-center gap-1.5 bg-[#FFF1D6] text-[#7A4B00] rounded-full px-2.5 py-0.5 text-xs font-bold">
                                 <span class="w-1.5 h-1.5 rounded-full bg-[#D97706]"></span> Terlambat
                             </span>
                         @else
-                            <span class="inline-flex items-center gap-1.5 bg-[#DDF3EC] text-[#0B5E4E] rounded-full px-2.5 py-1 text-xs font-bold">
+                            <span class="inline-flex items-center gap-1.5 bg-[#DDF3EC] text-[#0B5E4E] rounded-full px-2.5 py-0.5 text-xs font-bold">
                                 <span class="w-1.5 h-1.5 rounded-full bg-[#0F7A66]"></span> Tepat waktu
                             </span>
                         @endif
                     </div>
                     <div>
-                        <span class="text-xs text-[#5A6B65] font-semibold block">Lokasi</span>
-                        <span class="font-bold text-sm text-[#10211D] truncate block">{{ $companyName }} · {{ $distanceText }}</span>
-                    </div>
-                    <div>
-                        <span class="text-xs text-[#5A6B65] font-semibold block">Keaslian GPS</span>
+                        <span class="text-xs text-[#5A6B65] font-semibold block">Lokasi & GPS</span>
                         @if($isMock)
-                            <span class="font-bold text-sm text-rose-600">Terindikasi Mock</span>
+                            <span class="font-bold text-xs text-rose-600 block">Mock GPS</span>
                         @else
-                            <span class="font-bold text-sm text-[#0B5E4E]">Terverifikasi</span>
+                            <span class="font-bold text-xs text-[#0B5E4E] block">
+                                {{ $attendance && $attendance->checkout_time ? ($attendance->is_checkout_within_radius ? 'Valid di Kantor' : 'Luar Radius Pulang') : ($attendance->is_within_radius !== false ? 'Valid di Kantor' : 'Luar Radius') }}
+                            </span>
                         @endif
                     </div>
                 </div>
+
+                @if($attendance && $attendance->checkout_notes)
+                    <div class="mt-1 p-2.5 rounded-xl bg-[#F7F9F5] border border-[#CBD5CA]/60 text-xs text-[#10211D]">
+                        <span class="text-[11px] font-bold text-[#5A6B65] block mb-0.5">Catatan:</span>
+                        <p class="leading-relaxed">{{ $attendance->checkout_notes }}</p>
+                    </div>
+                @endif
             </div>
 
             <!-- Perforated Cutouts & Dashed Divider -->

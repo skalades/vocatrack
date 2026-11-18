@@ -490,8 +490,10 @@
         const previewBox = document.getElementById('photo-preview-box');
         const helperText = document.getElementById('photo-helper-text');
         const hiddenBase64 = document.getElementById('journal-compressed-photo');
+        const submitBtn = document.querySelector('#journal-main-form button[type="submit"]');
 
         // Loading state
+        if (submitBtn) submitBtn.disabled = true;
         if (previewBox) {
             previewBox.innerHTML = `
                 <div class="flex flex-col items-center justify-center p-1 text-center">
@@ -502,6 +504,9 @@
                     <span class="text-[9px] font-bold text-[#C6F26B] leading-none">Kompres...</span>
                 </div>
             `;
+        }
+        if (helperText) {
+            helperText.innerHTML = `<span class="text-xs text-amber-600 font-semibold animate-pulse">Sedang mengoptimalkan resolusi foto...</span>`;
         }
 
         try {
@@ -519,30 +524,13 @@
                 `;
             }
 
-            // 2. Set hidden base64 input
+            // 2. Set hidden base64 input (compressed_photos[])
             if (hiddenBase64) {
                 hiddenBase64.value = result.dataUrl;
             }
 
-            // 3. Masukkan file terkompresi ke input.files via DataTransfer bila didukung browser
-            let fileAssigned = false;
-            if (result.file && window.DataTransfer) {
-                try {
-                    const dt = new DataTransfer();
-                    dt.items.add(result.file);
-                    input.files = dt.files;
-                    fileAssigned = true;
-                } catch (dtErr) {
-                    fileAssigned = false;
-                    console.warn('DataTransfer assignment fallback to base64:', dtErr);
-                }
-            }
-
-            // Bila DataTransfer tidak didukung / gagal di browser mobile, kosongkan input berkas asli
-            // agar form mengirimkan foto terkompresi via base64 (compressed_photos) secara mulus
-            if (!fileAssigned && hiddenBase64 && hiddenBase64.value) {
-                input.value = '';
-            }
+            // 3. Kosongkan input berkas mentah agar payload jaringan ringan & terhindar dari error MIME berkas mentah
+            input.value = '';
 
             // 4. Update helper text with size savings badge
             if (helperText) {
@@ -561,7 +549,7 @@
             }
         } catch (err) {
             console.error('Image compression failed:', err);
-            // Fallback: tampilkan gambar asli
+            // Fallback: baca data URL biasa
             const reader = new FileReader();
             reader.onload = function(e) {
                 if (previewBox) {
@@ -574,8 +562,18 @@
                         </button>
                     `;
                 }
+                if (hiddenBase64 && typeof e.target.result === 'string' && e.target.result.startsWith('data:image/')) {
+                    hiddenBase64.value = e.target.result;
+                    input.value = '';
+                }
             };
             reader.readAsDataURL(file);
+
+            if (helperText) {
+                helperText.innerHTML = `<span class="text-xs text-[#5A6B65]">Foto siap diunggah (${formatBytes(file.size)}).</span>`;
+            }
+        } finally {
+            if (submitBtn) submitBtn.disabled = false;
         }
     }
 
