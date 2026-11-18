@@ -74,7 +74,7 @@ async function connectToWhatsApp() {
             version,
             auth: state,
             logger: pino({ level: 'silent' }), // Silent agar terminal tetap bersih dan rapi
-            printQRInTerminal: false,
+            printQRInTerminal: true,
             browser: Browsers.ubuntu('Chrome'),
             connectTimeoutMs: 60000,
             defaultQueryTimeoutMs: 60000,
