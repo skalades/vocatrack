@@ -88,6 +88,7 @@ Route::middleware(['auth', 'role:super-admin'])->prefix('super-admin')->group(fu
     Route::get('/schools/{school}', [TenantController::class, 'show'])->whereNumber('school')->name('superadmin.schools.show');
     Route::post('/schools', [TenantController::class, 'storeSchool'])->name('superadmin.schools.store');
     Route::put('/schools/{school}', [TenantController::class, 'updateSchool'])->name('superadmin.schools.update');
+    Route::put('/schools/{school}/features', [TenantController::class, 'updateSchoolFeatures'])->name('superadmin.schools.update-features');
     Route::delete('/schools/{school}', [TenantController::class, 'destroySchool'])->name('superadmin.schools.destroy');
     Route::post('/schools/{school}/toggle', [TenantController::class, 'toggleSchool'])->name('superadmin.schools.toggle');
     Route::post('/schools/{school}/extend', [TenantController::class, 'extendSubscription'])->name('superadmin.schools.extend');

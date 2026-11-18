@@ -129,13 +129,15 @@ class GeolocationGuardService
     /**
      * Comprehensive evaluation of check-in geolocation coordinates, radius, accuracy, and spoof detection.
      */
-    public function evaluateCheckinLocation(Company $company, array $data, ?string $userAgent = null): array
+    public function evaluateCheckinLocation(Company $company, array $data, ?string $userAgent = null, ?bool $overrideGpsEnabled = null): array
     {
         $accuracy = isset($data['accuracy']) ? (int) round((float) $data['accuracy']) : null;
         $isMock = $this->detectMockLocation($data, $userAgent);
 
+        $isGpsEnforced = $overrideGpsEnabled !== null ? $overrideGpsEnabled : (bool) $company->gps_enabled;
+
         // Guard against weak GPS signal if GPS enforcement is enabled
-        if ($company->gps_enabled) {
+        if ($isGpsEnforced) {
             if (!isset($data['latitude']) || !isset($data['longitude'])) {
                 throw ValidationException::withMessages([
                     'location' => 'Data koordinat GPS perangkat diperlukan untuk presensi di DU/DI ini.',

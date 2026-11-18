@@ -485,6 +485,153 @@
                 @endif
             </x-card>
 
+            {{-- Fitur & Kebijakan Tenant (On/Off Toggles) --}}
+            <x-card title="Fitur & Kebijakan Tenant" class="xl:col-span-2">
+                <form action="{{ route('superadmin.schools.update-features', $school) }}" method="POST" class="space-y-5">
+                    @csrf
+                    @method('PUT')
+
+                    <div class="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-100 flex items-start gap-3">
+                        <div class="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 mt-0.5">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h4 class="text-xs font-bold text-emerald-950">Kendali Modul & Kebijakan Khusus Tenant</h4>
+                            <p class="text-[11px] text-emerald-800 leading-relaxed mt-0.5">
+                                Aktifkan atau nonaktifkan fitur di bawah untuk menyesuaikan dengan kebutuhan operasional sekolah <strong>{{ $school->name }}</strong>. Pengaturan langsung berlaku secara instan kepada seluruh pengguna di tenant ini.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {{-- Group 1: Presensi Masuk --}}
+                        <div class="space-y-3 p-4 rounded-2xl bg-white border border-slate-200">
+                            <div class="flex items-center gap-2 border-b border-slate-100 pb-2">
+                                <span class="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-xs">1</span>
+                                <h5 class="text-xs font-bold text-slate-800">Presensi Masuk (Check-In)</h5>
+                            </div>
+
+                            {{-- Swafoto Masuk --}}
+                            <div class="flex items-center justify-between gap-3 pt-1">
+                                <div>
+                                    <label for="feat-checkin-selfie" class="text-xs font-bold text-slate-800 block cursor-pointer">Swafoto Kamera Masuk</label>
+                                    <span class="text-[11px] text-slate-500 leading-tight block mt-0.5">Wajibkan foto selfie wajah saat check-in</span>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer shrink-0">
+                                    <input type="hidden" name="feature_checkin_selfie" value="0">
+                                    <input type="checkbox" id="feat-checkin-selfie" name="feature_checkin_selfie" value="1" {{ $school->isFeatureEnabled('feature_checkin_selfie', true) ? 'checked' : '' }} class="sr-only peer">
+                                    <div class="w-10 h-5.5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4.5 after:w-4.5 after:transition-all peer-checked:bg-emerald-600"></div>
+                                </label>
+                            </div>
+
+                            {{-- Geofencing Masuk --}}
+                            <div class="flex items-center justify-between gap-3 pt-2 border-t border-slate-50">
+                                <div>
+                                    <label for="feat-checkin-geofence" class="text-xs font-bold text-slate-800 block cursor-pointer">Geofencing GPS Masuk</label>
+                                    <span class="text-[11px] text-slate-500 leading-tight block mt-0.5">Kunci presensi masuk hanya di radius kantor DU/DI</span>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer shrink-0">
+                                    <input type="hidden" name="feature_checkin_geofence" value="0">
+                                    <input type="checkbox" id="feat-checkin-geofence" name="feature_checkin_geofence" value="1" {{ $school->isFeatureEnabled('feature_checkin_geofence', true) ? 'checked' : '' }} class="sr-only peer">
+                                    <div class="w-10 h-5.5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4.5 after:w-4.5 after:transition-all peer-checked:bg-emerald-600"></div>
+                                </label>
+                            </div>
+                        </div>
+
+                        {{-- Group 2: Presensi Pulang --}}
+                        <div class="space-y-3 p-4 rounded-2xl bg-white border border-slate-200">
+                            <div class="flex items-center gap-2 border-b border-slate-100 pb-2">
+                                <span class="w-6 h-6 rounded-lg bg-teal-100 text-teal-800 flex items-center justify-center font-bold text-xs">2</span>
+                                <h5 class="text-xs font-bold text-slate-800">Presensi Pulang (Check-Out)</h5>
+                            </div>
+
+                            {{-- Swafoto Pulang --}}
+                            <div class="flex items-center justify-between gap-3 pt-1">
+                                <div>
+                                    <label for="feat-checkout-selfie" class="text-xs font-bold text-slate-800 block cursor-pointer">Swafoto Kamera Pulang</label>
+                                    <span class="text-[11px] text-slate-500 leading-tight block mt-0.5">Wajibkan foto selfie saat kepulangan kerja</span>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer shrink-0">
+                                    <input type="hidden" name="feature_checkout_selfie" value="0">
+                                    <input type="checkbox" id="feat-checkout-selfie" name="feature_checkout_selfie" value="1" {{ $school->isFeatureEnabled('feature_checkout_selfie', true) ? 'checked' : '' }} class="sr-only peer">
+                                    <div class="w-10 h-5.5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4.5 after:w-4.5 after:transition-all peer-checked:bg-emerald-600"></div>
+                                </label>
+                            </div>
+
+                            {{-- Geofencing Pulang --}}
+                            <div class="flex items-center justify-between gap-3 pt-2 border-t border-slate-50">
+                                <div>
+                                    <label for="feat-checkout-geofence" class="text-xs font-bold text-slate-800 block cursor-pointer">Geofencing GPS Pulang</label>
+                                    <span class="text-[11px] text-slate-500 leading-tight block mt-0.5">Kunci validasi radius GPS saat check-out</span>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer shrink-0">
+                                    <input type="hidden" name="feature_checkout_geofence" value="0">
+                                    <input type="checkbox" id="feat-checkout-geofence" name="feature_checkout_geofence" value="1" {{ $school->isFeatureEnabled('feature_checkout_geofence', true) ? 'checked' : '' }} class="sr-only peer">
+                                    <div class="w-10 h-5.5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4.5 after:w-4.5 after:transition-all peer-checked:bg-emerald-600"></div>
+                                </label>
+                            </div>
+                        </div>
+
+                        {{-- Group 3: Komunikasi & Portal --}}
+                        <div class="space-y-3 p-4 rounded-2xl bg-white border border-slate-200">
+                            <div class="flex items-center gap-2 border-b border-slate-100 pb-2">
+                                <span class="w-6 h-6 rounded-lg bg-sky-100 text-sky-800 flex items-center justify-center font-bold text-xs">3</span>
+                                <h5 class="text-xs font-bold text-slate-800">Komunikasi & Fitur Lainnya</h5>
+                            </div>
+
+                            {{-- WhatsApp Gateway --}}
+                            <div class="flex items-center justify-between gap-3 pt-1">
+                                <div>
+                                    <label for="feat-whatsapp" class="text-xs font-bold text-slate-800 block cursor-pointer">WhatsApp Gateway</label>
+                                    <span class="text-[11px] text-slate-500 leading-tight block mt-0.5">Kirim pesan WhatsApp (SOS darurat, jurnal, akun)</span>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer shrink-0">
+                                    <input type="hidden" name="feature_whatsapp" value="0">
+                                    <input type="checkbox" id="feat-whatsapp" name="feature_whatsapp" value="1" {{ $school->isFeatureEnabled('feature_whatsapp', true) ? 'checked' : '' }} class="sr-only peer">
+                                    <div class="w-10 h-5.5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4.5 after:w-4.5 after:transition-all peer-checked:bg-emerald-600"></div>
+                                </label>
+                            </div>
+
+                            {{-- Lampiran Foto Jurnal --}}
+                            <div class="flex items-center justify-between gap-3 pt-2 border-t border-slate-50">
+                                <div>
+                                    <label for="feat-journal-photo" class="text-xs font-bold text-slate-800 block cursor-pointer">Foto Bukti Jurnal</label>
+                                    <span class="text-[11px] text-slate-500 leading-tight block mt-0.5">Izinkan unggah foto dokumentasi di jurnal harian</span>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer shrink-0">
+                                    <input type="hidden" name="feature_journal_photo" value="0">
+                                    <input type="checkbox" id="feat-journal-photo" name="feature_journal_photo" value="1" {{ $school->isFeatureEnabled('feature_journal_photo', true) ? 'checked' : '' }} class="sr-only peer">
+                                    <div class="w-10 h-5.5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4.5 after:w-4.5 after:transition-all peer-checked:bg-emerald-600"></div>
+                                </label>
+                            </div>
+
+                            {{-- Portal Monitoring Orang Tua --}}
+                            <div class="flex items-center justify-between gap-3 pt-2 border-t border-slate-50">
+                                <div>
+                                    <label for="feat-parent-portal" class="text-xs font-bold text-slate-800 block cursor-pointer">Portal Orang Tua</label>
+                                    <span class="text-[11px] text-slate-500 leading-tight block mt-0.5">Akses link publik monitoring orang tua / wali murid</span>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer shrink-0">
+                                    <input type="hidden" name="feature_parent_portal" value="0">
+                                    <input type="checkbox" id="feat-parent-portal" name="feature_parent_portal" value="1" {{ $school->isFeatureEnabled('feature_parent_portal', true) ? 'checked' : '' }} class="sr-only peer">
+                                    <div class="w-10 h-5.5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4.5 after:w-4.5 after:transition-all peer-checked:bg-emerald-600"></div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between pt-2 border-t border-slate-100">
+                        <span class="text-xs text-slate-500 font-medium">Perubahan langsung aktif dan tersimpan ke cache konfigurasi sekolah.</span>
+                        <button type="submit" class="px-5 py-2.5 rounded-xl text-xs font-extrabold bg-slate-900 text-white hover:bg-slate-800 transition-colors shadow-xs">
+                            Simpan Pengaturan Fitur
+                        </button>
+                    </div>
+                </form>
+            </x-card>
+
             <x-card title="Zona Bahaya" class="xl:col-span-2 border-rose-200">
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div class="space-y-2">

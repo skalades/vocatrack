@@ -6,11 +6,24 @@
     $studentName = auth()->user()->name ?? 'Raka Pratama';
     $firstName = explode(' ', trim($studentName))[0];
     $companyName = $spkl->company->name ?? 'Kantor PKL';
-    $isGpsEnabled = (bool) ($spkl->company->gps_enabled ?? false);
+
+    // Tenant feature policies from school
+    $school = $spkl?->school;
+    $isSchoolCheckinSelfie = $school ? $school->isFeatureEnabled('feature_checkin_selfie', true) : true;
+    $isSchoolCheckinGeofence = $school ? $school->isFeatureEnabled('feature_checkin_geofence', true) : true;
+    $isSchoolCheckoutSelfie = $school ? $school->isFeatureEnabled('feature_checkout_selfie', true) : true;
+    $isSchoolCheckoutGeofence = $school ? $school->isFeatureEnabled('feature_checkout_geofence', true) : true;
+
+    $isCheckoutMode = ($todayAttendance && !$todayAttendance->checkout_time && ($mode === 'checkout' || request('mode') === 'checkout'));
+
+    $isSelfieEnabled = $isCheckoutMode ? $isSchoolCheckoutSelfie : $isSchoolCheckinSelfie;
+    $isGpsEnabled = $isCheckoutMode
+        ? ($isSchoolCheckoutGeofence && (bool) ($spkl->company->gps_enabled ?? false))
+        : ($isSchoolCheckinGeofence && (bool) ($spkl->company->gps_enabled ?? false));
+
     $companyLat = $spkl->company->latitude ?? -6.200000;
     $companyLng = $spkl->company->longitude ?? 106.816666;
     $companyRadius = $spkl->company->radius_meters ?? 100;
-    $isCheckoutMode = ($todayAttendance && !$todayAttendance->checkout_time && ($mode === 'checkout' || request('mode') === 'checkout'));
 @endphp
 
 @section('content')
@@ -136,7 +149,11 @@
 
                 <div class="flex flex-col items-center">
                     <h1 class="text-[17px] font-bold text-white tracking-tight">
-                        {{ $isCheckoutMode ? 'Verifikasi Selfie Pulang' : 'Verifikasi Selfie' }}
+                        @if($isSelfieEnabled)
+                            {{ $isCheckoutMode ? 'Verifikasi Selfie Pulang' : 'Verifikasi Selfie' }}
+                        @else
+                            {{ $isCheckoutMode ? 'Presensi Pulang' : 'Presensi Masuk' }}
+                        @endif
                     </h1>
                     <span class="text-[11px] text-[#A9C2B9] font-medium leading-none">
                         {{ $isCheckoutMode ? 'Check-Out Pulang' : 'Check-In Hari Ini' }}
@@ -148,73 +165,101 @@
                 </a>
             </div>
 
-            <!-- Camera Viewfinder Box (Compact & Responsive for Mobile Viewport) -->
-            <div class="relative h-[380px] sm:h-[430px] rounded-[28px] bg-[#12382F] overflow-hidden my-1 flex items-center justify-center border border-white/10 shadow-2xl">
-                <!-- Live Video Feed -->
-                <video id="webcam-feed" autoplay playsinline muted class="w-full h-full object-cover transform scale-x-[-1]"></video>
+            @if($isSelfieEnabled)
+                <!-- Camera Viewfinder Box (Compact & Responsive for Mobile Viewport) -->
+                <div class="relative h-[380px] sm:h-[430px] rounded-[28px] bg-[#12382F] overflow-hidden my-1 flex items-center justify-center border border-white/10 shadow-2xl">
+                    <!-- Live Video Feed -->
+                    <video id="webcam-feed" autoplay playsinline muted class="w-full h-full object-cover transform scale-x-[-1]"></video>
 
-                <!-- Hidden Canvas for capture snapshot -->
-                <canvas id="snapshot-canvas" class="hidden"></canvas>
+                    <!-- Hidden Canvas for capture snapshot -->
+                    <canvas id="snapshot-canvas" class="hidden"></canvas>
 
-                <!-- Camera Blocked / Permission Denied Overlay -->
-                <div id="camera-blocked-overlay" class="hidden absolute inset-0 z-20 bg-[#071915]/92 backdrop-blur-xs flex flex-col items-center justify-center p-6 text-center animate-fade-in">
-                    <div class="relative w-16 h-16 rounded-2xl bg-white/[0.08] border border-white/15 flex items-center justify-center mb-3 shadow-inner">
-                        <svg class="w-8 h-8 text-[#C6F26B]" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M1 1l22 22m-2-2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3m3-3h6l2 3h4a2 2 0 0 1 2 2v9.34m-7.72-2.06a4 4 0 1 1-5.56-5.56"/>
-                        </svg>
-                        <span class="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-rose-500 text-white flex items-center justify-center border-2 border-[#071915]">
-                            <svg class="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                    <!-- Camera Blocked / Permission Denied Overlay -->
+                    <div id="camera-blocked-overlay" class="hidden absolute inset-0 z-20 bg-[#071915]/92 backdrop-blur-xs flex flex-col items-center justify-center p-6 text-center animate-fade-in">
+                        <div class="relative w-16 h-16 rounded-2xl bg-white/[0.08] border border-white/15 flex items-center justify-center mb-3 shadow-inner">
+                            <svg class="w-8 h-8 text-[#C6F26B]" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M1 1l22 22m-2-2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3m3-3h6l2 3h4a2 2 0 0 1 2 2v9.34m-7.72-2.06a4 4 0 1 1-5.56-5.56"/>
+                            </svg>
+                            <span class="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-rose-500 text-white flex items-center justify-center border-2 border-[#071915]">
+                                <svg class="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                            </span>
+                        </div>
+                        <h3 class="font-space font-bold text-base text-white">Kamera Belum Diizinkan</h3>
+                        <p class="text-xs text-[#A9C2B9] mt-1 max-w-[260px] leading-relaxed">
+                            Safari / Peramban belum diberikan akses ke kamera selfie Anda.
+                        </p>
+                        <button type="button" onclick="window.showPermissionGuideModal('camera')" 
+                                class="mt-3.5 px-4 py-2 rounded-full bg-[#C6F26B] hover:bg-[#b8e85c] text-[#0B2B25] text-xs font-bold active:scale-95 transition-all shadow-xs cursor-pointer flex items-center gap-1.5">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg>
+                            <span>Buka Panduan Izin Kamera</span>
+                        </button>
+                    </div>
+
+                    <!-- Face Oval Mask Overlay SVG -->
+                    <svg width="100%" height="100%" viewBox="0 0 350 480" role="img" aria-label="Bingkai verifikasi wajah" class="absolute inset-0 pointer-events-none">
+                        <defs>
+                            <mask id="face-viewfinder-mask">
+                                <rect width="350" height="480" fill="#fff"/>
+                                <ellipse cx="175" cy="220" rx="95" ry="128" fill="#000"/>
+                            </mask>
+                        </defs>
+                        <!-- Darkened vignette around face -->
+                        <rect width="350" height="480" fill="rgba(11,43,37,0.58)" mask="url(#face-viewfinder-mask)"/>
+                        <!-- Glowing Dashed Face Guide Oval -->
+                        <ellipse cx="175" cy="220" rx="95" ry="128" fill="none" stroke="#C6F26B" stroke-width="2.8" stroke-dasharray="8 6"/>
+                        <!-- Horizontal alignment marker -->
+                        <line x1="110" y1="220" x2="240" y2="220" stroke="#C6F26B" stroke-width="1.8" opacity="0.6"/>
+                    </svg>
+
+                    <!-- Top Prompt Pill -->
+                    <div class="absolute top-3.5 inset-x-0 flex justify-center z-10 px-4">
+                        <span id="liveness-prompt-pill" class="inline-flex items-center gap-2 bg-white text-[#0B2B25] rounded-full px-4 py-1.5 text-xs font-bold shadow-md transition-all">
+                            <span id="liveness-prompt-text">Posisikan wajah di dalam bingkai oval</span>
                         </span>
                     </div>
-                    <h3 class="font-space font-bold text-base text-white">Kamera Belum Diizinkan</h3>
-                    <p class="text-xs text-[#A9C2B9] mt-1 max-w-[260px] leading-relaxed">
-                        Safari / Peramban belum diberikan akses ke kamera selfie Anda.
+
+                    <!-- Bottom Functional Indicators (Kamera Siap & GPS Terkunci) -->
+                    <div class="absolute bottom-3 inset-x-3 flex gap-2 justify-center z-10">
+                        <!-- Status Kamera -->
+                        <span id="badge-camera" class="inline-flex items-center gap-1.5 bg-[#071915]/85 backdrop-blur-xs text-white rounded-full px-3 py-1 text-[11px] font-bold border border-white/10 shadow-xs">
+                            <span id="badge-camera-dot" class="w-2 h-2 rounded-full bg-amber-400"></span>
+                            <span id="badge-camera-text">Kamera: Memuat...</span>
+                        </span>
+
+                        <!-- Status GPS -->
+                        <span id="badge-gps" class="inline-flex items-center gap-1.5 bg-[#071915]/85 backdrop-blur-xs text-white rounded-full px-3 py-1 text-[11px] font-bold border border-white/10 shadow-xs">
+                            <span id="badge-gps-dot" class="w-2 h-2 rounded-full bg-amber-400"></span>
+                            <span id="badge-gps-text">GPS: Mencari...</span>
+                        </span>
+                    </div>
+                </div>
+            @else
+                <!-- No-Selfie Direct Attendance Card -->
+                <div class="relative min-h-[300px] sm:min-h-[340px] rounded-[28px] bg-[#12382F] p-6 my-1 flex flex-col items-center justify-center text-center border border-white/10 shadow-2xl">
+                    <div class="w-16 h-16 rounded-3xl bg-[#C6F26B]/15 text-[#C6F26B] border border-[#C6F26B]/30 flex items-center justify-center mb-3 shadow-inner">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.4">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <span class="px-3 py-1 rounded-full bg-white/10 text-[#C6F26B] text-[10.5px] font-bold uppercase tracking-wider mb-2">
+                        Presensi Cepat · Bebas Kamera
+                    </span>
+                    <h2 class="font-space font-bold text-lg text-white">
+                        {{ $isCheckoutMode ? 'Presensi Pulang Mandiri' : 'Presensi Masuk Mandiri' }}
+                    </h2>
+                    <p class="text-xs text-[#A9C2B9] mt-1 max-w-[270px] leading-relaxed">
+                        Sekolah menonaktifkan kewajiban swafoto. Anda dapat langsung mencatat {{ $isCheckoutMode ? 'kepulangan kerja' : 'kehadiran' }} dengan tombol di bawah.
                     </p>
-                    <button type="button" onclick="window.showPermissionGuideModal('camera')" 
-                            class="mt-3.5 px-4 py-2 rounded-full bg-[#C6F26B] hover:bg-[#b8e85c] text-[#0B2B25] text-xs font-bold active:scale-95 transition-all shadow-xs cursor-pointer flex items-center gap-1.5">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg>
-                        <span>Buka Panduan Izin Kamera</span>
-                    </button>
+
+                    <!-- Bottom Functional GPS Indicator Only -->
+                    <div class="flex gap-2 justify-center mt-4">
+                        <span id="badge-gps" class="inline-flex items-center gap-1.5 bg-[#071915]/85 backdrop-blur-xs text-white rounded-full px-3 py-1 text-[11px] font-bold border border-white/10 shadow-xs">
+                            <span id="badge-gps-dot" class="w-2 h-2 rounded-full bg-amber-400"></span>
+                            <span id="badge-gps-text">GPS: Mencari...</span>
+                        </span>
+                    </div>
                 </div>
-
-                <!-- Face Oval Mask Overlay SVG -->
-                <svg width="100%" height="100%" viewBox="0 0 350 480" role="img" aria-label="Bingkai verifikasi wajah" class="absolute inset-0 pointer-events-none">
-                    <defs>
-                        <mask id="face-viewfinder-mask">
-                            <rect width="350" height="480" fill="#fff"/>
-                            <ellipse cx="175" cy="220" rx="95" ry="128" fill="#000"/>
-                        </mask>
-                    </defs>
-                    <!-- Darkened vignette around face -->
-                    <rect width="350" height="480" fill="rgba(11,43,37,0.58)" mask="url(#face-viewfinder-mask)"/>
-                    <!-- Glowing Dashed Face Guide Oval -->
-                    <ellipse cx="175" cy="220" rx="95" ry="128" fill="none" stroke="#C6F26B" stroke-width="2.8" stroke-dasharray="8 6"/>
-                    <!-- Horizontal alignment marker -->
-                    <line x1="110" y1="220" x2="240" y2="220" stroke="#C6F26B" stroke-width="1.8" opacity="0.6"/>
-                </svg>
-
-                <!-- Top Prompt Pill -->
-                <div class="absolute top-3.5 inset-x-0 flex justify-center z-10 px-4">
-                    <span id="liveness-prompt-pill" class="inline-flex items-center gap-2 bg-white text-[#0B2B25] rounded-full px-4 py-1.5 text-xs font-bold shadow-md transition-all">
-                        <span id="liveness-prompt-text">Posisikan wajah di dalam bingkai oval</span>
-                    </span>
-                </div>
-
-                <!-- Bottom Functional Indicators (Kamera Siap & GPS Terkunci) -->
-                <div class="absolute bottom-3 inset-x-3 flex gap-2 justify-center z-10">
-                    <!-- Status Kamera -->
-                    <span id="badge-camera" class="inline-flex items-center gap-1.5 bg-[#071915]/85 backdrop-blur-xs text-white rounded-full px-3 py-1 text-[11px] font-bold border border-white/10 shadow-xs">
-                        <span id="badge-camera-dot" class="w-2 h-2 rounded-full bg-amber-400"></span>
-                        <span id="badge-camera-text">Kamera: Memuat...</span>
-                    </span>
-
-                    <!-- Status GPS -->
-                    <span id="badge-gps" class="inline-flex items-center gap-1.5 bg-[#071915]/85 backdrop-blur-xs text-white rounded-full px-3 py-1 text-[11px] font-bold border border-white/10 shadow-xs">
-                        <span id="badge-gps-dot" class="w-2 h-2 rounded-full bg-amber-400"></span>
-                        <span id="badge-gps-text">GPS: Mencari...</span>
-                    </span>
-                </div>
-            </div>
+            @endif
 
             <!-- Location & Realtime Distance Bar -->
             <div id="location-bar-container" onclick="handleLocationBarClick()" 
@@ -252,28 +297,36 @@
 
             <!-- Controls Row (Flash, Big Shutter, Flip Camera) -->
             <div class="flex items-center justify-center gap-8 pt-2 pb-1">
-                <!-- Flash Button -->
-                <button type="button" onclick="toggleCameraFlash()" aria-label="Nyalakan lampu kilat"
-                        class="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
-                    </svg>
-                </button>
+                @if($isSelfieEnabled)
+                    <!-- Flash Button -->
+                    <button type="button" onclick="toggleCameraFlash()" aria-label="Nyalakan lampu kilat"
+                            class="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+                        </svg>
+                    </button>
+                @endif
 
                 <!-- Big Shutter Button -->
-                <button type="button" id="shutter-btn" onclick="captureAndSubmitPresensi()" aria-label="{{ $isCheckoutMode ? 'Ambil foto dan check-out pulang' : 'Ambil foto dan kirim presensi' }}"
+                <button type="button" id="shutter-btn" onclick="captureAndSubmitPresensi()" aria-label="{{ $isCheckoutMode ? 'Presensi pulang sekarang' : 'Kirim presensi masuk' }}"
                         class="w-[84px] h-[84px] rounded-full border-4 border-[#C6F26B] flex items-center justify-center active:scale-90 transition-all cursor-pointer group shadow-[0_0_20px_rgba(198,242,107,0.3)]">
-                    <span id="shutter-btn-core" class="w-[62px] h-[62px] rounded-full bg-white group-hover:scale-95 transition-transform"></span>
+                    <span id="shutter-btn-core" class="w-[62px] h-[62px] rounded-full bg-white group-hover:scale-95 transition-transform flex items-center justify-center text-[#0B2B25]">
+                        @if(!$isSelfieEnabled)
+                            <svg class="w-7 h-7 text-[#0B2B25]" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                        @endif
+                    </span>
                 </button>
 
-                <!-- Switch Camera Button -->
-                <button type="button" onclick="flipCameraFacing()" aria-label="Ganti kamera"
-                        class="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M20 16v5h-5M4 8V3h5"/>
-                        <path d="M4 16v-1a8 8 0 0 1 14.93-4M20 8v1a8 8 0 0 1-14.93 4"/>
-                    </svg>
-                </button>
+                @if($isSelfieEnabled)
+                    <!-- Switch Camera Button -->
+                    <button type="button" onclick="flipCameraFacing()" aria-label="Ganti kamera"
+                            class="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M20 16v5h-5M4 8V3h5"/>
+                            <path d="M4 16v-1a8 8 0 0 1 14.93-4M20 8v1a8 8 0 0 1-14.93 4"/>
+                        </svg>
+                    </button>
+                @endif
             </div>
 
             <!-- Disclaimer Info -->
@@ -314,6 +367,7 @@
     let gpsStatus = 'searching';   // 'searching', 'locked', 'weak_accuracy', 'denied', 'unavailable', 'fake_gps'
     
     const isGpsEnabled = {{ $isGpsEnabled ? 'true' : 'false' }};
+    const isSelfieEnabled = {{ $isSelfieEnabled ? 'true' : 'false' }};
     const isCheckoutMode = {{ $isCheckoutMode ? 'true' : 'false' }};
     const targetLat = {{ $companyLat }};
     const targetLng = {{ $companyLng }};
@@ -381,7 +435,10 @@
 
         // Camera Badge
         if (camDot && camText) {
-            if (cameraStatus === 'ready') {
+            if (!isSelfieEnabled) {
+                camDot.className = 'w-2 h-2 rounded-full bg-[#C6F26B]';
+                camText.textContent = 'Kamera: Nonaktif';
+            } else if (cameraStatus === 'ready') {
                 camDot.className = 'w-2 h-2 rounded-full bg-[#C6F26B]';
                 camText.textContent = 'Kamera: Siap';
             } else if (cameraStatus === 'denied') {
@@ -460,6 +517,13 @@
     }
 
     function startLiveCamera() {
+        if (!isSelfieEnabled) {
+            cameraStatus = 'ready';
+            updateStatusBadges();
+            updateShutterVisuals();
+            return;
+        }
+
         const video = document.getElementById('webcam-feed');
         const overlay = document.getElementById('camera-blocked-overlay');
         const promptText = document.getElementById('liveness-prompt-text');
@@ -632,32 +696,40 @@
         shutterBtn.classList.add('scale-75', 'opacity-50');
         setTimeout(() => shutterBtn.classList.remove('scale-75', 'opacity-50'), 250);
 
-        // Kompresi di sisi klien agar server cukup menyimpan byte apa adanya (tanpa re-encode).
-        // Sisi terpanjang dibatasi 800px, lalu JPEG 0.72; turunkan kualitas bila masih > ~250KB.
-        const MAX_SIDE = 800;
-        const srcW = video.videoWidth || 640;
-        const srcH = video.videoHeight || 480;
-        const scale = Math.min(1, MAX_SIDE / Math.max(srcW, srcH));
-        canvas.width = Math.round(srcW * scale);
-        canvas.height = Math.round(srcH * scale);
-        const ctx = canvas.getContext('2d');
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = 'high';
+        if (isSelfieEnabled) {
+            const video = document.getElementById('webcam-feed');
+            const canvas = document.getElementById('snapshot-canvas');
+            if (video && canvas) {
+                // Kompresi di sisi klien agar server cukup menyimpan byte apa adanya (tanpa re-encode).
+                // Sisi terpanjang dibatasi 800px, lalu JPEG 0.72; turunkan kualitas bila masih > ~250KB.
+                const MAX_SIDE = 800;
+                const srcW = video.videoWidth || 640;
+                const srcH = video.videoHeight || 480;
+                const scale = Math.min(1, MAX_SIDE / Math.max(srcW, srcH));
+                canvas.width = Math.round(srcW * scale);
+                canvas.height = Math.round(srcH * scale);
+                const ctx = canvas.getContext('2d');
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
 
-        if (currentFacingMode === 'user') {
-            ctx.translate(canvas.width, 0);
-            ctx.scale(-1, 1);
-        }
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                if (currentFacingMode === 'user') {
+                    ctx.translate(canvas.width, 0);
+                    ctx.scale(-1, 1);
+                }
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-        const MAX_BASE64_LENGTH = 340 * 1024; // ≈ 250KB biner
-        let quality = 0.72;
-        let base64Photo = canvas.toDataURL('image/jpeg', quality);
-        while (base64Photo.length > MAX_BASE64_LENGTH && quality > 0.4) {
-            quality -= 0.1;
-            base64Photo = canvas.toDataURL('image/jpeg', quality);
+                const MAX_BASE64_LENGTH = 340 * 1024; // ≈ 250KB biner
+                let quality = 0.72;
+                let base64Photo = canvas.toDataURL('image/jpeg', quality);
+                while (base64Photo.length > MAX_BASE64_LENGTH && quality > 0.4) {
+                    quality -= 0.1;
+                    base64Photo = canvas.toDataURL('image/jpeg', quality);
+                }
+                photoInput.value = base64Photo;
+            }
+        } else {
+            photoInput.value = '';
         }
-        photoInput.value = base64Photo;
 
         // Fill GPS Form Fields SECURELY from verified device coordinates
         document.getElementById('form-latitude').value = userCoords.latitude;

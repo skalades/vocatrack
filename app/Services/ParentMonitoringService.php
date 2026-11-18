@@ -51,6 +51,10 @@ class ParentMonitoringService
             return 'Portal monitoring tidak tersedia karena layanan sekolah sedang dinonaktifkan. Silakan hubungi pihak sekolah.';
         }
 
+        if (!$school->isFeatureEnabled('feature_parent_portal', true)) {
+            return 'Akses portal monitoring orang tua sedang dinonaktifkan oleh kebijakan sekolah / Super Admin.';
+        }
+
         if (!$user->is_active) {
             return 'Portal monitoring tidak tersedia karena akun siswa sedang dinonaktifkan. Silakan hubungi pihak sekolah.';
         }

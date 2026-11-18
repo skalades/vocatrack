@@ -229,7 +229,9 @@ class StudentController extends Controller
             'reason' => ['nullable', 'string', 'max:255'],
         ]);
 
-        if ($request->has('is_within_radius') && filter_var($request->input('is_within_radius'), FILTER_VALIDATE_BOOLEAN) === false) {
+        $school = $spkl->school;
+        $isSchoolGeofenceCheckin = $school ? $school->isFeatureEnabled('feature_checkin_geofence', true) : true;
+        if ($isSchoolGeofenceCheckin && $request->has('is_within_radius') && filter_var($request->input('is_within_radius'), FILTER_VALIDATE_BOOLEAN) === false) {
             if (!$request->filled('reason') || strlen(trim($request->reason)) < 5) {
                 if ($request->wantsJson()) {
                     return response()->json([
@@ -318,7 +320,9 @@ class StudentController extends Controller
             'notes' => ['nullable', 'string', 'max:255'],
         ]);
 
-        if ($request->has('is_within_radius') && filter_var($request->input('is_within_radius'), FILTER_VALIDATE_BOOLEAN) === false) {
+        $school = $spkl->school;
+        $isSchoolGeofenceCheckout = $school ? $school->isFeatureEnabled('feature_checkout_geofence', true) : true;
+        if ($isSchoolGeofenceCheckout && $request->has('is_within_radius') && filter_var($request->input('is_within_radius'), FILTER_VALIDATE_BOOLEAN) === false) {
             if (!$request->filled('reason') || strlen(trim($request->reason)) < 5) {
                 if ($request->wantsJson()) {
                     return response()->json([

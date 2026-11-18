@@ -151,6 +151,19 @@ class School extends Model
         return SchoolSetting::allForSchool((int) $this->id)[$key] ?? $default;
     }
 
+    /**
+     * Memeriksa apakah fitur spesifik tenant aktif untuk sekolah ini (default: true).
+     */
+    public function isFeatureEnabled(string $featureKey, bool $default = true): bool
+    {
+        $val = $this->getSetting($featureKey, null);
+        if ($val === null || $val === '') {
+            return $default;
+        }
+
+        return filter_var($val, FILTER_VALIDATE_BOOLEAN);
+    }
+
     public function getStorageUsedMbAttribute(): float
     {
         return round(($this->storage_used_bytes ?? 0) / (1024 * 1024), 2);

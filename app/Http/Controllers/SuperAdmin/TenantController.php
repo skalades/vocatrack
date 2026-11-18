@@ -9,6 +9,7 @@ use App\Http\Requests\SuperAdmin\StoreSchoolRequest;
 use App\Http\Requests\SuperAdmin\UpdateSchoolRequest;
 use App\Models\ActivityLog;
 use App\Models\School;
+use App\Models\SchoolSetting;
 use App\Models\Student;
 use App\Models\SubscriptionPlan;
 use App\Models\User;
@@ -129,6 +130,7 @@ class TenantController extends Controller
         $data['companiesCount'] = $school->companies()->count();
         $data['storageUsedMb'] = round(((int) $school->storage_used_bytes) / (1024 * 1024), 1);
         $data['plans'] = SubscriptionPlan::where('is_active', true)->orderBy('price')->get();
+        $data['schoolSettings'] = SchoolSetting::allForSchool($school->id);
 
         if ($tab === 'tagihan') {
             $data['invoices'] = $school->invoices()->with('plan')->latest()->paginate(15)->withQueryString();
@@ -209,6 +211,45 @@ class TenantController extends Controller
         );
 
         return back()->with('success', "Data profil sekolah {$school->name} berhasil diperbarui.");
+    }
+
+    public function updateSchoolFeatures(Request $request, School $school)
+    {
+        $features = [
+            'feature_checkin_selfie',
+            'feature_checkin_geofence',
+            'feature_checkout_selfie',
+            'feature_checkout_geofence',
+            'feature_whatsapp',
+            'feature_journal_photo',
+            'feature_parent_portal',
+        ];
+
+        $before = [];
+        $after = [];
+        foreach ($features as $key) {
+            $before[$key] = $school->isFeatureEnabled($key, true) ? '1' : '0';
+            $newValue = $request->boolean($key) ? '1' : '0';
+            $after[$key] = $newValue;
+
+            SchoolSetting::updateOrCreate(
+                ['school_id' => $school->id, 'key' => $key],
+                ['value' => $newValue]
+            );
+        }
+
+        AuditLogService::log(
+            'school_features_updated',
+            'schools',
+            "Pengaturan fitur dan kebijakan tenant {$school->name} berhasil diperbarui.",
+            $school,
+            null,
+            $before,
+            $after
+        );
+
+        return redirect()->route('superadmin.schools.show', ['school' => $school->id, 'tab' => 'pengaturan'])
+            ->with('success', "Pengaturan fitur dan kebijakan tenant {$school->name} berhasil disimpan.");
     }
 
     public function destroySchool(Request $request, School $school)

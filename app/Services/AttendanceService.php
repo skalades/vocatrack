@@ -23,14 +23,19 @@ class AttendanceService
         $company = $spkl->company;
         $geoGuard = $geoGuard ?? app(GeolocationGuardService::class);
 
+        // Periksa apakah fitur geofencing tenant aktif untuk presensi masuk
+        $school = $spkl->school;
+        $isSchoolGeofence = $school ? $school->isFeatureEnabled('feature_checkin_geofence', true) : true;
+        $effectiveGps = $isSchoolGeofence && (bool) ($company?->gps_enabled ?? false);
+
         // 1. Evaluate GPS, accuracy & anti-fake GPS guard
-        $geoEval = $geoGuard->evaluateCheckinLocation($company, $data, request()?->userAgent());
+        $geoEval = $geoGuard->evaluateCheckinLocation($company, $data, request()?->userAgent(), $effectiveGps);
         $isWithinRadius = $geoEval['is_within_radius'];
         $accuracyMeters = $geoEval['accuracy_meters'];
         $isMockDetected = $geoEval['is_mock_detected'];
 
         // Enforce reason when outside radius (or guide to Dinas Luar request)
-        if (!$isWithinRadius && (empty($data['reason']) || strlen(trim($data['reason'])) < 5)) {
+        if ($effectiveGps && !$isWithinRadius && (empty($data['reason']) || strlen(trim($data['reason'])) < 5)) {
             throw ValidationException::withMessages([
                 'reason' => 'Anda terdeteksi berada di luar radius lokasi DU/DI. Presensi kamera selfie hanya berlaku di dalam area kantor penugasan. Silakan ajukan izin melalui menu "Dinas Luar" di Beranda jika sedang bertugas di luar.',
             ]);
@@ -103,8 +108,12 @@ class AttendanceService
         $accuracyMeters = null;
         $isMockDetected = false;
 
-        if (isset($data['latitude']) || isset($data['longitude']) || ($company && $company->gps_enabled)) {
-            $geoEval = $geoGuard->evaluateCheckinLocation($company, $data, request()?->userAgent());
+        $school = $spkl->school;
+        $isSchoolGeofenceCheckout = $school ? $school->isFeatureEnabled('feature_checkout_geofence', true) : true;
+        $effectiveGpsCheckout = $isSchoolGeofenceCheckout && (bool) ($company?->gps_enabled ?? false);
+
+        if ($effectiveGpsCheckout) {
+            $geoEval = $geoGuard->evaluateCheckinLocation($company, $data, request()?->userAgent(), true);
             $isWithinRadius = $geoEval['is_within_radius'];
             $accuracyMeters = $geoEval['accuracy_meters'];
             $isMockDetected = $geoEval['is_mock_detected'];
@@ -115,6 +124,10 @@ class AttendanceService
                     'reason' => 'Anda berada di luar radius lokasi DU/DI saat absen pulang. Silakan sertakan alasan penugasan luar radius.',
                 ]);
             }
+        } else {
+            $isWithinRadius = true;
+            $accuracyMeters = isset($data['accuracy']) ? (int) round((float) $data['accuracy']) : null;
+            $isMockDetected = false;
         }
 
         // 2. Atomic check-out with pessimistic lock

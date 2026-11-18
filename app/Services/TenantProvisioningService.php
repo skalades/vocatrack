@@ -25,6 +25,14 @@ class TenantProvisioningService
         'kop_header_line2' => 'DINAS PENDIDIKAN',
         'kepsek_name' => 'Kepala Sekolah',
         'kepsek_nip' => '-',
+        // Pengaturan Fitur & Kebijakan Tenant (On/Off Flags)
+        'feature_checkin_selfie' => '1',
+        'feature_checkin_geofence' => '1',
+        'feature_checkout_selfie' => '1',
+        'feature_checkout_geofence' => '1',
+        'feature_whatsapp' => '1',
+        'feature_journal_photo' => '1',
+        'feature_parent_portal' => '1',
     ];
 
     /**

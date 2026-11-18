@@ -29,6 +29,25 @@ class WhatsAppChannel
             return;
         }
 
+        // Periksa apakah tenant sekolah mengaktifkan fitur WhatsApp Gateway
+        $schoolId = $notifiable->school_id
+            ?? $notifiable->student?->school_id
+            ?? $notifiable->teacher?->school_id
+            ?? $notifiable->school?->id
+            ?? null;
+
+        if ($schoolId) {
+            $settings = \App\Models\SchoolSetting::allForSchool((int) $schoolId);
+            $isWaEnabled = isset($settings['feature_whatsapp'])
+                ? filter_var($settings['feature_whatsapp'], FILTER_VALIDATE_BOOLEAN)
+                : true;
+
+            if (!$isWaEnabled) {
+                Log::info("[WhatsAppChannel] Notifikasi ke {$waNumber} dilewati karena fitur WhatsApp Gateway dinonaktifkan untuk sekolah #{$schoolId}.");
+                return;
+            }
+        }
+
         // Cek preferensi notifikasi bila notifiable memilikinya
         if (method_exists($notifiable, 'wantsWhatsAppNotification')) {
             $type = method_exists($notification, 'getNotificationType')
