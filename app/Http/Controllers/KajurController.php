@@ -410,6 +410,15 @@ class KajurController extends Controller
             $attendancesQuery->where('status', $request->status);
         }
 
+        if ($request->filled('search')) {
+            $search = '%' . trim($request->search) . '%';
+            $attendancesQuery->where(function ($q) use ($search) {
+                $q->whereHas('studentPkl.student.user', fn($uq) => $uq->where('name', 'like', $search))
+                  ->orWhereHas('studentPkl.student', fn($sq) => $sq->where('nisn', 'like', $search)->orWhere('nis', 'like', $search))
+                  ->orWhereHas('studentPkl.company', fn($cq) => $cq->where('name', 'like', $search));
+            });
+        }
+
         $attendances = $attendancesQuery->latest('created_at')->paginate(25)->withQueryString();
 
         $stats = [
@@ -645,5 +654,63 @@ class KajurController extends Controller
         $learningObjective->delete();
 
         return back()->with('success', 'Capaian Pembelajaran berhasil dihapus.');
+    }
+
+    /**
+     * Reset kata sandi siswa jurusan oleh Kepala Jurusan.
+     */
+    public function resetStudentPassword(Request $request, Student $student)
+    {
+        $schoolId = $this->getSchoolId();
+        $major = $this->getHeadedMajor();
+
+        abort_unless($major->classes()->where('id', $student->class_id)->exists(), 403, 'Siswa bukan berasal dari jurusan Anda.');
+        abort_unless($student->user?->role === 'siswa', 403, 'Akun target bukan akun siswa.');
+
+        $validated = $request->validate([
+            'new_password' => ['nullable', 'string', 'min:8', 'max:100'],
+        ], [
+            'new_password.min' => 'Kata sandi baru minimal 8 karakter. Kosongkan untuk dibuatkan otomatis.',
+        ]);
+
+        $user = $student->user;
+        $newPassword = $validated['new_password'] ?? \App\Services\TenantProvisioningService::generateTemporaryPassword();
+
+        DB::transaction(function () use ($user, $newPassword, $student) {
+            $user->update([
+                'password' => $newPassword,
+                'is_active' => true,
+                'must_change_password' => true,
+            ]);
+
+            if (config('session.driver') === 'database') {
+                DB::table(config('session.table', 'sessions'))->where('user_id', $user->id)->delete();
+            }
+
+            \App\Models\StudentPasswordResetRequest::where('student_id', $student->id)
+                ->where('status', 'pending')
+                ->update([
+                    'status' => 'completed',
+                    'notes' => "Direset oleh Kepala Jurusan " . Auth::user()->name . " pada " . now()->format('d/m/Y H:i'),
+                ]);
+
+            \App\Services\AuditLogService::log(
+                'password_reset',
+                'security',
+                "Kata sandi siswa ({$user->email}) direset oleh Kepala Jurusan " . Auth::user()->email . '.',
+                null,
+                Auth::user(),
+                null,
+                ['target_user_id' => $user->id, 'student_id' => $student->id]
+            );
+        });
+
+        return back()
+            ->with('success', "Kata sandi {$user->name} berhasil direset. Siswa wajib menggantinya saat login berikutnya.")
+            ->with('temporary_credential', [
+                'email' => $user->email,
+                'password' => $newPassword,
+                'context' => "Peserta Didik {$user->name}",
+            ]);
     }
 }

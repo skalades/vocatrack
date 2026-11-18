@@ -339,6 +339,7 @@ Route::middleware(['auth', 'IdentifyTenant', 'is-kajur'])->prefix('kajur')->grou
     // Siswa & Plotting PKL Jurusan
     Route::get('/students', [KajurController::class, 'students'])->name('kajur.students');
     Route::post('/students/{student}/assign', [KajurController::class, 'assignPlotting'])->name('kajur.students.assign');
+    Route::post('/students/{student}/reset-password', [KajurController::class, 'resetStudentPassword'])->middleware('throttle:5,1')->name('kajur.students.reset-password');
 
     // Monitoring Presensi & Jurnal
     Route::get('/attendance', [KajurController::class, 'attendance'])->name('kajur.attendance');

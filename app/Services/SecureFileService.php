@@ -142,7 +142,8 @@ class SecureFileService
         return match ($user->role) {
             'admin-sekolah', 'kepala-sekolah' => true,
             'siswa' => $user->student && (int) $user->student->id === (int) $spkl->student_id,
-            'guru-pembimbing' => $user->teacher && (int) $user->teacher->id === (int) $spkl->teacher_id,
+            'guru-pembimbing' => ($user->teacher && (int) $user->teacher->id === (int) $spkl->teacher_id)
+                || ($user->isKajur() && in_array($spkl->student?->class?->major_id, $user->headed_major_ids, true)),
             // Laporan kendala/SOS sengaja tidak terlihat oleh pihak DU/DI.
             'pembimbing-dudi' => $type !== 'kendala'
                 && $user->supervisor
