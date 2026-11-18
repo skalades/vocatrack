@@ -118,7 +118,7 @@
                         @if($todayJournal && $todayJournal->photos->isNotEmpty())
                             <img src="{{ $todayJournal->photos->first()->photo_url }}" alt="Bukti" class="w-full h-full object-cover">
                         @else
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#C6F26B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <svg id="photo-preview-placeholder" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#C6F26B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
                                 <circle cx="8.5" cy="8.5" r="1.5"/>
                                 <polyline points="21 15 16 10 5 21"/>
@@ -127,18 +127,20 @@
                     </div>
 
                     <!-- Add Photo Trigger -->
-                    <label for="journal-photos-input" 
-                           class="w-[60px] h-[60px] rounded-[16px] border-2 border-dashed border-[#7C8D85] bg-[#F7F9F5] hover:bg-[#EEF2EC] text-[#0B5E4E] flex items-center justify-center shrink-0 cursor-pointer active:scale-95 transition-all">
+                    <label for="journal-photos-input" id="journal-photo-label"
+                           class="w-[60px] h-[60px] rounded-[16px] border-2 border-dashed border-[#7C8D85] bg-[#F7F9F5] hover:bg-[#EEF2EC] text-[#0B5E4E] flex items-center justify-center shrink-0 cursor-pointer active:scale-95 transition-all"
+                           title="Ambil foto atau pilih dari galeri">
                         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                             <line x1="12" y1="5" x2="12" y2="19"/>
                             <line x1="5" y1="12" x2="19" y2="12"/>
                         </svg>
                     </label>
                     <input type="file" id="journal-photos-input" name="photos[]" accept="image/*" class="hidden" onchange="handleJournalPhotoSelected(this)">
+                    <input type="hidden" name="compressed_photos[]" id="journal-compressed-photo">
 
-                    <span class="text-xs text-[#5A6B65] leading-relaxed flex-1">
+                    <div id="photo-helper-text" class="text-xs text-[#5A6B65] leading-relaxed flex-1">
                         Foto dokumentasi kegiatan. Ambil dari kamera atau unggah bukti pekerjaan.
-                    </span>
+                    </div>
                 </div>
 
                 <!-- Simpan Jurnal CTA Button -->
@@ -397,17 +399,187 @@
         }
     }
 
-    // Photo preview handler
-    function handleJournalPhotoSelected(input) {
-        if (input.files && input.files[0]) {
+    function formatBytes(bytes, decimals = 1) {
+        if (!+bytes) return '0 B';
+        const k = 1024;
+        const dm = decimals < 0 ? 0 : decimals;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
+    }
+
+    async function compressJournalImage(file) {
+        return new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = function(e) {
-                const box = document.getElementById('photo-preview-box');
-                if (box) {
-                    box.innerHTML = `<img src="${e.target.result}" class="w-full h-full object-cover">`;
+                const img = new Image();
+                img.onload = function() {
+                    const MAX_SIDE = 1200; // 1200px max side is crisp and clear for documentation
+                    let w = img.width;
+                    let h = img.height;
+                    const scale = Math.min(1, MAX_SIDE / Math.max(w, h));
+
+                    const canvas = document.createElement('canvas');
+                    canvas.width = Math.round(w * scale);
+                    canvas.height = Math.round(h * scale);
+
+                    const ctx = canvas.getContext('2d');
+                    ctx.imageSmoothingEnabled = true;
+                    ctx.imageSmoothingQuality = 'high';
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                    // Iterative compression targeting < 350KB
+                    const TARGET_MAX_BYTES = 350 * 1024;
+                    let quality = 0.75;
+                    let dataUrl = canvas.toDataURL('image/jpeg', quality);
+
+                    while (dataUrl.length * 0.75 > TARGET_MAX_BYTES && quality > 0.4) {
+                        quality -= 0.1;
+                        dataUrl = canvas.toDataURL('image/jpeg', quality);
+                    }
+
+                    canvas.toBlob((blob) => {
+                        const compressedSize = blob ? blob.size : Math.round(dataUrl.length * 0.75);
+                        let compressedFile = null;
+                        if (blob) {
+                            try {
+                                compressedFile = new File([blob], (file.name || 'foto-jurnal').replace(/\.[^/.]+$/, "") + ".jpg", {
+                                    type: 'image/jpeg',
+                                    lastModified: Date.now()
+                                });
+                            } catch (err) {
+                                compressedFile = null;
+                            }
+                        }
+
+                        resolve({
+                            dataUrl: dataUrl,
+                            blob: blob,
+                            file: compressedFile,
+                            size: compressedSize,
+                            originalSize: file.size,
+                            width: canvas.width,
+                            height: canvas.height
+                        });
+                    }, 'image/jpeg', quality);
+                };
+                img.onerror = () => reject(new Error('Gagal memuat gambar'));
+                img.src = e.target.result;
+            };
+            reader.onerror = () => reject(new Error('Gagal membaca berkas'));
+            reader.readAsDataURL(file);
+        });
+    }
+
+    // Photo preview and client-side compression handler
+    async function handleJournalPhotoSelected(input) {
+        if (!input.files || !input.files[0]) return;
+        const file = input.files[0];
+
+        const previewBox = document.getElementById('photo-preview-box');
+        const helperText = document.getElementById('photo-helper-text');
+        const hiddenBase64 = document.getElementById('journal-compressed-photo');
+
+        // Loading state
+        if (previewBox) {
+            previewBox.innerHTML = `
+                <div class="flex flex-col items-center justify-center p-1 text-center">
+                    <svg class="animate-spin w-5 h-5 text-[#C6F26B] mb-1" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                    </svg>
+                    <span class="text-[9px] font-bold text-[#C6F26B] leading-none">Kompres...</span>
+                </div>
+            `;
+        }
+
+        try {
+            const result = await compressJournalImage(file);
+
+            // 1. Tampilkan gambar terkompresi & tombol hapus
+            if (previewBox) {
+                previewBox.innerHTML = `
+                    <img src="${result.dataUrl}" class="w-full h-full object-cover">
+                    <button type="button" onclick="clearSelectedJournalPhoto()" 
+                            class="absolute top-1 right-1 w-5 h-5 rounded-full bg-slate-900/80 text-white flex items-center justify-center hover:bg-rose-600 transition-colors cursor-pointer shadow-xs" 
+                            title="Hapus foto">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                `;
+            }
+
+            // 2. Set hidden base64 input
+            if (hiddenBase64) {
+                hiddenBase64.value = result.dataUrl;
+            }
+
+            // 3. Masukkan file terkompresi ke input.files via DataTransfer
+            if (result.file && window.DataTransfer) {
+                try {
+                    const dt = new DataTransfer();
+                    dt.items.add(result.file);
+                    input.files = dt.files;
+                } catch (dtErr) {
+                    console.warn('DataTransfer assignment fallback to base64:', dtErr);
+                }
+            }
+
+            // 4. Update helper text with size savings badge
+            if (helperText) {
+                helperText.innerHTML = `
+                    <div class="flex flex-col gap-0.5">
+                        <span class="text-xs font-bold text-[#0B5E4E] flex items-center gap-1.5">
+                            <svg class="w-3.5 h-3.5 text-[#0B5E4E] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                            Foto siap diunggah
+                        </span>
+                        <span class="text-[11px] text-[#5A6B65]">
+                            Ukuran terkompresi: <strong class="text-slate-800">${formatBytes(result.size)}</strong> 
+                            <span class="text-slate-400 line-through">(${formatBytes(result.originalSize)})</span>
+                        </span>
+                    </div>
+                `;
+            }
+        } catch (err) {
+            console.error('Image compression failed:', err);
+            // Fallback: tampilkan gambar asli
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                if (previewBox) {
+                    previewBox.innerHTML = `
+                        <img src="${e.target.result}" class="w-full h-full object-cover">
+                        <button type="button" onclick="clearSelectedJournalPhoto()" 
+                                class="absolute top-1 right-1 w-5 h-5 rounded-full bg-slate-900/80 text-white flex items-center justify-center hover:bg-rose-600 transition-colors cursor-pointer shadow-xs" 
+                                title="Hapus foto">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
+                    `;
                 }
             };
-            reader.readAsDataURL(input.files[0]);
+            reader.readAsDataURL(file);
+        }
+    }
+
+    function clearSelectedJournalPhoto() {
+        const input = document.getElementById('journal-photos-input');
+        const hiddenBase64 = document.getElementById('journal-compressed-photo');
+        const previewBox = document.getElementById('photo-preview-box');
+        const helperText = document.getElementById('photo-helper-text');
+
+        if (input) input.value = '';
+        if (hiddenBase64) hiddenBase64.value = '';
+
+        if (previewBox) {
+            previewBox.innerHTML = `
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#C6F26B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                    <circle cx="8.5" cy="8.5" r="1.5"/>
+                    <polyline points="21 15 16 10 5 21"/>
+                </svg>
+            `;
+        }
+
+        if (helperText) {
+            helperText.innerHTML = `Foto dokumentasi kegiatan. Ambil dari kamera atau unggah bukti pekerjaan.`;
         }
     }
 

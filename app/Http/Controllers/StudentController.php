@@ -195,7 +195,7 @@ class StudentController extends Controller
             'reason' => ['nullable', 'string', 'max:255'],
         ]);
 
-        if ($spkl->company?->gps_enabled && $request->has('is_within_radius') && filter_var($request->input('is_within_radius'), FILTER_VALIDATE_BOOLEAN) === false) {
+        if ($request->has('is_within_radius') && filter_var($request->input('is_within_radius'), FILTER_VALIDATE_BOOLEAN) === false) {
             if (!$request->filled('reason') || strlen(trim($request->reason)) < 5) {
                 if ($request->wantsJson()) {
                     return response()->json([
@@ -498,7 +498,8 @@ class StudentController extends Controller
         $request->validate([
             'date' => ['required', 'date', 'before_or_equal:today'],
             'activity_description' => ['required', 'string', 'min:50'],
-            'photos.*' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            'photos.*' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'compressed_photos.*' => ['nullable', 'string'],
             'action_type' => ['nullable', 'in:draft,submit'],
             'is_draft' => ['nullable', 'boolean'],
         ], [
@@ -589,6 +590,56 @@ class StudentController extends Controller
                 ]);
             }
             app(StorageQuotaService::class)->recordUpload($spkl->school, $totalSize);
+        } elseif ($request->filled('compressed_photos')) {
+            $compressedPhotos = array_filter((array) $request->input('compressed_photos'));
+            $photosToSave = [];
+            $totalSize = 0;
+
+            foreach ($compressedPhotos as $base64Image) {
+                if (empty($base64Image) || !is_string($base64Image)) {
+                    continue;
+                }
+
+                if (preg_match('/^data:image\/(\w+);base64,/', $base64Image)) {
+                    $cleanBase64 = substr($base64Image, strpos($base64Image, ',') + 1);
+                    $imageData = base64_decode($cleanBase64, true);
+                    if ($imageData === false) {
+                        continue;
+                    }
+
+                    $realMimeMap = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
+                    $imageInfo = @getimagesizefromstring($imageData);
+                    if ($imageInfo === false || !isset($realMimeMap[$imageInfo['mime'] ?? ''])) {
+                        continue;
+                    }
+
+                    $extension = $realMimeMap[$imageInfo['mime']];
+                    $fileSize = strlen($imageData);
+                    $totalSize += $fileSize;
+
+                    $photosToSave[] = [
+                        'data' => $imageData,
+                        'ext' => $extension,
+                        'size' => $fileSize,
+                    ];
+                }
+            }
+
+            if (!empty($photosToSave)) {
+                if (!app(StorageQuotaService::class)->canUpload($spkl->school, $totalSize)) {
+                    return $this->journalErrorResponse($request, ['photos' => 'Kapasitas penyimpanan sekolah Anda telah penuh. Tidak dapat mengunggah foto jurnal. Hubungi admin sekolah.']);
+                }
+
+                foreach ($photosToSave as $item) {
+                    $fileName = 'schools/' . $spkl->school_id . '/journals/' . date('Y') . '/' . Str::random(32) . '.' . $item['ext'];
+                    app(SecureFileService::class)->putContents($fileName, $item['data']);
+                    JournalPhoto::create([
+                        'journal_id' => $journal->id,
+                        'photo_path' => $fileName,
+                    ]);
+                }
+                app(StorageQuotaService::class)->recordUpload($spkl->school, $totalSize);
+            }
         }
 
         $msg = ($status === 'submitted')
