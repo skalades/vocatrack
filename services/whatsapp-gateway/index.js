@@ -1,12 +1,7 @@
 require('dotenv').config();
-const dns = require('dns');
-try {
-    dns.setDefaultResultOrder('ipv4first');
-} catch (e) {}
 
 const express = require('express');
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, Browsers, fetchLatestWaWebVersion, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
-const pino = require('pino');
+const { Client, LocalAuth } = require('whatsapp-web.js');
 const QRCode = require('qrcode');
 const path = require('path');
 const fs = require('fs');
@@ -17,379 +12,313 @@ app.use(express.urlencoded({ extended: true }));
 
 const PORT = process.env.PORT || 3005;
 const API_KEY = process.env.API_KEY || 'vokatrack-secret-key-2026';
-const AUTH_DIR = path.join(__dirname, 'auth_info_baileys');
 
-let sock = null;
-let connectionStatus = 'connecting';
-let qrCodeDataUrl = null;
-let connectedUser = null;
-let lastError = null;
-let isConnecting = false;
+// ─── State Global ───────────────────────────────────────────────────────────
+let connectionStatus = 'connecting'; // connecting | waiting_scan | connected
+let qrCodeDataUrl    = null;
+let connectedUser    = null;
+let lastError        = null;
 
-// Normalisasi nomor telepon ke format WhatsApp (62xxxxxxxxxx@s.whatsapp.net)
-function formatWhatsAppJid(phone) {
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+function formatPhone(phone) {
     if (!phone) return null;
-    let cleaned = phone.toString().replace(/[^0-9]/g, '');
-    if (cleaned.startsWith('0')) {
-        cleaned = '62' + cleaned.substring(1);
-    } else if (cleaned.startsWith('8')) {
-        cleaned = '62' + cleaned;
-    }
-    return cleaned + '@s.whatsapp.net';
+    let n = phone.toString().replace(/[^0-9]/g, '');
+    if (n.startsWith('0'))    n = '62' + n.substring(1);
+    else if (n.startsWith('8')) n = '62' + n;
+    return n + '@c.us';
 }
 
-// Inisialisasi Koneksi Baileys
-async function connectToWhatsApp() {
-    if (isConnecting) return;
-    isConnecting = true;
+// ─── WhatsApp Client (whatsapp-web.js) ───────────────────────────────────────
+const client = new Client({
+    authStrategy: new LocalAuth({
+        dataPath: path.join(__dirname, 'auth_info_wwebjs'),
+    }),
+    puppeteer: {
+        headless: true,
+        args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-accelerated-2d-canvas',
+            '--no-first-run',
+            '--no-zygote',
+            '--single-process',
+            '--disable-gpu',
+        ],
+    },
+});
 
-    // Bersihkan listener dari socket lama jika ada
-    if (sock) {
-        try {
-            sock.ev.removeAllListeners();
-            sock.end(undefined);
-        } catch (e) {}
-        sock = null;
-    }
-
-    connectionStatus = 'connecting';
-
+// QR siap di-scan
+client.on('qr', async (qr) => {
+    connectionStatus = 'waiting_scan';
+    lastError = null;
     try {
-        const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
-        let version;
-        try {
-            const waVersion = await fetchLatestWaWebVersion();
-            version = waVersion.version;
-            console.log(`[VokaTrack WA Gateway] Versi WhatsApp Web aktif: v${version.join('.')}`);
-        } catch (e) {
-            try {
-                const bVersion = await fetchLatestBaileysVersion();
-                version = bVersion.version;
-            } catch (err) {
-                version = [2, 3000, 1055185710];
-            }
-        }
+        qrCodeDataUrl = await QRCode.toDataURL(qr, { width: 300, margin: 2 });
 
-        sock = makeWASocket({
-            version,
-            auth: state,
-            logger: pino({ level: 'silent' }), // Silent agar terminal tetap bersih dan rapi
-            printQRInTerminal: false,
-            browser: Browsers.ubuntu('Chrome'),
-            connectTimeoutMs: 60000,
-            defaultQueryTimeoutMs: 60000,
-            keepAliveIntervalMs: 30000,
-            syncFullHistory: false
-        });
-
-        sock.ev.on('creds.update', saveCreds);
-
-        sock.ev.on('connection.update', async (update) => {
-            const { connection, lastDisconnect, qr } = update;
-
-            if (qr) {
-                connectionStatus = 'waiting_scan';
-                lastError = null;
-                try {
-                    // Generate QR untuk Web UI
-                    qrCodeDataUrl = await QRCode.toDataURL(qr, { width: 300, margin: 2 });
-                    // Cetak QR langsung di terminal (manual, karena printQRInTerminal deprecated)
-                    const qrTerminal = await QRCode.toString(qr, { type: 'terminal', small: true });
-                    console.log('\n========== SCAN QR CODE BERIKUT ==========');
-                    console.log(qrTerminal);
-                    console.log('===========================================');
-                    console.log('[VokaTrack WA Gateway] Atau buka: https://vocatrack.nadirlabs.net/super-admin/whatsapp');
-                } catch (err) {
-                    console.error('[VokaTrack WA Gateway] Gagal generate QR:', err);
-                }
-            }
-
-            if (connection === 'close') {
-                const statusCode = lastDisconnect?.error?.output?.statusCode;
-                const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
-                lastError = lastDisconnect?.error?.message || 'Koneksi terputus';
-                connectedUser = null;
-
-                if (statusCode === 408) {
-                    console.log('[VokaTrack WA Gateway] QR timeout (408). Reconnect tanpa hapus sesi...');
-                    // JANGAN hapus auth_info saat QR timeout — cukup reconnect ulang
-                    connectionStatus = 'connecting';
-                    qrCodeDataUrl = null;
-                    isConnecting = false;
-                    setTimeout(connectToWhatsApp, 5000); // 5 detik jeda
-                    return;
-                } else if (statusCode === 401 || statusCode === DisconnectReason.loggedOut) {
-                    console.log('[VokaTrack WA Gateway] Sesi telah logout. Silakan scan ulang.');
-                    try {
-                        fs.rmSync(AUTH_DIR, { recursive: true, force: true });
-                    } catch (e) {}
-                } else {
-                    console.log(`[VokaTrack WA Gateway] Koneksi terputus. Status: ${statusCode || 'Unknown'}. Reconnect: ${shouldReconnect}`);
-                }
-
-                connectionStatus = 'connecting';
-                isConnecting = false;
-                setTimeout(connectToWhatsApp, 10000); // 10 detik untuk reconnect normal
-            } else if (connection === 'open') {
-                connectionStatus = 'connected';
-                qrCodeDataUrl = null;
-                lastError = null;
-                isConnecting = false;
-                connectedUser = sock.user;
-                const phone = sock.user?.id ? sock.user.id.split(':')[0] : 'Aktif';
-                console.log(`\n======================================================`);
-                console.log(`✅ [VokaTrack WA Gateway] WhatsApp BERHASIL TERHUBUNG!`);
-                console.log(`   Nomor Pengirim: ${phone}`);
-                console.log(`   REST API Siap: http://localhost:${PORT}/send-message`);
-                console.log(`======================================================\n`);
-            }
-        });
+        // Cetak QR di terminal agar bisa langsung scan via SSH
+        const qrText = await QRCode.toString(qr, { type: 'terminal', small: true });
+        console.log('\n╔══════════════ SCAN QR CODE INI ══════════════╗');
+        console.log(qrText);
+        console.log('╚══════════════════════════════════════════════╝');
+        console.log('[VokaTrack WA] Atau buka: https://vocatrack.nadirlabs.net/super-admin/whatsapp\n');
     } catch (err) {
-        console.error('[VokaTrack WA Gateway] Error inisialisasi koneksi:', err.message);
-        connectionStatus = 'connecting';
-        isConnecting = false;
-        setTimeout(connectToWhatsApp, 10000); // 10 detik cooldown jika error inisialisasi
-    } finally {
-        isConnecting = false;
+        console.error('[VokaTrack WA] Gagal generate QR:', err.message);
     }
-}
+});
 
-// Middleware Autentikasi API Key (Opsional / Bearer Token)
+// Auth berhasil (sesi terbaca / QR berhasil di-scan)
+client.on('authenticated', () => {
+    console.log('[VokaTrack WA] ✔ Autentikasi berhasil. Memuat sesi...');
+    connectionStatus = 'connecting';
+    qrCodeDataUrl = null;
+});
+
+// Siap kirim pesan
+client.on('ready', () => {
+    connectionStatus = 'connected';
+    qrCodeDataUrl    = null;
+    lastError        = null;
+    connectedUser    = client.info;
+    const phone = client.info?.wid?.user || '-';
+    console.log('======================================================');
+    console.log('✅ [VokaTrack WA] WhatsApp BERHASIL TERHUBUNG!');
+    console.log(`   Nomor Pengirim: +${phone}`);
+    console.log(`   REST API Siap : http://localhost:${PORT}/send-message`);
+    console.log('======================================================\n');
+});
+
+// Gagal autentikasi
+client.on('auth_failure', (msg) => {
+    console.error('[VokaTrack WA] ✘ Autentikasi gagal:', msg);
+    connectionStatus = 'connecting';
+    lastError = msg;
+});
+
+// Koneksi terputus — reinit otomatis
+client.on('disconnected', (reason) => {
+    console.log('[VokaTrack WA] Terputus:', reason);
+    connectionStatus = 'connecting';
+    connectedUser    = null;
+    lastError        = reason;
+    setTimeout(() => {
+        console.log('[VokaTrack WA] Menginisialisasi ulang koneksi...');
+        client.initialize().catch(() => {});
+    }, 5000);
+});
+
+// Mulai engine
+client.initialize().catch((err) => {
+    console.error('[VokaTrack WA] Gagal inisialisasi:', err.message);
+});
+
+// ─── Middleware Auth ──────────────────────────────────────────────────────────
 function authMiddleware(req, res, next) {
     if (!API_KEY) return next();
-    const authHeader = req.headers['authorization'];
-    if (!authHeader) {
-        // Jika tidak ada header, cek query atau izinkan jika dari localhost
-        return res.status(401).json({ success: false, error: 'Unauthorized: Header Authorization Bearer diperlukan.' });
-    }
-    const token = authHeader.replace(/^Bearer\s+/i, '');
+    const token = (req.headers['authorization'] || '').replace(/^Bearer\s+/i, '');
     if (token !== API_KEY) {
-        return res.status(403).json({ success: false, error: 'Forbidden: API Key tidak valid.' });
+        return res.status(401).json({ success: false, error: 'Unauthorized: API Key tidak valid.' });
     }
     next();
 }
 
-// ---------------- REST API ROUTES ----------------
+// ─── REST API ─────────────────────────────────────────────────────────────────
 
-// 1. Endpoint Kirim Pesan (Dipanggil oleh VokaTrack Laravel)
+// POST /send-message
 app.post('/send-message', authMiddleware, async (req, res) => {
     const { phone, message } = req.body;
-
     if (!phone || !message) {
         return res.status(422).json({ success: false, error: 'Parameter "phone" dan "message" wajib diisi.' });
     }
-
-    if (connectionStatus !== 'connected' || !sock) {
-        return res.status(503).json({
-            success: false,
-            error: 'Gateway belum terhubung ke WhatsApp. Silakan scan QR terlebih dahulu di http://localhost:' + PORT
-        });
+    if (connectionStatus !== 'connected') {
+        return res.status(503).json({ success: false, error: 'Gateway belum terhubung. Silakan scan QR terlebih dahulu.' });
     }
-
-    const jid = formatWhatsAppJid(phone);
-    if (!jid) {
-        return res.status(400).json({ success: false, error: 'Nomor telepon tidak valid.' });
-    }
+    const jid = formatPhone(phone);
+    if (!jid) return res.status(400).json({ success: false, error: 'Nomor telepon tidak valid.' });
 
     try {
-        const sent = await sock.sendMessage(jid, { text: message });
-        return res.json({
-            success: true,
-            message: 'Pesan berhasil dikirim via Gateway Mandiri',
-            target: jid,
-            id: sent?.key?.id
-        });
+        const result = await client.sendMessage(jid, message);
+        return res.json({ success: true, message: 'Pesan berhasil dikirim.', id: result?.id?._serialized });
     } catch (err) {
-        console.error('[VokaTrack WA Gateway] Gagal kirim pesan ke ' + jid + ':', err);
-        return res.status(500).json({ success: false, error: err.message || 'Gagal mengirim pesan.' });
+        console.error('[VokaTrack WA] Gagal kirim ke', jid, ':', err.message);
+        return res.status(500).json({ success: false, error: err.message });
     }
 });
 
-// 2. Status Endpoint (JSON)
+// GET /status
 app.get('/status', (req, res) => {
+    const phone = connectedUser?.wid?.user || null;
     res.json({
         success: true,
         status: connectionStatus,
-        user: connectedUser ? { id: connectedUser.id?.split(':')[0], name: connectedUser.name } : null,
-        error: lastError
+        user: phone ? { phone, name: connectedUser?.pushname || '-' } : null,
+        error: lastError,
+        engine: 'whatsapp-web.js',
     });
 });
 
-// 3. QR Endpoint (JSON)
+// GET /qr-data
 app.get('/qr-data', (req, res) => {
-    res.json({
-        status: connectionStatus,
-        qr: qrCodeDataUrl
-    });
+    res.json({ status: connectionStatus, qr: qrCodeDataUrl });
 });
 
-// 4. Logout Endpoint
-app.post('/logout', (req, res) => {
+// POST /logout
+app.post('/logout', async (req, res) => {
     try {
-        if (sock) sock.logout();
-        fs.rmSync(AUTH_DIR, { recursive: true, force: true });
-        connectionStatus = 'disconnected';
-        setTimeout(connectToWhatsApp, 2000);
-        res.json({ success: true, message: 'Berhasil logout. Silakan scan ulang.' });
+        await client.logout();
+        res.json({ success: true, message: 'Logout berhasil. Reinisialisasi...' });
+        setTimeout(() => client.initialize().catch(() => {}), 3000);
     } catch (e) {
         res.status(500).json({ success: false, error: e.message });
     }
 });
 
-// 5. Dashboard Web UI (VokaTrack Aesthetic)
+// GET / — Dashboard Web UI
 app.get('/', (req, res) => {
-    const phone = connectedUser?.id ? connectedUser.id.split(':')[0] : '-';
+    const phone = connectedUser?.wid?.user || '-';
+    const name  = connectedUser?.pushname  || '-';
     res.send(`<!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VokaTrack — WhatsApp Gateway Mandiri</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <title>VokaTrack — WhatsApp Gateway</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background: #0B2B25; color: #fff; }
-        .font-space { font-family: 'Space Grotesk', sans-serif; }
-    </style>
+    <style>body { font-family: 'Plus Jakarta Sans', sans-serif; background: #0B2B25; color: #fff; }</style>
 </head>
 <body class="min-h-screen flex items-center justify-center p-4">
     <div class="max-w-lg w-full bg-[#12382F] border border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6">
+
+        <!-- Header -->
         <div class="flex items-center justify-between pb-4 border-b border-white/10">
             <div class="flex items-center gap-3">
-                <span class="w-10 h-10 rounded-2xl bg-[#C6F26B] text-[#0B2B25] font-extrabold flex items-center justify-center font-space text-lg">V</span>
+                <span class="w-10 h-10 rounded-2xl bg-[#C6F26B] text-[#0B2B25] font-extrabold flex items-center justify-center text-lg" style="font-family:'Space Grotesk',sans-serif">V</span>
                 <div>
-                    <h1 class="font-extrabold text-base tracking-tight text-white leading-none">VokaTrack WA Gateway</h1>
-                    <p class="text-[11px] text-[#A9C2B9] font-medium mt-1">Self-Hosted WhatsApp Gateway Engine</p>
+                    <h1 class="font-extrabold text-base text-white leading-none">VokaTrack WA Gateway</h1>
+                    <p class="text-[11px] text-[#A9C2B9] mt-1">Engine: whatsapp-web.js · Port ${PORT}</p>
                 </div>
             </div>
-            <span id="badge-status" class="px-3 py-1 rounded-full text-xs font-bold ${connectionStatus === 'connected' ? 'bg-[#C6F26B] text-[#0B2B25]' : 'bg-amber-400 text-amber-950'}">
-                ${connectionStatus === 'connected' ? '● TERHUBUNG' : (connectionStatus === 'waiting_scan' ? 'Scan QR' : 'Menghubungkan...')}
+            <span id="badge" class="px-3 py-1 rounded-full text-xs font-bold ${connectionStatus === 'connected' ? 'bg-[#C6F26B] text-[#0B2B25]' : 'bg-amber-400 text-amber-950'}">
+                ${connectionStatus === 'connected' ? '● TERHUBUNG' : connectionStatus === 'waiting_scan' ? 'Scan QR' : 'Menghubungkan...'}
             </span>
         </div>
 
+        <!-- Koneksi Perangkat -->
+        <div class="pb-2 border-b border-white/10">
+            <p class="text-xs font-bold text-[#A9C2B9] mb-1">Koneksi Perangkat WhatsApp</p>
+            <p class="text-[11px] text-white/50">Scan QR Code dengan WhatsApp di HP Administrator/Sekolah.</p>
+            <p class="text-xs text-white/40 mt-1">Port: ${PORT}</p>
+        </div>
+
+        <!-- Content Area -->
         <div id="content-area" class="text-center space-y-4">
             ${connectionStatus === 'connected' ? `
                 <div class="p-5 rounded-2xl bg-white/[0.05] border border-white/10 space-y-3">
                     <div class="w-16 h-16 rounded-full bg-[#C6F26B]/20 text-[#C6F26B] flex items-center justify-center mx-auto">
                         <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                     </div>
-                    <div>
-                        <h2 class="text-lg font-bold text-white">WhatsApp Terhubung</h2>
-                        <p class="text-xs text-[#A9C2B9]">Nomor Pengirim: <span class="font-mono font-bold text-white">+${phone}</span></p>
-                    </div>
-                    <p class="text-[11px] text-white/70">Gateway mandiri ini siap mengirimkan notifikasi darurat SOS dari VokaTrack.</p>
+                    <h2 class="text-lg font-bold text-white">WhatsApp Terhubung</h2>
+                    <p class="text-xs text-[#A9C2B9]">Nama: <span class="font-semibold text-white">${name}</span></p>
+                    <p class="text-xs text-[#A9C2B9]">Nomor: <span class="font-mono font-bold text-white">+${phone}</span></p>
                 </div>
-
                 <div class="p-4 rounded-2xl bg-black/20 border border-white/5 text-left space-y-2">
-                    <label class="block text-xs font-bold text-[#A9C2B9]">Uji Kirim Pesan:</label>
+                    <label class="block text-xs font-bold text-[#A9C2B9]">Uji Coba Kirim Pesan:</label>
+                    <p class="text-[11px] text-white/50">Kirimkan pesan uji coba ke nomor tujuan.</p>
+                    <label class="block text-xs text-[#A9C2B9] mt-2">Nomor WhatsApp</label>
                     <div class="flex gap-2">
-                        <input type="text" id="test-phone" placeholder="08xxxxxxxxxx" class="flex-1 bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-xs text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-[#C6F26B]">
+                        <input type="text" id="test-phone" placeholder="Contoh: 08123456789" class="flex-1 bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-xs text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-[#C6F26B]">
                         <button onclick="sendTest()" class="px-4 py-2 rounded-xl bg-[#C6F26B] text-[#0B2B25] font-extrabold text-xs hover:bg-[#b8e65e] transition-colors cursor-pointer">Kirim</button>
                     </div>
+                    <label class="block text-xs text-[#A9C2B9] mt-2">Isi Pesan</label>
+                    <textarea id="test-msg" rows="2" placeholder="Pesan uji coba..." class="w-full bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-xs text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-[#C6F26B]">Halo! Ini pesan uji coba dari VokaTrack Gateway.</textarea>
                     <p id="test-result" class="text-[11px]"></p>
                 </div>
-
-                <form action="/logout" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin logout dari nomor WhatsApp ini?')">
+                <form action="/logout" method="POST" onsubmit="return confirm('Yakin ingin logout?')">
                     <button type="submit" class="text-xs text-rose-300 hover:text-rose-200 underline font-semibold cursor-pointer">Ganti Nomor (Logout)</button>
                 </form>
-            ` : (connectionStatus === 'waiting_scan' && qrCodeDataUrl ? `
-                <div class="space-y-4">
-                    <p class="text-xs text-[#A9C2B9]">Scan QR Code ini menggunakan WhatsApp di HP Anda:<br><span class="text-white font-semibold">WhatsApp &gt; Perangkat Tertaut &gt; Tautkan Perangkat</span></p>
-                    <div class="inline-block p-3 bg-white rounded-2xl shadow-xl">
-                        <img src="${qrCodeDataUrl}" alt="QR Code WhatsApp" class="w-64 h-64 mx-auto">
-                    </div>
-                    <p class="text-[11px] text-white/50">Halaman ini akan otomatis menyambung begitu QR Code berhasil di-scan.</p>
-                </div>
             ` : `
-                <div class="py-12 space-y-3" id="connecting-state">
-                    <div class="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center mx-auto mb-2">
-                        <svg class="w-8 h-8 text-[#C6F26B]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4.5 12.75l6 6 9-13.5"/></svg>
+                <div class="py-10 space-y-4" id="qr-wrapper">
+                    <div class="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center mx-auto">
+                        <svg class="w-8 h-8 text-[#C6F26B] animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4.5 12.75l6 6 9-13.5"/></svg>
                     </div>
                     <h2 class="text-base font-bold text-white">Engine Aktif — Menyiapkan QR Code...</h2>
                     <p class="text-xs text-[#A9C2B9]">Sedang menghubungkan ke server WhatsApp dan mengambil QR code baru.</p>
                     <p class="text-[11px] text-white/50">Mohon tunggu beberapa saat. Halaman ini akan otomatis menampilkan QR Code begitu server WhatsApp siap.</p>
                 </div>
-            `)}
+            `}
         </div>
 
-        <div class="pt-4 border-t border-white/10 text-center">
-            <p class="text-[10px] text-white/40 font-mono">VokaTrack Independent Notification Engine · Port: ${PORT}</p>
+        <!-- Footer -->
+        <div class="pt-4 border-t border-white/10 space-y-1">
+            <div class="flex justify-between text-[10px] text-white/40 font-mono">
+                <span>● Engine: whatsapp-web.js</span>
+                <span>Provider: CUSTOM</span>
+            </div>
+            <div class="flex justify-between text-[10px] text-white/30">
+                <span>Cara penggunaan:</span>
+            </div>
+            <ol class="text-[10px] text-white/30 list-decimal list-inside space-y-0.5">
+                <li>Siswa aktifkan SOS → notifikasi dikirim otomatis via gateway ini</li>
+                <li>Admin menerima pesan WhatsApp dari nomor terdaftar</li>
+            </ol>
         </div>
     </div>
 
     <script>
-        // Live polling QR + status tanpa full reload
-        let currentStatus = '${connectionStatus}';
+        const initStatus = '${connectionStatus}';
 
         async function pollQR() {
             try {
-                const res = await fetch('/qr-data');
+                const res  = await fetch('/qr-data');
                 const data = await res.json();
 
-                if (data.status !== currentStatus) {
-                    // Status berubah (connected / disconnected) → reload sekali
-                    location.reload();
-                    return;
+                if (data.status === 'connected' && initStatus !== 'connected') {
+                    location.reload(); return;
                 }
 
-                if (data.status === 'waiting_scan' && data.qr) {
-                    // Update QR image tanpa reload halaman
-                    const imgEl = document.getElementById('qr-img');
-                    const areaEl = document.getElementById('content-area');
+                const wrapper = document.getElementById('qr-wrapper');
+                if (!wrapper) return;
 
-                    if (imgEl) {
-                        imgEl.src = data.qr;
+                if (data.status === 'waiting_scan' && data.qr) {
+                    const img = document.getElementById('qr-img');
+                    if (img) {
+                        img.src = data.qr;
                     } else {
-                        // Render kotak QR pertama kali jika belum ada
-                        areaEl.innerHTML = \`
-                            <div class="space-y-4">
-                                <p class="text-xs text-[#A9C2B9]">Scan QR Code ini menggunakan WhatsApp di HP Anda:<br>
-                                    <span class="text-white font-semibold">WhatsApp &gt; Perangkat Tertaut &gt; Tautkan Perangkat</span></p>
-                                <div class="inline-block p-3 bg-white rounded-2xl shadow-xl">
-                                    <img id="qr-img" src="\${data.qr}" alt="QR Code WhatsApp" class="w-64 h-64 mx-auto">
-                                </div>
-                                <p class="text-[11px] text-white/50">QR Code otomatis diperbarui. Halaman akan menyambung setelah berhasil di-scan.</p>
-                            </div>\`;
+                        wrapper.innerHTML = \`
+                            <p class="text-xs text-[#A9C2B9]">Scan QR Code ini dengan WhatsApp:<br>
+                                <span class="text-white font-semibold">WhatsApp › Perangkat Tertaut › Tautkan Perangkat</span></p>
+                            <div class="inline-block p-3 bg-white rounded-2xl shadow-xl mt-2">
+                                <img id="qr-img" src="\${data.qr}" alt="QR Code" class="w-64 h-64 mx-auto">
+                            </div>
+                            <p class="text-[11px] text-white/50">QR diperbarui otomatis tiap 5 detik. Halaman akan menyambung setelah berhasil di-scan.</p>
+                        \`;
                     }
+                    document.getElementById('badge').textContent = 'Scan QR';
                 } else if (data.status === 'connecting') {
-                    const areaEl = document.getElementById('content-area');
-                    if (areaEl && !areaEl.querySelector('#qr-img')) {
-                        areaEl.innerHTML = \`
-                            <div class="py-12 space-y-3">
-                                <div class="w-8 h-8 border-2 border-[#C6F26B] border-t-transparent rounded-full animate-spin mx-auto"></div>
-                                <p class="text-xs text-[#A9C2B9]">Sedang memuat engine WhatsApp... Mohon tunggu sebentar.</p>
-                            </div>\`;
-                    }
+                    document.getElementById('badge').textContent = 'Menghubungkan...';
                 }
             } catch (e) {}
         }
 
-        if (currentStatus !== 'connected') {
-            // Langsung cek QR saat halaman load
+        if (initStatus !== 'connected') {
             pollQR();
             setInterval(pollQR, 5000);
         }
 
         async function sendTest() {
-            const phone = document.getElementById('test-phone').value;
-            const resEl = document.getElementById('test-result');
+            const phone  = document.getElementById('test-phone').value;
+            const msg    = document.getElementById('test-msg')?.value || 'Halo! Ini pesan uji coba dari VokaTrack Gateway.';
+            const resEl  = document.getElementById('test-result');
             if (!phone) return alert('Masukkan nomor tujuan!');
             resEl.textContent = 'Mengirim...';
             resEl.className = 'text-[11px] text-amber-300';
             try {
-                const res = await fetch('/send-message', {
+                const r    = await fetch('/send-message', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': 'Bearer ${API_KEY}'
-                    },
-                    body: JSON.stringify({
-                        phone: phone,
-                        message: 'Halo! Ini adalah pesan uji coba dari Gateway WhatsApp Mandiri VokaTrack.'
-                    })
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ${API_KEY}' },
+                    body: JSON.stringify({ phone, message: msg }),
                 });
-                const data = await res.json();
+                const data = await r.json();
                 if (data.success) {
                     resEl.textContent = '✅ Pesan berhasil terkirim!';
                     resEl.className = 'text-[11px] text-[#C6F26B] font-bold';
@@ -407,19 +336,14 @@ app.get('/', (req, res) => {
 </html>`);
 });
 
-// Tangani error global agar proses tidak pernah crash
-process.on('uncaughtException', (err) => {
-    console.error('[VokaTrack WA Gateway] Uncaught Exception:', err.message);
-});
-process.on('unhandledRejection', (reason) => {
-    console.error('[VokaTrack WA Gateway] Unhandled Rejection:', reason);
-});
+// ─── Error Handlers ───────────────────────────────────────────────────────────
+process.on('uncaughtException',  (err) => console.error('[VokaTrack WA] Uncaught Exception:', err.message));
+process.on('unhandledRejection', (r)   => console.error('[VokaTrack WA] Unhandled Rejection:', r));
 
-// Mulai Server dan Jalankan Baileys
+// ─── Start Server ─────────────────────────────────────────────────────────────
 const server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`[VokaTrack WA Gateway] Web UI aktif di http://localhost:${PORT}`);
-    connectToWhatsApp();
 });
 server.on('error', (err) => {
-    console.error(`[VokaTrack WA Gateway] Server error on port ${PORT}:`, err.message);
+    console.error(`[VokaTrack WA] Server error port ${PORT}:`, err.message);
 });
