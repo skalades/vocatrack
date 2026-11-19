@@ -42,9 +42,46 @@ class StudentPkl extends Model
         return $this->end_date ? \Carbon\Carbon::parse($this->end_date) : $this->pklPeriod?->end_date;
     }
 
+    /**
+     * Cek apakah pelaksanaan PKL saat ini sudah dimulai oleh pihak perusahaan (is_pkl_started).
+     */
+    public function getIsStartedAttribute(): bool
+    {
+        return (bool) ($this->company?->is_pkl_started ?? false);
+    }
+
+    /**
+     * Status terhitung penugasan siswa (mempertimbangkan pengaturan mulai dari perusahaan mitra).
+     */
+    public function getComputedStatusAttribute(): string
+    {
+        if (in_array($this->status, ['completed', 'withdrawn'], true)) {
+            return $this->status;
+        }
+
+        return $this->is_started ? 'active' : 'pending_start';
+    }
+
+    /**
+     * Label teks status penugasan siswa untuk tampilan UI.
+     */
+    public function getComputedStatusLabelAttribute(): string
+    {
+        return match ($this->computed_status) {
+            'completed' => 'SELESAI',
+            'withdrawn' => 'DIBATALKAN',
+            'active' => 'AKTIF',
+            default => 'BELUM MULAI',
+        };
+    }
+
     public function isPklActiveToday(): bool
     {
         if ($this->status !== 'active') {
+            return false;
+        }
+
+        if ($this->company && !$this->company->is_pkl_started) {
             return false;
         }
 

@@ -71,52 +71,107 @@
 
     <!-- Filters & Search Toolbar -->
     <x-card noPadding class="p-4 bg-white border border-slate-200/80">
-        <form method="GET" action="{{ route('adminsekolah.plotting') }}" class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
-            <!-- Search -->
-            <div class="sm:col-span-5 relative">
-                <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+        <form method="GET" action="{{ route('adminsekolah.plotting') }}" id="plotting-filter-form" class="space-y-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 items-center">
+                <!-- Search -->
+                <div class="sm:col-span-2 lg:col-span-3 relative">
+                    <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    </div>
+                    <input type="text" name="search" value="{{ request('search') }}" placeholder="Cari siswa, NISN, atau DU/DI..." 
+                           class="w-full text-xs font-semibold pl-9.5 pr-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600">
                 </div>
-                <input type="text" name="search" value="{{ request('search') }}" placeholder="Cari nama siswa, NISN, atau DU/DI..." 
-                       class="w-full text-xs font-semibold pl-9.5 pr-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600">
+
+                <!-- Major Filter -->
+                <div class="sm:col-span-1 lg:col-span-2">
+                    <select name="major_id" id="filter-major" onchange="onToolbarMajorChange(true)" 
+                            class="w-full text-xs font-semibold px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600">
+                        <option value="all" {{ request('major_id', 'all') === 'all' ? 'selected' : '' }}>Semua Jurusan</option>
+                        @foreach($majors as $m)
+                            <option value="{{ $m->id }}" {{ request('major_id') == $m->id ? 'selected' : '' }}>
+                                {{ $m->code }} - {{ $m->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <!-- Company Filter (Terkait dengan Jurusan) -->
+                <div class="sm:col-span-1 lg:col-span-3">
+                    <select name="company_id" id="filter-company" onchange="this.form.submit()" 
+                            class="w-full text-xs font-semibold px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600">
+                        <option value="all" {{ request('company_id', 'all') === 'all' ? 'selected' : '' }}>Semua Perusahaan DU/DI</option>
+                        @foreach($companies as $cp)
+                            <option value="{{ $cp->id }}" 
+                                    data-majors="{{ $cp->majors->pluck('id')->join(',') }}" 
+                                    {{ request('company_id') == $cp->id ? 'selected' : '' }}>
+                                {{ $cp->name }} {{ $cp->majors->isNotEmpty() ? '[' . $cp->majors->pluck('code')->join(', ') . ']' : '[Semua Jurusan]' }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <!-- Teacher Filter -->
+                <div class="sm:col-span-1 lg:col-span-2">
+                    <select name="teacher_id" onchange="this.form.submit()" 
+                            class="w-full text-xs font-semibold px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600">
+                        <option value="all" {{ request('teacher_id', 'all') === 'all' ? 'selected' : '' }}>Semua Guru</option>
+                        @foreach($teachers as $tc)
+                            <option value="{{ $tc->id }}" {{ request('teacher_id') == $tc->id ? 'selected' : '' }}>
+                                {{ $tc->user->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <!-- Status Filter (Siswa Aktif / Belum Mulai sesuai DU/DI) -->
+                <div class="sm:col-span-1 lg:col-span-2">
+                    <select name="status" onchange="this.form.submit()" 
+                            class="w-full text-xs font-semibold px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600">
+                        <option value="all" {{ request('status', 'all') === 'all' ? 'selected' : '' }}>Semua Status</option>
+                        <option value="active" {{ request('status') === 'active' ? 'selected' : '' }}>Aktif (DU/DI Sudah Mulai)</option>
+                        <option value="pending_start" {{ request('status') === 'pending_start' ? 'selected' : '' }}>Belum Mulai (DU/DI Belum Mulai)</option>
+                        <option value="completed" {{ request('status') === 'completed' ? 'selected' : '' }}>Selesai</option>
+                    </select>
+                </div>
             </div>
 
-            <!-- Major Filter -->
-            <div class="sm:col-span-3">
-                <select name="major_id" onchange="this.form.submit()" 
-                        class="w-full text-xs font-semibold px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600">
-                    <option value="all" {{ request('major_id', 'all') === 'all' ? 'selected' : '' }}>Semua Jurusan</option>
-                    @foreach($majors as $m)
-                        <option value="{{ $m->id }}" {{ request('major_id') == $m->id ? 'selected' : '' }}>
-                            {{ $m->code }} - {{ $m->name }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
+            <!-- Filter Controls & Reset Indicator -->
+            <div class="flex items-center justify-between pt-1 border-t border-slate-100 text-xs">
+                <div class="flex items-center gap-2 text-slate-500 font-medium text-[11px]">
+                    <span>Filter aktif:</span>
+                    @if(request('major_id') && request('major_id') !== 'all')
+                        @php $activeMajor = $majors->firstWhere('id', request('major_id')); @endphp
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 font-bold border border-indigo-200/60">
+                            Jurusan: {{ $activeMajor?->code ?? request('major_id') }}
+                        </span>
+                    @endif
+                    @if(request('company_id') && request('company_id') !== 'all')
+                        @php $activeComp = $companies->firstWhere('id', request('company_id')); @endphp
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 font-bold border border-indigo-200/60">
+                            DU/DI: {{ Str::limit($activeComp?->name ?? request('company_id'), 18) }}
+                        </span>
+                    @endif
+                    @if(request('status') && request('status') !== 'all')
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 font-bold border border-amber-200/60">
+                            Status: {{ request('status') === 'active' ? 'Aktif' : (request('status') === 'pending_start' ? 'Belum Mulai' : request('status')) }}
+                        </span>
+                    @endif
+                    @if(!request()->filled('search') && (!request()->filled('major_id') || request('major_id') === 'all') && (!request()->filled('company_id') || request('company_id') === 'all') && (!request()->filled('teacher_id') || request('teacher_id') === 'all') && (!request()->filled('status') || request('status') === 'all'))
+                        <span class="text-slate-400 italic">Menampilkan seluruh data penugasan</span>
+                    @endif
+                </div>
 
-            <!-- Teacher Filter -->
-            <div class="sm:col-span-2">
-                <select name="teacher_id" onchange="this.form.submit()" 
-                        class="w-full text-xs font-semibold px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600">
-                    <option value="all" {{ request('teacher_id', 'all') === 'all' ? 'selected' : '' }}>Semua Guru</option>
-                    @foreach($teachers as $tc)
-                        <option value="{{ $tc->id }}" {{ request('teacher_id') == $tc->id ? 'selected' : '' }}>
-                            {{ $tc->user->name }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
-
-            <!-- Buttons -->
-            <div class="sm:col-span-2 flex items-center space-x-2">
-                <button type="submit" class="w-full text-xs font-bold py-2.5 px-3 rounded-xl bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 transition-colors">
-                    Filter
-                </button>
-                @if(request()->filled('search') || (request()->filled('major_id') && request('major_id') !== 'all') || (request()->filled('teacher_id') && request('teacher_id') !== 'all'))
-                    <a href="{{ route('adminsekolah.plotting') }}" class="p-2.5 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors shrink-0" title="Reset filter">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                    </a>
-                @endif
+                <div class="flex items-center space-x-2">
+                    <button type="submit" class="text-xs font-bold py-1.5 px-3 rounded-xl bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 transition-colors">
+                        Terapkan Filter
+                    </button>
+                    @if(request()->filled('search') || (request()->filled('major_id') && request('major_id') !== 'all') || (request()->filled('company_id') && request('company_id') !== 'all') || (request()->filled('teacher_id') && request('teacher_id') !== 'all') || (request()->filled('status') && request('status') !== 'all'))
+                        <a href="{{ route('adminsekolah.plotting') }}" class="text-xs font-bold py-1.5 px-3 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900 transition-colors flex items-center gap-1" title="Reset filter">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                            <span>Reset</span>
+                        </a>
+                    @endif
+                </div>
             </div>
         </form>
     </x-card>
@@ -191,12 +246,48 @@
                                     </span>
                                 @endif
                             </td>
-                            <td class="py-3.5 px-6 text-center min-w-[100px] whitespace-nowrap">
-                                <x-badge variant="success" size="xs">
-                                    {{ strtoupper($sp->status) }}
-                                </x-badge>
+                            <td class="py-3.5 px-6 text-center min-w-[120px] whitespace-nowrap">
+                                @if($sp->status === 'completed')
+                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-blue-50 text-blue-700 border border-blue-200" title="Penugasan PKL telah selesai">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                                        SELESAI
+                                    </span>
+                                @elseif($sp->status === 'withdrawn')
+                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-rose-50 text-rose-700 border border-rose-200" title="Penugasan PKL dibatalkan">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                                        BATAL
+                                    </span>
+                                @elseif($sp->company && $sp->company->is_pkl_started)
+                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200/80 shadow-2xs" title="Pelaksanaan PKL Sudah Mulai: Presensi dan jurnal kegiatan industri aktif berjalan">
+                                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                                        AKTIF
+                                    </span>
+                                @else
+                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200/80" title="Setingan DU/DI Belum Mulai: Siswa belum mulai PKL & bebas dari kewajiban presensi">
+                                        <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+                                        BELUM MULAI
+                                    </span>
+                                @endif
                             </td>
                             <td class="py-3.5 px-4 text-right whitespace-nowrap table-sticky-right space-x-1">
+                                @php
+                                    $stUser = $sp->student->user;
+                                    $studentPhone = $stUser?->formatted_wa_number ?: ($stUser?->profile?->phone ?? null);
+                                    $hasPhone = !empty($studentPhone) && \App\Services\WhatsAppGatewayService::isValidIndonesianNumber($studentPhone);
+                                @endphp
+
+                                <!-- Tombol Kirim Link Orang Tua Otomatis ke Nomor Siswa -->
+                                <form action="{{ route('adminsekolah.plotting.send-parent-link', $sp) }}" method="POST" class="inline" 
+                                      onsubmit="return confirm('Kirim otomatis link portal pemantauan orang tua untuk {{ addslashes($stUser->name ?? 'Siswa') }} ke nomor WhatsApp siswa ({{ $studentPhone ?: 'Belum Terdaftar' }})?')">
+                                    @csrf
+                                    <button type="submit" 
+                                            class="px-2.5 py-1 rounded-lg {{ $hasPhone ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 cursor-pointer' : 'bg-slate-50 hover:bg-slate-100 text-slate-500 border border-slate-200 cursor-pointer' }} text-[11px] font-bold transition-colors inline-flex items-center gap-1 shadow-2xs" 
+                                            title="{{ $hasPhone ? 'Kirim link portal pemantauan orang tua via WhatsApp ke: ' . $studentPhone : 'Nomor WhatsApp siswa belum terdaftar / format tidak valid (Klik untuk periksa)' }}">
+                                        <svg class="w-3.5 h-3.5 {{ $hasPhone ? 'text-emerald-600' : 'text-slate-400' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                                        <span>Kirim Link Ortu</span>
+                                    </button>
+                                </form>
+
                                 <button type="button" 
                                         onclick="openEditPlottingModal({{ json_encode([
                                             'id' => $sp->id,
@@ -409,7 +500,8 @@
                     @foreach($companies as $cp)
                         <option value="{{ $cp->id }}" 
                                 data-start="{{ $cp->default_start_date ? $cp->default_start_date->format('Y-m-d') : '' }}"
-                                data-end="{{ $cp->default_end_date ? $cp->default_end_date->format('Y-m-d') : '' }}">
+                                data-end="{{ $cp->default_end_date ? $cp->default_end_date->format('Y-m-d') : '' }}"
+                                data-majors="{{ $cp->majors->pluck('id')->join(',') }}">
                             {{ $cp->name }} {{ $cp->majors->isNotEmpty() ? '[' . $cp->majors->pluck('code')->join(', ') . ']' : '[Semua Jurusan]' }}
                         </option>
                     @endforeach
@@ -561,27 +653,93 @@
         filterStudentList();
     }
 
-    function onMajorFilterChange() {
-        const majorVal = document.getElementById('modal-filter-major').value;
-        const classSelect = document.getElementById('modal-filter-class');
-        const classOptions = classSelect.querySelectorAll('option');
+    function onToolbarMajorChange(submitOnChange = true) {
+        const majorSelect = document.getElementById('filter-major');
+        const companySelect = document.getElementById('filter-company');
+        if (!majorSelect || !companySelect) return;
 
-        classOptions.forEach(opt => {
-            if (opt.value === 'all') return;
-            const optMajor = opt.getAttribute('data-major');
-            if (majorVal === 'all' || optMajor === majorVal) {
+        const selectedMajor = majorSelect.value;
+        const compOptions = companySelect.querySelectorAll('option');
+        let currentSelectedValid = false;
+
+        compOptions.forEach(opt => {
+            if (opt.value === 'all' || opt.value === '') return;
+            const majorsAttr = opt.getAttribute('data-majors');
+            const majorsList = majorsAttr ? majorsAttr.split(',').filter(Boolean) : [];
+
+            // Tampilkan jika perusahaan untuk semua jurusan ATAU terikat dengan jurusan terpilih
+            if (selectedMajor === 'all' || majorsList.length === 0 || majorsList.includes(selectedMajor)) {
                 opt.style.display = '';
+                if (opt.value === companySelect.value) {
+                    currentSelectedValid = true;
+                }
             } else {
                 opt.style.display = 'none';
             }
         });
 
-        // Reset class to all if current selected is hidden
-        const currentSelectedOpt = classSelect.querySelector(`option[value="${classSelect.value}"]`);
-        if (currentSelectedOpt && currentSelectedOpt.style.display === 'none') {
-            classSelect.value = 'all';
+        // Reset pilihan perusahaan jika tidak kompatibel dengan jurusan baru
+        if (!currentSelectedValid && companySelect.value !== 'all') {
+            companySelect.value = 'all';
         }
 
+        if (submitOnChange) {
+            document.getElementById('plotting-filter-form').submit();
+        }
+    }
+
+    function onMajorFilterChange() {
+        const majorVal = document.getElementById('modal-filter-major').value;
+
+        // 1. Filter Kelas / Rombel
+        const classSelect = document.getElementById('modal-filter-class');
+        if (classSelect) {
+            const classOptions = classSelect.querySelectorAll('option');
+            classOptions.forEach(opt => {
+                if (opt.value === 'all') return;
+                const optMajor = opt.getAttribute('data-major');
+                if (majorVal === 'all' || optMajor === majorVal) {
+                    opt.style.display = '';
+                } else {
+                    opt.style.display = 'none';
+                }
+            });
+
+            // Reset class to all if current selected is hidden
+            const currentSelectedOpt = classSelect.querySelector(`option[value="${classSelect.value}"]`);
+            if (currentSelectedOpt && currentSelectedOpt.style.display === 'none') {
+                classSelect.value = 'all';
+            }
+        }
+
+        // 2. Filter Perusahaan Mitra (DU/DI) sesuai jurusan
+        const compSelect = document.getElementById('sel-company');
+        if (compSelect) {
+            const compOptions = compSelect.querySelectorAll('option');
+            let currentCompStillValid = false;
+            compOptions.forEach(opt => {
+                if (!opt.value) return; // Lewati opsi placeholder
+                const mAttr = opt.getAttribute('data-majors');
+                const mList = mAttr ? mAttr.split(',').filter(Boolean) : [];
+
+                if (majorVal === 'all' || mList.length === 0 || mList.includes(majorVal)) {
+                    opt.style.display = '';
+                    if (opt.value === compSelect.value) {
+                        currentCompStillValid = true;
+                    }
+                } else {
+                    opt.style.display = 'none';
+                }
+            });
+
+            // Jika perusahaan terpilih sebelumnya tidak cocok dengan jurusan baru, reset
+            if (!currentCompStillValid && compSelect.value) {
+                compSelect.value = '';
+                updateSupervisors();
+            }
+        }
+
+        // 3. Filter daftar siswa
         filterStudentList();
     }
 
@@ -715,6 +873,7 @@
     }
 
     document.addEventListener('DOMContentLoaded', function() {
+        onToolbarMajorChange(false);
         updateSupervisors();
         filterStudentList();
     });

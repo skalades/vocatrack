@@ -1409,7 +1409,7 @@ class AdminSekolahController extends Controller
 
         // 2. Query StudentPkls (Filter & Search)
         $query = StudentPkl::where('school_id', $schoolId)
-            ->with(['student.user', 'student.class.major', 'company.majors', 'company.supervisors.user', 'teacher.user', 'supervisor.user', 'pklPeriod']);
+            ->with(['student.user.profile', 'student.class.major', 'company.majors', 'company.supervisors.user', 'teacher.user', 'supervisor.user', 'pklPeriod']);
 
         if ($search = $request->query('search')) {
             $query->where(function ($q) use ($search) {
@@ -1422,6 +1422,26 @@ class AdminSekolahController extends Controller
         if ($majorId = $request->query('major_id')) {
             if ($majorId !== 'all') {
                 $query->whereHas('student.class', fn($cq) => $cq->where('major_id', $majorId));
+            }
+        }
+
+        if ($companyId = $request->query('company_id')) {
+            if ($companyId !== 'all') {
+                $query->where('company_id', $companyId);
+            }
+        }
+
+        if ($statusFilter = $request->query('status')) {
+            if ($statusFilter === 'active') {
+                $query->where('status', 'active')
+                      ->whereHas('company', fn($cq) => $cq->where('is_pkl_started', true));
+            } elseif ($statusFilter === 'pending_start') {
+                $query->where('status', 'active')
+                      ->whereHas('company', fn($cq) => $cq->where('is_pkl_started', false));
+            } elseif ($statusFilter === 'completed') {
+                $query->where('status', 'completed');
+            } elseif ($statusFilter === 'withdrawn') {
+                $query->where('status', 'withdrawn');
             }
         }
 
@@ -1663,6 +1683,88 @@ class AdminSekolahController extends Controller
         $studentPkl->delete();
 
         return back()->with('success', "Penugasan PKL untuk siswa {$studentName} berhasil dibatalkan (unplot).");
+    }
+
+    /**
+     * Kirim link monitoring orang tua secara otomatis oleh sistem ke nomor WhatsApp siswa terdaftar.
+     */
+    public function sendParentLink(Request $request, StudentPkl $studentPkl, WhatsAppGatewayService $waGateway)
+    {
+        $schoolId = $this->getSchoolId();
+        abort_if($studentPkl->school_id !== $schoolId, 403);
+
+        $student = $studentPkl->student;
+        if (!$student) {
+            return back()->with('error', 'Data siswa tidak ditemukan.');
+        }
+
+        // Pastikan token monitoring orang tua tersedia
+        if (empty($student->parent_token)) {
+            $student->regenerateParentToken();
+            $student->refresh();
+        }
+
+        // Pastikan portal monitoring aktif
+        if (!$student->is_parent_portal_active) {
+            $student->update(['is_parent_portal_active' => true]);
+        }
+
+        $user = $student->user;
+        $rawPhone = $user?->wa_number ?: ($user?->profile?->phone ?? null);
+        $normalizedPhone = WhatsAppGatewayService::normalizePhoneNumber($rawPhone);
+
+        if (empty($normalizedPhone) || !WhatsAppGatewayService::isValidIndonesianNumber($normalizedPhone)) {
+            $displayName = $user?->name ?? 'Siswa';
+            $phoneNotice = $rawPhone ? "({$rawPhone} - format nomor tidak valid)" : '(nomor HP belum terdaftar)';
+            $errorMsg = "Gagal mengirim link: Nomor WhatsApp/telepon siswa {$displayName} {$phoneNotice}. Silakan lengkapi kontak nomor telepon siswa pada menu Data Siswa terlebih dahulu.";
+
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json(['success' => false, 'message' => $errorMsg], 422);
+            }
+
+            return back()->with('error', $errorMsg);
+        }
+
+        $parentUrl = route('parent.monitor', ['token' => $student->parent_token]);
+        $companyName = $studentPkl->company?->name ?? 'DU/DI Mitra';
+        $teacherName = $studentPkl->teacher?->user?->name ?? 'Guru Pembimbing';
+        $schoolName = $user?->school?->name ?? 'Sekolah';
+        $className = $student->class?->name ?? '-';
+        $majorName = $student->class?->major?->name ?? '-';
+
+        $message = "Yth. Orang Tua / Wali dari {$user?->name} ({$className} - {$majorName}),\n\n"
+                 . "Berikut adalah tautan resmi Portal Pemantauan Aktivitas PKL (Praktik Kerja Lapangan) putra/putri Anda:\n"
+                 . "👉 {$parentUrl}\n\n"
+                 . "🏢 Mitra DU/DI: {$companyName}\n"
+                 . "👨‍🏫 Guru Pembimbing: {$teacherName}\n\n"
+                 . "Melalui tautan di atas, Bapak/Ibu dapat memantau presensi harian, jurnal kegiatan industri, serta rekap kehadiran secara langsung tanpa perlu login atau memasukkan kata sandi.\n\n"
+                 . "Terima kasih atas bimbingan dan kerja samanya.\n"
+                 . "— Tim PKL {$schoolName}";
+
+        $sent = $waGateway->sendMessage($normalizedPhone, $message);
+
+        if ($sent) {
+            $successMsg = "Link portal pemantauan orang tua untuk {$user?->name} berhasil dikirimkan otomatis oleh sistem ke nomor siswa ({$normalizedPhone}).";
+
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => $successMsg,
+                    'phone' => $normalizedPhone,
+                    'url' => $parentUrl,
+                ]);
+            }
+
+            return back()->with('success', $successMsg);
+        }
+
+        $failMsg = "Gagal mengirim pesan otomatis ke nomor {$normalizedPhone}. Pastikan koneksi gateway WhatsApp server aktif.";
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json(['success' => false, 'message' => $failMsg], 500);
+        }
+
+        return back()->with('error', $failMsg);
     }
 
     public function storePeriod(Request $request)

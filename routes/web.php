@@ -209,6 +209,7 @@ Route::middleware(['auth', 'IdentifyTenant', 'role:admin-sekolah'])->prefix('adm
     // Plotting PKL
     Route::get('/plotting', [AdminSekolahController::class, 'plotting'])->name('adminsekolah.plotting');
     Route::post('/plotting', [AdminSekolahController::class, 'storePlotting'])->name('adminsekolah.plotting.store');
+    Route::post('/plotting/{studentPkl}/send-parent-link', [AdminSekolahController::class, 'sendParentLink'])->name('adminsekolah.plotting.send-parent-link');
     Route::put('/plotting/{studentPkl}/reassign', [AdminSekolahController::class, 'reassignPlotting'])->name('adminsekolah.plotting.reassign');
     Route::delete('/plotting/{studentPkl}', [AdminSekolahController::class, 'destroyPlotting'])->name('adminsekolah.plotting.destroy');
 
