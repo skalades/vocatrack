@@ -427,7 +427,7 @@ class KajurController extends Controller
             });
         }
 
-        $attendances = $attendancesQuery->latest('created_at')->paginate(25)->withQueryString();
+        $attendances = $attendancesQuery->latest('created_at')->paginate(20)->withQueryString();
 
         $stats = [
             'total' => (clone $attendancesQuery)->count(),

@@ -5,7 +5,7 @@
     <div class="px-4 py-3 bg-slate-900/90 border-b border-white/10 flex items-center justify-between gap-3 text-white shrink-0 z-10">
         <div class="flex items-center gap-2 min-w-0">
             <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span class="text-xs font-extrabold tracking-tight truncate">Resolusi Penuh</span>
+            <span id="lightbox-title" class="text-xs font-extrabold tracking-tight truncate">Resolusi Penuh</span>
             <span id="lightbox-zoom-level" class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/10 text-slate-300 font-bold">100%</span>
         </div>
 
@@ -68,15 +68,19 @@
     let lightboxStartY = 0;
     let lastTapTime = 0;
 
-    function openImageLightbox(src) {
+    function openImageLightbox(src, title = null) {
         if (!src) return;
 
         const modal = document.getElementById('image-lightbox-modal');
         const img = document.getElementById('lightbox-image');
         const downloadLink = document.getElementById('lightbox-download-link');
+        const titleEl = document.getElementById('lightbox-title');
 
         img.src = src;
         downloadLink.href = src;
+        if (titleEl) {
+            titleEl.textContent = title || 'Resolusi Penuh';
+        }
 
         currentLightboxScale = 1;
         lightboxTranslateX = 0;
@@ -91,14 +95,17 @@
         const modal = document.getElementById('image-lightbox-modal');
         modal.classList.add('hidden');
         
-        // Restore parent modal overflow if open
-        const parentModal = document.getElementById('home-announcement-modal') || document.getElementById('announcement-modal');
-        if (parentModal && !parentModal.classList.contains('hidden')) {
+        // Restore parent modal overflow if any modal is still visible
+        const hasOpenModal = document.querySelector('.fixed.inset-0:not(.hidden):not(#image-lightbox-modal)');
+        if (hasOpenModal) {
             document.body.style.overflow = 'hidden';
         } else {
             document.body.style.overflow = '';
         }
     }
+
+    window.openImageLightbox = openImageLightbox;
+    window.closeImageLightbox = closeImageLightbox;
 
     function updateLightboxTransform() {
         const img = document.getElementById('lightbox-image');

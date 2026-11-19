@@ -76,6 +76,7 @@ class StudentAuditEnhancementTest extends TestCase
             'latitude' => -6.200000,
             'longitude' => 106.816666,
             'radius_meters' => 100,
+            'is_pkl_started' => true,
         ]);
 
         $major = Major::create([

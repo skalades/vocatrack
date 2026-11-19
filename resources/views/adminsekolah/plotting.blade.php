@@ -595,7 +595,7 @@
 
     function openEditPeriodModal(data) {
         const form = document.getElementById('form-period');
-        form.action = `/adminsekolah/periods/${data.id}`;
+        form.action = "{{ route('adminsekolah.periods.update', ':id') }}".replace(':id', data.id);
         document.getElementById('period-form-method').value = "PUT";
         document.getElementById('period-form-title').textContent = "Edit Periode PKL";
         document.getElementById('period-name').value = data.name || "";

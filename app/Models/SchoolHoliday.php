@@ -31,6 +31,19 @@ class SchoolHoliday extends Model
         ];
     }
 
+    protected static function booted(): void
+    {
+        static::saved(function (SchoolHoliday $holiday) {
+            $year = $holiday->holiday_date ? (int) Carbon::parse($holiday->holiday_date)->year : (int) date('Y');
+            \Illuminate\Support\Facades\Cache::forget("school_holidays_dates_{$holiday->school_id}_{$year}");
+        });
+
+        static::deleted(function (SchoolHoliday $holiday) {
+            $year = $holiday->holiday_date ? (int) Carbon::parse($holiday->holiday_date)->year : (int) date('Y');
+            \Illuminate\Support\Facades\Cache::forget("school_holidays_dates_{$holiday->school_id}_{$year}");
+        });
+    }
+
     public function school(): BelongsTo
     {
         return $this->belongsTo(School::class);

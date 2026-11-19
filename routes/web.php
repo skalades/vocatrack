@@ -254,6 +254,13 @@ Route::middleware(['auth', 'IdentifyTenant', 'role:admin-sekolah'])->prefix('adm
     Route::get('/invoices/{invoice}/pdf', [AdminSekolahController::class, 'downloadInvoicePdf'])->name('adminsekolah.invoices.pdf');
 });
 
+// Backward compatibility alias for /adminsekolah (without hyphen)
+Route::middleware(['auth', 'IdentifyTenant', 'role:admin-sekolah'])->prefix('adminsekolah')->group(function () {
+    Route::post('/periods', [AdminSekolahController::class, 'storePeriod']);
+    Route::put('/periods/{period}', [AdminSekolahController::class, 'updatePeriod']);
+    Route::post('/periods/{period}/toggle-active', [AdminSekolahController::class, 'togglePeriodActive']);
+});
+
 // 3. Siswa (Mobile-First) Routes
 Route::middleware(['auth', 'IdentifyTenant', 'role:siswa'])->prefix('siswa')->group(function () {
     Route::get('/beranda', [StudentController::class, 'home'])->name('student.home');

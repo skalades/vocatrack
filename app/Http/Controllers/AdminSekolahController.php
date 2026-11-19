@@ -423,7 +423,7 @@ class AdminSekolahController extends Controller
             }
         }
 
-        $students = $query->latest()->paginate(15)->withQueryString();
+        $students = $query->latest()->paginate(20)->withQueryString();
         $classes = SchoolClass::where('school_id', $schoolId)->with('major')->get();
         $majors = Major::where('school_id', $schoolId)->orderBy('name')->get();
         $companies = Company::where('school_id', $schoolId)->orderBy('name')->get();
@@ -1408,7 +1408,7 @@ class AdminSekolahController extends Controller
             }
         }
 
-        $studentPkls = $query->latest()->paginate(15)->withQueryString();
+        $studentPkls = $query->latest()->paginate(20)->withQueryString();
 
         // 3. All students with plotting status for active period
         $allStudents = Student::whereHas('user', fn($q) => $q->where('school_id', $schoolId))

@@ -97,7 +97,7 @@ class SupervisorController extends Controller
             ->whereIn('type', ['dinas_luar', 'luar_kantor'])
             ->with(['studentPkl.student.user'])
             ->orderBy('created_at', 'desc')
-            ->paginate(15);
+            ->paginate(20);
 
         $baseStatsQuery = AttendanceRequest::whereIn('student_pkl_id', $spklIds)->whereIn('type', ['dinas_luar', 'luar_kantor']);
         $stats = [
@@ -186,7 +186,7 @@ class SupervisorController extends Controller
 
         $journals = $query->orderByRaw("CASE WHEN status = 'submitted' THEN 1 ELSE 2 END")
             ->orderBy('date', 'desc')
-            ->paginate(15)
+            ->paginate(20)
             ->withQueryString();
 
         $baseStatsQuery = Journal::whereIn('student_pkl_id', $spklIds);

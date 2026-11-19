@@ -516,7 +516,7 @@ class TeacherController extends Controller
             ->whereIn('type', ['izin', 'sakit'])
             ->with(['studentPkl.student.user', 'studentPkl.company'])
             ->orderBy('created_at', 'desc')
-            ->paginate(15);
+            ->paginate(20);
 
         $baseStatsQuery = AttendanceRequest::whereIn('student_pkl_id', $spklIds)->whereIn('type', ['izin', 'sakit']);
         $stats = [
@@ -605,7 +605,7 @@ class TeacherController extends Controller
 
         $journals = $query->orderByRaw("CASE WHEN status = 'review_guru' THEN 1 WHEN status = 'submitted' THEN 2 ELSE 3 END")
             ->orderBy('date', 'desc')
-            ->paginate(15)
+            ->paginate(20)
             ->withQueryString();
 
         $baseStatsQuery = Journal::whereIn('student_pkl_id', $spklIds);

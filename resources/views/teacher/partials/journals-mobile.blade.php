@@ -126,9 +126,12 @@
                             @if($sj->photos->isNotEmpty())
                                 <div class="flex items-center gap-1.5 pt-1 overflow-x-auto [scrollbar-width:none]">
                                     @foreach($sj->photos as $ph)
-                                        <a href="{{ $ph->photo_url }}" target="_blank" class="w-12 h-12 rounded-lg overflow-hidden border border-slate-200 shadow-2xs shrink-0 block">
+                                        <button type="button" 
+                                                onclick="openImageLightbox('{{ $ph->photo_url }}', 'Dokumentasi: {{ addslashes($sp->student->user->name ?? 'Siswa') }}')" 
+                                                class="w-12 h-12 rounded-lg overflow-hidden border border-slate-200 shadow-2xs shrink-0 block cursor-pointer text-left" 
+                                                title="Lihat foto">
                                             <img src="{{ $ph->photo_url }}" class="w-full h-full object-cover" alt="Foto">
-                                        </a>
+                                        </button>
                                     @endforeach
                                 </div>
                             @endif
@@ -195,9 +198,12 @@
                         @if($pj->photos->isNotEmpty())
                             <div class="flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none]">
                                 @foreach($pj->photos as $ph)
-                                    <a href="{{ $ph->photo_url }}" target="_blank" class="w-14 h-14 rounded-xl overflow-hidden border border-slate-200 shadow-2xs shrink-0 block">
+                                    <button type="button" 
+                                            onclick="openImageLightbox('{{ $ph->photo_url }}', 'Dokumentasi: {{ addslashes($pj->studentPkl->student->user->name ?? 'Siswa') }}')" 
+                                            class="w-14 h-14 rounded-xl overflow-hidden border border-slate-200 shadow-2xs shrink-0 block cursor-pointer text-left" 
+                                            title="Lihat foto">
                                         <img src="{{ $ph->photo_url }}" class="w-full h-full object-cover" alt="Foto">
-                                    </a>
+                                    </button>
                                 @endforeach
                             </div>
                         @endif

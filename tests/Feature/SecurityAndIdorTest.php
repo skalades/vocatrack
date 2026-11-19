@@ -268,6 +268,7 @@ class SecurityAndIdorTest extends TestCase
     public function test_checkin_rejects_malicious_photo_mime_types(): void
     {
         $studentUser = $this->spklA->student->user;
+        $this->companyA->update(['is_pkl_started' => true]);
 
         // Attempting to send a malicious php or exe base64 string
         $maliciousBase64 = 'data:image/php;base64,' . base64_encode('<?php echo "exploit";');

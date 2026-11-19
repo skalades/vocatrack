@@ -257,4 +257,73 @@ class StudentAttendanceCheckoutGeofencingTest extends TestCase
 
         $response->assertSessionHasErrors(['checkout']);
     }
+
+    public function test_checkout_without_selfie_succeeds_when_school_disables_selfie(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-11-18 16:30:00'));
+
+        \App\Models\SchoolSetting::create([
+            'school_id' => $this->school->id,
+            'key' => 'feature_checkout_selfie',
+            'value' => '0',
+        ]);
+        \Illuminate\Support\Facades\Cache::forget(\App\Models\SchoolSetting::cacheKey((int) $this->school->id));
+
+        $attendance = Attendance::create([
+            'school_id' => $this->school->id,
+            'student_pkl_id' => $this->spkl->id,
+            'date' => '2026-11-18',
+            'checkin_time' => '07:30:00',
+            'status' => 'hadir',
+            'is_within_radius' => true,
+        ]);
+
+        $response = $this->actingAs($this->studentUser)->post(route('student.checkout'), [
+            'latitude' => -6.914740,
+            'longitude' => 107.609815,
+            'accuracy' => 8,
+            'is_mocked' => false,
+            'photo' => null,
+            'checkout_notes' => 'Selesai shift kerja sore tanpa selfie',
+        ]);
+
+        $response->assertRedirect(route('student.attendance'));
+        $response->assertSessionHas('success');
+
+        $attendance->refresh();
+        $this->assertEquals('16:30:00', $attendance->checkout_time);
+        $this->assertNull($attendance->checkout_photo_path);
+        $this->assertTrue((bool) $attendance->is_checkout_within_radius);
+        $this->assertStringContainsString('Selesai shift kerja sore tanpa selfie', (string) $attendance->checkout_notes);
+    }
+
+    public function test_checkout_view_renders_no_selfie_ui_when_school_disables_checkout_selfie(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-11-18 16:30:00'));
+
+        \App\Models\SchoolSetting::create([
+            'school_id' => $this->school->id,
+            'key' => 'feature_checkout_selfie',
+            'value' => '0',
+        ]);
+        \Illuminate\Support\Facades\Cache::forget(\App\Models\SchoolSetting::cacheKey((int) $this->school->id));
+
+        Attendance::create([
+            'school_id' => $this->school->id,
+            'student_pkl_id' => $this->spkl->id,
+            'date' => '2026-11-18',
+            'checkin_time' => '07:30:00',
+            'status' => 'hadir',
+            'is_within_radius' => true,
+        ]);
+
+        $response = $this->actingAs($this->studentUser)->get(route('student.attendance', ['mode' => 'checkout']));
+
+        $response->assertOk();
+        $response->assertSee('Presensi Cepat · Bebas Kamera');
+        $response->assertSee('Presensi Pulang Mandiri');
+        $response->assertSee('Sekolah menonaktifkan kewajiban swafoto');
+        $response->assertDontSee('id="webcam-feed"', false);
+        $response->assertDontSee('id="snapshot-canvas"', false);
+    }
 }

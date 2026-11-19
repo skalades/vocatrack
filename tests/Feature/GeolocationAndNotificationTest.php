@@ -74,6 +74,7 @@ class GeolocationAndNotificationTest extends TestCase
             'latitude' => -6.200000,
             'longitude' => 106.816666,
             'radius_meters' => 100,
+            'is_pkl_started' => true,
         ]);
 
         $this->dudiUser = User::create([

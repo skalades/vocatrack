@@ -120,6 +120,7 @@ class PklInteractiveMapTest extends TestCase
             'latitude' => -6.8905,
             'longitude' => 107.6102,
             'radius_meters' => 100,
+            'is_pkl_started' => true,
         ]);
 
         // 2. Company Yellow (PT Kreasi Media - Late/Leave)
@@ -132,6 +133,7 @@ class PklInteractiveMapTest extends TestCase
             'latitude' => -6.9080,
             'longitude' => 107.6180,
             'radius_meters' => 120,
+            'is_pkl_started' => true,
         ]);
 
         // 3. Company Red (PT Industri Presisi - Alfa/Incident)
@@ -144,6 +146,7 @@ class PklInteractiveMapTest extends TestCase
             'latitude' => -6.9450,
             'longitude' => 107.6400,
             'radius_meters' => 150,
+            'is_pkl_started' => true,
         ]);
 
         // Students

@@ -5,20 +5,29 @@ namespace App\Services;
 use App\Models\SchoolHoliday;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 
 class HolidayService
 {
     /**
-     * Check if a given date is a registered holiday for the given school.
+     * Check if a given date is a registered holiday for the given school with caching.
      */
     public function isHoliday(int $schoolId, Carbon|string $date): bool
     {
-        $dateString = $date instanceof Carbon ? $date->toDateString() : Carbon::parse($date)->toDateString();
+        $dateObj = $date instanceof Carbon ? $date : Carbon::parse($date);
+        $dateString = $dateObj->toDateString();
+        $year = (int) $dateObj->year;
 
-        return SchoolHoliday::withoutGlobalScopes()
-            ->where('school_id', $schoolId)
-            ->whereDate('holiday_date', $dateString)
-            ->exists();
+        $holidayDates = Cache::remember("school_holidays_dates_{$schoolId}_{$year}", 86400, function () use ($schoolId, $year) {
+            return SchoolHoliday::withoutGlobalScopes()
+                ->where('school_id', $schoolId)
+                ->whereYear('holiday_date', $year)
+                ->pluck('holiday_date')
+                ->map(fn ($d) => $d instanceof Carbon ? $d->toDateString() : (string) $d)
+                ->all();
+        });
+
+        return in_array($dateString, $holidayDates, true);
     }
 
     /**

@@ -597,13 +597,12 @@
     }
 
     function captureAndSubmitPresensi() {
-        const video = document.getElementById('webcam-feed');
-        const canvas = document.getElementById('snapshot-canvas');
         const form = document.getElementById('attendance-submission-form') || document.getElementById('checkin-form');
         const photoInput = document.getElementById('form-photo-base64');
         const shutterBtn = document.getElementById('shutter-btn');
+        const shutterCore = document.getElementById('shutter-btn-core');
 
-        if (!video || !canvas || !form) return;
+        if (!form || !shutterBtn) return;
 
         // 0. Guard: Koneksi internet. Presensi tidak bisa diantrekan offline karena waktu
         //    & lokasi wajib diverifikasi server saat itu juga. Kamera tetap menyala agar
@@ -618,10 +617,14 @@
             return;
         }
 
-        // 1. Guard: Camera Readiness
-        if (cameraStatus !== 'ready' || !videoStream || video.videoWidth === 0) {
-            window.showPermissionGuideModal('camera');
-            return;
+        // 1. Guard: Camera Readiness (Hanya diverifikasi jika kewajiban swafoto aktif di sekolah)
+        if (isSelfieEnabled) {
+            const video = document.getElementById('webcam-feed');
+            const canvas = document.getElementById('snapshot-canvas');
+            if (!video || !canvas || cameraStatus !== 'ready' || !videoStream || video.videoWidth === 0) {
+                window.showPermissionGuideModal('camera');
+                return;
+            }
         }
 
         // 2. Guard: Geolocation Real Readings
@@ -729,16 +732,22 @@
                 photoInput.value = base64Photo;
             }
         } else {
-            photoInput.value = '';
+            if (photoInput) photoInput.value = '';
         }
 
         // Fill GPS Form Fields SECURELY from verified device coordinates
-        document.getElementById('form-latitude').value = userCoords.latitude;
-        document.getElementById('form-longitude').value = userCoords.longitude;
-        document.getElementById('form-accuracy').value = userCoords.accuracy;
-        document.getElementById('form-is-mocked').value = userCoords.isMocked ? 1 : 0;
-        if (!document.getElementById('form-reason').value) {
-            document.getElementById('form-reason').value = '';
+        const latEl = document.getElementById('form-latitude');
+        const lngEl = document.getElementById('form-longitude');
+        const accEl = document.getElementById('form-accuracy');
+        const mockEl = document.getElementById('form-is-mocked');
+        const reasonEl = document.getElementById('form-reason');
+
+        if (latEl) latEl.value = (userCoords.latitude !== null && userCoords.latitude !== undefined) ? userCoords.latitude : '';
+        if (lngEl) lngEl.value = (userCoords.longitude !== null && userCoords.longitude !== undefined) ? userCoords.longitude : '';
+        if (accEl) accEl.value = (userCoords.accuracy !== null && userCoords.accuracy !== undefined) ? userCoords.accuracy : '';
+        if (mockEl) mockEl.value = userCoords.isMocked ? 1 : 0;
+        if (reasonEl && !reasonEl.value) {
+            reasonEl.value = '';
         }
 
         if (isCheckoutMode) {
@@ -754,8 +763,12 @@
             videoStream.getTracks().forEach(track => track.stop());
         }
 
-        // Disable button & show submit status
+        // Disable button & show submit status with visual spinner
         shutterBtn.disabled = true;
+        shutterBtn.classList.add('cursor-not-allowed', 'opacity-70');
+        if (shutterCore) {
+            shutterCore.innerHTML = `<svg class="animate-spin w-7 h-7 text-[#0B2B25]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
+        }
         const promptText = document.getElementById('liveness-prompt-text');
         if (promptText) promptText.textContent = 'Memproses data presensi...';
 
