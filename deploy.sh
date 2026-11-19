@@ -37,6 +37,7 @@ php artisan migrate --force
 php artisan vokatrack:migrate-private-files
 
 echo "⚡ [6/7] Mengoptimalkan Cache Laravel (Config, Route, View, Event)..."
+rm -f public/hot
 php artisan optimize:clear
 php artisan optimize
 php artisan view:cache

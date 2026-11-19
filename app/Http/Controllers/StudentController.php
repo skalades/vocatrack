@@ -93,11 +93,11 @@ class StudentController extends Controller
 
         if ($spkl) {
             $todayAttendance = Attendance::where('student_pkl_id', $spkl->id)
-                ->whereDate('date', $today)
+                ->forDate($today)
                 ->first();
 
             $todayJournal = Journal::where('student_pkl_id', $spkl->id)
-                ->whereDate('date', $today)
+                ->forDate($today)
                 ->first();
 
             $dayStatus = $attendanceService->getDayAttendanceStatus($spkl);
@@ -193,11 +193,11 @@ class StudentController extends Controller
 
         if ($spkl) {
             $todayAttendance = Attendance::where('student_pkl_id', $spkl->id)
-                ->whereDate('date', $today)
+                ->forDate($today)
                 ->first();
 
             $todayJournal = Journal::where('student_pkl_id', $spkl->id)
-                ->whereDate('date', $today)
+                ->forDate($today)
                 ->first();
 
             $history = Attendance::where('student_pkl_id', $spkl->id)
@@ -982,11 +982,11 @@ class StudentController extends Controller
         $certificate = Certificate::whereIn('student_pkl_id', $spklIds)->firstOrFail();
 
         try {
-            $pdf = $certificateService->renderPdf($certificate);
             $sanitizedName = Str::slug(Auth::user()->name);
             $safeCertNumber = str_replace(['/', '\\'], '-', $certificate->certificate_number);
+            $filename = "E-Sertifikat_PKL_{$sanitizedName}_{$safeCertNumber}.pdf";
 
-            return $pdf->download("E-Sertifikat_PKL_{$sanitizedName}_{$safeCertNumber}.pdf");
+            return $certificateService->getCachedPdfResponse($certificate, $filename);
         } catch (\Throwable $e) {
             Log::error("Download sertifikat siswa gagal (User ID: " . Auth::id() . "): " . $e->getMessage(), [
                 'exception' => $e,

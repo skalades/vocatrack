@@ -81,10 +81,6 @@ class StudentPkl extends Model
             return false;
         }
 
-        if ($this->company && !$this->company->is_pkl_started) {
-            return false;
-        }
-
         $today = \Carbon\Carbon::today();
         $start = $this->effective_start_date;
         $end = $this->effective_end_date;

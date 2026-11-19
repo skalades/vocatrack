@@ -510,64 +510,67 @@ class BackupService
         $studentsFile = fopen("{$tempDir}/data_siswa.csv", 'w');
         fprintf($studentsFile, chr(0xEF).chr(0xBB).chr(0xBF)); // UTF-8 BOM
         fputcsv($studentsFile, ['NIS', 'NISN', 'Nama Siswa', 'Kelas', 'Jurusan', 'Email', 'Status']);
-        $students = Student::with(['class.major', 'user'])
+        Student::with(['class.major', 'user'])
             ->whereHas('class', fn($q) => $q->where('school_id', $school->id))
-            ->get();
-        foreach ($students as $s) {
-            fputcsv($studentsFile, [
-                $s->nis,
-                $s->nisn,
-                $s->name,
-                $s->class?->name ?? '-',
-                $s->class?->major?->name ?? '-',
-                $s->user?->email ?? '-',
-                $s->user?->is_active ? 'Aktif' : 'Nonaktif',
-            ]);
-        }
+            ->chunk(500, function ($students) use ($studentsFile) {
+                foreach ($students as $s) {
+                    fputcsv($studentsFile, [
+                        $s->nis,
+                        $s->nisn,
+                        $s->name,
+                        $s->class?->name ?? '-',
+                        $s->class?->major?->name ?? '-',
+                        $s->user?->email ?? '-',
+                        $s->user?->is_active ? 'Aktif' : 'Nonaktif',
+                    ]);
+                }
+            });
         fclose($studentsFile);
 
         // 3. Attendances CSV
         $attendancesFile = fopen("{$tempDir}/rekap_presensi.csv", 'w');
         fprintf($attendancesFile, chr(0xEF).chr(0xBB).chr(0xBF));
         fputcsv($attendancesFile, ['Tanggal', 'Nama Siswa', 'NISN', 'Status Hadir', 'Waktu Masuk', 'Waktu Pulang', 'Jarak GPS (m)', 'Catatan']);
-        $studentUserIds = User::where('school_id', $school->id)->where('role', 'siswa')->pluck('id');
-        $attendances = Attendance::with('user.student')
-            ->whereIn('user_id', $studentUserIds)
+        Attendance::with(['studentPkl.student.user'])
+            ->where('school_id', $school->id)
             ->latest('date')
-            ->get();
-        foreach ($attendances as $att) {
-            fputcsv($attendancesFile, [
-                $att->date?->format('Y-m-d') ?? '-',
-                $att->user?->name ?? '-',
-                $att->user?->student?->nisn ?? '-',
-                $att->status,
-                $att->checkin_time?->format('H:i:s') ?? '-',
-                $att->checkout_time?->format('H:i:s') ?? '-',
-                $att->distance_meters ?? '-',
-                $att->notes ?? '-',
-            ]);
-        }
+            ->chunk(500, function ($attendances) use ($attendancesFile) {
+                foreach ($attendances as $att) {
+                    $student = $att->studentPkl?->student;
+                    fputcsv($attendancesFile, [
+                        $att->date?->format('Y-m-d') ?? (is_string($att->date) ? $att->date : '-'),
+                        $student?->user?->name ?? $student?->name ?? '-',
+                        $student?->nisn ?? '-',
+                        $att->status,
+                        $att->checkin_time?->format('H:i:s') ?? (is_string($att->checkin_time) ? $att->checkin_time : '-'),
+                        $att->checkout_time?->format('H:i:s') ?? (is_string($att->checkout_time) ? $att->checkout_time : '-'),
+                        $att->distance_meters ?? '-',
+                        $att->notes ?? $att->checkout_notes ?? '-',
+                    ]);
+                }
+            });
         fclose($attendancesFile);
 
         // 4. Journals CSV
         $journalsFile = fopen("{$tempDir}/rekap_jurnal.csv", 'w');
         fprintf($journalsFile, chr(0xEF).chr(0xBB).chr(0xBF));
         fputcsv($journalsFile, ['Tanggal', 'Nama Siswa', 'Status Approval', 'Uraian Kegiatan', 'Catatan Guru', 'Catatan DUDI']);
-        $studentPklIds = StudentPkl::whereHas('student.class', fn($q) => $q->where('school_id', $school->id))->pluck('id');
-        $journals = Journal::with('studentPkl.student')
-            ->whereIn('student_pkl_id', $studentPklIds)
+        Journal::with('studentPkl.student.user')
+            ->where('school_id', $school->id)
             ->latest('date')
-            ->get();
-        foreach ($journals as $j) {
-            fputcsv($journalsFile, [
-                $j->date?->format('Y-m-d') ?? '-',
-                $j->studentPkl?->student?->name ?? '-',
-                $j->status,
-                $j->content,
-                $j->teacher_notes ?? '-',
-                $j->dudi_notes ?? '-',
-            ]);
-        }
+            ->chunk(500, function ($journals) use ($journalsFile) {
+                foreach ($journals as $j) {
+                    $student = $j->studentPkl?->student;
+                    fputcsv($journalsFile, [
+                        $j->date?->format('Y-m-d') ?? (is_string($j->date) ? $j->date : '-'),
+                        $student?->user?->name ?? $student?->name ?? '-',
+                        $j->status,
+                        $j->content ?? $j->activity_description ?? '-',
+                        $j->teacher_notes ?? '-',
+                        $j->dudi_notes ?? '-',
+                    ]);
+                }
+            });
         fclose($journalsFile);
 
         // 5. Companies CSV

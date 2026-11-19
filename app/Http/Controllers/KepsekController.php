@@ -44,7 +44,7 @@ class KepsekController extends Controller
         }
 
         $weeklyAttendances = Attendance::where('school_id', $schoolId)
-            ->whereDate('date', '>=', Carbon::today()->subDays(6)->toDateString())
+            ->where('date', '>=', Carbon::today()->subDays(6)->toDateString())
             ->get();
 
         $weeklyTrend = $trendDates->map(function ($date) use ($weeklyAttendances) {
@@ -73,9 +73,10 @@ class KepsekController extends Controller
 
         // 3. Ringkasan Supervisi Guru
         $supervisionCount = SupervisionVisit::where('school_id', $schoolId)->count();
+        $startOfMonth = Carbon::today()->startOfMonth()->toDateString();
+        $endOfMonth = Carbon::today()->endOfMonth()->toDateString();
         $supervisionThisMonth = SupervisionVisit::where('school_id', $schoolId)
-            ->whereMonth('visit_date', Carbon::today()->month)
-            ->whereYear('visit_date', Carbon::today()->year)
+            ->whereBetween('visit_date', [$startOfMonth, $endOfMonth])
             ->count();
 
         // 4. DU/DI Rekanan Utama dengan Penempatan Siswa Terbanyak

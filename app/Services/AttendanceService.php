@@ -63,7 +63,7 @@ class AttendanceService
         // 3. Atomic check and insert with transaction & duplicate constraint protection
         return DB::transaction(function () use ($spkl, $today, $status, $now, $data, $isWithinRadius, $accuracyMeters, $isMockDetected, $checkoutNotes) {
             $existing = Attendance::where('student_pkl_id', $spkl->id)
-                ->whereDate('date', $today)
+                ->forDate($today)
                 ->lockForUpdate()
                 ->first();
 
@@ -133,7 +133,7 @@ class AttendanceService
         // 2. Atomic check-out with pessimistic lock
         return DB::transaction(function () use ($spkl, $today, $now, $data, $isWithinRadius, $accuracyMeters, $isMockDetected) {
             $attendance = Attendance::where('student_pkl_id', $spkl->id)
-                ->whereDate('date', $today)
+                ->forDate($today)
                 ->lockForUpdate()
                 ->first();
 
@@ -229,7 +229,7 @@ class AttendanceService
         if ($isHoliday) {
             $holiday = \App\Models\SchoolHoliday::withoutGlobalScopes()
                 ->where('school_id', $spkl->school_id)
-                ->whereDate('holiday_date', $dateString)
+                ->where('holiday_date', $dateString)
                 ->first();
         }
 

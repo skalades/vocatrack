@@ -155,8 +155,11 @@ class WhatsAppGatewayController extends Controller
     public function logout()
     {
         $baseUrl = $this->getGatewayBaseUrl();
+        $token = config('services.whatsapp.token', 'vokatrack-secret-key-2026');
         try {
-            Http::timeout(5)->post("{$baseUrl}/logout");
+            Http::timeout(5)
+                ->withHeaders(['Authorization' => "Bearer {$token}"])
+                ->post("{$baseUrl}/logout");
             return back()->with('success', 'Sesi WhatsApp berhasil diputus. Silakan scan QR ulang.');
         } catch (\Throwable $e) {
             return back()->withErrors(['whatsapp' => 'Gagal memutus sesi WhatsApp: ' . $e->getMessage()]);

@@ -32,18 +32,21 @@ use Illuminate\Support\Facades\Route;
 // Guest Routes
 Route::get('/', [LandingController::class, 'index'])->name('landing');
 
-// PWA Web Manifest (Tersinkronisasi otomatis dengan logo & identitas sistem)
+// PWA Web Manifest (Disajikan statis dengan cache efisien, di-generate saat pengaturan berubah)
 Route::get('/manifest.webmanifest', function () {
-    \App\Models\PlatformSetting::syncPwaManifest();
-    $manifest = json_decode(@file_get_contents(public_path('manifest.webmanifest')), true) ?: [];
+    $path = public_path('manifest.webmanifest');
+    if (!file_exists($path)) {
+        \App\Models\PlatformSetting::syncPwaManifest();
+    }
+    $manifest = json_decode(@file_get_contents($path), true) ?: [];
     return response()->json($manifest, 200, [
         'Content-Type' => 'application/manifest+json; charset=utf-8',
-        'Cache-Control' => 'no-cache, private',
+        'Cache-Control' => 'public, max-age=86400, stale-while-revalidate=3600',
     ]);
 })->name('pwa.manifest');
 
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
-Route::post('/login', [AuthController::class, 'login'])->name('login.post');
+Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:30,1')->name('login.post');
 Route::match(['get', 'post'], '/logout', [AuthController::class, 'logout'])->name('logout');
 Route::get('/forgot-password', [\App\Http\Controllers\PasswordResetController::class, 'showForgotForm'])->name('password.request');
 Route::post('/forgot-password', [\App\Http\Controllers\PasswordResetController::class, 'requestReset'])->middleware('throttle:5,15')->name('password.email');

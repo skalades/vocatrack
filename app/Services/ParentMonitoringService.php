@@ -118,7 +118,7 @@ class ParentMonitoringService
 
         // Kehadiran Hari Ini
         $todayAttendance = Attendance::where('student_pkl_id', $spkl->id)
-            ->whereDate('date', $today)
+            ->forDate($today)
             ->first();
 
         // Statistik Kehadiran Kumulatif

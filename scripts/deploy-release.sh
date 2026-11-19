@@ -121,7 +121,7 @@ cmd_deploy() {
 
     if command -v npm >/dev/null 2>&1; then
         log "[4/7] Build aset frontend"
-        (cd "$dir" && npm ci --no-audit --no-fund && npm run build && rm -rf node_modules)
+        (cd "$dir" && npm ci --no-audit --no-fund && npm run build && rm -f public/hot && rm -rf node_modules)
     else
         warn "[4/7] npm tidak ada — memakai public/build yang ter-commit."
     fi

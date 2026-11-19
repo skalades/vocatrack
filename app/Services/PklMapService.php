@@ -56,7 +56,7 @@ class PklMapService
             'studentPkls.student.class.major',
             'studentPkls.teacher.user',
             'studentPkls.attendances' => function ($q) use ($date) {
-                $q->whereDate('date', $date);
+                $q->forDate($date);
             },
         ])->get();
 

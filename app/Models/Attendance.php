@@ -93,4 +93,15 @@ class Attendance extends Model
     {
         return $this->checkout_time;
     }
+
+    /**
+     * Scope query untuk pencocokan tanggal sargable performa tinggi (MySQL/PostgreSQL)
+     * sekaligus kompatibel dengan SQLite testing.
+     */
+    public function scopeForDate($query, string $date)
+    {
+        return \Illuminate\Support\Facades\DB::getDriverName() === 'sqlite'
+            ? $query->whereDate('date', $date)
+            : $query->where('date', $date);
+    }
 }

@@ -364,4 +364,51 @@ class CertificateService
             'learningObjectives' => $certificate->studentPkl?->student?->class?->major?->learningObjectives ?? collect(),
         ])->setPaper('a4', 'landscape');
     }
+
+    /**
+     * Path penyimpanan berkas PDF terkompilasi di disk privat (storage/app/private).
+     */
+    public function getPdfStoragePath(Certificate $certificate): string
+    {
+        return "schools/{$certificate->school_id}/certificates/{$certificate->uuid}.pdf";
+    }
+
+    /**
+     * Periksa apakah berkas PDF sudah tersedia di cache disk privat.
+     */
+    public function hasPdfCache(Certificate $certificate): bool
+    {
+        return Storage::disk('local')->exists($this->getPdfStoragePath($certificate));
+    }
+
+    /**
+     * Render dan simpan berkas PDF ke disk privat.
+     */
+    public function saveCompiledPdf(Certificate $certificate): string
+    {
+        $pdf = $this->renderPdf($certificate);
+        $path = $this->getPdfStoragePath($certificate);
+        Storage::disk('local')->put($path, $pdf->output());
+
+        return $path;
+    }
+
+    /**
+     * Dapatkan response unduh dari cache berkas statis (menghindari re-render DomPDF berulang).
+     */
+    public function getCachedPdfResponse(Certificate $certificate, string $downloadFilename): \Symfony\Component\HttpFoundation\Response
+    {
+        $path = $this->getPdfStoragePath($certificate);
+        if (!Storage::disk('local')->exists($path)) {
+            $this->saveCompiledPdf($certificate);
+        }
+
+        $absolutePath = Storage::disk('local')->path($path);
+
+        return response()->download($absolutePath, $downloadFilename, [
+            'Content-Type' => 'application/pdf',
+            'X-Content-Type-Options' => 'nosniff',
+            'Cache-Control' => 'private, max-age=86400',
+        ]);
+    }
 }

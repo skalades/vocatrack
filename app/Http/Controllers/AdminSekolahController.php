@@ -54,16 +54,18 @@ class AdminSekolahController extends Controller
         $activePkl = StudentPkl::where('school_id', $schoolId)->where('status', 'active')->count();
 
         $today = Carbon::today()->toDateString();
-        $todayAttendances = Attendance::where('school_id', $schoolId)
+        $countsByStatus = Attendance::where('school_id', $schoolId)
             ->where('date', $today)
-            ->get();
+            ->selectRaw('status, count(*) as count')
+            ->groupBy('status')
+            ->pluck('count', 'status');
 
         $attendanceStats = [
-            'hadir' => $todayAttendances->where('status', 'hadir')->count(),
-            'terlambat' => $todayAttendances->where('status', 'terlambat')->count(),
-            'izin' => $todayAttendances->where('status', 'izin')->count(),
-            'sakit' => $todayAttendances->where('status', 'sakit')->count(),
-            'alfa' => $todayAttendances->where('status', 'alfa')->count(),
+            'hadir' => (int) ($countsByStatus['hadir'] ?? 0),
+            'terlambat' => (int) ($countsByStatus['terlambat'] ?? 0),
+            'izin' => (int) ($countsByStatus['izin'] ?? 0),
+            'sakit' => (int) ($countsByStatus['sakit'] ?? 0),
+            'alfa' => (int) ($countsByStatus['alfa'] ?? 0),
         ];
 
         $recentAnnouncements = Announcement::where('school_id', $schoolId)
@@ -1973,11 +1975,11 @@ class AdminSekolahController extends Controller
         abort_if($certificate->school_id !== $schoolId, 403, 'Akses ditolak.');
 
         try {
-            $pdf = $certificateService->renderPdf($certificate);
             $nameSlug = Str::slug($certificate->studentPkl?->student?->user?->name ?? 'Siswa');
             $safeCertNumber = str_replace(['/', '\\'], '-', $certificate->certificate_number);
+            $filename = "E-Sertifikat_PKL_{$nameSlug}_{$safeCertNumber}.pdf";
 
-            return $pdf->download("E-Sertifikat_PKL_{$nameSlug}_{$safeCertNumber}.pdf");
+            return $certificateService->getCachedPdfResponse($certificate, $filename);
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error("Download E-Sertifikat gagal (ID: {$certificate->id}): " . $e->getMessage(), [
                 'exception' => $e,

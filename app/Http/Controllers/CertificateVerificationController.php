@@ -34,11 +34,11 @@ class CertificateVerificationController extends Controller
         }
 
         try {
-            $pdf = $certificateService->renderPdf($certificate);
             $studentName = Str::slug($certificate->studentPkl?->student?->user?->name ?? 'Siswa');
             $safeCertNumber = str_replace(['/', '\\'], '-', $certificate->certificate_number);
+            $filename = "E-Sertifikat_PKL_{$studentName}_{$safeCertNumber}.pdf";
 
-            return $pdf->download("E-Sertifikat_PKL_{$studentName}_{$safeCertNumber}.pdf");
+            return $certificateService->getCachedPdfResponse($certificate, $filename);
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error("Download sertifikat publik gagal (UUID: {$uuid}): " . $e->getMessage(), [
                 'exception' => $e,

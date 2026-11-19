@@ -62,9 +62,8 @@ class StorageQuotaService
 
         // 5. Update school storage_used_bytes cache & database safely
         try {
-            if (Schema::hasColumn('schools', 'storage_used_bytes')) {
-                $school->update(['storage_used_bytes' => $totalBytes]);
-            }
+            DB::table('schools')->where('id', $school->id)->update(['storage_used_bytes' => $totalBytes]);
+            $school->storage_used_bytes = $totalBytes;
         } catch (\Throwable $e) {
             Log::warning("[STORAGE QUOTA] Could not persist storage_used_bytes column for school {$school->id}: " . $e->getMessage());
         }
@@ -76,6 +75,7 @@ class StorageQuotaService
 
     /**
      * Increment school storage usage in real-time when new media is uploaded.
+     * Uses direct query and cached byte tracking to eliminate information_schema reflection.
      */
     public function recordUpload(School $school, int $fileSizeBytes): void
     {
@@ -84,10 +84,13 @@ class StorageQuotaService
         }
 
         try {
-            if (Schema::hasColumn('schools', 'storage_used_bytes')) {
-                $school->increment('storage_used_bytes', $fileSizeBytes);
-                Cache::put("school_storage_bytes_{$school->id}", $school->storage_used_bytes, now()->addHours(6));
-            }
+            DB::table('schools')
+                ->where('id', $school->id)
+                ->increment('storage_used_bytes', $fileSizeBytes);
+
+            $newBytes = (int) ($school->storage_used_bytes ?? 0) + $fileSizeBytes;
+            $school->storage_used_bytes = $newBytes;
+            Cache::put("school_storage_bytes_{$school->id}", $newBytes, now()->addHours(6));
         } catch (\Throwable $e) {
             Log::warning("[STORAGE QUOTA] Could not increment storage_used_bytes for school {$school->id}: " . $e->getMessage());
         }
@@ -103,12 +106,15 @@ class StorageQuotaService
         }
 
         try {
-            if (Schema::hasColumn('schools', 'storage_used_bytes')) {
-                $current = (int) ($school->storage_used_bytes ?? 0);
-                $newBytes = max(0, $current - $fileSizeBytes);
-                $school->update(['storage_used_bytes' => $newBytes]);
-                Cache::put("school_storage_bytes_{$school->id}", $newBytes, now()->addHours(6));
-            }
+            $current = (int) ($school->storage_used_bytes ?? 0);
+            $newBytes = max(0, $current - $fileSizeBytes);
+
+            DB::table('schools')
+                ->where('id', $school->id)
+                ->update(['storage_used_bytes' => $newBytes]);
+
+            $school->storage_used_bytes = $newBytes;
+            Cache::put("school_storage_bytes_{$school->id}", $newBytes, now()->addHours(6));
         } catch (\Throwable $e) {
             Log::warning("[STORAGE QUOTA] Could not decrement storage_used_bytes for school {$school->id}: " . $e->getMessage());
         }
@@ -170,7 +176,7 @@ class StorageQuotaService
      */
     public function canUpload(School $school, int $newFileSizeBytes = 0): bool
     {
-        $currentBytes = $school->storage_used_bytes ?? 0;
+        $currentBytes = (int) ($school->storage_used_bytes ?? Cache::get("school_storage_bytes_{$school->id}") ?? DB::table('schools')->where('id', $school->id)->value('storage_used_bytes') ?: 0);
         $maxBytes = $school->storage_quota_mb * 1024 * 1024;
 
         return ($currentBytes + $newFileSizeBytes) <= $maxBytes;

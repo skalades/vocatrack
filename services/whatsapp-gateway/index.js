@@ -11,6 +11,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 const PORT = process.env.PORT || 3005;
+const HOST = process.env.HOST || '127.0.0.1';
 const API_KEY = process.env.API_KEY || 'vokatrack-secret-key-2026';
 
 // ─── State Global ───────────────────────────────────────────────────────────
@@ -113,9 +114,11 @@ client.initialize().catch((err) => {
 
 // ─── Middleware Auth ──────────────────────────────────────────────────────────
 function authMiddleware(req, res, next) {
-    if (!API_KEY) return next();
-    const token = (req.headers['authorization'] || '').replace(/^Bearer\s+/i, '');
-    if (token !== API_KEY) {
+    if (!API_KEY || API_KEY.trim() === '') {
+        return res.status(500).json({ success: false, error: 'Server misconfiguration: API_KEY is not configured.' });
+    }
+    const token = (req.headers['authorization'] || '').replace(/^Bearer\s+/i, '').trim();
+    if (!token || token !== API_KEY) {
         return res.status(401).json({ success: false, error: 'Unauthorized: API Key tidak valid.' });
     }
     next();
@@ -162,7 +165,7 @@ app.get('/qr-data', (req, res) => {
 });
 
 // POST /logout
-app.post('/logout', async (req, res) => {
+app.post('/logout', authMiddleware, async (req, res) => {
     try {
         await client.logout();
         res.json({ success: true, message: 'Logout berhasil. Reinisialisasi...' });
@@ -229,6 +232,8 @@ app.get('/', (req, res) => {
                         <input type="text" id="test-phone" placeholder="Contoh: 08123456789" class="flex-1 bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-xs text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-[#C6F26B]">
                         <button onclick="sendTest()" class="px-4 py-2 rounded-xl bg-[#C6F26B] text-[#0B2B25] font-extrabold text-xs hover:bg-[#b8e65e] transition-colors cursor-pointer">Kirim</button>
                     </div>
+                    <label class="block text-xs text-[#A9C2B9] mt-2">API Key Otorisasi</label>
+                    <input type="password" id="test-key" placeholder="Masukkan API Key Gateway..." class="w-full bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-xs text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-[#C6F26B]">
                     <label class="block text-xs text-[#A9C2B9] mt-2">Isi Pesan</label>
                     <textarea id="test-msg" rows="2" placeholder="Pesan uji coba..." class="w-full bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-xs text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-[#C6F26B]">Halo! Ini pesan uji coba dari VokaTrack Gateway.</textarea>
                     <p id="test-result" class="text-[11px]"></p>
@@ -307,15 +312,17 @@ app.get('/', (req, res) => {
 
         async function sendTest() {
             const phone  = document.getElementById('test-phone').value;
+            const key    = document.getElementById('test-key')?.value || '';
             const msg    = document.getElementById('test-msg')?.value || 'Halo! Ini pesan uji coba dari VokaTrack Gateway.';
             const resEl  = document.getElementById('test-result');
             if (!phone) return alert('Masukkan nomor tujuan!');
+            if (!key) return alert('Masukkan API Key otorisasi!');
             resEl.textContent = 'Mengirim...';
             resEl.className = 'text-[11px] text-amber-300';
             try {
                 const r    = await fetch('/send-message', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ${API_KEY}' },
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
                     body: JSON.stringify({ phone, message: msg }),
                 });
                 const data = await r.json();
@@ -341,8 +348,8 @@ process.on('uncaughtException',  (err) => console.error('[VokaTrack WA] Uncaught
 process.on('unhandledRejection', (r)   => console.error('[VokaTrack WA] Unhandled Rejection:', r));
 
 // ─── Start Server ─────────────────────────────────────────────────────────────
-const server = app.listen(PORT, '0.0.0.0', () => {
-    console.log(`[VokaTrack WA Gateway] Web UI aktif di http://localhost:${PORT}`);
+const server = app.listen(PORT, HOST, () => {
+    console.log(`[VokaTrack WA Gateway] Web UI aktif di http://${HOST}:${PORT}`);
 });
 server.on('error', (err) => {
     console.error(`[VokaTrack WA] Server error port ${PORT}:`, err.message);

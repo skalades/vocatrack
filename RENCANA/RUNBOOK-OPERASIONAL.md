@@ -26,11 +26,11 @@ Jadwal yang terdaftar (`php artisan schedule:list`):
 ### 1.2 Queue worker (Supervisor)
 ```ini
 [program:vokatrack-worker]
-command=php /www/wwwroot/vocatrack/current/artisan queue:work --tries=3 --max-time=3600
+command=php /www/wwwroot/vocatrack/current/artisan queue:work --queue=high,default,certificates --tries=3 --max-time=3600
 autostart=true
 autorestart=true
 user=www
-numprocs=1
+numprocs=2
 stdout_logfile=/www/wwwroot/vocatrack/shared/storage/logs/worker.log
 ```
 

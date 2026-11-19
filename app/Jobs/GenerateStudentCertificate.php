@@ -25,8 +25,15 @@ class GenerateStudentCertificate implements ShouldQueue
             return;
         }
 
-        $certificateService->generateForStudentPkl(
+        $certificate = $certificateService->generateForStudentPkl(
             \App\Models\StudentPkl::withoutGlobalScopes()->findOrFail($this->studentPklId)
         );
+
+        // Pre-render dan simpan PDF ke cache berkas privat di background job
+        try {
+            $certificateService->saveCompiledPdf($certificate);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning("GenerateStudentCertificate: Gagal pre-render PDF (ID: {$certificate->id}): " . $e->getMessage());
+        }
     }
 }
