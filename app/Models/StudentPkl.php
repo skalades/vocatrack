@@ -22,8 +22,46 @@ class StudentPkl extends Model
         'pkl_period_id',
         'teacher_id',
         'supervisor_id',
+        'start_date',
+        'end_date',
         'status',
     ];
+
+    protected $casts = [
+        'start_date' => 'date',
+        'end_date' => 'date',
+    ];
+
+    public function getEffectiveStartDateAttribute(): ?\Carbon\Carbon
+    {
+        return $this->start_date ? \Carbon\Carbon::parse($this->start_date) : $this->pklPeriod?->start_date;
+    }
+
+    public function getEffectiveEndDateAttribute(): ?\Carbon\Carbon
+    {
+        return $this->end_date ? \Carbon\Carbon::parse($this->end_date) : $this->pklPeriod?->end_date;
+    }
+
+    public function isPklActiveToday(): bool
+    {
+        if ($this->status !== 'active') {
+            return false;
+        }
+
+        $today = \Carbon\Carbon::today();
+        $start = $this->effective_start_date;
+        $end = $this->effective_end_date;
+
+        if ($start && $today->lt($start)) {
+            return false;
+        }
+
+        if ($end && $today->gt($end)) {
+            return false;
+        }
+
+        return true;
+    }
 
     public function student(): BelongsTo
     {

@@ -39,12 +39,20 @@ class StudentController extends Controller
             abort(403, 'Profil siswa tidak ditemukan.');
         }
 
+        if ($mustBeActive && $student->isGraduated()) {
+            return null;
+        }
+
         $query = $student->studentPkls()
             ->with(['student.class.major', 'company', 'teacher.user', 'supervisor.user', 'pklPeriod'])
             ->latest();
 
         if ($mustBeActive) {
-            return $query->whereIn('status', ['assigned', 'active'])->first();
+            $spkl = $query->whereIn('status', ['assigned', 'active'])->first();
+            if ($spkl && !$spkl->isPklActiveToday()) {
+                return null;
+            }
+            return $spkl;
         }
 
         return $query->first();
@@ -145,8 +153,8 @@ class StudentController extends Controller
 
         $dayNumber = 27;
         $currentWeek = 6;
-        if ($spkl && $spkl->start_date) {
-            $startDate = Carbon::parse($spkl->start_date);
+        if ($spkl && $spkl->effective_start_date) {
+            $startDate = $spkl->effective_start_date;
             $dayNumber = max(1, (int) $startDate->diffInDays(Carbon::today()) + 1);
             $currentWeek = max(1, (int) ceil($dayNumber / 7));
         }
@@ -178,8 +186,8 @@ class StudentController extends Controller
         $dayStatus = null;
 
         $dayNumber = 27;
-        if ($spkl && $spkl->start_date) {
-            $startDate = Carbon::parse($spkl->start_date);
+        if ($spkl && $spkl->effective_start_date) {
+            $startDate = $spkl->effective_start_date;
             $dayNumber = max(1, (int) $startDate->diffInDays(Carbon::today()) + 1);
         }
 
@@ -518,8 +526,8 @@ class StudentController extends Controller
         $today = Carbon::today()->toDateString();
 
         $currentWeek = 6;
-        if ($spkl && $spkl->start_date) {
-            $startDate = Carbon::parse($spkl->start_date);
+        if ($spkl && $spkl->effective_start_date) {
+            $startDate = $spkl->effective_start_date;
             $dayNumber = max(1, (int) $startDate->diffInDays(Carbon::today()) + 1);
             $currentWeek = max(1, (int) ceil($dayNumber / 7));
         }

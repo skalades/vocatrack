@@ -20,6 +20,8 @@ class Student extends Model
         'nisn',
         'parent_token',
         'is_parent_portal_active',
+        'academic_status',
+        'graduation_year',
     ];
 
     protected $casts = [
@@ -28,7 +30,23 @@ class Student extends Model
 
     protected $attributes = [
         'is_parent_portal_active' => true,
+        'academic_status' => 'active',
     ];
+
+    public function scopeActive($query)
+    {
+        return $query->where('academic_status', 'active');
+    }
+
+    public function scopeGraduated($query)
+    {
+        return $query->where('academic_status', 'graduated');
+    }
+
+    public function isGraduated(): bool
+    {
+        return $this->academic_status === 'graduated';
+    }
 
     protected static function booted(): void
     {

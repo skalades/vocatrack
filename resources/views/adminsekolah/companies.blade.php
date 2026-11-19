@@ -211,6 +211,8 @@
                                         'contact_person' => $cp->contact_person,
                                         'phone' => $cp->phone,
                                         'work_days' => $cp->work_days,
+                                        'default_start_date' => $cp->default_start_date ? $cp->default_start_date->format('Y-m-d') : null,
+                                        'default_end_date' => $cp->default_end_date ? $cp->default_end_date->format('Y-m-d') : null,
                                         'requires_industry_approval' => (bool) $cp->requires_industry_approval,
                                         'is_pkl_started' => (bool) $cp->is_pkl_started,
                                         'gps_enabled' => (bool) $cp->gps_enabled,
@@ -378,6 +380,22 @@
                     <option value="5_days">5 Hari Kerja (Senin s.d. Jumat)</option>
                     <option value="6_days">6 Hari Kerja (Senin s.d. Sabtu)</option>
                 </select>
+            </div>
+
+            <!-- Jadwal Default Magang DU/DI -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 rounded-2xl bg-indigo-50/50 border border-indigo-100">
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 mb-1">Tanggal Mulai DU/DI (Opsional)</label>
+                    <input type="date" name="default_start_date" 
+                           class="w-full text-xs p-2.5 rounded-xl bg-white border border-slate-200 font-semibold text-slate-800">
+                    <p class="text-[10px] text-slate-400 mt-0.5">Jadwal mulai khusus perusahaan ini.</p>
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 mb-1">Tanggal Selesai DU/DI (Opsional)</label>
+                    <input type="date" name="default_end_date" 
+                           class="w-full text-xs p-2.5 rounded-xl bg-white border border-slate-200 font-semibold text-slate-800">
+                    <p class="text-[10px] text-slate-400 mt-0.5">Misal: tambang/industri 8-10 bulan.</p>
+                </div>
             </div>
 
             <!-- GPS Geofencing Section -->
@@ -595,6 +613,22 @@
                         <option value="5_days">5 Hari Kerja (Senin s.d. Jumat)</option>
                         <option value="6_days">6 Hari Kerja (Senin s.d. Sabtu)</option>
                     </select>
+                </div>
+
+                <!-- Jadwal Default Magang DU/DI -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 rounded-2xl bg-indigo-50/50 border border-indigo-100">
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-700 mb-1">Tanggal Mulai DU/DI (Opsional)</label>
+                        <input type="date" name="default_start_date" id="edit-start-date"
+                               class="w-full text-xs p-2.5 rounded-xl bg-white border border-slate-200 font-semibold text-slate-800">
+                        <p class="text-[10px] text-slate-400 mt-0.5">Jadwal mulai khusus perusahaan ini.</p>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-700 mb-1">Tanggal Selesai DU/DI (Opsional)</label>
+                        <input type="date" name="default_end_date" id="edit-end-date"
+                               class="w-full text-xs p-2.5 rounded-xl bg-white border border-slate-200 font-semibold text-slate-800">
+                        <p class="text-[10px] text-slate-400 mt-0.5">Misal: tambang/industri 8-10 bulan.</p>
+                    </div>
                 </div>
 
                 <!-- GPS Geofencing Section -->
@@ -1175,6 +1209,8 @@
         document.getElementById('edit-contact-person').value = data.contact_person || '';
         document.getElementById('edit-phone').value = data.phone || '';
         document.getElementById('edit-work-days').value = data.work_days || '5_days';
+        document.getElementById('edit-start-date').value = data.default_start_date || '';
+        document.getElementById('edit-end-date').value = data.default_end_date || '';
 
         const isPklStartedCheck = document.getElementById('edit-check-is-pkl-started');
         if (isPklStartedCheck) {

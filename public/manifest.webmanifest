@@ -2,7 +2,7 @@
     "id": "/siswa/beranda",
     "name": "VokaTrack Siswa \u2014 Presensi & Jurnal PKL",
     "short_name": "VokaTrack",
-    "description": "Presensi selfie, jurnal harian, dan laporan PKL untuk siswa SMK.",
+    "description": "Enterprise Cloud",
     "lang": "id",
     "start_url": "/siswa/beranda?source=pwa",
     "scope": "/",

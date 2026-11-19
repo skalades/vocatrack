@@ -18,7 +18,19 @@ class Major extends Model
         'head_teacher_id',
         'code',
         'name',
+        'program_duration_years',
+        'default_pkl_duration_months',
     ];
+
+    protected $casts = [
+        'program_duration_years' => 'integer',
+        'default_pkl_duration_months' => 'integer',
+    ];
+
+    public function isFourYearProgram(): bool
+    {
+        return (int) $this->program_duration_years === 4;
+    }
 
     public function headTeacher(): BelongsTo
     {

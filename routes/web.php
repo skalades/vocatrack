@@ -173,6 +173,8 @@ Route::middleware(['auth', 'IdentifyTenant', 'role:admin-sekolah'])->prefix('adm
     Route::post('/classes', [AdminSekolahController::class, 'storeClass'])->name('adminsekolah.classes.store');
     Route::put('/classes/{schoolClass}', [AdminSekolahController::class, 'updateClass'])->name('adminsekolah.classes.update');
     Route::delete('/classes/{schoolClass}', [AdminSekolahController::class, 'destroyClass'])->name('adminsekolah.classes.destroy');
+    Route::get('/classes/promotion-preview', [AdminSekolahController::class, 'previewPromotion'])->name('adminsekolah.classes.promotion-preview');
+    Route::post('/classes/promote', [AdminSekolahController::class, 'promoteClasses'])->name('adminsekolah.classes.promote');
     Route::post('/majors/{major}/competencies', [AdminSekolahController::class, 'storeMajorCompetency'])->name('adminsekolah.majors.competencies.store');
     Route::put('/competencies/{learningObjective}', [AdminSekolahController::class, 'updateMajorCompetency'])->name('adminsekolah.competencies.update');
     Route::delete('/competencies/{learningObjective}', [AdminSekolahController::class, 'destroyMajorCompetency'])->name('adminsekolah.competencies.destroy');

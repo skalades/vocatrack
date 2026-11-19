@@ -23,6 +23,7 @@ use App\Models\Teacher;
 use App\Models\User;
 use App\Services\AuditLogService;
 use App\Services\CertificateService;
+use App\Services\ClassPromotionService;
 use App\Services\HolidayService;
 use App\Services\IncidentReportService;
 use App\Services\SubscriptionService;
@@ -194,6 +195,8 @@ class AdminSekolahController extends Controller
                 Rule::unique('majors', 'code')->where('school_id', $schoolId),
             ],
             'name' => ['required', 'string', 'max:100'],
+            'program_duration_years' => ['nullable', 'integer', 'in:3,4'],
+            'default_pkl_duration_months' => ['nullable', 'integer', 'min:1', 'max:24'],
             'head_teacher_id' => [
                 'nullable',
                 Rule::exists('teachers', 'id')->where(fn($q) => $q->whereIn('user_id', User::where('school_id', $schoolId)->pluck('id'))),
@@ -207,6 +210,8 @@ class AdminSekolahController extends Controller
             'head_teacher_id' => $request->head_teacher_id,
             'code' => strtoupper($request->code),
             'name' => $request->name,
+            'program_duration_years' => (int) $request->input('program_duration_years', 3),
+            'default_pkl_duration_months' => (int) $request->input('default_pkl_duration_months', 6),
         ]);
 
         return back()->with('success', 'Jurusan keahlian berhasil ditambahkan.');
@@ -223,6 +228,8 @@ class AdminSekolahController extends Controller
                 Rule::unique('majors', 'code')->where('school_id', $schoolId)->ignore($major->id),
             ],
             'name' => ['required', 'string', 'max:100'],
+            'program_duration_years' => ['nullable', 'integer', 'in:3,4'],
+            'default_pkl_duration_months' => ['nullable', 'integer', 'min:1', 'max:24'],
             'head_teacher_id' => [
                 'nullable',
                 Rule::exists('teachers', 'id')->where(fn($q) => $q->whereIn('user_id', User::where('school_id', $schoolId)->pluck('id'))),
@@ -235,6 +242,8 @@ class AdminSekolahController extends Controller
             'head_teacher_id' => $request->head_teacher_id,
             'code' => strtoupper($request->code),
             'name' => $request->name,
+            'program_duration_years' => (int) $request->input('program_duration_years', $major->program_duration_years ?? 3),
+            'default_pkl_duration_months' => (int) $request->input('default_pkl_duration_months', $major->default_pkl_duration_months ?? 6),
         ]);
 
         return back()->with('success', 'Data jurusan berhasil diperbarui.');
@@ -329,11 +338,17 @@ class AdminSekolahController extends Controller
                 'required', 'string', 'max:50',
                 Rule::unique('classes', 'name')->where('school_id', $schoolId)->where('academic_year', $request->academic_year),
             ],
-            'grade_level' => ['required', 'in:X,XI,XII'],
+            'grade_level' => ['required', 'in:X,XI,XII,XIII'],
             'academic_year' => ['required', 'string', 'max:15'],
         ], [
             'name.unique' => 'Nama rombel kelas ini sudah ada untuk tahun ajaran yang dipilih.',
+            'grade_level.in' => 'Tingkat kelas harus berupa X, XI, XII, atau XIII.',
         ]);
+
+        $major = Major::where('school_id', $schoolId)->findOrFail($request->major_id);
+        if ($request->grade_level === 'XIII' && !$major->isFourYearProgram()) {
+            return back()->withErrors(['grade_level' => "Tingkat Kelas XIII hanya diperuntukkan bagi jurusan program 4 tahun ({$major->name} saat ini disetel program 3 tahun)."]);
+        }
 
         SchoolClass::create([
             'school_id' => $schoolId,
@@ -357,11 +372,17 @@ class AdminSekolahController extends Controller
                 'required', 'string', 'max:50',
                 Rule::unique('classes', 'name')->where('school_id', $schoolId)->where('academic_year', $request->academic_year)->ignore($schoolClass->id),
             ],
-            'grade_level' => ['required', 'in:X,XI,XII'],
+            'grade_level' => ['required', 'in:X,XI,XII,XIII'],
             'academic_year' => ['required', 'string', 'max:15'],
         ], [
             'name.unique' => 'Nama rombel kelas ini sudah ada untuk tahun ajaran yang dipilih.',
+            'grade_level.in' => 'Tingkat kelas harus berupa X, XI, XII, atau XIII.',
         ]);
+
+        $major = Major::where('school_id', $schoolId)->findOrFail($request->major_id);
+        if ($request->grade_level === 'XIII' && !$major->isFourYearProgram()) {
+            return back()->withErrors(['grade_level' => "Tingkat Kelas XIII hanya diperuntukkan bagi jurusan program 4 tahun ({$major->name} saat ini disetel program 3 tahun)."]);
+        }
 
         $schoolClass->update([
             'major_id' => $request->major_id,
@@ -1061,6 +1082,8 @@ class AdminSekolahController extends Controller
             'contact_person' => ['required', 'string', 'max:100'],
             'phone' => ['required', 'string', 'max:20'],
             'work_days' => ['required', 'in:5_days,6_days'],
+            'default_start_date' => ['nullable', 'date'],
+            'default_end_date' => ['nullable', 'date', 'after_or_equal:default_start_date'],
             'requires_industry_approval' => ['nullable', 'boolean'],
             'is_pkl_started' => ['nullable', 'boolean'],
             'gps_enabled' => ['nullable', 'boolean'],
@@ -1083,6 +1106,8 @@ class AdminSekolahController extends Controller
                 'contact_person' => $request->contact_person,
                 'phone' => $request->phone,
                 'work_days' => $request->work_days,
+                'default_start_date' => $request->default_start_date,
+                'default_end_date' => $request->default_end_date,
                 'requires_industry_approval' => $request->boolean('requires_industry_approval'),
                 'is_pkl_started' => $request->boolean('is_pkl_started'),
                 'gps_enabled' => $request->boolean('gps_enabled'),
@@ -1132,6 +1157,8 @@ class AdminSekolahController extends Controller
             'contact_person' => ['required', 'string', 'max:100'],
             'phone' => ['required', 'string', 'max:20'],
             'work_days' => ['required', 'in:5_days,6_days'],
+            'default_start_date' => ['nullable', 'date'],
+            'default_end_date' => ['nullable', 'date', 'after_or_equal:default_start_date'],
             'requires_industry_approval' => ['nullable', 'boolean'],
             'is_pkl_started' => ['nullable', 'boolean'],
             'gps_enabled' => ['nullable', 'boolean'],
@@ -1149,6 +1176,8 @@ class AdminSekolahController extends Controller
                 'contact_person' => $request->contact_person,
                 'phone' => $request->phone,
                 'work_days' => $request->work_days,
+                'default_start_date' => $request->default_start_date,
+                'default_end_date' => $request->default_end_date,
                 'requires_industry_approval' => $request->boolean('requires_industry_approval'),
                 'is_pkl_started' => $request->boolean('is_pkl_started'),
                 'gps_enabled' => $request->boolean('gps_enabled'),
@@ -1380,7 +1409,7 @@ class AdminSekolahController extends Controller
 
         // 2. Query StudentPkls (Filter & Search)
         $query = StudentPkl::where('school_id', $schoolId)
-            ->with(['student.user', 'student.class.major', 'company.majors', 'teacher.user', 'supervisor.user', 'pklPeriod']);
+            ->with(['student.user', 'student.class.major', 'company.majors', 'company.supervisors.user', 'teacher.user', 'supervisor.user', 'pklPeriod']);
 
         if ($search = $request->query('search')) {
             $query->where(function ($q) use ($search) {
@@ -1497,6 +1526,8 @@ class AdminSekolahController extends Controller
                     $query->whereIn('user_id', User::where('school_id', $schoolId)->select('id'));
                 })
             ],
+            'start_date' => ['nullable', 'date'],
+            'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
         ]);
 
         $studentIds = $request->has('student_ids') && is_array($request->student_ids) && count($request->student_ids) > 0
@@ -1523,8 +1554,34 @@ class AdminSekolahController extends Controller
                 return back()->withErrors(['student_id' => count($alreadyPlotted) . ' siswa yang dipilih sudah memiliki penugasan DU/DI di periode ini.']);
             }
 
+            $company = Company::where('school_id', $schoolId)->find($request->company_id);
+            $period = PklPeriod::where('school_id', $schoolId)->find($request->pkl_period_id);
+
             try {
                 foreach ($studentIds as $sId) {
+                    $student = Student::with('class.major')->find($sId);
+                    $major = $student?->class?->major;
+
+                    // Penentuan tanggal mulai penugasan
+                    $resolvedStartDate = $request->filled('start_date')
+                        ? $request->start_date
+                        : ($company?->default_start_date?->toDateString() ?? $period?->start_date?->toDateString());
+
+                    // Penentuan tanggal berakhir penugasan
+                    $resolvedEndDate = $request->filled('end_date')
+                        ? $request->end_date
+                        : ($company?->default_end_date?->toDateString() ?? null);
+
+                    // Jika tanggal berakhir belum ada, sesuaikan dengan durasi default jurusan
+                    if (!$resolvedEndDate && $resolvedStartDate && $major?->default_pkl_duration_months) {
+                        $resolvedEndDate = \Carbon\Carbon::parse($resolvedStartDate)
+                            ->addMonths($major->default_pkl_duration_months)
+                            ->toDateString();
+                    }
+
+                    // Fallback akhir ke tanggal penutupan periode
+                    $resolvedEndDate = $resolvedEndDate ?? $period?->end_date?->toDateString();
+
                     StudentPkl::create([
                         'school_id' => $schoolId,
                         'student_id' => $sId,
@@ -1532,6 +1589,8 @@ class AdminSekolahController extends Controller
                         'pkl_period_id' => $request->pkl_period_id,
                         'teacher_id' => $request->teacher_id,
                         'supervisor_id' => $request->supervisor_id,
+                        'start_date' => $resolvedStartDate,
+                        'end_date' => $resolvedEndDate,
                         'status' => 'active',
                     ]);
                 }
@@ -1563,15 +1622,26 @@ class AdminSekolahController extends Controller
                 'nullable',
                 Rule::exists('supervisors', 'id')->where('company_id', $studentPkl->company_id),
             ],
+            'start_date' => ['nullable', 'date'],
+            'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
         ]);
 
-        $studentPkl->update([
+        $updateData = [
             'teacher_id' => $request->teacher_id,
             'supervisor_id' => $request->filled('supervisor_id') ? $request->supervisor_id : null,
-        ]);
+        ];
+
+        if ($request->has('start_date')) {
+            $updateData['start_date'] = $request->start_date ?: null;
+        }
+        if ($request->has('end_date')) {
+            $updateData['end_date'] = $request->end_date ?: null;
+        }
+
+        $studentPkl->update($updateData);
 
         $studentName = $studentPkl->student->user->name ?? 'Siswa';
-        return back()->with('success', "Guru pembimbing dan mentor untuk {$studentName} berhasil diperbarui.");
+        return back()->with('success', "Data penugasan dan rentang tanggal PKL untuk {$studentName} berhasil diperbarui.");
     }
 
     public function destroyPlotting(StudentPkl $studentPkl)
@@ -1872,5 +1942,46 @@ class AdminSekolahController extends Controller
         ))->setPaper('a4', 'portrait');
 
         return $pdf->download("Invoice-{$invoice->invoice_number}.pdf");
+    }
+
+    public function previewPromotion(Request $request, ClassPromotionService $promotionService)
+    {
+        $schoolId = $this->getSchoolId();
+        $request->validate([
+            'current_academic_year' => ['required', 'string'],
+            'target_academic_year' => ['required', 'string'],
+        ]);
+
+        $preview = $promotionService->previewPromotion(
+            $schoolId,
+            $request->current_academic_year,
+            $request->target_academic_year
+        );
+
+        return response()->json([
+            'success' => true,
+            'preview' => $preview,
+        ]);
+    }
+
+    public function promoteClasses(Request $request, ClassPromotionService $promotionService)
+    {
+        $schoolId = $this->getSchoolId();
+        $request->validate([
+            'current_academic_year' => ['required', 'string'],
+            'target_academic_year' => ['required', 'string'],
+            'class_ids' => ['nullable', 'array'],
+            'class_ids.*' => [Rule::exists('classes', 'id')->where('school_id', $schoolId)],
+        ]);
+
+        $stats = $promotionService->executePromotion(
+            $schoolId,
+            $request->current_academic_year,
+            $request->target_academic_year,
+            $request->input('class_ids', [])
+        );
+
+        $msg = "Proses kenaikan kelas berhasil: {$stats['promoted_students_count']} siswa naik tingkat, {$stats['graduated_students_count']} siswa dinyatakan lulus (alumni).";
+        return back()->with('success', $msg);
     }
 }

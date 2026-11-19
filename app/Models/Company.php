@@ -27,6 +27,8 @@ class Company extends Model
         'override_hours',
         'custom_work_hours',
         'work_days',
+        'default_start_date',
+        'default_end_date',
         'requires_industry_approval',
         'is_pkl_started',
     ];
@@ -37,6 +39,8 @@ class Company extends Model
     ];
 
     protected $casts = [
+        'default_start_date' => 'date',
+        'default_end_date' => 'date',
         'requires_industry_approval' => 'boolean',
         'is_pkl_started' => 'boolean',
         'gps_enabled' => 'boolean',

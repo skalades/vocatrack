@@ -180,16 +180,39 @@
                                     <span class="text-slate-400 text-xs italic">Belum Ditentukan</span>
                                 @endif
                             </td>
-                            <td class="py-3.5 px-4 min-w-[180px] max-w-[220px]">
+                            <td class="py-3.5 px-4 min-w-[190px] max-w-[240px]">
                                 <span class="text-xs font-semibold text-slate-700 block truncate" title="{{ $sp->pklPeriod->name }}">{{ $sp->pklPeriod->name }}</span>
-                                <span class="text-[10px] text-slate-400 font-mono whitespace-nowrap block mt-0.5">{{ \Carbon\Carbon::parse($sp->pklPeriod->start_date)->format('d M') }} - {{ \Carbon\Carbon::parse($sp->pklPeriod->end_date)->format('d M Y') }}</span>
+                                <span class="text-[10px] text-slate-500 font-mono whitespace-nowrap block mt-0.5">
+                                    {{ $sp->effective_start_date ? $sp->effective_start_date->format('d M Y') : '-' }} &rarr; {{ $sp->effective_end_date ? $sp->effective_end_date->format('d M Y') : '-' }}
+                                </span>
+                                @if($sp->start_date || $sp->end_date)
+                                    <span class="inline-flex items-center px-1.5 py-0.2 rounded text-[9px] font-bold bg-purple-50 text-purple-700 border border-purple-200 mt-0.5">
+                                        Jadwal Khusus DU/DI
+                                    </span>
+                                @endif
                             </td>
                             <td class="py-3.5 px-6 text-center min-w-[100px] whitespace-nowrap">
                                 <x-badge variant="success" size="xs">
                                     {{ strtoupper($sp->status) }}
                                 </x-badge>
                             </td>
-                            <td class="py-3.5 px-4 text-right whitespace-nowrap table-sticky-right">
+                            <td class="py-3.5 px-4 text-right whitespace-nowrap table-sticky-right space-x-1">
+                                <button type="button" 
+                                        onclick="openEditPlottingModal({{ json_encode([
+                                            'id' => $sp->id,
+                                            'student_name' => $sp->student->user->name ?? 'Siswa',
+                                            'company_name' => $sp->company->name ?? 'DU/DI',
+                                            'teacher_id' => $sp->teacher_id,
+                                            'supervisor_id' => $sp->supervisor_id,
+                                            'start_date' => $sp->start_date ? $sp->start_date->format('Y-m-d') : ($sp->effective_start_date ? $sp->effective_start_date->format('Y-m-d') : ''),
+                                            'end_date' => $sp->end_date ? $sp->end_date->format('Y-m-d') : ($sp->effective_end_date ? $sp->effective_end_date->format('Y-m-d') : ''),
+                                            'update_url' => route('adminsekolah.plotting.reassign', $sp),
+                                            'supervisors' => $sp->company->supervisors->map(fn($s) => ['id' => $s->id, 'name' => $s->user->name]),
+                                        ]) }})"
+                                        class="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[11px] font-bold border border-indigo-200 transition-colors cursor-pointer" 
+                                        title="Ubah Jadwal atau Guru Pembimbing">
+                                    Edit Jadwal
+                                </button>
                                 <form action="{{ route('adminsekolah.plotting.destroy', $sp) }}" method="POST" class="inline" onsubmit="return confirm('Batalkan penugasan PKL siswa {{ $sp->student->user->name }} di {{ $sp->company->name }}?')">
                                     @csrf
                                     @method('DELETE')
@@ -384,12 +407,30 @@
                         class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-bold text-slate-900">
                     <option value="">-- Pilih Perusahaan DU/DI --</option>
                     @foreach($companies as $cp)
-                        <option value="{{ $cp->id }}">
+                        <option value="{{ $cp->id }}" 
+                                data-start="{{ $cp->default_start_date ? $cp->default_start_date->format('Y-m-d') : '' }}"
+                                data-end="{{ $cp->default_end_date ? $cp->default_end_date->format('Y-m-d') : '' }}">
                             {{ $cp->name }} {{ $cp->majors->isNotEmpty() ? '[' . $cp->majors->pluck('code')->join(', ') . ']' : '[Semua Jurusan]' }}
                         </option>
                     @endforeach
                 </select>
                 <p class="text-[10px] text-slate-400 mt-1">Kode dalam kurung siku <code class="font-bold text-indigo-700">[GP, ...]</code> menunjukkan kompetensi keahlian/jurusan yang bermitra dengan industri tersebut.</p>
+            </div>
+
+            <!-- Tanggal Pelaksanaan Spesifik DU/DI (Opsional) -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 rounded-2xl bg-indigo-50/50 border border-indigo-100">
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 mb-1">Tanggal Mulai DU/DI (Opsional)</label>
+                    <input type="date" name="start_date" id="plot-start-date"
+                           class="w-full text-xs p-2.5 rounded-xl bg-white border border-slate-200 font-semibold text-slate-800">
+                    <p class="text-[10px] text-slate-400 mt-0.5">Kosongkan jika mengikuti jadwal periode.</p>
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 mb-1">Tanggal Selesai DU/DI (Opsional)</label>
+                    <input type="date" name="end_date" id="plot-end-date"
+                           class="w-full text-xs p-2.5 rounded-xl bg-white border border-slate-200 font-semibold text-slate-800">
+                    <p class="text-[10px] text-slate-400 mt-0.5">Bisa berbeda per DU/DI (misal Geologi 8-10 bln).</p>
+                </div>
             </div>
 
             <!-- Mentor Lapangan DU/DI -->
@@ -425,6 +466,71 @@
                 </x-button>
                 <x-button type="submit" variant="primary" size="md" id="btn-submit-plotting">
                     Simpan Plotting Penugasan
+                </x-button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Edit Plotting & Jadwal DU/DI -->
+<div id="modal-edit-plotting" onclick="if(event.target === this) this.classList.add('hidden')" class="hidden fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-lg rounded-3xl p-6 shadow-2xl border border-slate-100 animate-in fade-in duration-150">
+        <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
+            <div>
+                <h3 class="text-base font-extrabold text-slate-900 tracking-tight">Edit Jadwal & Pembimbing PKL</h3>
+                <p class="text-xs text-slate-500 font-medium" id="edit-plot-student-info">Perbarui jadwal magang atau pembimbing siswa</p>
+            </div>
+            <button type="button" onclick="document.getElementById('modal-edit-plotting').classList.add('hidden')" class="p-1.5 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+
+        <form id="form-edit-plotting" method="POST" class="space-y-4">
+            @csrf
+            @method('PUT')
+
+            <!-- Rentang Tanggal Spesifik Siswa / DU/DI -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 rounded-2xl bg-indigo-50/50 border border-indigo-100">
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 mb-1">Tanggal Mulai Magang</label>
+                    <input type="date" name="start_date" id="edit-plot-start-date"
+                           class="w-full text-xs p-2.5 rounded-xl bg-white border border-slate-200 font-semibold text-slate-800">
+                    <p class="text-[10px] text-slate-400 mt-0.5">Kosongkan jika mengikuti periode.</p>
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 mb-1">Tanggal Selesai Magang</label>
+                    <input type="date" name="end_date" id="edit-plot-end-date"
+                           class="w-full text-xs p-2.5 rounded-xl bg-white border border-slate-200 font-semibold text-slate-800">
+                    <p class="text-[10px] text-slate-400 mt-0.5">Bisa diperpanjang jika 8-10 bln.</p>
+                </div>
+            </div>
+
+            <!-- Guru Pembimbing Sekolah -->
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1.5">Guru Pembimbing Sekolah</label>
+                <select name="teacher_id" id="edit-plot-teacher-id" required 
+                        class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium text-slate-900">
+                    @foreach($teachers as $tc)
+                        <option value="{{ $tc->id }}">{{ $tc->user->name }} (NIP: {{ $tc->nip ?? '-' }})</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <!-- Mentor Lapangan DU/DI -->
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1.5">Mentor DU/DI (Opsional)</label>
+                <select name="supervisor_id" id="edit-plot-supervisor-id" 
+                        class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium text-slate-900">
+                    <option value="">-- Belum Ditentukan / Pilih Mentor --</option>
+                </select>
+            </div>
+
+            <div class="flex items-center justify-end space-x-2.5 pt-3 border-t border-slate-100">
+                <x-button type="button" variant="secondary" size="md" onclick="document.getElementById('modal-edit-plotting').classList.add('hidden')">
+                    Batal
+                </x-button>
+                <x-button type="submit" variant="primary" size="md">
+                    Simpan Perubahan
                 </x-button>
             </div>
         </form>
@@ -569,6 +675,43 @@
         if (!hasSelectedValid && selSup.value) {
             selSup.value = '';
         }
+
+        // Auto-fill tanggal default perusahaan jika tersedia
+        if (selComp.selectedIndex >= 0) {
+            const opt = selComp.options[selComp.selectedIndex];
+            const defStart = opt.getAttribute('data-start');
+            const defEnd = opt.getAttribute('data-end');
+            const inStart = document.getElementById('plot-start-date');
+            const inEnd = document.getElementById('plot-end-date');
+            if (inStart && defStart) inStart.value = defStart;
+            if (inEnd && defEnd) inEnd.value = defEnd;
+        }
+    }
+
+    function openEditPlottingModal(data) {
+        const form = document.getElementById('form-edit-plotting');
+        form.action = data.update_url;
+
+        document.getElementById('edit-plot-student-info').textContent = `${data.student_name} — ${data.company_name}`;
+        document.getElementById('edit-plot-teacher-id').value = data.teacher_id;
+        document.getElementById('edit-plot-start-date').value = data.start_date || '';
+        document.getElementById('edit-plot-end-date').value = data.end_date || '';
+
+        const selSup = document.getElementById('edit-plot-supervisor-id');
+        selSup.innerHTML = '<option value="">-- Belum Ditentukan / Pilih Mentor --</option>';
+        if (data.supervisors && data.supervisors.length > 0) {
+            data.supervisors.forEach(sup => {
+                const opt = document.createElement('option');
+                opt.value = sup.id;
+                opt.textContent = sup.name;
+                if (sup.id === data.supervisor_id) {
+                    opt.selected = true;
+                }
+                selSup.appendChild(opt);
+            });
+        }
+
+        document.getElementById('modal-edit-plotting').classList.remove('hidden');
     }
 
     document.addEventListener('DOMContentLoaded', function() {
