@@ -302,6 +302,110 @@ class JournalWorkflowTest extends TestCase
         $this->assertCount(1, $journal->photos);
     }
 
+    public function test_student_journal_store_supports_heic_iphone_photos(): void
+    {
+        \Illuminate\Support\Facades\Storage::fake('local');
+
+        $school = School::create([
+            'npsn' => '77777780',
+            'name' => 'SMK iPhone Photo Test',
+            'address' => 'Bandung',
+            'phone' => '022-780',
+            'email' => 'smk80@journal.sch.id',
+            'is_active' => true,
+        ]);
+
+        $major = Major::create(['school_id' => $school->id, 'code' => 'RPL', 'name' => 'RPL']);
+        $class = SchoolClass::create([
+            'school_id' => $school->id,
+            'major_id' => $major->id,
+            'name' => 'XII RPL 2',
+            'grade_level' => 'XII',
+            'academic_year' => '2026/2027',
+        ]);
+
+        $company = Company::create([
+            'school_id' => $school->id,
+            'name' => 'PT Apple Tech',
+            'address' => 'Bandung',
+            'contact_person' => 'PIC',
+            'phone' => '0812',
+            'work_days' => '5_days',
+            'is_pkl_started' => true,
+        ]);
+
+        $period = PklPeriod::create([
+            'school_id' => $school->id,
+            'name' => 'Periode 2026',
+            'start_date' => '2026-01-01',
+            'end_date' => '2026-12-31',
+            'is_active' => true,
+        ]);
+
+        $guruUser = User::create([
+            'school_id' => $school->id,
+            'name' => 'Guru',
+            'email' => 'guru80@sekolah.sch.id',
+            'password' => bcrypt('password'),
+            'role' => 'guru-pembimbing',
+            'is_active' => true,
+        ]);
+        $teacher = Teacher::create(['user_id' => $guruUser->id, 'nip' => '998877']);
+
+        $studentUser = User::create([
+            'school_id' => $school->id,
+            'name' => 'Siswa iPhone',
+            'email' => 'iphone@sekolah.sch.id',
+            'password' => bcrypt('password'),
+            'role' => 'siswa',
+            'is_active' => true,
+        ]);
+        $student = Student::create(['user_id' => $studentUser->id, 'class_id' => $class->id, 'nis' => '901', 'nisn' => '9988776655']);
+
+        $spkl = StudentPkl::create([
+            'school_id' => $school->id,
+            'student_id' => $student->id,
+            'company_id' => $company->id,
+            'pkl_period_id' => $period->id,
+            'teacher_id' => $teacher->id,
+            'status' => 'active',
+            'start_date' => '2026-01-01',
+            'end_date' => '2026-12-31',
+        ]);
+
+        // 1. Uji unggah berkas HEIC mentah dari kamera iPhone
+        $heicFile = \Illuminate\Http\UploadedFile::fake()->create('IMG_8234.HEIC', 350, 'image/heic');
+        $response1 = $this->actingAs($studentUser)->post(route('student.journal.store'), [
+            'date' => Carbon::today()->toDateString(),
+            'activity_description' => 'Melakukan pengujian konfigurasi jaringan LAN dan mendokumentasikan topologi switch.',
+            'photos' => [$heicFile],
+        ]);
+
+        $response1->assertRedirect();
+        $response1->assertSessionHas('success');
+
+        $journal = Journal::where('student_pkl_id', $spkl->id)->first();
+        $this->assertNotNull($journal);
+        $this->assertCount(1, $journal->photos);
+        $this->assertStringEndsWith('.heic', strtolower($journal->photos->first()->photo_path));
+
+        // 2. Uji unggah berkas HEIC ketika browser/server membaca MIME sebagai application/octet-stream
+        $yesterday = Carbon::yesterday()->toDateString();
+        $octetHeic = \Illuminate\Http\UploadedFile::fake()->create('IMG_9999.heic', 500, 'application/octet-stream');
+        $response2 = $this->actingAs($studentUser)->post(route('student.journal.store'), [
+            'date' => $yesterday,
+            'activity_description' => 'Mengerjakan instalasi kabel jaringan LAN dan pengujian koneksi server lokal di lab sekolah.',
+            'photos' => [$octetHeic],
+        ]);
+
+        $response2->assertRedirect();
+        $response2->assertSessionHas('success');
+
+        $journalYesterday = Journal::where('student_pkl_id', $spkl->id)->whereDate('date', $yesterday)->first();
+        $this->assertNotNull($journalYesterday);
+        $this->assertCount(1, $journalYesterday->photos);
+    }
+
     public function test_teacher_process_journal_preserves_active_tab(): void
     {
         $school = School::create([

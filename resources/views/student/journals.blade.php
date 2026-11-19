@@ -146,7 +146,7 @@
                             <line x1="5" y1="12" x2="19" y2="12"/>
                         </svg>
                     </label>
-                    <input type="file" id="journal-photos-input" name="photos[]" accept="image/*" class="hidden" onchange="handleJournalPhotoSelected(this)">
+                    <input type="file" id="journal-photos-input" name="photos[]" accept="image/*,.heic,.heif,.HEIC,.HEIF" class="hidden" onchange="handleJournalPhotoSelected(this)">
                     <input type="hidden" name="compressed_photos[]" id="journal-compressed-photo">
 
                     <div id="photo-helper-text" class="text-xs text-[#5A6B65] leading-relaxed flex-1">
@@ -420,66 +420,98 @@
     }
 
     async function compressJournalImage(file) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const img = new Image();
-                img.onload = function() {
-                    const MAX_SIDE = 1200; // 1200px max side is crisp and clear for documentation
-                    let w = img.width;
-                    let h = img.height;
-                    const scale = Math.min(1, MAX_SIDE / Math.max(w, h));
+        let drawable = null;
+        let originalWidth = 0;
+        let originalHeight = 0;
+        let tempUrl = null;
 
-                    const canvas = document.createElement('canvas');
-                    canvas.width = Math.round(w * scale);
-                    canvas.height = Math.round(h * scale);
+        // 1. Coba decode via createImageBitmap (Akselerasi hardware, mendukung HEIC di Safari iOS 15+)
+        if (typeof window.createImageBitmap === 'function') {
+            try {
+                const bitmap = await window.createImageBitmap(file);
+                drawable = bitmap;
+                originalWidth = bitmap.width;
+                originalHeight = bitmap.height;
+            } catch (bitmapErr) {
+                console.warn('createImageBitmap failed, trying Blob URL image:', bitmapErr);
+            }
+        }
 
-                    const ctx = canvas.getContext('2d');
-                    ctx.imageSmoothingEnabled = true;
-                    ctx.imageSmoothingQuality = 'high';
-                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        // 2. Coba via Image element dengan URL.createObjectURL (Safari mendukung render HEIC via Blob URL)
+        if (!drawable) {
+            try {
+                tempUrl = URL.createObjectURL(file);
+                drawable = await new Promise((resolve, reject) => {
+                    const img = new Image();
+                    img.onload = () => resolve(img);
+                    img.onerror = (e) => reject(new Error('Gagal memuat gambar via Blob URL'));
+                    img.src = tempUrl;
+                });
+                originalWidth = drawable.width;
+                originalHeight = drawable.height;
+            } catch (blobErr) {
+                if (tempUrl) {
+                    URL.revokeObjectURL(tempUrl);
+                    tempUrl = null;
+                }
+                console.warn('Blob URL image load failed, trying FileReader:', blobErr);
+            }
+        }
 
-                    // Iterative compression targeting < 350KB
-                    const TARGET_MAX_BYTES = 350 * 1024;
-                    let quality = 0.75;
-                    let dataUrl = canvas.toDataURL('image/jpeg', quality);
-
-                    while (dataUrl.length * 0.75 > TARGET_MAX_BYTES && quality > 0.4) {
-                        quality -= 0.1;
-                        dataUrl = canvas.toDataURL('image/jpeg', quality);
-                    }
-
-                    canvas.toBlob((blob) => {
-                        const compressedSize = blob ? blob.size : Math.round(dataUrl.length * 0.75);
-                        let compressedFile = null;
-                        if (blob) {
-                            try {
-                                compressedFile = new File([blob], (file.name || 'foto-jurnal').replace(/\.[^/.]+$/, "") + ".jpg", {
-                                    type: 'image/jpeg',
-                                    lastModified: Date.now()
-                                });
-                            } catch (err) {
-                                compressedFile = null;
-                            }
-                        }
-
-                        resolve({
-                            dataUrl: dataUrl,
-                            blob: blob,
-                            file: compressedFile,
-                            size: compressedSize,
-                            originalSize: file.size,
-                            width: canvas.width,
-                            height: canvas.height
-                        });
-                    }, 'image/jpeg', quality);
+        // 3. Fallback via FileReader data URL
+        if (!drawable) {
+            drawable = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => resolve(img);
+                    img.onerror = () => reject(new Error('Format berkas tidak dapat didekode oleh peramban'));
+                    img.src = e.target.result;
                 };
-                img.onerror = () => reject(new Error('Gagal memuat gambar'));
-                img.src = e.target.result;
-            };
-            reader.onerror = () => reject(new Error('Gagal membaca berkas'));
-            reader.readAsDataURL(file);
-        });
+                reader.onerror = () => reject(new Error('Gagal membaca berkas'));
+                reader.readAsDataURL(file);
+            });
+            originalWidth = drawable.width;
+            originalHeight = drawable.height;
+        }
+
+        const MAX_SIDE = 1200; // 1200px max side is crisp and clear for documentation
+        const scale = Math.min(1, MAX_SIDE / Math.max(originalWidth, originalHeight));
+
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(originalWidth * scale);
+        canvas.height = Math.round(originalHeight * scale);
+
+        const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(drawable, 0, 0, canvas.width, canvas.height);
+
+        // Bersihkan resource memori
+        if (tempUrl) {
+            URL.revokeObjectURL(tempUrl);
+        }
+        if (drawable && typeof drawable.close === 'function') {
+            drawable.close(); // Bersihkan ImageBitmap
+        }
+
+        // Iterative compression targeting < 350KB
+        const TARGET_MAX_BYTES = 350 * 1024;
+        let quality = 0.75;
+        let dataUrl = canvas.toDataURL('image/jpeg', quality);
+
+        while (dataUrl.length * 0.75 > TARGET_MAX_BYTES && quality > 0.4) {
+            quality -= 0.1;
+            dataUrl = canvas.toDataURL('image/jpeg', quality);
+        }
+
+        return {
+            dataUrl: dataUrl,
+            size: Math.round(dataUrl.length * 0.75),
+            originalSize: file.size,
+            width: canvas.width,
+            height: canvas.height
+        };
     }
 
     // Photo preview and client-side compression handler
@@ -501,7 +533,7 @@
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
                     </svg>
-                    <span class="text-[9px] font-bold text-[#C6F26B] leading-none">Kompres...</span>
+                    <span class="text-[9px] font-bold text-[#C6F26B] leading-none">Memproses...</span>
                 </div>
             `;
         }
@@ -541,38 +573,55 @@
                             Foto siap diunggah
                         </span>
                         <span class="text-[11px] text-[#5A6B65]">
-                            Ukuran terkompresi: <strong class="text-slate-800">${formatBytes(result.size)}</strong> 
+                            Ukuran teroptimasi: <strong class="text-slate-800">${formatBytes(result.size)}</strong> 
                             <span class="text-slate-400 line-through">(${formatBytes(result.originalSize)})</span>
                         </span>
                     </div>
                 `;
             }
         } catch (err) {
-            console.error('Image compression failed:', err);
-            // Fallback: baca data URL biasa
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                if (previewBox) {
-                    previewBox.innerHTML = `
-                        <img src="${e.target.result}" class="w-full h-full object-cover">
-                        <button type="button" onclick="clearSelectedJournalPhoto()" 
-                                class="absolute top-1 right-1 w-5 h-5 rounded-full bg-slate-900/80 text-white flex items-center justify-center hover:bg-rose-600 transition-colors cursor-pointer shadow-xs" 
-                                title="Hapus foto">
-                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
-                        </button>
-                    `;
-                }
-                if (hiddenBase64 && typeof e.target.result === 'string' && e.target.result.startsWith('data:image/')) {
-                    hiddenBase64.value = e.target.result;
-                    input.value = '';
-                }
-            };
-            reader.readAsDataURL(file);
+            console.warn('Image compression fallback to raw file upload:', err);
+
+            // Biarkan berkas asli tetap di input.files (name="photos[]")
+            if (hiddenBase64) hiddenBase64.value = '';
+
+            // Tampilkan icon preview dokumen/foto yang bersih (bukan tag <img> rusak)
+            const ext = (file.name.split('.').pop() || 'IMG').toUpperCase().slice(0, 4);
+            if (previewBox) {
+                previewBox.innerHTML = `
+                    <div class="flex flex-col items-center justify-center p-1 text-center w-full h-full bg-[#0B2B25] text-white select-none">
+                        <svg class="w-6 h-6 text-[#C6F26B] mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                            <circle cx="8.5" cy="8.5" r="1.5"/>
+                            <polyline points="21 15 16 10 5 21"/>
+                        </svg>
+                        <span class="text-[9px] font-extrabold text-[#C6F26B] leading-none tracking-wider">${ext}</span>
+                    </div>
+                    <button type="button" onclick="clearSelectedJournalPhoto()" 
+                            class="absolute top-1 right-1 w-5 h-5 rounded-full bg-slate-900/80 text-white flex items-center justify-center hover:bg-rose-600 transition-colors cursor-pointer shadow-xs" 
+                            title="Hapus foto">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                `;
+            }
 
             if (helperText) {
-                helperText.innerHTML = `<span class="text-xs text-[#5A6B65]">Foto siap diunggah (${formatBytes(file.size)}).</span>`;
+                helperText.innerHTML = `
+                    <div class="flex flex-col gap-0.5">
+                        <span class="text-xs font-bold text-[#0B5E4E] flex items-center gap-1.5">
+                            <svg class="w-3.5 h-3.5 text-[#0B5E4E] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                            Berkas siap diunggah
+                        </span>
+                        <span class="text-[11px] text-[#5A6B65] truncate max-w-[200px]" title="${file.name}">
+                            ${file.name} (${formatBytes(file.size)})
+                        </span>
+                    </div>
+                `;
             }
         } finally {
+            if (submitBtn) submitBtn.disabled = false;
+        }
+    }
             if (submitBtn) submitBtn.disabled = false;
         }
     }

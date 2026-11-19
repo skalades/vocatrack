@@ -662,15 +662,36 @@ class StudentController extends Controller
         if ($hasCompressed) {
             $validationRules['compressed_photos.*'] = ['nullable', 'string'];
         } elseif ($request->hasFile('photos')) {
-            $validationRules['photos.*'] = ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,heic,heif', 'max:10240'];
+            $validationRules['photos.*'] = [
+                'nullable',
+                'file',
+                'max:15360',
+                function ($attribute, $value, $fail) {
+                    if (!$value instanceof \Illuminate\Http\UploadedFile) {
+                        return;
+                    }
+                    $allowedExts = ['jpg', 'jpeg', 'png', 'webp', 'heic', 'heif', 'gif', 'bmp', 'avif'];
+                    $ext = strtolower($value->getClientOriginalExtension());
+                    $guessed = strtolower($value->guessExtension() ?? '');
+                    $mime = strtolower($value->getMimeType() ?? '');
+
+                    $isAllowed = in_array($ext, $allowedExts, true)
+                        || in_array($guessed, $allowedExts, true)
+                        || str_starts_with($mime, 'image/')
+                        || in_array($mime, ['application/octet-stream', 'application/x-heic', 'image/heic', 'image/heif'], true);
+
+                    if (!$isAllowed) {
+                        $fail('Format foto jurnal harus berupa JPG, JPEG, PNG, WebP, atau HEIC/HEIF.');
+                    }
+                },
+            ];
         }
 
         $request->validate($validationRules, [
             'date.before_or_equal' => 'Tanggal jurnal tidak boleh melebihi hari ini.',
             'activity_description.min' => 'Uraian kegiatan minimal harus 50 karakter.',
             'photos.*.file' => 'Berkas foto jurnal tidak valid.',
-            'photos.*.mimes' => 'Format foto jurnal harus berupa JPG, JPEG, PNG, atau WebP.',
-            'photos.*.max' => 'Ukuran foto jurnal tidak boleh lebih dari 10 MB per berkas.',
+            'photos.*.max' => 'Ukuran foto jurnal tidak boleh lebih dari 15 MB per berkas.',
         ]);
 
         $requiresIndustry = $spkl->company?->requires_industry_approval ?? true;
@@ -751,20 +772,32 @@ class StudentController extends Controller
                     continue;
                 }
 
-                if (preg_match('/^data:image\/(\w+);base64,/', $base64Image)) {
+                if (preg_match('/^data:image\/(\w+);base64,/', $base64Image, $m)) {
                     $cleanBase64 = substr($base64Image, strpos($base64Image, ',') + 1);
                     $imageData = base64_decode($cleanBase64, true);
                     if ($imageData === false) {
                         continue;
                     }
 
-                    $realMimeMap = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
+                    $realMimeMap = [
+                        'image/jpeg' => 'jpg',
+                        'image/png'  => 'png',
+                        'image/webp' => 'webp',
+                        'image/gif'  => 'gif',
+                    ];
                     $imageInfo = @getimagesizefromstring($imageData);
-                    if ($imageInfo === false || !isset($realMimeMap[$imageInfo['mime'] ?? ''])) {
+                    $extension = null;
+
+                    if ($imageInfo && isset($realMimeMap[$imageInfo['mime'] ?? ''])) {
+                        $extension = $realMimeMap[$imageInfo['mime']];
+                    } elseif (substr($imageData, 4, 4) === 'ftyp' || in_array(strtolower($m[1]), ['heic', 'heif'], true)) {
+                        $extension = 'heic';
+                    }
+
+                    if (!$extension) {
                         continue;
                     }
 
-                    $extension = $realMimeMap[$imageInfo['mime']];
                     $fileSize = strlen($imageData);
                     $totalSize += $fileSize;
 

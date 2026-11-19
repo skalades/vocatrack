@@ -43,6 +43,11 @@ class SecureFileService
         'image/png',
         'image/webp',
         'image/gif',
+        'image/heic',
+        'image/heif',
+        'image/heic-sequence',
+        'image/heif-sequence',
+        'image/avif',
     ];
 
     public function putContents(string $path, string $contents): string
