@@ -642,7 +642,11 @@
                                         <span class="text-xs font-bold block truncate">{{ $pj->studentPkl->student->user->name }}</span>
                                         <span class="text-[10px] text-[#A9C2B9] block truncate">{{ Str::limit($pj->activity_description ?? '', 48) }}</span>
                                     </span>
-                                    <span class="text-[10px] font-bold text-white/50 shrink-0">{{ $pj->date->diffForHumans(null, true) }}</span>
+                                    @php
+                                        $pjDate = $pj->date instanceof \Carbon\Carbon ? $pj->date : \Carbon\Carbon::parse($pj->date);
+                                        $pjRel = $pjDate->isToday() ? 'Hari ini' : ($pjDate->isYesterday() ? 'Kemarin' : $pjDate->diffForHumans(null, true));
+                                    @endphp
+                                    <span class="text-[10px] font-bold text-white/50 shrink-0">{{ $pjRel }}</span>
                                 </a>
                             @endforeach
                         </div>

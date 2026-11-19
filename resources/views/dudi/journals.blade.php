@@ -199,7 +199,11 @@
                                         <svg class="w-3.5 h-3.5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                                         {{ \Carbon\Carbon::parse($sj->date)->isoFormat('dddd, D MMMM Y') }}
                                     </span>
-                                    <span class="text-[10px] text-slate-400">({{ \Carbon\Carbon::parse($sj->date)->diffForHumans() }})</span>
+                                    @php
+                                        $parsedDate = \Carbon\Carbon::parse($sj->date);
+                                        $relDate = $parsedDate->isToday() ? 'Hari ini' : ($parsedDate->isYesterday() ? 'Kemarin' : $parsedDate->diffForHumans());
+                                    @endphp
+                                    <span class="text-[10px] text-slate-400" title="{{ $sj->created_at ? 'Diajukan: ' . $sj->created_at->translatedFormat('d M Y, H:i') : '' }}">({{ $relDate }})</span>
                                     <x-badge :variant="$sj->status" size="xs">
                                         {{ strtoupper(str_replace('_', ' ', $sj->status)) }}
                                     </x-badge>
@@ -419,7 +423,11 @@
 
                                 <td class="py-3 px-4 whitespace-nowrap">
                                     <span class="font-bold text-slate-900 block text-xs">{{ \Carbon\Carbon::parse($j->date)->isoFormat('dddd, D MMM Y') }}</span>
-                                    <span class="text-[10px] text-slate-400 block">{{ \Carbon\Carbon::parse($j->date)->diffForHumans() }}</span>
+                                    @php
+                                        $pDate = \Carbon\Carbon::parse($j->date);
+                                        $pRelDate = $pDate->isToday() ? 'Hari ini' : ($pDate->isYesterday() ? 'Kemarin' : $pDate->diffForHumans());
+                                    @endphp
+                                    <span class="text-[10px] text-slate-400 block" title="{{ $j->created_at ? 'Diajukan: ' . $j->created_at->translatedFormat('d M Y, H:i') : '' }}">{{ $pRelDate }}</span>
                                 </td>
 
                                 <td class="py-3 px-4">
