@@ -143,6 +143,7 @@ const queueDelete = (id) => tx('readwrite', (s) => s.delete(id));
 async function enqueueJournal(form) {
     const fd = new FormData(form);
     const photo = fd.getAll('photos[]').find((f) => f instanceof File && f.size > 0) || null;
+    const rawCompressed = fd.getAll('compressed_photos[]').find((v) => typeof v === 'string' && v.startsWith('data:image/')) || null;
 
     // Satu entri per tanggal: entri baru menggantikan antrean lama di tanggal yang sama.
     const date = todayInAppTz();
@@ -157,6 +158,7 @@ async function enqueueJournal(form) {
         action_type: String(fd.get('action_type') || 'submit'),
         photo: photo ? new Blob([await photo.arrayBuffer()], { type: photo.type }) : (existing?.photo ?? null),
         photoName: photo ? photo.name : (existing?.photoName ?? null),
+        compressedPhoto: rawCompressed || (existing?.compressedPhoto ?? null),
         status: 'pending',
         error: null,
         createdAt: existing?.createdAt ?? Date.now(),
@@ -183,7 +185,11 @@ async function postJournal(item, token) {
     fd.append('date', item.date);
     fd.append('activity_description', item.activity_description);
     fd.append('action_type', item.action_type);
-    if (item.photo) fd.append('photos[]', item.photo, item.photoName || 'jurnal.jpg');
+    if (item.compressedPhoto) {
+        fd.append('compressed_photos[]', item.compressedPhoto);
+    } else if (item.photo) {
+        fd.append('photos[]', item.photo, item.photoName || 'jurnal.jpg');
+    }
 
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), SYNC_TIMEOUT_MS);
@@ -356,7 +362,7 @@ function renderQueuePanel(items) {
                         </span>
                     </div>
                     <p class="text-xs text-[#5A6B65] leading-relaxed line-clamp-2">${escapeHtml(q.activity_description)}</p>
-                    ${q.photo ? '<span class="inline-flex items-center gap-1 text-[11px] text-[#5A6B65]"><svg class="w-3 h-3 text-[#5A6B65]" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>1 foto terlampir</span>' : ''}
+                    ${(q.photo || q.compressedPhoto) ? '<span class="inline-flex items-center gap-1 text-[11px] text-[#5A6B65]"><svg class="w-3 h-3 text-[#5A6B65]" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>1 foto terlampir</span>' : ''}
                     ${q.error ? `<p class="text-[11px] font-semibold text-rose-700">${escapeHtml(q.error)}</p>` : ''}
                     <div class="flex gap-2 pt-1">
                         ${q.status === 'failed' ? `<button type="button" data-queue-action="edit" data-id="${q.id}" class="flex-1 min-h-[36px] rounded-xl bg-[#0B2B25] text-white text-[11px] font-bold cursor-pointer">Perbaiki</button>` : ''}

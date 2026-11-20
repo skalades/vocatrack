@@ -130,6 +130,7 @@ cmd_deploy() {
     (cd "$dir" && "$PHP_BIN" artisan vokatrack:backup --prefix=pre_deploy_vokatrack --no-prune)
     (cd "$dir" && "$PHP_BIN" artisan migrate --force)
     (cd "$dir" && "$PHP_BIN" artisan vokatrack:migrate-private-files)
+    (cd "$dir" && "$PHP_BIN" artisan vokatrack:compress-journal-photos --threshold=300 || true)
 
     log "[6/7] Cache konfigurasi, rute, view, event"
     (cd "$dir" && "$PHP_BIN" artisan optimize && "$PHP_BIN" artisan view:cache && "$PHP_BIN" artisan event:cache)

@@ -495,8 +495,8 @@
             drawable.close(); // Bersihkan ImageBitmap
         }
 
-        // Iterative compression targeting < 350KB
-        const TARGET_MAX_BYTES = 350 * 1024;
+        // Iterative compression targeting < 250KB
+        const TARGET_MAX_BYTES = 250 * 1024;
         let quality = 0.75;
         let dataUrl = canvas.toDataURL('image/jpeg', quality);
 
@@ -505,10 +505,14 @@
             dataUrl = canvas.toDataURL('image/jpeg', quality);
         }
 
+        const compressedSize = Math.round(dataUrl.length * 0.75);
+        const savingsPercent = file.size > 0 ? Math.max(0, Math.round((1 - (compressedSize / file.size)) * 100)) : 0;
+
         return {
             dataUrl: dataUrl,
-            size: Math.round(dataUrl.length * 0.75),
+            size: compressedSize,
             originalSize: file.size,
+            savingsPercent: savingsPercent,
             width: canvas.width,
             height: canvas.height
         };
@@ -538,7 +542,7 @@
             `;
         }
         if (helperText) {
-            helperText.innerHTML = `<span class="text-xs text-amber-600 font-semibold animate-pulse">Sedang mengoptimalkan resolusi foto...</span>`;
+            helperText.innerHTML = `<span class="text-xs text-amber-600 font-semibold animate-pulse">Mengompresi foto jurnal...</span>`;
         }
 
         try {
@@ -566,21 +570,25 @@
 
             // 4. Update helper text with size savings badge
             if (helperText) {
+                const savingsBadge = result.savingsPercent > 0 
+                    ? `<span class="text-[#0B5E4E] font-semibold">(hemat ${result.savingsPercent}%)</span>` 
+                    : '';
                 helperText.innerHTML = `
                     <div class="flex flex-col gap-0.5">
                         <span class="text-xs font-bold text-[#0B5E4E] flex items-center gap-1.5">
                             <svg class="w-3.5 h-3.5 text-[#0B5E4E] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
-                            Foto siap diunggah
+                            Foto terkompresi siap diunggah
                         </span>
                         <span class="text-[11px] text-[#5A6B65]">
-                            Ukuran teroptimasi: <strong class="text-slate-800">${formatBytes(result.size)}</strong> 
+                            Ukuran: <strong class="text-slate-800">${formatBytes(result.size)}</strong> 
+                            ${savingsBadge}
                             <span class="text-slate-400 line-through">(${formatBytes(result.originalSize)})</span>
                         </span>
                     </div>
                 `;
             }
         } catch (err) {
-            console.warn('Image compression fallback to raw file upload:', err);
+            console.warn('Image compression fallback to raw file upload (server will compress):', err);
 
             // Biarkan berkas asli tetap di input.files (name="photos[]")
             if (hiddenBase64) hiddenBase64.value = '';
@@ -610,7 +618,7 @@
                     <div class="flex flex-col gap-0.5">
                         <span class="text-xs font-bold text-[#0B5E4E] flex items-center gap-1.5">
                             <svg class="w-3.5 h-3.5 text-[#0B5E4E] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
-                            Berkas siap diunggah
+                            Foto siap diunggah (kompresi server aktif)
                         </span>
                         <span class="text-[11px] text-[#5A6B65] truncate max-w-[200px]" title="${file.name}">
                             ${file.name} (${formatBytes(file.size)})
@@ -619,9 +627,6 @@
                 `;
             }
         } finally {
-            if (submitBtn) submitBtn.disabled = false;
-        }
-    }
             if (submitBtn) submitBtn.disabled = false;
         }
     }

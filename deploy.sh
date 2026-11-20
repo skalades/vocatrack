@@ -35,6 +35,8 @@ php artisan vokatrack:backup --prefix=pre_deploy_vokatrack --no-prune
 php artisan migrate --force
 # Pindahkan berkas pribadi siswa lama dari disk publik ke disk privat (idempoten)
 php artisan vokatrack:migrate-private-files
+# Audit dan kompresi foto jurnal lama berukuran besar (idempoten)
+php artisan vokatrack:compress-journal-photos --threshold=300 || true
 
 echo "⚡ [6/7] Mengoptimalkan Cache Laravel (Config, Route, View, Event)..."
 rm -f public/hot

@@ -13,6 +13,7 @@ use App\Models\StudentPkl;
 use App\Services\AnnouncementService;
 use App\Services\AttendanceService;
 use App\Services\CertificateService;
+use App\Services\ImageCompressionService;
 use App\Services\IncidentReportService;
 use App\Services\SecureFileService;
 use App\Services\StorageQuotaService;
@@ -773,85 +774,50 @@ class StudentController extends Controller
             $journal->learningObjectives()->sync($loIds);
         }
 
+        $photosToSave = [];
+        $totalSize = 0;
+        $compression = app(ImageCompressionService::class);
+
         if ($hasCompressed) {
             $compressedPhotos = array_filter((array) $request->input('compressed_photos'));
-            $photosToSave = [];
-            $totalSize = 0;
-
             foreach ($compressedPhotos as $base64Image) {
                 if (empty($base64Image) || !is_string($base64Image)) {
                     continue;
                 }
 
-                if (preg_match('/^data:image\/(\w+);base64,/', $base64Image, $m)) {
-                    $cleanBase64 = substr($base64Image, strpos($base64Image, ',') + 1);
-                    $imageData = base64_decode($cleanBase64, true);
-                    if ($imageData === false) {
-                        continue;
-                    }
-
-                    $realMimeMap = [
-                        'image/jpeg' => 'jpg',
-                        'image/png'  => 'png',
-                        'image/webp' => 'webp',
-                        'image/gif'  => 'gif',
-                    ];
-                    $imageInfo = @getimagesizefromstring($imageData);
-                    $extension = null;
-
-                    if ($imageInfo && isset($realMimeMap[$imageInfo['mime'] ?? ''])) {
-                        $extension = $realMimeMap[$imageInfo['mime']];
-                    } elseif (substr($imageData, 4, 4) === 'ftyp' || in_array(strtolower($m[1]), ['heic', 'heif'], true)) {
-                        $extension = 'heic';
-                    }
-
-                    if (!$extension) {
-                        continue;
-                    }
-
-                    $fileSize = strlen($imageData);
-                    $totalSize += $fileSize;
-
-                    $photosToSave[] = [
-                        'data' => $imageData,
-                        'ext' => $extension,
-                        'size' => $fileSize,
-                    ];
+                $processed = $compression->compressBase64($base64Image);
+                if ($processed && !empty($processed['data'])) {
+                    $photosToSave[] = $processed;
+                    $totalSize += $processed['size'];
                 }
-            }
-
-            if (!empty($photosToSave)) {
-                if (!app(StorageQuotaService::class)->canUpload($spkl->school, $totalSize)) {
-                    return $this->journalErrorResponse($request, ['photos' => 'Kapasitas penyimpanan sekolah Anda telah penuh. Tidak dapat mengunggah foto jurnal. Hubungi admin sekolah.']);
-                }
-
-                foreach ($photosToSave as $item) {
-                    $fileName = 'schools/' . $spkl->school_id . '/journals/' . date('Y') . '/' . Str::random(32) . '.' . $item['ext'];
-                    app(SecureFileService::class)->putContents($fileName, $item['data']);
-                    JournalPhoto::create([
-                        'journal_id' => $journal->id,
-                        'photo_path' => $fileName,
-                    ]);
-                }
-                app(StorageQuotaService::class)->recordUpload($spkl->school, $totalSize);
             }
         } elseif ($request->hasFile('photos')) {
-            $totalSize = 0;
             foreach ($request->file('photos') as $photo) {
-                if (!$photo->isValid()) continue;
-                $totalSize += $photo->getSize();
-            }
+                if (!$photo->isValid()) {
+                    continue;
+                }
 
+                $processed = $compression->compressUploadedFile($photo);
+                if (!empty($processed['data'])) {
+                    $photosToSave[] = $processed;
+                    $totalSize += $processed['size'];
+                }
+            }
+        }
+
+        if (!empty($photosToSave)) {
             if (!app(StorageQuotaService::class)->canUpload($spkl->school, $totalSize)) {
-                return $this->journalErrorResponse($request, ['photos' => 'Kapasitas penyimpanan sekolah Anda telah penuh. Tidak dapat mengunggah foto jurnal. Hubungi admin sekolah.']);
+                return $this->journalErrorResponse($request, [
+                    'photos' => 'Kapasitas penyimpanan sekolah Anda telah penuh. Tidak dapat mengunggah foto jurnal. Hubungi admin sekolah.',
+                ]);
             }
 
-            foreach ($request->file('photos') as $photo) {
-                if (!$photo->isValid()) continue;
-                $path = app(SecureFileService::class)->storeUploadedFile($photo, 'schools/' . $spkl->school_id . '/journals/' . date('Y'));
+            foreach ($photosToSave as $item) {
+                $fileName = 'schools/' . $spkl->school_id . '/journals/' . date('Y') . '/' . Str::random(32) . '.' . $item['extension'];
+                app(SecureFileService::class)->putContents($fileName, $item['data']);
                 JournalPhoto::create([
                     'journal_id' => $journal->id,
-                    'photo_path' => $path,
+                    'photo_path' => $fileName,
                 ]);
             }
             app(StorageQuotaService::class)->recordUpload($spkl->school, $totalSize);
