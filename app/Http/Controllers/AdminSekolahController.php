@@ -4,10 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Models\Announcement;
 use App\Models\Attendance;
+use App\Models\AttendanceRequest;
 use App\Models\Certificate;
 use App\Models\Company;
 use App\Models\IncidentReport;
 use App\Models\Invoice;
+use App\Models\Journal;
+use App\Models\JournalPhoto;
 use App\Models\LearningObjective;
 use App\Models\Major;
 use App\Models\PklPeriod;
@@ -171,6 +174,170 @@ class AdminSekolahController extends Controller
         }
 
         return back()->with('success', 'Konfigurasi identitas sekolah dan jam kerja berhasil disimpan.');
+    }
+
+    public function toggleTestMode(Request $request)
+    {
+        $schoolId = $this->getSchoolId();
+        $school = School::findOrFail($schoolId);
+
+        $currentState = $school->isTestModeActive();
+        $newState = !$currentState;
+
+        SchoolSetting::updateOrCreate(
+            ['school_id' => $schoolId, 'key' => 'stress_test_mode'],
+            ['value' => $newState ? '1' : '0']
+        );
+
+        if ($newState) {
+            SchoolSetting::updateOrCreate(
+                ['school_id' => $schoolId, 'key' => 'stress_test_activated_at'],
+                ['value' => now()->toIso8601String()]
+            );
+        }
+
+        \Illuminate\Support\Facades\Cache::forget(SchoolSetting::cacheKey($schoolId));
+
+        $msg = $newState 
+            ? 'Mode Simulasi & Uji Coba berhasil DIAKTIFKAN. Siswa di DU/DI belum mulai kini dapat presensi bebas radius.'
+            : 'Mode Simulasi & Uji Coba telah DINONAKTIFKAN. Seluruh aturan jam dan geofencing kembali normal.';
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'is_active' => $newState,
+                'message' => $msg,
+            ]);
+        }
+
+        return back()->with('success', $msg);
+    }
+
+    public function getTestModeStats(Request $request)
+    {
+        $schoolId = $this->getSchoolId();
+        $school = School::findOrFail($schoolId);
+        $date = $request->query('date') ?: Carbon::today()->toDateString();
+
+        $attQuery = Attendance::where('school_id', $schoolId)
+            ->forDate($date)
+            ->whereHas('studentPkl.company', fn($cq) => $cq->where('is_pkl_started', false));
+
+        $journalQuery = Journal::where('school_id', $schoolId)
+            ->forDate($date)
+            ->whereHas('studentPkl.company', fn($cq) => $cq->where('is_pkl_started', false));
+
+        $journalIds = (clone $journalQuery)->pluck('id');
+        $photoCount = JournalPhoto::whereIn('journal_id', $journalIds)->count();
+
+        $reqCount = AttendanceRequest::where('school_id', $schoolId)
+            ->whereDate('start_date', '<=', $date)
+            ->whereDate('end_date', '>=', $date)
+            ->whereHas('studentPkl.company', fn($cq) => $cq->where('is_pkl_started', false))
+            ->count();
+
+        return response()->json([
+            'is_active' => $school->isTestModeActive(),
+            'date' => $date,
+            'attendances_count' => $attQuery->count(),
+            'journals_count' => $journalQuery->count(),
+            'photos_count' => $photoCount,
+            'requests_count' => $reqCount,
+        ]);
+    }
+
+    public function cleanTestData(Request $request)
+    {
+        $schoolId = $this->getSchoolId();
+        $school = School::findOrFail($schoolId);
+        $date = $request->input('date') ?: Carbon::today()->toDateString();
+
+        $attQuery = Attendance::where('school_id', $schoolId)
+            ->forDate($date)
+            ->whereHas('studentPkl.company', fn($cq) => $cq->where('is_pkl_started', false));
+
+        $journalQuery = Journal::where('school_id', $schoolId)
+            ->forDate($date)
+            ->whereHas('studentPkl.company', fn($cq) => $cq->where('is_pkl_started', false));
+
+        $reqQuery = AttendanceRequest::where('school_id', $schoolId)
+            ->whereDate('start_date', '<=', $date)
+            ->whereDate('end_date', '>=', $date)
+            ->whereHas('studentPkl.company', fn($cq) => $cq->where('is_pkl_started', false));
+
+        $attCount = (clone $attQuery)->count();
+        $journalCount = (clone $journalQuery)->count();
+        $reqCount = (clone $reqQuery)->count();
+        $journalIds = (clone $journalQuery)->pluck('id');
+        $photoCount = JournalPhoto::whereIn('journal_id', $journalIds)->count();
+
+        $deletedFiles = 0;
+        $deleteFileHelper = function (?string $path) use (&$deletedFiles) {
+            if (empty($path)) return;
+            try {
+                if (Storage::disk('local')->exists($path)) {
+                    Storage::disk('local')->delete($path);
+                    $deletedFiles++;
+                }
+            } catch (\Throwable $e) {}
+            try {
+                if (Storage::disk('public')->exists($path)) {
+                    Storage::disk('public')->delete($path);
+                    $deletedFiles++;
+                }
+            } catch (\Throwable $e) {}
+        };
+
+        // Hapus fisik foto presensi
+        $attQuery->chunkById(200, function ($attendances) use ($deleteFileHelper) {
+            foreach ($attendances as $att) {
+                $deleteFileHelper($att->checkin_photo_path);
+                $deleteFileHelper($att->checkout_photo_path ?? null);
+            }
+        });
+
+        // Hapus fisik foto jurnal
+        JournalPhoto::whereIn('journal_id', $journalIds)->chunkById(200, function ($photos) use ($deleteFileHelper) {
+            foreach ($photos as $p) {
+                $deleteFileHelper($p->photo_path);
+            }
+        });
+
+        // Hapus fisik lampiran izin
+        $reqQuery->chunkById(200, function ($requests) use ($deleteFileHelper) {
+            foreach ($requests as $r) {
+                $deleteFileHelper($r->attachment_path);
+            }
+        });
+
+        // Hapus record DB
+        \Illuminate\Support\Facades\DB::transaction(function () use ($attQuery, $journalIds, $journalQuery, $reqQuery) {
+            JournalPhoto::whereIn('journal_id', $journalIds)->delete();
+            $journalQuery->delete();
+            $attQuery->delete();
+            $reqQuery->delete();
+        });
+
+        // Hitung ulang kuota storage sekolah
+        app(\App\Services\StorageQuotaService::class)->calculateSchoolStorage($school);
+        \Illuminate\Support\Facades\Cache::forget("school_storage_bytes_{$school->id}");
+
+        $msg = "Pembersihan batch selesai: {$attCount} presensi, {$journalCount} jurnal ({$photoCount} foto), dan {$deletedFiles} file fisik berhasil dihapus. Data siswa aktif PKL aman 100%.";
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => $msg,
+                'deleted' => [
+                    'attendances' => $attCount,
+                    'journals' => $journalCount,
+                    'photos' => $photoCount,
+                    'files' => $deletedFiles,
+                ],
+            ]);
+        }
+
+        return back()->with('success', $msg);
     }
 
     public function majors()

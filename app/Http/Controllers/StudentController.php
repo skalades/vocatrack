@@ -164,7 +164,7 @@ class StudentController extends Controller
 
         $completedJournalsCount = $spkl ? Journal::where('student_pkl_id', $spkl->id)->whereIn('status', ['submitted', 'review_guru', 'approved'])->count() : 18;
         $targetJournalsCount = max($completedJournalsCount, 20);
-        $isPklStarted = (bool) ($spkl?->company?->is_pkl_started ?? false);
+        $isPklStarted = (bool) ($spkl?->company?->is_pkl_started ?? false) || (bool) ($spkl?->isTestStudent());
 
         return view('student.home', compact(
             'spkl', 'student', 'todayAttendance', 'todayJournal', 'stats', 'announcements', 'unreadAnnouncements',
@@ -212,7 +212,7 @@ class StudentController extends Controller
             $dayStatus = $attendanceService->getDayAttendanceStatus($spkl);
         }
 
-        $isPklStarted = (bool) ($spkl?->company?->is_pkl_started ?? false);
+        $isPklStarted = (bool) ($spkl?->company?->is_pkl_started ?? false) || (bool) ($spkl?->isTestStudent());
         $mode = $request->query('mode', (!$todayAttendance ? 'checkin' : ($request->has('checkout') ? 'checkout' : 'ticket')));
 
         return view('student.attendance', compact('spkl', 'student', 'todayAttendance', 'todayJournal', 'history', 'pendingRequests', 'dayStatus', 'dayNumber', 'isPklStarted', 'mode'));
@@ -225,7 +225,7 @@ class StudentController extends Controller
             return back()->withErrors(['time' => 'Anda tidak memiliki penugasan PKL aktif untuk melakukan presensi.']);
         }
 
-        if (!$spkl->company?->is_pkl_started) {
+        if (!$spkl->company?->is_pkl_started && !$spkl->isTestStudent()) {
             $msg = 'Pelaksanaan PKL di ' . ($spkl->company->name ?? 'perusahaan ini') . ' belum resmi dimulai. Anda belum diwajibkan melakukan presensi.';
             if ($request->wantsJson()) {
                 return response()->json(['message' => $msg, 'errors' => ['time' => [$msg]]], 422);
@@ -244,6 +244,9 @@ class StudentController extends Controller
 
         $school = $spkl->school;
         $isSchoolGeofenceCheckin = $school ? $school->isFeatureEnabled('feature_checkin_geofence', true) : true;
+        if ($spkl->isTestStudent()) {
+            $isSchoolGeofenceCheckin = false;
+        }
         if ($isSchoolGeofenceCheckin && $request->has('is_within_radius') && filter_var($request->input('is_within_radius'), FILTER_VALIDATE_BOOLEAN) === false) {
             if (!$request->filled('reason') || strlen(trim($request->reason)) < 5) {
                 if ($request->wantsJson()) {
@@ -621,7 +624,7 @@ class StudentController extends Controller
             return $this->journalErrorResponse($request, ['date' => 'Anda tidak memiliki penugasan PKL aktif untuk mengisi jurnal.']);
         }
 
-        if (!$spkl->company?->is_pkl_started) {
+        if (!$spkl->company?->is_pkl_started && !$spkl->isTestStudent()) {
             return $this->journalErrorResponse($request, [
                 'date' => 'Pelaksanaan PKL di ' . ($spkl->company->name ?? 'perusahaan ini') . ' belum resmi dimulai. Pengisian jurnal belum diwajibkan.'
             ]);

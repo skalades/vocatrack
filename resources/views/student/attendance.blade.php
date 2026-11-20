@@ -166,6 +166,16 @@
                 </a>
             </div>
 
+            @if($spkl?->isTestStudent())
+                <div class="my-1.5 px-4 py-2 rounded-2xl bg-amber-500/20 border border-amber-400/40 text-amber-200 text-xs flex items-center justify-between shadow-xs">
+                    <span class="flex items-center gap-2 font-bold text-[11px]">
+                        <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                        Mode Simulasi Uji Coba Aktif
+                    </span>
+                    <span class="text-[10.5px] text-amber-300 font-semibold bg-amber-400/10 px-2 py-0.5 rounded-full border border-amber-300/30">Bebas Radius GPS</span>
+                </div>
+            @endif
+
             @if($isSelfieEnabled)
                 <!-- Camera Viewfinder Box (Compact & Responsive for Mobile Viewport) -->
                 <div class="relative h-[380px] sm:h-[430px] rounded-[28px] bg-[#12382F] overflow-hidden my-1 flex items-center justify-center border border-white/10 shadow-2xl">

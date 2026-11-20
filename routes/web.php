@@ -167,6 +167,9 @@ Route::middleware(['auth', 'IdentifyTenant', 'role:admin-sekolah'])->prefix('adm
     // Settings
     Route::get('/settings', [AdminSekolahController::class, 'settings'])->name('adminsekolah.settings');
     Route::post('/settings', [AdminSekolahController::class, 'updateSettings'])->name('adminsekolah.settings.update');
+    Route::post('/test-mode/toggle', [AdminSekolahController::class, 'toggleTestMode'])->name('adminsekolah.test-mode.toggle');
+    Route::get('/test-mode/stats', [AdminSekolahController::class, 'getTestModeStats'])->name('adminsekolah.test-mode.stats');
+    Route::post('/test-mode/clean', [AdminSekolahController::class, 'cleanTestData'])->name('adminsekolah.test-mode.clean');
 
     // Majors & Classes
     Route::get('/majors', [AdminSekolahController::class, 'majors'])->name('adminsekolah.majors');

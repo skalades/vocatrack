@@ -51,6 +51,16 @@ class StudentPkl extends Model
     }
 
     /**
+     * Memeriksa apakah siswa ini merupakan siswa simulasi/uji coba
+     * (Mode uji coba aktif pada sekolah DAN DU/DI belum mulai PKL).
+     */
+    public function isTestStudent(): bool
+    {
+        return (bool) $this->school?->isTestModeActive()
+            && (!$this->company || !$this->company->is_pkl_started);
+    }
+
+    /**
      * Status terhitung penugasan siswa (mempertimbangkan pengaturan mulai dari perusahaan mitra).
      */
     public function getComputedStatusAttribute(): string

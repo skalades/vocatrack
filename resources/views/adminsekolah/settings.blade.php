@@ -341,6 +341,79 @@
         </div>
     </x-card>
 
+    <!-- 5. Mode Simulasi & Uji Coba Presensi (Stress Test) -->
+    <x-card 
+        title="5. Mode Simulasi & Uji Coba Presensi (Stress Test)" 
+        subtitle="Aktifkan untuk menguji beban server secara massal bersama siswa yang belum mulai PKL tanpa batasan radius GPS."
+    >
+        <div class="space-y-4">
+            <!-- Banner Status & Toggle Card -->
+            <div class="p-4 sm:p-5 rounded-2xl border transition-all {{ $school->isTestModeActive() ? 'bg-amber-50/70 border-amber-300' : 'bg-slate-50/70 border-slate-200' }}">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div class="space-y-1">
+                        <div class="flex items-center gap-2">
+                            <span class="text-sm font-extrabold {{ $school->isTestModeActive() ? 'text-amber-900' : 'text-slate-900' }}">
+                                Status Mode Simulasi:
+                            </span>
+                            @if($school->isTestModeActive())
+                                <x-badge variant="warning" size="xs">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-amber-500 mr-1 animate-pulse"></span>
+                                    AKTIF (Uji Coba Berlangsung)
+                                </x-badge>
+                            @else
+                                <x-badge variant="neutral" size="xs">
+                                    NONAKTIF (Normal)
+                                </x-badge>
+                            @endif
+                        </div>
+                        <p class="text-xs {{ $school->isTestModeActive() ? 'text-amber-800' : 'text-slate-600' }} leading-relaxed">
+                            @if($school->isTestModeActive())
+                                Siswa pada DU/DI yang berstatus <strong>"Belum Mulai"</strong> dapat melakukan presensi & isi jurnal dari mana saja (geofencing bebas). Siswa yang sudah resmi aktif PKL <strong>tetap wajib GPS kantor</strong>.
+                            @else
+                                Seluruh aturan geofencing GPS, jam presensi, dan pembatasan DU/DI belum mulai berjalan ketat 100%.
+                            @endif
+                        </p>
+                    </div>
+
+                    <div class="flex items-center gap-2 shrink-0">
+                        <form method="POST" action="{{ route('adminsekolah.test-mode.toggle') }}">
+                            @csrf
+                            <button type="submit" class="inline-flex items-center justify-center px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer {{ $school->isTestModeActive() ? 'bg-amber-600 hover:bg-amber-700 text-white focus:ring-2 focus:ring-amber-500/20' : 'bg-indigo-600 hover:bg-indigo-700 text-white focus:ring-2 focus:ring-indigo-500/20' }}">
+                                @if($school->isTestModeActive())
+                                    <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                    Nonaktifkan Simulasi
+                                @else
+                                    <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                    Nyalakan Mode Simulasi
+                                @endif
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel Statistik & Tombol Pembersihan Batch -->
+            <div class="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200 space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                        <h4 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Pembersihan Data Uji Coba (One-Click Batch Cleanup)</h4>
+                        <p class="text-xs text-slate-500 mt-0.5">Hapus sekaligus seluruh data presensi, jurnal, dan berkas foto dummy yang dibuat oleh siswa uji coba.</p>
+                    </div>
+
+                    <button type="button" onclick="openCleanTestModal()" class="inline-flex items-center justify-center px-4 py-2 rounded-xl text-xs font-bold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition-colors shadow-xs cursor-pointer">
+                        <svg class="w-4 h-4 mr-1.5 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                        Bersihkan Data Uji Coba...
+                    </button>
+                </div>
+
+                <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 text-[11px] text-slate-600 flex items-start gap-2.5">
+                    <svg class="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                    <span><strong>Jaminan Proteksi Data:</strong> Pembersihan batch ini <u>hanya</u> menghapus data dari DU/DI yang statusnya "Belum Mulai" (<code>is_pkl_started = 0</code>). Data kehadiran siswa aktif PKL yang sedang bertugas di industri <strong>dijamin aman 100% dan tidak akan pernah terhapus</strong>.</span>
+                </div>
+            </div>
+        </div>
+    </x-card>
+
 </div>
 
 <!-- Modal Form Period (Add / Edit) -->
@@ -398,8 +471,99 @@
     </div>
 </div>
 
+<!-- Modal Pembersihan Data Uji Coba Batch -->
+<div id="modal-clean-test" onclick="if(event.target === this) closeCleanTestModal()" class="hidden fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-lg rounded-3xl p-6 shadow-2xl border border-slate-100 space-y-5 animate-in fade-in duration-150">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div class="flex items-center gap-2.5">
+                <div class="w-9 h-9 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                </div>
+                <div>
+                    <h3 class="text-base font-extrabold text-slate-900 tracking-tight">Pembersihan Data Uji Coba</h3>
+                    <span class="text-xs text-slate-500">Hapus massal data simulasi tanpa menyentuh siswa aktif</span>
+                </div>
+            </div>
+            <button type="button" onclick="closeCleanTestModal()" class="p-1.5 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+
+        <form id="form-clean-test" method="POST" action="{{ route('adminsekolah.test-mode.clean') }}" class="space-y-4">
+            @csrf
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1.5">Pilih Tanggal Pelaksanaan Uji Coba</label>
+                <input type="date" name="date" id="clean-test-date" value="{{ \Carbon\Carbon::today()->toDateString() }}" required onchange="fetchCleanStats()"
+                       class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-600 font-semibold text-slate-900">
+            </div>
+
+            <!-- Stats Ringkasan Data -->
+            <div id="clean-stats-container" class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2 text-xs">
+                <div class="flex justify-between items-center text-slate-600">
+                    <span>Presensi Uji Coba Ditemukan:</span>
+                    <span id="stat-att-count" class="font-extrabold text-slate-900">Memuat...</span>
+                </div>
+                <div class="flex justify-between items-center text-slate-600">
+                    <span>Jurnal Uji Coba Ditemukan:</span>
+                    <span id="stat-journal-count" class="font-extrabold text-slate-900">Memuat...</span>
+                </div>
+                <div class="flex justify-between items-center text-slate-600">
+                    <span>Foto Tersimpan di Storage:</span>
+                    <span id="stat-photo-count" class="font-extrabold text-slate-900">Memuat...</span>
+                </div>
+            </div>
+
+            <div class="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-[11px] text-emerald-800 flex items-center gap-2">
+                <svg class="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                <span>Hanya DU/DI belum mulai yang dibersihkan. Siswa aktif PKL di industri 100% aman.</span>
+            </div>
+
+            <div class="flex items-center justify-end space-x-2.5 pt-3 border-t border-slate-100">
+                <x-button type="button" variant="secondary" size="md" onclick="closeCleanTestModal()">
+                    Batal
+                </x-button>
+                <button type="submit" id="btn-submit-clean" class="inline-flex items-center justify-center px-4 py-2.5 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white transition-all shadow-xs cursor-pointer focus:ring-2 focus:ring-rose-500/20">
+                    <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                    Ya, Bersihkan Data Uji Coba
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 @push('scripts')
 <script>
+    function openCleanTestModal() {
+        document.getElementById('modal-clean-test').classList.remove('hidden');
+        fetchCleanStats();
+    }
+
+    function closeCleanTestModal() {
+        document.getElementById('modal-clean-test').classList.add('hidden');
+    }
+
+    function fetchCleanStats() {
+        const dateInput = document.getElementById('clean-test-date');
+        const date = dateInput ? dateInput.value : '';
+        document.getElementById('stat-att-count').textContent = 'Memuat...';
+        document.getElementById('stat-journal-count').textContent = 'Memuat...';
+        document.getElementById('stat-photo-count').textContent = 'Memuat...';
+
+        fetch(`{{ route('adminsekolah.test-mode.stats') }}?date=${date}`, {
+            headers: { 'Accept': 'application/json' }
+        })
+        .then(r => r.json())
+        .then(data => {
+            document.getElementById('stat-att-count').textContent = `${data.attendances_count} presensi`;
+            document.getElementById('stat-journal-count').textContent = `${data.journals_count} jurnal`;
+            document.getElementById('stat-photo-count').textContent = `${data.photos_count} foto`;
+        })
+        .catch(() => {
+            document.getElementById('stat-att-count').textContent = '-';
+            document.getElementById('stat-journal-count').textContent = '-';
+            document.getElementById('stat-photo-count').textContent = '-';
+        });
+    }
     function previewSchoolLogo(input) {
         const preview = document.getElementById('logo-preview-img');
         const placeholder = document.getElementById('logo-placeholder');

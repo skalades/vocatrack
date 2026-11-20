@@ -164,6 +164,14 @@ class School extends Model
         return filter_var($val, FILTER_VALIDATE_BOOLEAN);
     }
 
+    /**
+     * Memeriksa apakah Mode Simulasi / Stress Test aktif untuk sekolah ini.
+     */
+    public function isTestModeActive(): bool
+    {
+        return $this->isFeatureEnabled('stress_test_mode', false);
+    }
+
     public function getStorageUsedMbAttribute(): float
     {
         return round(($this->storage_used_bytes ?? 0) / (1024 * 1024), 2);

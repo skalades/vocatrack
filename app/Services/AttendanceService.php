@@ -25,14 +25,18 @@ class AttendanceService
 
         // Periksa apakah fitur geofencing tenant aktif untuk presensi masuk
         $school = $spkl->school;
+        $isTestStudent = $spkl->isTestStudent();
         $isSchoolGeofence = $school ? $school->isFeatureEnabled('feature_checkin_geofence', true) : true;
+        if ($isTestStudent) {
+            $isSchoolGeofence = false;
+        }
         $effectiveGps = $isSchoolGeofence && (bool) ($company?->gps_enabled ?? false);
 
         // 1. Evaluate GPS, accuracy & anti-fake GPS guard
         $geoEval = $geoGuard->evaluateCheckinLocation($company, $data, request()?->userAgent(), $effectiveGps);
-        $isWithinRadius = $geoEval['is_within_radius'];
+        $isWithinRadius = $isTestStudent ? true : $geoEval['is_within_radius'];
         $accuracyMeters = $geoEval['accuracy_meters'];
-        $isMockDetected = $geoEval['is_mock_detected'];
+        $isMockDetected = $isTestStudent ? false : $geoEval['is_mock_detected'];
 
         // Enforce reason when outside radius (or guide to Dinas Luar request)
         if ($effectiveGps && !$isWithinRadius && (empty($data['reason']) || strlen(trim($data['reason'])) < 5)) {
@@ -45,7 +49,7 @@ class AttendanceService
         $workHours = $this->resolveWorkHours($company, $spkl->school_id);
 
         $checkinStart = Carbon::createFromTimeString($workHours['checkin_start']);
-        if ($now->lessThan($checkinStart)) {
+        if (!$isTestStudent && $now->lessThan($checkinStart)) {
             throw ValidationException::withMessages(['time' => 'Tombol presensi baru dapat ditekan mulai pukul ' . substr($workHours['checkin_start'], 0, 5) . ' WIB.']);
         }
 
@@ -53,7 +57,12 @@ class AttendanceService
         $status = $now->lessThanOrEqualTo($lateLimit) ? 'hadir' : 'terlambat';
 
         $checkoutNotes = null;
-        if (!$isWithinRadius && !empty($data['reason'])) {
+        if ($isTestStudent) {
+            $checkoutNotes = '[SIMULASI] Uji Coba Sistem';
+            if (!empty($data['reason'])) {
+                $checkoutNotes .= ' | ' . $data['reason'];
+            }
+        } elseif (!$isWithinRadius && !empty($data['reason'])) {
             $checkoutNotes = 'Alasan Luar Radius: ' . $data['reason'];
         }
         if ($isMockDetected) {
@@ -109,7 +118,11 @@ class AttendanceService
         $isMockDetected = false;
 
         $school = $spkl->school;
+        $isTestStudent = $spkl->isTestStudent();
         $isSchoolGeofenceCheckout = $school ? $school->isFeatureEnabled('feature_checkout_geofence', true) : true;
+        if ($isTestStudent) {
+            $isSchoolGeofenceCheckout = false;
+        }
         $effectiveGpsCheckout = $isSchoolGeofenceCheckout && (bool) ($company?->gps_enabled ?? false);
 
         if ($effectiveGpsCheckout) {
