@@ -119,30 +119,6 @@
         tr {
             page-break-inside: avoid;
         }
-        .photo-thumbnail-box {
-            display: inline-block;
-            margin-right: 5px;
-            margin-bottom: 4px;
-            vertical-align: top;
-            text-align: center;
-        }
-        .photo-img {
-            height: 60px;
-            max-width: 95px;
-            border: 1px solid #cbd5e1;
-            border-radius: 4px;
-            display: block;
-        }
-        .photo-caption {
-            font-size: 6.5pt;
-            color: #64748b;
-            display: block;
-            max-width: 95px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            margin-top: 1px;
-        }
     </style>
 </head>
 <body>
@@ -296,7 +272,7 @@
         III. Ringkasan Jurnal Kerja Industri (Terverifikasi)
         @if(!empty($includePhotos))
             <span style="font-size: 8pt; font-weight: normal; color: #4338ca; text-transform: none; float: right;">
-                (Disertai Dokumentasi Foto Lapangan)
+                (Dokumentasi Foto Tersedia di Lampiran)
             </span>
         @endif
     </div>
@@ -307,8 +283,8 @@
             <thead>
                 <tr>
                     <th style="width: 15%;" class="text-center">Tanggal</th>
-                    <th style="width: {{ !empty($includePhotos) ? '62%' : '60%' }};">Uraian Capaian Kegiatan & Pekerjaan</th>
-                    <th style="width: {{ !empty($includePhotos) ? '23%' : '25%' }};">Status Verifikasi</th>
+                    <th style="width: 60%;">Uraian Capaian Kegiatan & Pekerjaan</th>
+                    <th style="width: 25%;" class="text-center">Status Verifikasi</th>
                 </tr>
             </thead>
             <tbody>
@@ -318,31 +294,17 @@
                             {{ \Carbon\Carbon::parse($j->date)->format('d/m/Y') }}
                         </td>
                         <td style="font-size: 8pt; line-height: 1.35; vertical-align: top;">
-                            <div style="font-weight: 500; color: #1e293b;">{{ $j->activity_description }}</div>
-                            @if(!empty($includePhotos) && $j->photos->isNotEmpty())
-                                <div style="margin-top: 5px;">
-                                    @foreach($j->photos as $ph)
-                                        @if(!empty($ph->base64_data))
-                                            <div class="photo-thumbnail-box">
-                                                <img src="{{ $ph->base64_data }}" class="photo-img" alt="Foto Lapangan">
-                                                @if(!empty($ph->caption))
-                                                    <span class="photo-caption">{{ $ph->caption }}</span>
-                                                @endif
-                                            </div>
-                                        @endif
-                                    @endforeach
-                                </div>
-                            @endif
+                            <div style="color: #1e293b;">{{ $j->activity_description }}</div>
                         </td>
-                        <td style="font-size: 7.5pt; color: #047857; vertical-align: top;">
-                            <div>Disetujui DU/DI & Guru</div>
+                        <td class="text-center" style="font-size: 7.5pt; color: #047857; vertical-align: top;">
+                            <div style="font-weight: bold;">Disetujui DU/DI & Guru</div>
                             @if(!empty($includePhotos) && $j->photos->isNotEmpty())
                                 @php
                                     $validPhotosCount = $j->photos->filter(fn($p) => !empty($p->base64_data))->count();
                                 @endphp
                                 @if($validPhotosCount > 0)
-                                    <div style="font-size: 7pt; color: #4338ca; margin-top: 3px; font-weight: bold;">
-                                        &#128247; {{ $validPhotosCount }} Foto Terlampir
+                                    <div style="font-size: 7pt; color: #4338ca; margin-top: 2px; font-weight: bold;">
+                                        [{{ $validPhotosCount }} Foto di Lampiran]
                                     </div>
                                 @endif
                             @endif
@@ -379,6 +341,104 @@
             </td>
         </tr>
     </table>
+
+    <!-- LAMPIRAN DOKUMENTASI FOTO KEGIATAN LAPANGAN -->
+    @if(!empty($includePhotos))
+        @php
+            $photoList = [];
+            foreach($spkl->journals as $j) {
+                foreach($j->photos as $ph) {
+                    if (!empty($ph->base64_data)) {
+                        $photoList[] = [
+                            'date' => $j->date,
+                            'activity' => $j->activity_description,
+                            'photo' => $ph,
+                        ];
+                    }
+                }
+            }
+        @endphp
+
+        @if(!empty($photoList))
+            <div style="page-break-before: always;"></div>
+
+            <!-- Header Lampiran -->
+            <table style="width: 100%; border-bottom: 2px solid #0f172a; padding-bottom: 8px; margin-bottom: 16px;">
+                <tr>
+                    <td>
+                        <div style="font-size: 8.5pt; font-weight: bold; color: #4338ca; text-transform: uppercase; letter-spacing: 0.5px;">
+                            LAMPIRAN LAPORAN PKL
+                        </div>
+                        <div style="font-size: 13pt; font-weight: 800; color: #0f172a; text-transform: uppercase; margin-top: 2px;">
+                            DOKUMENTASI FOTO KEGIATAN LAPANGAN
+                        </div>
+                        <div style="font-size: 8.5pt; color: #475569; margin-top: 3px;">
+                            Siswa: <strong>{{ $spkl->student->user->name }}</strong> (NISN: {{ $spkl->student->nisn }}) &bull; Mitra: <strong>{{ $spkl->company->name }}</strong>
+                        </div>
+                    </td>
+                    <td style="text-align: right; vertical-align: bottom;">
+                        <span style="font-size: 8pt; font-weight: bold; padding: 4px 8px; background-color: #e0e7ff; color: #3730a3; border-radius: 4px;">
+                            Total: {{ count($photoList) }} Dokumentasi Foto
+                        </span>
+                    </td>
+                </tr>
+            </table>
+
+            <!-- Grid Galeri Foto 2 Kolom -->
+            <table style="width: 100%; border-collapse: separate; border-spacing: 12px 14px; margin-left: -12px; margin-right: -12px;">
+                @foreach(array_chunk($photoList, 2) as $row)
+                    <tr style="page-break-inside: avoid;">
+                        @foreach($row as $item)
+                            <td style="width: 50%; vertical-align: top; padding: 0;">
+                                <table style="width: 100%; border: 1px solid #cbd5e1; border-radius: 6px; background-color: #f8fafc; border-collapse: separate; border-spacing: 0;">
+                                    <!-- Card Header: Tanggal & Badge -->
+                                    <tr>
+                                        <td style="padding: 6px 10px; background-color: #f1f5f9; border-bottom: 1px solid #cbd5e1;">
+                                            <table style="width: 100%;">
+                                                <tr>
+                                                    <td style="font-size: 8pt; font-weight: bold; color: #0f172a;">
+                                                        {{ \Carbon\Carbon::parse($item['date'])->isoFormat('dddd, D MMMM Y') }}
+                                                    </td>
+                                                    <td style="text-align: right; font-size: 7.5pt; font-weight: bold; color: #059669;">
+                                                        [Terverifikasi]
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+
+                                    <!-- Card Body: Foto Lapangan Berkualitas -->
+                                    <tr>
+                                        <td style="padding: 8px; text-align: center; background-color: #ffffff;">
+                                            <img src="{{ $item['photo']->base64_data }}" style="max-height: 175px; max-width: 100%; width: auto; border: 1px solid #e2e8f0; border-radius: 4px; display: inline-block;" alt="Foto Dokumentasi">
+                                        </td>
+                                    </tr>
+
+                                    <!-- Card Footer: Keterangan & Aktivitas -->
+                                    <tr>
+                                        <td style="padding: 8px 10px; font-size: 8pt; line-height: 1.35; color: #334155; border-top: 1px solid #e2e8f0; background-color: #f8fafc;">
+                                            @if(!empty($item['photo']->caption))
+                                                <div style="font-weight: bold; color: #0f172a; margin-bottom: 2px;">
+                                                    {{ $item['photo']->caption }}
+                                                </div>
+                                            @endif
+                                            <div style="color: #475569; font-size: 7.5pt;">
+                                                {{ $item['activity'] }}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                        @endforeach
+
+                        @if(count($row) === 1)
+                            <td style="width: 50%; padding: 0;"></td>
+                        @endif
+                    </tr>
+                @endforeach
+            </table>
+        @endif
+    @endif
 
 </body>
 </html>
