@@ -17,6 +17,7 @@ use App\Services\AttendanceService;
 use App\Services\HolidayService;
 use App\Services\IncidentReportService;
 use App\Services\JournalService;
+use App\Services\SecureFileService;
 use App\Services\SupervisionService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
@@ -739,11 +740,18 @@ class TeacherController extends Controller
         return view('teacher.reports', compact('studentPkls'));
     }
 
-    public function downloadPdf(StudentPkl $spkl)
+    public function downloadPdf(Request $request, StudentPkl $spkl)
     {
         $teacher = $this->getTeacher();
         if ($spkl->teacher_id !== $teacher->id) {
             abort(403);
+        }
+
+        $includePhotos = $request->boolean('include_photos', false);
+
+        $journalRelations = ['learningObjectives'];
+        if ($includePhotos) {
+            $journalRelations[] = 'photos';
         }
 
         $spkl->load([
@@ -755,7 +763,7 @@ class TeacherController extends Controller
             'teacher.user',
             'pklPeriod',
             'attendances' => fn($q) => $q->orderBy('date', 'asc'),
-            'journals' => fn($q) => $q->where('status', 'approved')->orderBy('date', 'asc'),
+            'journals' => fn($q) => $q->where('status', 'approved')->with($journalRelations)->orderBy('date', 'asc'),
             'assessment',
         ]);
 
@@ -768,11 +776,30 @@ class TeacherController extends Controller
             $schoolLogoBase64 = "data:{$mime};base64,{$content}";
         }
 
-        $pdf = Pdf::loadView('reports.student_pdf', compact('spkl', 'settings', 'schoolLogoBase64'));
+        if ($includePhotos) {
+            ini_set('memory_limit', '512M');
+            set_time_limit(180);
+
+            $secureService = app(SecureFileService::class);
+            foreach ($spkl->journals as $journal) {
+                foreach ($journal->photos as $photo) {
+                    $disk = $secureService->diskFor($photo->photo_path);
+                    if ($disk && Storage::disk($disk)->exists($photo->photo_path)) {
+                        $mime = Storage::disk($disk)->mimeType($photo->photo_path) ?? 'image/jpeg';
+                        $photo->base64_data = 'data:' . $mime . ';base64,' . base64_encode(Storage::disk($disk)->get($photo->photo_path));
+                    } else {
+                        $photo->base64_data = null;
+                    }
+                }
+            }
+        }
+
+        $pdf = Pdf::loadView('reports.student_pdf', compact('spkl', 'settings', 'schoolLogoBase64', 'includePhotos'));
         $pdf->setPaper('a4', 'portrait');
 
         $sanitizedName = Str::slug($spkl->student->user->name);
-        return $pdf->download("Laporan_PKL_{$sanitizedName}.pdf");
+        $suffix = $includePhotos ? '_Lengkap_Foto' : '';
+        return $pdf->download("Laporan_PKL_{$sanitizedName}{$suffix}.pdf");
     }
 
     public function incidents(Request $request, IncidentReportService $incidentService)

@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\Assessment;
 use App\Models\Company;
+use App\Models\Journal;
+use App\Models\JournalPhoto;
 use App\Models\Major;
 use App\Models\PklPeriod;
 use App\Models\School;
@@ -244,5 +246,106 @@ class AssessmentAndPdfTest extends TestCase
         $removeResponse->assertRedirect();
         $school->refresh();
         $this->assertNull($school->logo_path);
+    }
+
+    public function test_guru_can_download_pdf_report_with_field_photos(): void
+    {
+        Storage::fake('local');
+        Storage::fake('public');
+
+        $school = School::create([
+            'npsn' => '77777777',
+            'name' => 'SMK Negeri 2 Bandung',
+            'address' => 'Jl. Ciliwung',
+            'phone' => '022-123456',
+            'email' => 'info@smkn2bdg.sch.id',
+            'is_active' => true,
+        ]);
+
+        $guruUser = User::create([
+            'school_id' => $school->id,
+            'name' => 'Guru Pembimbing Lapangan',
+            'email' => 'guru.lapangan@smkn2bdg.sch.id',
+            'password' => bcrypt('password'),
+            'role' => 'guru-pembimbing',
+            'is_active' => true,
+        ]);
+        $teacher = Teacher::create(['user_id' => $guruUser->id, 'nip' => '198505052010011005']);
+
+        $major = Major::create(['school_id' => $school->id, 'code' => 'RPL', 'name' => 'Rekayasa Perangkat Lunak']);
+        $class = SchoolClass::create([
+            'school_id' => $school->id,
+            'major_id' => $major->id,
+            'name' => 'XII RPL 2',
+            'grade_level' => 'XII',
+            'academic_year' => '2026/2027',
+        ]);
+
+        $company = Company::create([
+            'school_id' => $school->id,
+            'name' => 'PT Solusi Teknologi',
+            'address' => 'Bandung',
+            'contact_person' => 'Ahmad',
+            'phone' => '0812345678',
+            'work_days' => '5_days',
+        ]);
+
+        $period = PklPeriod::create([
+            'school_id' => $school->id,
+            'name' => 'Periode 2026 Gasal',
+            'start_date' => '2026-07-01',
+            'end_date' => '2026-12-31',
+            'is_active' => true,
+        ]);
+
+        $studentUser = User::create([
+            'school_id' => $school->id,
+            'name' => 'Fajar Pratama',
+            'email' => 'fajar@smkn2bdg.sch.id',
+            'password' => bcrypt('password'),
+            'role' => 'siswa',
+            'is_active' => true,
+        ]);
+        $student = Student::create(['user_id' => $studentUser->id, 'class_id' => $class->id, 'nis' => '2021001', 'nisn' => '0099887766']);
+
+        $spkl = StudentPkl::create([
+            'school_id' => $school->id,
+            'student_id' => $student->id,
+            'company_id' => $company->id,
+            'pkl_period_id' => $period->id,
+            'teacher_id' => $teacher->id,
+            'status' => 'active',
+        ]);
+
+        $journal = Journal::create([
+            'school_id' => $school->id,
+            'student_pkl_id' => $spkl->id,
+            'date' => '2026-08-15',
+            'activity_description' => 'Konfigurasi server database dan pengujian migrasi',
+            'status' => 'approved',
+        ]);
+
+        // Create sample photo file in local storage
+        $photoPath = 'journals/test-photo.jpg';
+        $dummyImage = UploadedFile::fake()->image('test-photo.jpg', 400, 300)->getContent();
+        Storage::disk('local')->put($photoPath, $dummyImage);
+
+        JournalPhoto::create([
+            'journal_id' => $journal->id,
+            'photo_path' => $photoPath,
+            'caption' => 'Server rack dan monitoring',
+        ]);
+
+        // 1. Download without photos
+        $responseStandard = $this->actingAs($guruUser)->get(route('guru.reports.download', $spkl->id));
+        $responseStandard->assertStatus(200);
+        $this->assertEquals('application/pdf', $responseStandard->headers->get('content-type'));
+        $this->assertStringContainsString('Laporan_PKL_fajar-pratama.pdf', (string) $responseStandard->headers->get('content-disposition'));
+
+        // 2. Download with field photos included
+        $responseWithPhotos = $this->actingAs($guruUser)->get(route('guru.reports.download', ['spkl' => $spkl->id, 'include_photos' => 1]));
+        $responseWithPhotos->assertStatus(200);
+        $this->assertEquals('application/pdf', $responseWithPhotos->headers->get('content-type'));
+        $this->assertStringContainsString('Laporan_PKL_fajar-pratama_Lengkap_Foto.pdf', (string) $responseWithPhotos->headers->get('content-disposition'));
     }
 }

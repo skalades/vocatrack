@@ -116,6 +116,33 @@
         .sig-space {
             height: 60px;
         }
+        tr {
+            page-break-inside: avoid;
+        }
+        .photo-thumbnail-box {
+            display: inline-block;
+            margin-right: 5px;
+            margin-bottom: 4px;
+            vertical-align: top;
+            text-align: center;
+        }
+        .photo-img {
+            height: 60px;
+            max-width: 95px;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            display: block;
+        }
+        .photo-caption {
+            font-size: 6.5pt;
+            color: #64748b;
+            display: block;
+            max-width: 95px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            margin-top: 1px;
+        }
     </style>
 </head>
 <body>
@@ -144,7 +171,12 @@
 
     <div class="title">
         LAPORAN REKAPITULASI PRAKTIK KERJA LAPANGAN (PKL)<br>
-        <span style="font-size: 9.5pt; font-weight: normal; color: #475569;">Periode: {{ $spkl->pklPeriod->name }}</span>
+        <span style="font-size: 9.5pt; font-weight: normal; color: #475569;">
+            Periode: {{ $spkl->pklPeriod->name }}
+            @if(!empty($includePhotos))
+                &bull; <strong style="color: #4338ca;">Dokumen Lengkap dengan Foto Dokumentasi</strong>
+            @endif
+        </span>
     </div>
 
     <!-- Student & DU/DI Identity -->
@@ -260,7 +292,14 @@
     @endif
 
     <!-- 3. Approved Journals Extract -->
-    <div class="section-title">III. Ringkasan Jurnal Kerja Industri (Terverifikasi)</div>
+    <div class="section-title">
+        III. Ringkasan Jurnal Kerja Industri (Terverifikasi)
+        @if(!empty($includePhotos))
+            <span style="font-size: 8pt; font-weight: normal; color: #4338ca; text-transform: none; float: right;">
+                (Disertai Dokumentasi Foto Lapangan)
+            </span>
+        @endif
+    </div>
     @if($spkl->journals->isEmpty())
         <p style="font-size: 8.5pt; color: #64748b; font-style: italic;">Belum ada entri jurnal yang disetujui penuh.</p>
     @else
@@ -268,21 +307,45 @@
             <thead>
                 <tr>
                     <th style="width: 15%;" class="text-center">Tanggal</th>
-                    <th style="width: 60%;">Uraian Capaian Kegiatan & Pekerjaan</th>
-                    <th style="width: 25%;">Status Verifikasi</th>
+                    <th style="width: {{ !empty($includePhotos) ? '62%' : '60%' }};">Uraian Capaian Kegiatan & Pekerjaan</th>
+                    <th style="width: {{ !empty($includePhotos) ? '23%' : '25%' }};">Status Verifikasi</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach($spkl->journals as $j)
-                    <tr>
-                        <td class="text-center font-bold" style="font-size: 8pt;">
+                    <tr style="page-break-inside: avoid;">
+                        <td class="text-center font-bold" style="font-size: 8pt; vertical-align: top;">
                             {{ \Carbon\Carbon::parse($j->date)->format('d/m/Y') }}
                         </td>
-                        <td style="font-size: 8pt; line-height: 1.3;">
-                            {{ $j->activity_description }}
+                        <td style="font-size: 8pt; line-height: 1.35; vertical-align: top;">
+                            <div style="font-weight: 500; color: #1e293b;">{{ $j->activity_description }}</div>
+                            @if(!empty($includePhotos) && $j->photos->isNotEmpty())
+                                <div style="margin-top: 5px;">
+                                    @foreach($j->photos as $ph)
+                                        @if(!empty($ph->base64_data))
+                                            <div class="photo-thumbnail-box">
+                                                <img src="{{ $ph->base64_data }}" class="photo-img" alt="Foto Lapangan">
+                                                @if(!empty($ph->caption))
+                                                    <span class="photo-caption">{{ $ph->caption }}</span>
+                                                @endif
+                                            </div>
+                                        @endif
+                                    @endforeach
+                                </div>
+                            @endif
                         </td>
-                        <td style="font-size: 7.5pt; color: #047857;">
-                            Disetujui DU/DI & Guru
+                        <td style="font-size: 7.5pt; color: #047857; vertical-align: top;">
+                            <div>Disetujui DU/DI & Guru</div>
+                            @if(!empty($includePhotos) && $j->photos->isNotEmpty())
+                                @php
+                                    $validPhotosCount = $j->photos->filter(fn($p) => !empty($p->base64_data))->count();
+                                @endphp
+                                @if($validPhotosCount > 0)
+                                    <div style="font-size: 7pt; color: #4338ca; margin-top: 3px; font-weight: bold;">
+                                        &#128247; {{ $validPhotosCount }} Foto Terlampir
+                                    </div>
+                                @endif
+                            @endif
                         </td>
                     </tr>
                 @endforeach
