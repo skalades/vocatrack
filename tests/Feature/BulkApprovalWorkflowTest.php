@@ -164,13 +164,15 @@ class BulkApprovalWorkflowTest extends TestCase
 
         $this->assertEquals('revision', $j3->fresh()->status);
 
-        // Guru bulk approves j1 and j2 (final approved)
+        // Guru bulk approves j1 and j2 (final approved) with tab preservation
         $this->actingAs($this->teacherUser)
             ->post(route('guru.journals.bulk'), [
                 'journal_ids' => [$j1->id, $j2->id],
                 'action' => 'approve',
+                'tab' => 'pending',
             ])
-            ->assertRedirect();
+            ->assertRedirect()
+            ->assertSessionHas('active_tab', 'pending');
 
         $this->assertEquals('approved', $j1->fresh()->status);
         $this->assertEquals('approved', $j2->fresh()->status);

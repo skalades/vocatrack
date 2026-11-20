@@ -22,14 +22,14 @@
         </div>
 
         <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
-            <button type="button" onclick="{{ $barId }}DeselectAll()" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold transition-colors">
+            <button type="button" onclick="window['{{ $barId }}DeselectAll']()" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold transition-colors cursor-pointer">
                 Batal
             </button>
-            <button type="button" onclick="{{ $barId }}PromptReject()" class="px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shadow-sm transition-colors flex items-center gap-1.5">
+            <button type="button" onclick="window['{{ $barId }}PromptReject']()" class="px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shadow-sm transition-colors flex items-center gap-1.5 cursor-pointer">
                 <svg class="w-3.5 h-3.5 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                 <span>{{ $rejectActionLabel }}</span>
             </button>
-            <button type="button" onclick="{{ $barId }}SubmitApprove()" class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition-colors flex items-center gap-1.5">
+            <button type="button" onclick="window['{{ $barId }}SubmitApprove']()" class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition-colors flex items-center gap-1.5 cursor-pointer">
                 <svg class="w-3.5 h-3.5 stroke-[2.5]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
                 <span>Setujui Semua</span>
             </button>
@@ -42,7 +42,7 @@
     <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-100 animate-in fade-in zoom-in duration-200">
         <div class="px-6 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
             <h3 class="text-sm font-bold text-slate-800">{{ $rejectActionLabel }} Massal</h3>
-            <button type="button" onclick="{{ $barId }}CloseModal()" class="text-slate-400 hover:text-slate-600">
+            <button type="button" onclick="window['{{ $barId }}CloseModal']()" class="text-slate-400 hover:text-slate-600 cursor-pointer">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
         </div>
@@ -53,10 +53,10 @@
             <textarea id="{{ $barId }}-modal-notes" rows="3" placeholder="Contoh: Format penulisan aktivitas belum sesuai..." class="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"></textarea>
             
             <div class="pt-3 border-t border-slate-100 flex items-center justify-end space-x-3">
-                <button type="button" onclick="{{ $barId }}CloseModal()" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors">
+                <button type="button" onclick="window['{{ $barId }}CloseModal']()" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors cursor-pointer">
                     Batal
                 </button>
-                <button type="button" onclick="{{ $barId }}SubmitReject()" class="px-3.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shadow-sm transition-colors">
+                <button type="button" onclick="window['{{ $barId }}SubmitReject']()" class="px-3.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shadow-sm transition-colors cursor-pointer">
                     Kirim {{ $rejectActionLabel }}
                 </button>
             </div>
@@ -69,6 +69,7 @@
     @csrf
     <input type="hidden" name="action" id="{{ $barId }}-form-action" value="approve">
     <input type="hidden" name="notes" id="{{ $barId }}-form-notes" value="">
+    <input type="hidden" name="tab" id="{{ $barId }}-form-tab" value="">
     <div id="{{ $barId }}-form-inputs"></div>
 </form>
 
@@ -131,11 +132,25 @@
         modal.classList.add('hidden');
     };
 
+    function syncCurrentTab() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const queryTab = urlParams.get('tab');
+        const activeTabInput = document.querySelector('.current-tab-input');
+        const storedTab = localStorage.getItem('active_journal_tab_guru') || localStorage.getItem('active_journal_tab_dudi');
+        const targetTab = queryTab || (activeTabInput ? activeTabInput.value : null) || storedTab || 'table';
+
+        const tabInput = document.getElementById(barId + '-form-tab');
+        if (tabInput) {
+            tabInput.value = targetTab;
+        }
+    }
+
     window[barId + 'SubmitApprove'] = function() {
         const checked = getCheckedBoxes();
         if (checked.length === 0) return;
         if (!confirm('Apakah Anda yakin ingin menyetujui ' + checked.length + ' {{ $itemLabel }} terpilih secara massal?')) return;
 
+        syncCurrentTab();
         formAction.value = 'approve';
         formNotes.value = '';
         formInputs.innerHTML = '';
@@ -158,6 +173,7 @@
             return;
         }
 
+        syncCurrentTab();
         formAction.value = rejectVal;
         formNotes.value = notes;
         formInputs.innerHTML = '';
@@ -171,16 +187,19 @@
         form.submit();
     };
 
-    document.addEventListener('DOMContentLoaded', function() {
-        document.querySelectorAll('input.bulk-checkbox-' + barId).forEach(cb => {
-            cb.addEventListener('change', window[barId + 'UpdateState']);
-        });
-        const master = document.getElementById('master-checkbox-' + barId);
-        if (master) {
-            master.addEventListener('change', function() {
-                window[barId + 'ToggleMaster'](this);
-            });
+    // Event delegation agar elemen dinamis / tab / accordion tetap terdeteksi
+    document.addEventListener('change', function(e) {
+        if (!e.target) return;
+        if (e.target.classList && e.target.classList.contains('bulk-checkbox-' + barId)) {
+            window[barId + 'UpdateState']();
         }
+        if (e.target.id === 'master-checkbox-' + barId || e.target.getAttribute('data-master-for') === barId) {
+            window[barId + 'ToggleMaster'](e.target);
+        }
+    });
+
+    document.addEventListener('DOMContentLoaded', function() {
+        window[barId + 'UpdateState']();
     });
 })();
 </script>

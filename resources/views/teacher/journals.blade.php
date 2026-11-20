@@ -198,41 +198,46 @@
                             $isPendingItem = $sj->status === 'review_guru' || ($sj->status === 'submitted' && !($sp->company->requires_industry_approval ?? true));
                         @endphp
                         <div class="bg-white p-4 rounded-xl border border-slate-200/70 shadow-2xs flex flex-col md:flex-row md:items-start justify-between gap-4 hover:border-slate-300 transition-colors">
-                            <div class="space-y-2 flex-1 min-w-0">
-                                <div class="flex items-center gap-2 flex-wrap">
-                                    <span class="inline-flex items-center gap-1 text-xs font-bold text-slate-900 font-mono">
-                                        <svg class="w-3.5 h-3.5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                                        {{ \Carbon\Carbon::parse($sj->date)->isoFormat('dddd, D MMMM Y') }}
-                                    </span>
-                                    @php
-                                        $parsedDate = \Carbon\Carbon::parse($sj->date);
-                                        $relDate = $parsedDate->isToday() ? 'Hari ini' : ($parsedDate->isYesterday() ? 'Kemarin' : $parsedDate->diffForHumans());
-                                    @endphp
-                                    <span class="text-[10px] text-slate-400" title="{{ $sj->created_at ? 'Diajukan: ' . $sj->created_at->translatedFormat('d M Y, H:i') : '' }}">({{ $relDate }})</span>
-                                    <x-badge :variant="$sj->status" size="xs">
-                                        {{ strtoupper(str_replace('_', ' ', $sj->status)) }}
-                                    </x-badge>
-                                </div>
-
-                                <p class="text-xs text-slate-700 leading-relaxed font-normal">
-                                    {{ $sj->activity_description }}
-                                </p>
-
-                                @if($sj->photos->isNotEmpty())
-                                    <div class="flex items-center gap-2 pt-1">
-                                        @foreach($sj->photos as $ph)
-                                            <button type="button" 
-                                                    onclick="openImageLightbox('{{ $ph->photo_url }}', 'Dokumentasi Kerja: {{ addslashes($sp->student->user->name ?? 'Siswa') }}')" 
-                                                    class="group relative w-14 h-14 rounded-xl overflow-hidden border border-slate-200 shadow-2xs hover:scale-105 hover:border-indigo-400 transition-all block shrink-0 cursor-pointer text-left" 
-                                                    title="Klik untuk melihat foto resolusi penuh">
-                                                <img src="{{ $ph->photo_url }}" class="w-full h-full object-cover" alt="Foto Kerja">
-                                                <div class="absolute inset-0 bg-slate-950/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
-                                                    <svg class="w-4 h-4 stroke-[2.5]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7"/></svg>
-                                                </div>
-                                            </button>
-                                        @endforeach
-                                    </div>
+                            <div class="flex items-start gap-3 flex-1 min-w-0">
+                                @if($isPendingItem)
+                                    <input type="checkbox" value="{{ $sj->id }}" class="bulk-checkbox-teacher-journals mt-1 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer shrink-0" title="Pilih jurnal ini untuk diproses massal">
                                 @endif
+                                <div class="space-y-2 flex-1 min-w-0">
+                                    <div class="flex items-center gap-2 flex-wrap">
+                                        <span class="inline-flex items-center gap-1 text-xs font-bold text-slate-900 font-mono">
+                                            <svg class="w-3.5 h-3.5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                            {{ \Carbon\Carbon::parse($sj->date)->isoFormat('dddd, D MMMM Y') }}
+                                        </span>
+                                        @php
+                                            $parsedDate = \Carbon\Carbon::parse($sj->date);
+                                            $relDate = $parsedDate->isToday() ? 'Hari ini' : ($parsedDate->isYesterday() ? 'Kemarin' : $parsedDate->diffForHumans());
+                                        @endphp
+                                        <span class="text-[10px] text-slate-400" title="{{ $sj->created_at ? 'Diajukan: ' . $sj->created_at->translatedFormat('d M Y, H:i') : '' }}">({{ $relDate }})</span>
+                                        <x-badge :variant="$sj->status" size="xs">
+                                            {{ strtoupper(str_replace('_', ' ', $sj->status)) }}
+                                        </x-badge>
+                                    </div>
+
+                                    <p class="text-xs text-slate-700 leading-relaxed font-normal">
+                                        {{ $sj->activity_description }}
+                                    </p>
+
+                                    @if($sj->photos->isNotEmpty())
+                                        <div class="flex items-center gap-2 pt-1">
+                                            @foreach($sj->photos as $ph)
+                                                <button type="button" 
+                                                        onclick="openImageLightbox('{{ $ph->photo_url }}', 'Dokumentasi Kerja: {{ addslashes($sp->student->user->name ?? 'Siswa') }}')" 
+                                                        class="group relative w-14 h-14 rounded-xl overflow-hidden border border-slate-200 shadow-2xs hover:scale-105 hover:border-indigo-400 transition-all block shrink-0 cursor-pointer text-left" 
+                                                        title="Klik untuk melihat foto resolusi penuh">
+                                                    <img src="{{ $ph->photo_url }}" class="w-full h-full object-cover" alt="Foto Kerja">
+                                                    <div class="absolute inset-0 bg-slate-950/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                                                        <svg class="w-4 h-4 stroke-[2.5]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7"/></svg>
+                                                    </div>
+                                                </button>
+                                            @endforeach
+                                        </div>
+                                    @endif
+                                </div>
                             </div>
 
                             <div class="shrink-0 flex items-center gap-2 self-end md:self-center">
@@ -276,21 +281,41 @@
                 </p>
             </x-card>
         @else
+            <!-- Bulk Action Queue Toolbar -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-slate-50/90 border border-slate-200/80 rounded-2xl shadow-2xs">
+                <div class="flex items-center space-x-3">
+                    <input type="checkbox" id="master-checkbox-pending" data-master-for="teacher-journals" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer">
+                    <label for="master-checkbox-pending" class="text-xs font-bold text-slate-800 cursor-pointer select-none">
+                        Pilih Semua Antrean ({{ $allPendingJournals->count() }})
+                    </label>
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">
+                        {{ $allPendingJournals->count() }} Menunggu Verifikasi
+                    </span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button type="button" onclick="selectAllPendingAndApprove()" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs transition-colors cursor-pointer">
+                        <svg class="w-3.5 h-3.5 stroke-[2.5]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                        <span>Setujui Semua Antrean</span>
+                    </button>
+                </div>
+            </div>
+
             <div class="space-y-4">
                 @foreach($allPendingJournals as $pj)
                     <x-card class="p-5 sm:p-6 border-l-4 border-l-amber-500">
                         <div class="flex flex-col lg:flex-row lg:items-start justify-between gap-5">
                             <div class="space-y-3 flex-1 min-w-0">
-                                <div class="flex items-center space-x-3">
+                                <div class="flex items-start space-x-3">
+                                    <input type="checkbox" value="{{ $pj->id }}" class="bulk-checkbox-teacher-journals mt-2.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer shrink-0" title="Pilih jurnal ini untuk diproses massal">
                                     <div class="w-10 h-10 rounded-2xl bg-amber-100 text-amber-800 font-extrabold text-xs flex items-center justify-center shrink-0">
                                         {{ substr($pj->studentPkl->student->user->name, 0, 1) }}
                                     </div>
-                                    <div>
+                                    <div class="min-w-0">
                                         <div class="flex items-center gap-2">
-                                            <h4 class="text-sm font-extrabold text-slate-900">{{ $pj->studentPkl->student->user->name }}</h4>
+                                            <h4 class="text-sm font-extrabold text-slate-900 truncate">{{ $pj->studentPkl->student->user->name }}</h4>
                                             <span class="text-xs text-slate-400 font-mono">{{ $pj->studentPkl->student->class->name ?? '' }}</span>
                                         </div>
-                                        <p class="text-xs text-slate-500 font-medium">
+                                        <p class="text-xs text-slate-500 font-medium truncate">
                                             {{ $pj->studentPkl->company->name }} &bull; {{ \Carbon\Carbon::parse($pj->date)->isoFormat('dddd, D MMMM Y') }}
                                         </p>
                                     </div>
@@ -738,6 +763,18 @@
     function closeJournalModal(id) {
         const modal = document.getElementById('modal-journal-' + id);
         if (modal) modal.classList.add('hidden');
+    }
+
+    function selectAllPendingAndApprove() {
+        const checkboxes = document.querySelectorAll('#view-pending input.bulk-checkbox-teacher-journals');
+        if (checkboxes.length === 0) return;
+        checkboxes.forEach(cb => cb.checked = true);
+        if (typeof window['teacher-journalsUpdateState'] === 'function') {
+            window['teacher-journalsUpdateState']();
+        }
+        if (typeof window['teacher-journalsSubmitApprove'] === 'function') {
+            window['teacher-journalsSubmitApprove']();
+        }
     }
 
     document.addEventListener('keydown', function(e) {

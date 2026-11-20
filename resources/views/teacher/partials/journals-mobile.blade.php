@@ -11,6 +11,7 @@
 @endphp
 
 <div class="space-y-3.5 pb-10">
+    <input type="hidden" class="current-tab-input" value="{{ $initialTab }}">
 
     <!-- ============================================================== -->
     <!-- 1. SEGMENTED VIEW CONTROLLER (TABS)                            -->
@@ -111,9 +112,14 @@
                         @endphp
                         <div class="bg-white p-3 rounded-xl border border-slate-200/80 shadow-2xs space-y-2">
                             <div class="flex items-center justify-between gap-2">
-                                <span class="font-mono text-[10.5px] font-bold text-slate-800">
-                                    {{ \Carbon\Carbon::parse($sj->date)->isoFormat('dddd, D MMM Y') }}
-                                </span>
+                                <div class="flex items-center gap-2">
+                                    @if($isPendingItem)
+                                        <input type="checkbox" value="{{ $sj->id }}" class="bulk-checkbox-teacher-journals rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer" title="Pilih jurnal untuk aksi massal">
+                                    @endif
+                                    <span class="font-mono text-[10.5px] font-bold text-slate-800">
+                                        {{ \Carbon\Carbon::parse($sj->date)->isoFormat('dddd, D MMM Y') }}
+                                    </span>
+                                </div>
                                 <x-badge :variant="$sj->status" size="xs">
                                     {{ strtoupper(str_replace('_', ' ', $sj->status)) }}
                                 </x-badge>
@@ -176,10 +182,24 @@
                 </p>
             </div>
         @else
+            <!-- Mobile Select All Toolbar for Pending Queue -->
+            <div class="flex items-center justify-between p-3 bg-white rounded-2xl border border-slate-200/80 shadow-2xs">
+                <div class="flex items-center space-x-2.5">
+                    <input type="checkbox" id="m-master-checkbox-pending" data-master-for="teacher-journals" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer">
+                    <label for="m-master-checkbox-pending" class="text-xs font-bold text-slate-800 cursor-pointer select-none">
+                        Pilih Semua ({{ $allPendingJournals->count() }})
+                    </label>
+                </div>
+                <button type="button" onclick="selectMobileAllPendingAndApprove()" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[11px] shadow-2xs transition-all cursor-pointer">
+                    Setujui Semua
+                </button>
+            </div>
+
             <div class="space-y-3">
                 @foreach($allPendingJournals as $pj)
                     <div class="bg-white rounded-[22px] border border-amber-200 p-3.5 shadow-2xs space-y-3">
-                        <div class="flex items-center space-x-2.5">
+                        <div class="flex items-start space-x-2.5">
+                            <input type="checkbox" value="{{ $pj->id }}" class="bulk-checkbox-teacher-journals mt-1 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer shrink-0" title="Pilih jurnal untuk aksi massal">
                             <div class="w-9 h-9 rounded-xl bg-amber-100 text-amber-900 font-space font-bold text-xs flex items-center justify-center shrink-0">
                                 {{ substr($pj->studentPkl->student->user->name, 0, 1) }}
                             </div>
@@ -283,7 +303,12 @@
                 @endphp
                 <div class="bg-white rounded-[22px] border border-slate-200/80 p-3.5 shadow-2xs space-y-2.5 hover:border-[#0B2B25]/30 transition-all">
                     <div class="flex items-start justify-between gap-2.5">
-                        <div class="flex items-center space-x-2.5 min-w-0">
+                        <div class="flex items-start space-x-2.5 min-w-0">
+                            @if($canReview)
+                                <input type="checkbox" value="{{ $j->id }}" class="bulk-checkbox-teacher-journals mt-1 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer shrink-0" title="Pilih jurnal untuk aksi massal">
+                            @else
+                                <span class="w-1.5 h-1.5 rounded-full bg-slate-300 mt-2 shrink-0" title="Sudah diproses"></span>
+                            @endif
                             <div class="w-8 h-8 rounded-xl bg-[#0B2B25]/5 border border-[#0B2B25]/10 text-[#0B2B25] font-space font-bold text-xs flex items-center justify-center shrink-0">
                                 {{ $jInit }}
                             </div>
@@ -331,9 +356,31 @@
         @endif
     </div>
 
+    <!-- Bulk Action Bar for Mobile -->
+    <x-bulk-action-bar 
+        barId="teacher-journals"
+        :formAction="route('guru.journals.bulk')"
+        idParam="journal_ids[]"
+        itemLabel="jurnal"
+        rejectActionLabel="Minta Revisi"
+        rejectActionValue="revision"
+    />
+
 </div>
 
 <script>
+    function selectMobileAllPendingAndApprove() {
+        const checkboxes = document.querySelectorAll('#m-view-pending input.bulk-checkbox-teacher-journals');
+        if (checkboxes.length === 0) return;
+        checkboxes.forEach(cb => cb.checked = true);
+        if (typeof window['teacher-journalsUpdateState'] === 'function') {
+            window['teacher-journalsUpdateState']();
+        }
+        if (typeof window['teacher-journalsSubmitApprove'] === 'function') {
+            window['teacher-journalsSubmitApprove']();
+        }
+    }
+
     function switchMobileJournalView(viewName) {
         const validViews = ['students', 'pending', 'table'];
         if (!validViews.includes(viewName)) {
@@ -357,6 +404,10 @@
             activeBtn.classList.add('bg-[#0B2B25]', 'text-[#C6F26B]', 'shadow-xs', 'font-extrabold');
             activeBtn.classList.remove('text-slate-700');
         }
+
+        document.querySelectorAll('.current-tab-input').forEach(input => {
+            input.value = viewName;
+        });
 
         try {
             if (window.history && window.history.replaceState) {

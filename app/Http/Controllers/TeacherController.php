@@ -666,7 +666,7 @@ class TeacherController extends Controller
             'tab' => ['nullable', 'string', 'in:students,pending,table'],
         ]);
 
-        $activeTab = $request->input('tab', 'table');
+        $activeTab = $request->input('tab', 'pending');
 
         if ($request->action === 'revision' && empty($request->notes)) {
             return back()->withErrors(['notes' => 'Catatan revisi wajib diisi untuk revisi massal.'])->with('active_tab', $activeTab);
