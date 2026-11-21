@@ -302,6 +302,7 @@ Route::middleware(['auth', 'IdentifyTenant', 'role:siswa'])->prefix('siswa')->gr
 Route::middleware(['auth', 'IdentifyTenant', 'role:guru-pembimbing'])->prefix('guru')->group(function () {
     Route::get('/dashboard', [TeacherController::class, 'dashboard'])->name('guru.dashboard');
     Route::get('/monitoring', [TeacherController::class, 'monitoring'])->name('guru.monitoring');
+    Route::post('/monitoring/override-attendance', [TeacherController::class, 'overrideAttendance'])->name('guru.attendance.override');
     Route::post('/students/{student}/reset-password', [TeacherController::class, 'resetStudentPassword'])->middleware('throttle:5,1')->name('guru.students.reset-password');
     Route::get('/requests', [TeacherController::class, 'requests'])->name('guru.requests');
     Route::post('/requests/bulk', [TeacherController::class, 'bulkProcessRequests'])->name('guru.requests.bulk');

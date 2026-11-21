@@ -505,7 +505,39 @@ class TeacherController extends Controller
             ->latest()
             ->get();
 
-        return view('teacher.monitoring', compact('attendances', 'stats', 'pendingResetRequests'));
+        $myStudents = StudentPkl::where('teacher_id', $teacher->id)
+            ->whereIn('status', ['assigned', 'active'])
+            ->with(['student.user', 'company'])
+            ->get();
+
+        return view('teacher.monitoring', compact('attendances', 'stats', 'pendingResetRequests', 'myStudents'));
+    }
+
+    public function overrideAttendance(Request $request, AttendanceService $attendanceService)
+    {
+        $teacher = $this->getTeacher();
+
+        $request->validate([
+            'student_pkl_id' => ['required', 'integer'],
+            'date' => ['required', 'date', 'before_or_equal:today'],
+            'status' => ['required', 'in:hadir,terlambat,izin,sakit,dinas_luar,luar_kantor,alfa'],
+            'checkin_time' => ['nullable', 'string', 'max:8'],
+            'checkout_time' => ['nullable', 'string', 'max:8'],
+            'reason' => ['required', 'string', 'min:5', 'max:255'],
+        ], [
+            'student_pkl_id.required' => 'Pilih siswa binaan terlebih dahulu.',
+            'date.before_or_equal' => 'Tanggal presensi tidak boleh melebihi hari ini.',
+            'reason.required' => 'Wajib mencantumkan alasan override (misal: kendala HP siswa rusak).',
+            'reason.min' => 'Alasan override minimal 5 karakter.',
+        ]);
+
+        $spkl = StudentPkl::where('id', $request->student_pkl_id)
+            ->where('teacher_id', $teacher->id)
+            ->firstOrFail();
+
+        $attendanceService->overrideAttendanceByTeacher($spkl, $teacher, $request->all());
+
+        return back()->with('success', "Presensi {$spkl->student->user->name} tanggal " . Carbon::parse($request->date)->format('d/m/Y') . " berhasil di-override menjadi " . strtoupper(str_replace('_', ' ', $request->status)) . ".");
     }
 
     public function requests()

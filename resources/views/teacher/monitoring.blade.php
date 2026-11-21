@@ -19,9 +19,13 @@
             <svg class="w-4 h-4 mr-1.5 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
             <span>Verifikasi Izin & Sakit</span>
         </x-button>
-        <x-button type="button" variant="primary" size="sm" onclick="window.location.href='{{ route('guru.journals') }}'">
+        <x-button type="button" variant="secondary" size="sm" onclick="window.location.href='{{ route('guru.journals') }}'">
             <svg class="w-4 h-4 mr-1.5 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-            <span>Review Jurnal (Tingkat 2)</span>
+            <span>Review Jurnal</span>
+        </x-button>
+        <x-button type="button" variant="primary" size="sm" onclick="openOverrideAttendanceModal()">
+            <svg class="w-4 h-4 mr-1.5 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+            <span>Override Presensi (Kendala HP)</span>
         </x-button>
     </x-page-header>
 
@@ -204,6 +208,11 @@
                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><circle cx="12" cy="13" r="4"/></svg>
                                 </button>
                             @endif
+                            <button type="button"
+                                    onclick='openOverrideAttendanceModal({{ $a->student_pkl_id }}, "{{ $a->date }}", "{{ $a->status }}", "{{ $a->checkin_time ? substr($a->checkin_time, 0, 5) : '07:30' }}", "{{ $a->checkout_time ? substr($a->checkout_time, 0, 5) : '' }}")'
+                                    class="px-2 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-800 font-extrabold text-[11px] inline-flex items-center gap-1 transition-all cursor-pointer">
+                                <span>Override</span>
+                            </button>
                             <button type="button" onclick='showAttendanceDetail(@json($detailPayload))' class="px-2.5 py-1 rounded-lg bg-[#0B2B25] hover:bg-[#12382F] text-[#C6F26B] font-extrabold text-[11px] inline-flex items-center gap-1 transition-all cursor-pointer">
                                 <span>Detail</span>
                                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
@@ -355,6 +364,13 @@
                                     </form>
                                 @endif
                                 <button type="button"
+                                        onclick='openOverrideAttendanceModal({{ $a->student_pkl_id }}, "{{ $a->date }}", "{{ $a->status }}", "{{ $a->checkin_time ? substr($a->checkin_time, 0, 5) : '07:30' }}", "{{ $a->checkout_time ? substr($a->checkout_time, 0, 5) : '' }}")'
+                                        class="py-1.5 px-2.5 rounded-xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 font-bold text-xs shadow-2xs transition-all cursor-pointer inline-flex items-center gap-1"
+                                        title="Override / Koreksi Kehadiran Siswa (Kendala HP)">
+                                    <svg class="w-3.5 h-3.5 text-indigo-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                                    <span>Override</span>
+                                </button>
+                                <button type="button"
                                         onclick='showAttendanceDetail(@json($detailPayload))'
                                         class="py-1.5 px-2.5 rounded-xl border border-slate-200 bg-white hover:bg-indigo-50 hover:border-indigo-300 text-slate-700 hover:text-indigo-700 font-bold text-xs shadow-2xs transition-all cursor-pointer inline-flex items-center gap-1.5"
                                         title="Buka rincian lengkap foto swafoto, jam, dan titik lokasi presensi">
@@ -386,6 +402,9 @@
 
     <!-- Modal Reusable Detail Presensi -->
     <x-attendance-detail-modal />
+
+    <!-- Modal Override Presensi Siswa (Kendala HP / Manual Guru) -->
+    @include('teacher.partials.override-attendance-modal')
 
 </div>
 @endif

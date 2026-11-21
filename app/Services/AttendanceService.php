@@ -7,9 +7,12 @@ use App\Models\StudentPkl;
 use App\Models\Attendance;
 use App\Models\AttendanceRequest;
 use App\Models\SchoolSetting;
+use App\Models\Teacher;
 use App\Models\User;
 use App\Notifications\RequestStatusUpdatedNotification;
+use App\Services\AuditLogService;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -446,5 +449,111 @@ class AttendanceService
             'processed' => $processed,
             'skipped' => $skipped,
         ];
+    }
+
+    /**
+     * Override or manually record attendance for a supervised student by Teacher.
+     * Useful when student cannot check-in (e.g. broken phone, dead battery, emergency).
+     */
+    public function overrideAttendanceByTeacher(StudentPkl $spkl, Teacher $teacher, array $data): Attendance
+    {
+        // 1. Authorize: Ensure student is assigned to this teacher
+        if ((int) $spkl->teacher_id !== (int) $teacher->id) {
+            throw ValidationException::withMessages([
+                'student_pkl_id' => 'Siswa ini bukan merupakan siswa bimbingan Anda.',
+            ]);
+        }
+
+        // 2. Validate date (cannot be future date)
+        $date = $data['date'] ?? Carbon::today()->toDateString();
+        $carbonDate = Carbon::parse($date);
+        if ($carbonDate->isFuture()) {
+            throw ValidationException::withMessages([
+                'date' => 'Tanggal presensi tidak boleh melebihi hari ini.',
+            ]);
+        }
+
+        $status = $data['status'] ?? 'hadir';
+        $validStatuses = ['hadir', 'terlambat', 'izin', 'sakit', 'dinas_luar', 'luar_kantor', 'alfa'];
+        if (!in_array($status, $validStatuses, true)) {
+            throw ValidationException::withMessages([
+                'status' => 'Status kehadiran tidak valid.',
+            ]);
+        }
+
+        $reason = trim($data['reason'] ?? '');
+        if (strlen($reason) < 5) {
+            throw ValidationException::withMessages([
+                'reason' => 'Alasan override wajib diisi minimal 5 karakter (misal: kendala HP siswa rusak).',
+            ]);
+        }
+
+        $teacherName = $teacher->user->name ?? 'Guru Pembimbing';
+        $overrideTag = "[OVERRIDE GURU: {$teacherName}] {$reason}";
+
+        // Normalize time formats
+        $checkinTime = !empty($data['checkin_time']) ? Carbon::parse($data['checkin_time'])->toTimeString() : null;
+        $checkoutTime = !empty($data['checkout_time']) ? Carbon::parse($data['checkout_time'])->toTimeString() : null;
+
+        // If status is hadir/terlambat and no checkin time provided, default to work hours or now
+        if (in_array($status, ['hadir', 'terlambat'], true) && empty($checkinTime)) {
+            $company = $spkl->company;
+            $workHours = $company ? $this->resolveWorkHours($company, $spkl->school_id) : null;
+            $checkinTime = $workHours['checkin_start'] ?? '07:30:00';
+        }
+
+        return DB::transaction(function () use ($spkl, $teacher, $date, $status, $checkinTime, $checkoutTime, $overrideTag, $reason) {
+            $existing = Attendance::where('student_pkl_id', $spkl->id)
+                ->forDate($date)
+                ->lockForUpdate()
+                ->first();
+
+            $beforeState = $existing ? [
+                'status' => $existing->status,
+                'checkin_time' => $existing->checkin_time,
+                'checkout_time' => $existing->checkout_time,
+                'checkout_notes' => $existing->checkout_notes,
+            ] : null;
+
+            if ($existing) {
+                $existing->update([
+                    'status' => $status,
+                    'checkin_time' => $checkinTime ?? $existing->checkin_time,
+                    'checkout_time' => $checkoutTime ?? $existing->checkout_time,
+                    'checkout_notes' => $overrideTag,
+                    'is_within_radius' => true,
+                ]);
+                $attendance = $existing;
+            } else {
+                $attendance = Attendance::create([
+                    'school_id' => $spkl->school_id,
+                    'student_pkl_id' => $spkl->id,
+                    'date' => $date,
+                    'status' => $status,
+                    'checkin_time' => $checkinTime,
+                    'checkout_time' => $checkoutTime,
+                    'checkout_notes' => $overrideTag,
+                    'is_within_radius' => true,
+                ]);
+            }
+
+            AuditLogService::log(
+                'attendance_override',
+                'attendance',
+                "Guru pembimbing {$teacher->user->name} melakukan override presensi {$status} untuk siswa {$spkl->student->user->name} tanggal {$date}. Alasan: {$reason}",
+                $spkl->school,
+                Auth::user(),
+                $beforeState,
+                [
+                    'status' => $status,
+                    'checkin_time' => $attendance->checkin_time,
+                    'checkout_time' => $attendance->checkout_time,
+                    'checkout_notes' => $attendance->checkout_notes,
+                    'reason' => $reason,
+                ]
+            );
+
+            return $attendance;
+        });
     }
 }

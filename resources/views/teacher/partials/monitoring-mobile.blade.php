@@ -77,6 +77,26 @@
     @endif
 
     <!-- ============================================================== -->
+    <!-- 2.5 QUICK ACTION: OVERRIDE PRESENSI KENDALA HP                 -->
+    <!-- ============================================================== -->
+    <div class="flex items-center justify-between gap-2 bg-gradient-to-r from-[#0B2B25] to-[#12382F] p-3 rounded-2xl text-white shadow-sm">
+        <div class="flex items-center gap-2.5 min-w-0">
+            <div class="w-8 h-8 rounded-xl bg-white/10 text-[#C6F26B] flex items-center justify-center shrink-0">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+            </div>
+            <div class="min-w-0">
+                <h4 class="text-xs font-extrabold text-white truncate font-space">Kendala HP / Absen Manual?</h4>
+                <p class="text-[10px] text-white/70 truncate">Input atau override presensi siswa binaan</p>
+            </div>
+        </div>
+        <button type="button" 
+                onclick="openOverrideAttendanceModal()" 
+                class="px-3 py-1.5 rounded-xl bg-[#C6F26B] hover:bg-[#d4f884] text-[#0B2B25] font-extrabold text-[11px] shrink-0 transition-all cursor-pointer shadow-xs active:scale-95">
+            + Override
+        </button>
+    </div>
+
+    <!-- ============================================================== -->
     <!-- 3. HORIZONTAL STATUS FILTER PILLS (NO SCROLLBAR)               -->
     <!-- ============================================================== -->
     <div class="flex items-center gap-1.5 overflow-x-auto py-1 -mx-0.5 px-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -178,6 +198,12 @@
                         @endif
 
                         <button type="button" 
+                                onclick='openOverrideAttendanceModal({{ $a->student_pkl_id }}, "{{ $a->date }}", "{{ $a->status }}", "{{ $a->checkin_time ? substr($a->checkin_time, 0, 5) : '07:30' }}", "{{ $a->checkout_time ? substr($a->checkout_time, 0, 5) : '' }}")' 
+                                class="px-2.5 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-800 font-extrabold text-[11px] inline-flex items-center gap-1 transition-all cursor-pointer shadow-xs border border-indigo-200">
+                            <span>Override</span>
+                        </button>
+
+                        <button type="button" 
                                 onclick='showAttendanceDetail(@json($detailPayload))' 
                                 class="px-3 py-1.5 rounded-xl bg-[#0B2B25] hover:bg-[#12382F] text-[#C6F26B] font-extrabold text-[11px] inline-flex items-center gap-1 transition-all cursor-pointer shadow-xs">
                             <span>Detail</span>
@@ -223,5 +249,10 @@
     <!-- 6. REUSABLE DETAIL MODAL                                       -->
     <!-- ============================================================== -->
     <x-attendance-detail-modal />
+
+    <!-- ============================================================== -->
+    <!-- 7. OVERRIDE ATTENDANCE MODAL                                   -->
+    <!-- ============================================================== -->
+    @include('teacher.partials.override-attendance-modal')
 
 </div>
