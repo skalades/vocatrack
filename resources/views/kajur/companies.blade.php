@@ -59,8 +59,8 @@
                                 {{ substr($c->name, 0, 2) }}
                             </div>
                             <div class="flex items-center gap-1">
-                                <x-badge :variant="$c->work_days === '5_days' ? 'blue' : 'indigo'" size="xs">
-                                    {{ $c->work_days === '5_days' ? '5 Hari Kerja' : '6 Hari Kerja' }}
+                                <x-badge :variant="$c->work_days === '7_days' ? 'purple' : ($c->work_days === '6_days' ? 'indigo' : 'blue')" size="xs">
+                                    {{ $c->work_days === '7_days' ? '7 Hari (On-Project)' : ($c->work_days === '6_days' ? '6 Hari Kerja' : '5 Hari Kerja') }}
                                 </x-badge>
                                 @if($c->gps_enabled)
                                     <span class="inline-flex items-center p-1 rounded-md bg-emerald-50 text-emerald-700 text-[10px] font-bold" title="Geofencing GPS Aktif ({{ $c->radius_meters }}m)">
@@ -191,6 +191,7 @@
                 <select name="work_days" class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 font-medium text-slate-900">
                     <option value="5_days">5 Hari Kerja (Senin - Jumat)</option>
                     <option value="6_days">6 Hari Kerja (Senin - Sabtu)</option>
+                    <option value="7_days">7 Hari Penuh (Senin - Minggu / On Project)</option>
                 </select>
             </div>
 
@@ -337,6 +338,7 @@
                 <select id="edit-work-days" name="work_days" class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 font-medium text-slate-900">
                     <option value="5_days">5 Hari Kerja (Senin - Jumat)</option>
                     <option value="6_days">6 Hari Kerja (Senin - Sabtu)</option>
+                    <option value="7_days">7 Hari Penuh (Senin - Minggu / On Project)</option>
                 </select>
             </div>
 

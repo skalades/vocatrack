@@ -61,13 +61,14 @@ class EvaluateDailyAbsence extends Command
                         $holidaySchoolCache[$spkl->school_id] = $holidayService->isHoliday($spkl->school_id, $today);
                     }
 
-                    if ($holidaySchoolCache[$spkl->school_id]) {
-                        // Hari ini libur untuk sekolah ini, skip evaluasi alfa
+                    // Jika hari ini libur sekolah/tanggal merah nasional, lewati evaluasi alfa
+                    // KECUALI jika perusahaan menerapkan 7 hari kerja penuh (on-project) yang tetap wajib masuk kerja.
+                    if ($holidaySchoolCache[$spkl->school_id] && !$company->worksOnHolidays()) {
                         continue;
                     }
 
-                    // 2. Check work days: 5_days (Mon-Fri) or 6_days (Mon-Sat)
-                    $isWorkDay = ($company->work_days === '6_days') ? ($dayOfWeek <= 6) : ($dayOfWeek <= 5);
+                    // 2. Check work days: 5_days (Mon-Fri), 6_days (Mon-Sat), or 7_days (Mon-Sun on-project)
+                    $isWorkDay = $company->isWorkDay($today);
 
                     if (!$isWorkDay) {
                         continue;

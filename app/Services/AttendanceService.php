@@ -253,8 +253,11 @@ class AttendanceService
         $dayOfWeek = $date->dayOfWeekIso; // 1 (Mon) - 7 (Sun)
         $isWorkDay = true;
         if ($company) {
-            $isWorkDay = ($company->work_days === '6_days') ? ($dayOfWeek <= 6) : ($dayOfWeek <= 5);
+            $isWorkDay = $company->isWorkDay($date);
         }
+
+        // Jika perusahaan menerapkan 7 hari kerja (on-project), tanggal merah/libur sekolah tidak membebaskan siswa dari kewajiban kerja
+        $isEffectiveHoliday = $isHoliday && !($company?->worksOnHolidays());
 
         $workHours = $company ? $this->resolveWorkHours($company, $spkl->school_id) : null;
         $now = Carbon::now();
@@ -268,7 +271,8 @@ class AttendanceService
         }
 
         return [
-            'is_holiday' => $isHoliday,
+            'is_holiday' => $isEffectiveHoliday,
+            'is_calendar_holiday' => $isHoliday,
             'holiday_title' => $holiday?->title,
             'is_work_day' => $isWorkDay,
             'day_name' => $date->locale('id')->isoFormat('dddd'),

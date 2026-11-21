@@ -178,7 +178,7 @@
                 <span class="text-xs font-bold text-indigo-950 block">Aturan Geofencing Presensi GPS Perusahaan</span>
                 <p class="text-xs text-indigo-700 mt-0.5 font-medium">
                     Status GPS: <strong>{{ $company->gps_enabled ? 'Aktif (Radius ' . $company->radius_meters . ' Meter)' : 'Bebas Radius' }}</strong> &bull;
-                    Jadwal Kerja: <strong>{{ $company->work_days === '6_days' ? '6 Hari (Senin - Sabtu)' : '5 Hari (Senin - Jumat)' }}</strong>
+                    Jadwal Kerja: <strong>{{ $company->work_days === '7_days' ? '7 Hari Penuh (Senin - Minggu / On-Project)' : ($company->work_days === '6_days' ? '6 Hari (Senin - Sabtu)' : '5 Hari (Senin - Jumat)') }}</strong>
                 </p>
             </div>
         </div>

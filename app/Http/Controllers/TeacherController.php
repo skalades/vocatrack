@@ -97,9 +97,7 @@ class TeacherController extends Controller
             $isWorkDay = true;
             $hours = null;
             if ($company) {
-                $isWorkDay = in_array($company->work_days, ['6_days', '6_hari'], true)
-                    ? $today->dayOfWeekIso <= 6
-                    : $today->dayOfWeekIso <= 5;
+                $isWorkDay = $company->isWorkDay($today);
                 $hours = $workHoursCache[$company->id] ??= $attendanceService->resolveWorkHours($company, $sp->school_id);
             }
 
@@ -108,7 +106,7 @@ class TeacherController extends Controller
                 $state = $att->status;
             } elseif ($company && !$company->is_pkl_started) {
                 $state = 'belum_mulai';
-            } elseif ($isSchoolHoliday) {
+            } elseif ($isSchoolHoliday && !$company?->worksOnHolidays()) {
                 $state = 'libur';
             } elseif (!$isWorkDay) {
                 $state = 'libur_dudi';
