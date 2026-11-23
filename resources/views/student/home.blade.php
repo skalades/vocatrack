@@ -225,7 +225,7 @@
             </div>
 
             <!-- Primary Action CTA Button -->
-            @if($spkl && !$spkl->company?->is_pkl_started)
+            @if($spkl && !$spkl->company?->is_pkl_started && !$spkl->isTestStudent())
                 <!-- Banner Status PKL Belum Dimulai -->
                 <div class="mt-3.5 p-4 rounded-3xl bg-[#F4FAF6] border border-[#D5EADB] text-[#0B2B25] flex flex-col gap-2.5">
                     <div class="flex items-center justify-between">
@@ -246,7 +246,12 @@
                 <!-- Button to open Camera Verification -->
                 <a href="{{ route('student.attendance') }}" 
                    class="mt-3.5 flex items-center justify-between h-[60px] rounded-[30px] bg-[#0B2B25] hover:bg-[#12382F] text-white px-2 pl-6 shadow-[0_8px_20px_rgba(11,43,37,0.25)] active:scale-95 transition-all group">
-                    <span class="font-bold text-base tracking-wide">Presensi Masuk</span>
+                    <div class="flex items-center gap-2">
+                        <span class="font-bold text-base tracking-wide">Presensi Masuk</span>
+                        @if($spkl?->isTestStudent())
+                            <span class="px-2 py-0.5 rounded-full bg-amber-400 text-[#0B2B25] text-[10px] font-extrabold uppercase tracking-wide">Uji Coba</span>
+                        @endif
+                    </div>
                     <span class="w-11 h-11 rounded-full bg-[#C6F26B] text-[#0B2B25] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
                         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M5 12h14M12 5l7 7-7 7"/>

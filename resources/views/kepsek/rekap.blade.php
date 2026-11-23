@@ -140,6 +140,12 @@
     </div>
 
     <!-- Matrix Table Card -->
+    @php
+        $weekendDays = [];
+        for ($d = 1; $d <= $daysInMonth; $d++) {
+            $weekendDays[$d] = \Carbon\Carbon::parse($month . '-' . $d)->isWeekend();
+        }
+    @endphp
     <x-card noPadding>
         <div class="overflow-x-auto custom-scrollbar">
             <table class="w-full text-center text-xs border-collapse min-w-[1260px]">
@@ -147,7 +153,7 @@
                     <tr>
                         <th class="py-3.5 px-4 text-left sticky left-0 bg-slate-50 z-20 min-w-[200px] border-r border-slate-200 shadow-sm">Nama Siswa & NISN</th>
                         @for($d = 1; $d <= $daysInMonth; $d++)
-                            <th class="py-2.5 px-1 min-w-[28px] border-r border-slate-200/60 font-mono {{ \Carbon\Carbon::parse($month . '-' . $d)->isWeekend() ? 'bg-rose-50/80 text-rose-600 font-black' : '' }}">
+                            <th class="py-2.5 px-1 min-w-[28px] border-r border-slate-200/60 font-mono {{ ($weekendDays[$d] ?? false) ? 'bg-rose-50/80 text-rose-600 font-black' : '' }}">
                                 {{ $d }}
                             </th>
                         @endfor
@@ -180,7 +186,7 @@
                             </td>
                             @for($d = 1; $d <= $daysInMonth; $d++)
                                 @php
-                                    $isWeekend = \Carbon\Carbon::parse($month . '-' . $d)->isWeekend();
+                                    $isWeekend = $weekendDays[$d] ?? false;
                                     $record = $attMap[$d] ?? null;
                                     $code = '-';
                                     if ($record) {

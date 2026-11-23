@@ -1,6 +1,17 @@
 <?php
 
 use App\Http\Controllers\AdminSekolahController;
+use App\Http\Controllers\AdminSekolah\AcademicController;
+use App\Http\Controllers\AdminSekolah\BillingController as AdminSekolahBillingController;
+use App\Http\Controllers\AdminSekolah\CertificateController as AdminSekolahCertificateController;
+use App\Http\Controllers\AdminSekolah\CompanyController as AdminSekolahCompanyController;
+use App\Http\Controllers\AdminSekolah\DashboardController as AdminSekolahDashboardController;
+use App\Http\Controllers\AdminSekolah\HolidayController as AdminSekolahHolidayController;
+use App\Http\Controllers\AdminSekolah\IncidentController as AdminSekolahIncidentController;
+use App\Http\Controllers\AdminSekolah\PlottingController as AdminSekolahPlottingController;
+use App\Http\Controllers\AdminSekolah\SettingController as AdminSekolahSettingController;
+use App\Http\Controllers\AdminSekolah\StudentController as AdminSekolahStudentController;
+use App\Http\Controllers\AdminSekolah\TeacherController as AdminSekolahTeacherController;
 use App\Http\Controllers\AnnouncementController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CertificateVerificationController;
@@ -162,67 +173,67 @@ Route::post('/request-demo', [SchoolRequestController::class, 'storePublicSchool
 
 // 2. Admin Sekolah Routes
 Route::middleware(['auth', 'IdentifyTenant', 'role:admin-sekolah'])->prefix('admin-sekolah')->group(function () {
-    Route::get('/dashboard', [AdminSekolahController::class, 'dashboard'])->name('adminsekolah.dashboard');
+    Route::get('/dashboard', [AdminSekolahDashboardController::class, 'dashboard'])->name('adminsekolah.dashboard');
 
     // Settings
-    Route::get('/settings', [AdminSekolahController::class, 'settings'])->name('adminsekolah.settings');
-    Route::post('/settings', [AdminSekolahController::class, 'updateSettings'])->name('adminsekolah.settings.update');
-    Route::post('/test-mode/toggle', [AdminSekolahController::class, 'toggleTestMode'])->name('adminsekolah.test-mode.toggle');
-    Route::get('/test-mode/stats', [AdminSekolahController::class, 'getTestModeStats'])->name('adminsekolah.test-mode.stats');
-    Route::post('/test-mode/clean', [AdminSekolahController::class, 'cleanTestData'])->name('adminsekolah.test-mode.clean');
+    Route::get('/settings', [AdminSekolahSettingController::class, 'settings'])->name('adminsekolah.settings');
+    Route::post('/settings', [AdminSekolahSettingController::class, 'updateSettings'])->name('adminsekolah.settings.update');
+    Route::post('/test-mode/toggle', [AdminSekolahSettingController::class, 'toggleTestMode'])->name('adminsekolah.test-mode.toggle');
+    Route::get('/test-mode/stats', [AdminSekolahSettingController::class, 'getTestModeStats'])->name('adminsekolah.test-mode.stats');
+    Route::post('/test-mode/clean', [AdminSekolahSettingController::class, 'cleanTestData'])->name('adminsekolah.test-mode.clean');
 
     // Majors & Classes
-    Route::get('/majors', [AdminSekolahController::class, 'majors'])->name('adminsekolah.majors');
-    Route::post('/majors', [AdminSekolahController::class, 'storeMajor'])->name('adminsekolah.majors.store');
-    Route::put('/majors/{major}', [AdminSekolahController::class, 'updateMajor'])->name('adminsekolah.majors.update');
-    Route::delete('/majors/{major}', [AdminSekolahController::class, 'destroyMajor'])->name('adminsekolah.majors.destroy');
-    Route::post('/classes', [AdminSekolahController::class, 'storeClass'])->name('adminsekolah.classes.store');
-    Route::put('/classes/{schoolClass}', [AdminSekolahController::class, 'updateClass'])->name('adminsekolah.classes.update');
-    Route::delete('/classes/{schoolClass}', [AdminSekolahController::class, 'destroyClass'])->name('adminsekolah.classes.destroy');
-    Route::get('/classes/promotion-preview', [AdminSekolahController::class, 'previewPromotion'])->name('adminsekolah.classes.promotion-preview');
-    Route::post('/classes/promote', [AdminSekolahController::class, 'promoteClasses'])->name('adminsekolah.classes.promote');
-    Route::post('/majors/{major}/competencies', [AdminSekolahController::class, 'storeMajorCompetency'])->name('adminsekolah.majors.competencies.store');
-    Route::put('/competencies/{learningObjective}', [AdminSekolahController::class, 'updateMajorCompetency'])->name('adminsekolah.competencies.update');
-    Route::delete('/competencies/{learningObjective}', [AdminSekolahController::class, 'destroyMajorCompetency'])->name('adminsekolah.competencies.destroy');
+    Route::get('/majors', [AcademicController::class, 'majors'])->name('adminsekolah.majors');
+    Route::post('/majors', [AcademicController::class, 'storeMajor'])->name('adminsekolah.majors.store');
+    Route::put('/majors/{major}', [AcademicController::class, 'updateMajor'])->name('adminsekolah.majors.update');
+    Route::delete('/majors/{major}', [AcademicController::class, 'destroyMajor'])->name('adminsekolah.majors.destroy');
+    Route::post('/classes', [AcademicController::class, 'storeClass'])->name('adminsekolah.classes.store');
+    Route::put('/classes/{schoolClass}', [AcademicController::class, 'updateClass'])->name('adminsekolah.classes.update');
+    Route::delete('/classes/{schoolClass}', [AcademicController::class, 'destroyClass'])->name('adminsekolah.classes.destroy');
+    Route::get('/classes/promotion-preview', [AcademicController::class, 'previewPromotion'])->name('adminsekolah.classes.promotion-preview');
+    Route::post('/classes/promote', [AcademicController::class, 'promoteClasses'])->name('adminsekolah.classes.promote');
+    Route::post('/majors/{major}/competencies', [AcademicController::class, 'storeMajorCompetency'])->name('adminsekolah.majors.competencies.store');
+    Route::put('/competencies/{learningObjective}', [AcademicController::class, 'updateMajorCompetency'])->name('adminsekolah.competencies.update');
+    Route::delete('/competencies/{learningObjective}', [AcademicController::class, 'destroyMajorCompetency'])->name('adminsekolah.competencies.destroy');
 
     // Students & Excel Import & Export
-    Route::get('/students', [AdminSekolahController::class, 'students'])->name('adminsekolah.students');
-    Route::get('/students/export', [AdminSekolahController::class, 'exportStudents'])->name('adminsekolah.students.export');
-    Route::post('/students', [AdminSekolahController::class, 'storeStudent'])->name('adminsekolah.students.store');
-    Route::put('/students/{student}', [AdminSekolahController::class, 'updateStudent'])->name('adminsekolah.students.update');
-    Route::post('/students/{student}/reset-password', [AdminSekolahController::class, 'resetStudentPassword'])->name('adminsekolah.students.reset-password');
-    Route::delete('/students/{student}', [AdminSekolahController::class, 'destroyStudent'])->name('adminsekolah.students.destroy');
-    Route::post('/students/import', [AdminSekolahController::class, 'importStudents'])->name('adminsekolah.students.import');
+    Route::get('/students', [AdminSekolahStudentController::class, 'students'])->name('adminsekolah.students');
+    Route::get('/students/export', [AdminSekolahStudentController::class, 'exportStudents'])->name('adminsekolah.students.export');
+    Route::post('/students', [AdminSekolahStudentController::class, 'storeStudent'])->name('adminsekolah.students.store');
+    Route::put('/students/{student}', [AdminSekolahStudentController::class, 'updateStudent'])->name('adminsekolah.students.update');
+    Route::post('/students/{student}/reset-password', [AdminSekolahStudentController::class, 'resetStudentPassword'])->name('adminsekolah.students.reset-password');
+    Route::delete('/students/{student}', [AdminSekolahStudentController::class, 'destroyStudent'])->name('adminsekolah.students.destroy');
+    Route::post('/students/import', [AdminSekolahStudentController::class, 'importStudents'])->name('adminsekolah.students.import');
 
     // Teachers & Excel Export
-    Route::get('/teachers', [AdminSekolahController::class, 'teachers'])->name('adminsekolah.teachers');
-    Route::get('/teachers/export', [AdminSekolahController::class, 'exportTeachers'])->name('adminsekolah.teachers.export');
-    Route::post('/teachers', [AdminSekolahController::class, 'storeTeacher'])->name('adminsekolah.teachers.store');
-    Route::put('/teachers/{teacher}', [AdminSekolahController::class, 'updateTeacher'])->name('adminsekolah.teachers.update');
-    Route::post('/teachers/{teacher}/reset-password', [AdminSekolahController::class, 'resetTeacherPassword'])->name('adminsekolah.teachers.reset-password');
-    Route::delete('/teachers/{teacher}', [AdminSekolahController::class, 'destroyTeacher'])->name('adminsekolah.teachers.destroy');
+    Route::get('/teachers', [AdminSekolahTeacherController::class, 'teachers'])->name('adminsekolah.teachers');
+    Route::get('/teachers/export', [AdminSekolahTeacherController::class, 'exportTeachers'])->name('adminsekolah.teachers.export');
+    Route::post('/teachers', [AdminSekolahTeacherController::class, 'storeTeacher'])->name('adminsekolah.teachers.store');
+    Route::put('/teachers/{teacher}', [AdminSekolahTeacherController::class, 'updateTeacher'])->name('adminsekolah.teachers.update');
+    Route::post('/teachers/{teacher}/reset-password', [AdminSekolahTeacherController::class, 'resetTeacherPassword'])->name('adminsekolah.teachers.reset-password');
+    Route::delete('/teachers/{teacher}', [AdminSekolahTeacherController::class, 'destroyTeacher'])->name('adminsekolah.teachers.destroy');
 
     // DU/DI Companies & Supervisors
-    Route::get('/companies', [AdminSekolahController::class, 'companies'])->name('adminsekolah.companies');
-    Route::post('/companies', [AdminSekolahController::class, 'storeCompany'])->name('adminsekolah.companies.store');
-    Route::put('/companies/{company}', [AdminSekolahController::class, 'updateCompany'])->name('adminsekolah.companies.update');
-    Route::delete('/companies/{company}', [AdminSekolahController::class, 'destroyCompany'])->name('adminsekolah.companies.destroy');
-    Route::post('/companies/{company}/supervisors', [AdminSekolahController::class, 'storeCompanySupervisor'])->name('adminsekolah.companies.supervisors.store');
-    Route::put('/companies/{company}/supervisors/{supervisor}', [AdminSekolahController::class, 'updateCompanySupervisor'])->name('adminsekolah.companies.supervisors.update');
-    Route::delete('/companies/{company}/supervisors/{supervisor}', [AdminSekolahController::class, 'destroyCompanySupervisor'])->name('adminsekolah.companies.supervisors.destroy');
-    Route::post('/companies/{company}/reassign-batch', [AdminSekolahController::class, 'reassignCompanyBatch'])->name('adminsekolah.companies.reassign-batch');
+    Route::get('/companies', [AdminSekolahCompanyController::class, 'companies'])->name('adminsekolah.companies');
+    Route::post('/companies', [AdminSekolahCompanyController::class, 'storeCompany'])->name('adminsekolah.companies.store');
+    Route::put('/companies/{company}', [AdminSekolahCompanyController::class, 'updateCompany'])->name('adminsekolah.companies.update');
+    Route::delete('/companies/{company}', [AdminSekolahCompanyController::class, 'destroyCompany'])->name('adminsekolah.companies.destroy');
+    Route::post('/companies/{company}/supervisors', [AdminSekolahCompanyController::class, 'storeCompanySupervisor'])->name('adminsekolah.companies.supervisors.store');
+    Route::put('/companies/{company}/supervisors/{supervisor}', [AdminSekolahCompanyController::class, 'updateCompanySupervisor'])->name('adminsekolah.companies.supervisors.update');
+    Route::delete('/companies/{company}/supervisors/{supervisor}', [AdminSekolahCompanyController::class, 'destroyCompanySupervisor'])->name('adminsekolah.companies.supervisors.destroy');
+    Route::post('/companies/{company}/reassign-batch', [AdminSekolahCompanyController::class, 'reassignCompanyBatch'])->name('adminsekolah.companies.reassign-batch');
 
     // Plotting PKL
-    Route::get('/plotting', [AdminSekolahController::class, 'plotting'])->name('adminsekolah.plotting');
-    Route::post('/plotting', [AdminSekolahController::class, 'storePlotting'])->name('adminsekolah.plotting.store');
-    Route::post('/plotting/{studentPkl}/send-parent-link', [AdminSekolahController::class, 'sendParentLink'])->name('adminsekolah.plotting.send-parent-link');
-    Route::put('/plotting/{studentPkl}/reassign', [AdminSekolahController::class, 'reassignPlotting'])->name('adminsekolah.plotting.reassign');
-    Route::delete('/plotting/{studentPkl}', [AdminSekolahController::class, 'destroyPlotting'])->name('adminsekolah.plotting.destroy');
+    Route::get('/plotting', [AdminSekolahPlottingController::class, 'plotting'])->name('adminsekolah.plotting');
+    Route::post('/plotting', [AdminSekolahPlottingController::class, 'storePlotting'])->name('adminsekolah.plotting.store');
+    Route::post('/plotting/{studentPkl}/send-parent-link', [AdminSekolahPlottingController::class, 'sendParentLink'])->name('adminsekolah.plotting.send-parent-link');
+    Route::put('/plotting/{studentPkl}/reassign', [AdminSekolahPlottingController::class, 'reassignPlotting'])->name('adminsekolah.plotting.reassign');
+    Route::delete('/plotting/{studentPkl}', [AdminSekolahPlottingController::class, 'destroyPlotting'])->name('adminsekolah.plotting.destroy');
 
     // Periode Pelaksanaan PKL
-    Route::post('/periods', [AdminSekolahController::class, 'storePeriod'])->name('adminsekolah.periods.store');
-    Route::put('/periods/{period}', [AdminSekolahController::class, 'updatePeriod'])->name('adminsekolah.periods.update');
-    Route::post('/periods/{period}/toggle-active', [AdminSekolahController::class, 'togglePeriodActive'])->name('adminsekolah.periods.toggle-active');
+    Route::post('/periods', [AdminSekolahPlottingController::class, 'storePeriod'])->name('adminsekolah.periods.store');
+    Route::put('/periods/{period}', [AdminSekolahPlottingController::class, 'updatePeriod'])->name('adminsekolah.periods.update');
+    Route::post('/periods/{period}/toggle-active', [AdminSekolahPlottingController::class, 'togglePeriodActive'])->name('adminsekolah.periods.toggle-active');
 
     // Announcements / Pengumuman
     Route::get('/announcements', [AnnouncementController::class, 'adminIndex'])->name('adminsekolah.announcements');
@@ -232,20 +243,20 @@ Route::middleware(['auth', 'IdentifyTenant', 'role:admin-sekolah'])->prefix('adm
     Route::post('/announcements/{announcement}/toggle-pin', [AnnouncementController::class, 'adminTogglePin'])->name('adminsekolah.announcements.toggle-pin');
 
     // Kalender Hari Libur
-    Route::get('/holidays', [AdminSekolahController::class, 'holidays'])->name('adminsekolah.holidays');
-    Route::post('/holidays', [AdminSekolahController::class, 'storeHoliday'])->name('adminsekolah.holidays.store');
-    Route::delete('/holidays/{holiday}', [AdminSekolahController::class, 'destroyHoliday'])->name('adminsekolah.holidays.destroy');
-    Route::post('/holidays/sync-national', [AdminSekolahController::class, 'syncNationalHolidays'])->name('adminsekolah.holidays.sync-national');
+    Route::get('/holidays', [AdminSekolahHolidayController::class, 'holidays'])->name('adminsekolah.holidays');
+    Route::post('/holidays', [AdminSekolahHolidayController::class, 'storeHoliday'])->name('adminsekolah.holidays.store');
+    Route::delete('/holidays/{holiday}', [AdminSekolahHolidayController::class, 'destroyHoliday'])->name('adminsekolah.holidays.destroy');
+    Route::post('/holidays/sync-national', [AdminSekolahHolidayController::class, 'syncNationalHolidays'])->name('adminsekolah.holidays.sync-national');
 
     // Laporan Kendala & SOS Siswa
-    Route::get('/incidents', [AdminSekolahController::class, 'incidents'])->name('adminsekolah.incidents');
-    Route::post('/incidents/{report}/followup', [AdminSekolahController::class, 'followupIncident'])->name('adminsekolah.incidents.followup');
+    Route::get('/incidents', [AdminSekolahIncidentController::class, 'incidents'])->name('adminsekolah.incidents');
+    Route::post('/incidents/{report}/followup', [AdminSekolahIncidentController::class, 'followupIncident'])->name('adminsekolah.incidents.followup');
 
     // E-Sertifikat & Transkrip PKL
-    Route::get('/certificates', [AdminSekolahController::class, 'certificates'])->name('adminsekolah.certificates');
-    Route::post('/certificates/generate', [AdminSekolahController::class, 'generateCertificate'])->name('adminsekolah.certificates.generate');
-    Route::post('/certificates/batch', [AdminSekolahController::class, 'generateBatchCertificates'])->name('adminsekolah.certificates.batch');
-    Route::get('/certificates/{certificate}/download', [AdminSekolahController::class, 'downloadCertificate'])->name('adminsekolah.certificates.download');
+    Route::get('/certificates', [AdminSekolahCertificateController::class, 'certificates'])->name('adminsekolah.certificates');
+    Route::post('/certificates/generate', [AdminSekolahCertificateController::class, 'generateCertificate'])->name('adminsekolah.certificates.generate');
+    Route::post('/certificates/batch', [AdminSekolahCertificateController::class, 'generateBatchCertificates'])->name('adminsekolah.certificates.batch');
+    Route::get('/certificates/{certificate}/download', [AdminSekolahCertificateController::class, 'downloadCertificate'])->name('adminsekolah.certificates.download');
 
     // Link Monitoring Portal Orang Tua (Batch & Export per Jurusan & Rombel)
     Route::get('/parent-links', [ParentLinkController::class, 'adminIndex'])->name('adminsekolah.parent-links');
@@ -259,8 +270,8 @@ Route::middleware(['auth', 'IdentifyTenant', 'role:admin-sekolah'])->prefix('adm
     Route::get('/peta-sebaran', [PklMapController::class, 'adminMap'])->name('adminsekolah.map');
 
     // Portal Billing & Langganan SaaS Tenant
-    Route::get('/billing', [AdminSekolahController::class, 'billing'])->name('adminsekolah.billing');
-    Route::get('/invoices/{invoice}/pdf', [AdminSekolahController::class, 'downloadInvoicePdf'])->name('adminsekolah.invoices.pdf');
+    Route::get('/billing', [AdminSekolahBillingController::class, 'billing'])->name('adminsekolah.billing');
+    Route::get('/invoices/{invoice}/pdf', [AdminSekolahBillingController::class, 'downloadInvoicePdf'])->name('adminsekolah.invoices.pdf');
 });
 
 // Backward compatibility alias for /adminsekolah (without hyphen)

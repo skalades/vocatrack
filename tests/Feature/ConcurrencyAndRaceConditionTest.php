@@ -5,20 +5,26 @@ namespace Tests\Feature;
 use App\Models\Assessment;
 use App\Models\Attendance;
 use App\Models\AttendanceRequest;
+use App\Models\Certificate;
 use App\Models\Company;
 use App\Models\Journal;
 use App\Models\Major;
 use App\Models\PklPeriod;
 use App\Models\School;
 use App\Models\SchoolClass;
+use App\Models\SchoolSubscription;
 use App\Models\Student;
 use App\Models\StudentPkl;
+use App\Models\SubscriptionPlan;
 use App\Models\Supervisor;
 use App\Models\Teacher;
 use App\Models\User;
 use App\Services\AssessmentService;
 use App\Services\AttendanceService;
+use App\Services\CertificateService;
 use App\Services\JournalService;
+use App\Services\StorageQuotaService;
+use App\Services\SubscriptionService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
@@ -278,5 +284,78 @@ class ConcurrencyAndRaceConditionTest extends TestCase
         $response->assertSessionHasErrors(['date']);
         $this->assertEquals('approved', $journal->fresh()->status);
         $this->assertEquals('Original approved activity description for mining geology field work.', $journal->fresh()->activity_description);
+    }
+
+    public function test_student_quota_toctou_prevention_with_locking(): void
+    {
+        $env = $this->setupEnvironment();
+        $school = $env['school'];
+        $subService = app(SubscriptionService::class);
+
+        $plan = SubscriptionPlan::create([
+            'code' => 'starter-plan',
+            'name' => 'Starter PKL',
+            'price' => 500000,
+            'max_students' => 1, // Quota only allows 1 student
+            'max_storage_mb' => 1024,
+        ]);
+
+        $sub = SchoolSubscription::create([
+            'school_id' => $school->id,
+            'plan_id' => $plan->id,
+            'plan_name' => $plan->name,
+            'start_date' => Carbon::today(),
+            'end_date' => Carbon::today()->addYear(),
+            'price_paid' => 500000,
+            'student_quota' => 1, // Only 1 student allowed
+            'status' => 'active',
+        ]);
+
+        // There is already 1 student created in setupEnvironment.
+        // Therefore adding 1 more student must throw ValidationException under enforceQuotaWithLock
+        $this->expectException(ValidationException::class);
+        \Illuminate\Support\Facades\DB::transaction(function () use ($subService, $school) {
+            $subService->enforceQuotaWithLock($school, 1);
+        });
+    }
+
+    public function test_storage_quota_atomic_sync_on_upload_and_deletion(): void
+    {
+        $env = $this->setupEnvironment();
+        $school = $env['school'];
+        $storageService = app(StorageQuotaService::class);
+
+        $storageService->recordUpload($school, 102400); // 100 KB
+        $this->assertEquals(102400, (int) $school->fresh()->storage_used_bytes);
+        $this->assertEquals(102400, (int) \Illuminate\Support\Facades\Cache::get("school_storage_bytes_{$school->id}"));
+
+        $storageService->recordDeletion($school, 20400); // 20 KB
+        $this->assertEquals(82000, (int) $school->fresh()->storage_used_bytes);
+        $this->assertEquals(82000, (int) \Illuminate\Support\Facades\Cache::get("school_storage_bytes_{$school->id}"));
+    }
+
+    public function test_certificate_generation_with_concurrency_lock(): void
+    {
+        $env = $this->setupEnvironment();
+        $spkl = $env['spkl'];
+        $certService = app(CertificateService::class);
+
+        Assessment::create([
+            'school_id' => $spkl->school_id,
+            'student_pkl_id' => $spkl->id,
+            'score_dudi_discipline' => 90,
+            'score_dudi_technical' => 88,
+            'score_dudi_initiative' => 85,
+            'score_teacher_report' => 92,
+            'final_score' => 89.5,
+        ]);
+
+        $cert1 = $certService->generateForStudentPkl($spkl);
+        $this->assertNotNull($cert1->certificate_number);
+
+        // Generating again for same student returns existing record idempotently
+        $cert2 = $certService->generateForStudentPkl($spkl);
+        $this->assertEquals($cert1->id, $cert2->id);
+        $this->assertEquals($cert1->certificate_number, $cert2->certificate_number);
     }
 }

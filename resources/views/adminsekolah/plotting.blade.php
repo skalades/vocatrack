@@ -384,13 +384,13 @@
                     </div>
 
                     <!-- Toggle: Hanya yang belum diplot vs Semua -->
-                    <div class="flex items-center bg-white p-1 rounded-xl border border-indigo-200/80 text-[10px] font-bold">
+                    <div class="flex items-center bg-white p-1 rounded-xl border border-slate-200/80 text-[10px] font-bold">
                         <button type="button" id="btn-toggle-unplotted" onclick="setPlotFilter('unplotted')" 
-                                class="px-2.5 py-1 rounded-lg bg-indigo-600 text-white transition-all shadow-xs">
+                                class="px-2.5 py-1 rounded-lg bg-[#0B2B25] text-[#C6F26B] font-extrabold transition-all shadow-xs cursor-pointer">
                             Hanya Belum Diplot
                         </button>
                         <button type="button" id="btn-toggle-all" onclick="setPlotFilter('all')" 
-                                class="px-2.5 py-1 rounded-lg text-slate-600 hover:text-slate-900 transition-all">
+                                class="px-2.5 py-1 rounded-lg text-slate-600 hover:text-slate-900 transition-all cursor-pointer">
                             Tampilkan Semua
                         </button>
                     </div>
@@ -643,11 +643,11 @@
         const btnAll = document.getElementById('btn-toggle-all');
 
         if (type === 'unplotted') {
-            btnUnplotted.className = "px-2.5 py-1 rounded-lg bg-indigo-600 text-white transition-all shadow-xs";
-            btnAll.className = "px-2.5 py-1 rounded-lg text-slate-600 hover:text-slate-900 transition-all";
+            btnUnplotted.className = "px-2.5 py-1 rounded-lg bg-[#0B2B25] text-[#C6F26B] font-extrabold transition-all shadow-xs cursor-pointer";
+            btnAll.className = "px-2.5 py-1 rounded-lg text-slate-600 hover:text-slate-900 transition-all cursor-pointer";
         } else {
-            btnAll.className = "px-2.5 py-1 rounded-lg bg-indigo-600 text-white transition-all shadow-xs";
-            btnUnplotted.className = "px-2.5 py-1 rounded-lg text-slate-600 hover:text-slate-900 transition-all";
+            btnAll.className = "px-2.5 py-1 rounded-lg bg-[#0B2B25] text-[#C6F26B] font-extrabold transition-all shadow-xs cursor-pointer";
+            btnUnplotted.className = "px-2.5 py-1 rounded-lg text-slate-600 hover:text-slate-900 transition-all cursor-pointer";
         }
 
         filterStudentList();

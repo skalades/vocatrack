@@ -149,7 +149,7 @@
 
                 {{-- Submit & Reset --}}
                 <div class="flex items-center gap-2">
-                    <button type="submit" class="px-3.5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-colors shadow-xs">
+                    <button type="submit" class="px-3.5 py-2.5 rounded-xl bg-[#0B2B25] hover:bg-[#071E1A] text-[#C6F26B] text-xs font-extrabold transition-colors shadow-xs cursor-pointer">
                         Cari
                     </button>
                     @if(request()->hasAny(['search', 'major_id', 'class_id', 'company_id']))

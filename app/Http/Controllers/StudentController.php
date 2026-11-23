@@ -318,7 +318,7 @@ class StudentController extends Controller
             return back()->withErrors(['checkout' => 'Anda tidak memiliki penugasan PKL aktif.']);
         }
 
-        if (!$spkl->company?->is_pkl_started) {
+        if (!$spkl->company?->is_pkl_started && !$spkl->isTestStudent()) {
             $msg = 'Pelaksanaan PKL di ' . ($spkl->company->name ?? 'perusahaan ini') . ' belum resmi dimulai. Anda belum diwajibkan melakukan presensi pulang.';
             if ($request->wantsJson()) {
                 return response()->json(['message' => $msg, 'errors' => ['checkout' => [$msg]]], 422);
@@ -339,6 +339,9 @@ class StudentController extends Controller
 
         $school = $spkl->school;
         $isSchoolGeofenceCheckout = $school ? $school->isFeatureEnabled('feature_checkout_geofence', true) : true;
+        if ($spkl->isTestStudent()) {
+            $isSchoolGeofenceCheckout = false;
+        }
         if ($isSchoolGeofenceCheckout && $request->has('is_within_radius') && filter_var($request->input('is_within_radius'), FILTER_VALIDATE_BOOLEAN) === false) {
             if (!$request->filled('reason') || strlen(trim($request->reason)) < 5) {
                 if ($request->wantsJson()) {

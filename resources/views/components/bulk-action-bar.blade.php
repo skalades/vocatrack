@@ -10,11 +10,11 @@
 
 <!-- Sticky Floating Batch Action Bar -->
 <div id="{{ $barId }}" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 transition-all duration-300 transform translate-y-28 opacity-0 pointer-events-none w-[92%] max-w-2xl">
-    <div class="bg-slate-900/95 backdrop-blur-md text-white px-5 py-3.5 rounded-2xl shadow-2xl border border-slate-700/80 flex flex-col sm:flex-row items-center justify-between gap-3">
+    <div class="bg-[#0B2B25]/95 backdrop-blur-md text-white px-5 py-3.5 rounded-2xl shadow-2xl border border-[#1C5A4F]/80 flex flex-col sm:flex-row items-center justify-between gap-3">
         <div class="flex items-center space-x-3">
             <span class="flex h-3 w-3 relative">
-                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#C6F26B] opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-3 w-3 bg-[#C6F26B]"></span>
             </span>
             <span class="text-xs font-bold text-slate-100">
                 <span id="{{ $barId }}-count">0</span> {{ $itemLabel }} dipilih
@@ -22,14 +22,14 @@
         </div>
 
         <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
-            <button type="button" onclick="window['{{ $barId }}DeselectAll']()" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold transition-colors cursor-pointer">
+            <button type="button" onclick="window['{{ $barId }}DeselectAll']()" class="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-slate-200 hover:text-white text-xs font-semibold transition-colors cursor-pointer">
                 Batal
             </button>
             <button type="button" onclick="window['{{ $barId }}PromptReject']()" class="px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shadow-sm transition-colors flex items-center gap-1.5 cursor-pointer">
                 <svg class="w-3.5 h-3.5 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                 <span>{{ $rejectActionLabel }}</span>
             </button>
-            <button type="button" onclick="window['{{ $barId }}SubmitApprove']()" class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition-colors flex items-center gap-1.5 cursor-pointer">
+            <button type="button" onclick="window['{{ $barId }}SubmitApprove']()" class="px-3.5 py-1.5 rounded-xl bg-[#C6F26B] hover:bg-[#b5e855] text-[#0B2B25] text-xs font-extrabold shadow-sm transition-colors flex items-center gap-1.5 cursor-pointer">
                 <svg class="w-3.5 h-3.5 stroke-[2.5]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
                 <span>Setujui Semua</span>
             </button>

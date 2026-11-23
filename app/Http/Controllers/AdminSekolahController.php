@@ -2,45 +2,54 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Announcement;
-use App\Models\Attendance;
-use App\Models\AttendanceRequest;
+use App\Http\Controllers\AdminSekolah\AcademicController;
+use App\Http\Controllers\AdminSekolah\BillingController;
+use App\Http\Controllers\AdminSekolah\CertificateController;
+use App\Http\Controllers\AdminSekolah\CompanyController;
+use App\Http\Controllers\AdminSekolah\DashboardController;
+use App\Http\Controllers\AdminSekolah\HolidayController;
+use App\Http\Controllers\AdminSekolah\IncidentController;
+use App\Http\Controllers\AdminSekolah\PlottingController;
+use App\Http\Controllers\AdminSekolah\SettingController;
+use App\Http\Controllers\AdminSekolah\StudentController;
+use App\Http\Controllers\AdminSekolah\TeacherController;
+use App\Http\Requests\AdminSekolah\StoreClassRequest;
+use App\Http\Requests\AdminSekolah\StoreCompanyRequest;
+use App\Http\Requests\AdminSekolah\StoreHolidayRequest;
+use App\Http\Requests\AdminSekolah\StoreMajorRequest;
+use App\Http\Requests\AdminSekolah\StorePlottingRequest;
+use App\Http\Requests\AdminSekolah\StoreStudentRequest;
+use App\Http\Requests\AdminSekolah\StoreTeacherRequest;
+use App\Http\Requests\AdminSekolah\UpdateCompanyRequest;
+use App\Http\Requests\AdminSekolah\UpdateSettingsRequest;
+use App\Http\Requests\AdminSekolah\UpdateStudentRequest;
+use App\Http\Requests\AdminSekolah\UpdateTeacherRequest;
 use App\Models\Certificate;
 use App\Models\Company;
 use App\Models\IncidentReport;
 use App\Models\Invoice;
-use App\Models\Journal;
-use App\Models\JournalPhoto;
 use App\Models\LearningObjective;
 use App\Models\Major;
 use App\Models\PklPeriod;
-use App\Models\Profile;
-use App\Models\School;
 use App\Models\SchoolClass;
 use App\Models\SchoolHoliday;
-use App\Models\SchoolSetting;
 use App\Models\Student;
 use App\Models\StudentPkl;
 use App\Models\Supervisor;
 use App\Models\Teacher;
-use App\Models\User;
-use App\Services\AuditLogService;
 use App\Services\CertificateService;
 use App\Services\ClassPromotionService;
 use App\Services\HolidayService;
 use App\Services\IncidentReportService;
-use App\Services\SubscriptionService;
-use App\Services\TenantProvisioningService;
 use App\Services\WhatsAppGatewayService;
-use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
 
+/**
+ * AdminSekolahController
+ *
+ * Facade and backwards-compatible delegate for domain controllers under App\Http\Controllers\AdminSekolah.
+ */
 class AdminSekolahController extends Controller
 {
     protected function getSchoolId(): int
@@ -48,2211 +57,309 @@ class AdminSekolahController extends Controller
         return Auth::user()->school_id;
     }
 
+    // --- Dashboard ---
     public function dashboard()
     {
-        $schoolId = $this->getSchoolId();
-        $totalStudents = Student::whereHas('user', fn($q) => $q->where('school_id', $schoolId))->count();
-        $totalTeachers = Teacher::whereHas('user', fn($q) => $q->where('school_id', $schoolId))->count();
-        $totalCompanies = Company::where('school_id', $schoolId)->count();
-        $activePkl = StudentPkl::where('school_id', $schoolId)->where('status', 'active')->count();
-
-        $today = Carbon::today()->toDateString();
-        $countsByStatus = Attendance::where('school_id', $schoolId)
-            ->where('date', $today)
-            ->selectRaw('status, count(*) as count')
-            ->groupBy('status')
-            ->pluck('count', 'status');
-
-        $attendanceStats = [
-            'hadir' => (int) ($countsByStatus['hadir'] ?? 0),
-            'terlambat' => (int) ($countsByStatus['terlambat'] ?? 0),
-            'izin' => (int) ($countsByStatus['izin'] ?? 0),
-            'sakit' => (int) ($countsByStatus['sakit'] ?? 0),
-            'alfa' => (int) ($countsByStatus['alfa'] ?? 0),
-        ];
-
-        $recentAnnouncements = Announcement::where('school_id', $schoolId)
-            ->with(['author', 'major'])
-            ->pinnedFirst()
-            ->limit(4)
-            ->get();
-
-        return view('adminsekolah.dashboard', compact(
-            'totalStudents',
-            'totalTeachers',
-            'totalCompanies',
-            'activePkl',
-            'attendanceStats',
-            'recentAnnouncements'
-        ));
+        return app(DashboardController::class)->dashboard();
     }
 
+    // --- Settings & Test Mode ---
     public function settings()
     {
-        $schoolId = $this->getSchoolId();
-        $school = School::findOrFail($schoolId);
-        $settings = SchoolSetting::where('school_id', $schoolId)->pluck('value', 'key');
-        $periods = PklPeriod::where('school_id', $schoolId)->withCount('studentPkls')->latest()->get();
-
-        return view('adminsekolah.settings', compact('school', 'settings', 'periods'));
+        return app(SettingController::class)->settings();
     }
 
-    public function updateSettings(Request $request)
+    public function updateSettings(UpdateSettingsRequest $request)
     {
-        $schoolId = $this->getSchoolId();
-        $school = School::findOrFail($schoolId);
-
-        $request->validate([
-            'school_name' => ['required', 'string', 'max:150'],
-            'school_phone' => ['required', 'string', 'max:20'],
-            'school_address' => ['required', 'string'],
-            'school_logo' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
-            'checkin_start' => ['required'],
-            'checkin_late' => ['required'],
-            'checkin_alfa' => ['required'],
-            'checkout_start' => ['required'],
-            'journal_backdate_limit' => ['required', 'integer', 'min:0', 'max:30'],
-            'weight_dudi' => ['required', 'numeric', 'min:0', 'max:100'],
-            'weight_guru' => ['required', 'numeric', 'min:0', 'max:100'],
-        ]);
-
-        if (round((float) $request->weight_dudi + (float) $request->weight_guru, 2) !== 100.0) {
-            return back()->withErrors(['weight_dudi' => 'Total persentase bobot penilaian DU/DI dan Guru Pembimbing harus tepat 100% (saat ini: ' . ((float) $request->weight_dudi + (float) $request->weight_guru) . '%).'])->withInput();
-        }
-
-        $schoolData = [
-            'name' => $request->school_name,
-            'phone' => $request->school_phone,
-            'address' => $request->school_address,
-        ];
-
-        if ($request->boolean('remove_logo')) {
-            if ($school->logo_path && Storage::disk('public')->exists($school->logo_path)) {
-                Storage::disk('public')->delete($school->logo_path);
-            }
-            $schoolData['logo_path'] = null;
-        } elseif ($request->hasFile('school_logo')) {
-            $file = $request->file('school_logo');
-            $fileSize = $file->getSize();
-            if (!app(\App\Services\StorageQuotaService::class)->canUpload($school, $fileSize)) {
-                return back()->with('error', 'Kapasitas penyimpanan sekolah Anda telah penuh. Tidak dapat mengunggah logo baru.')->withInput();
-            }
-
-            if ($school->logo_path && Storage::disk('public')->exists($school->logo_path)) {
-                $oldSize = Storage::disk('public')->size($school->logo_path);
-                Storage::disk('public')->delete($school->logo_path);
-                app(\App\Services\StorageQuotaService::class)->recordDeletion($school, $oldSize);
-            }
-            $filename = 'logo_' . time() . '_' . Str::random(8) . '.' . $file->getClientOriginalExtension();
-            $path = $file->storeAs("schools/{$schoolId}/logo", $filename, 'public');
-            app(\App\Services\StorageQuotaService::class)->recordUpload($school, $fileSize);
-            $schoolData['logo_path'] = $path;
-        }
-
-        $school->update($schoolData);
-
-        $settingsToUpdate = [
-            'checkin_start' => $request->checkin_start,
-            'checkin_late' => $request->checkin_late,
-            'checkin_alfa' => $request->checkin_alfa,
-            'checkout_start' => $request->checkout_start,
-            'journal_backdate_limit' => $request->journal_backdate_limit,
-            'weight_dudi' => $request->weight_dudi,
-            'weight_guru' => $request->weight_guru,
-            'kop_header_line1' => $request->kop_header_line1,
-            'kop_header_line2' => $request->kop_header_line2,
-            'kop_header_line3' => $request->kop_header_line3,
-            'kepsek_name' => $request->kepsek_name,
-            'kepsek_nip' => $request->kepsek_nip,
-        ];
-
-        foreach ($settingsToUpdate as $k => $v) {
-            SchoolSetting::updateOrCreate(
-                ['school_id' => $schoolId, 'key' => $k],
-                ['value' => $v ?? '']
-            );
-        }
-
-        return back()->with('success', 'Konfigurasi identitas sekolah dan jam kerja berhasil disimpan.');
+        return app(SettingController::class)->updateSettings($request);
     }
 
     public function toggleTestMode(Request $request)
     {
-        $schoolId = $this->getSchoolId();
-        $school = School::findOrFail($schoolId);
-
-        $currentState = $school->isTestModeActive();
-        $newState = !$currentState;
-
-        SchoolSetting::updateOrCreate(
-            ['school_id' => $schoolId, 'key' => 'stress_test_mode'],
-            ['value' => $newState ? '1' : '0']
-        );
-
-        if ($newState) {
-            SchoolSetting::updateOrCreate(
-                ['school_id' => $schoolId, 'key' => 'stress_test_activated_at'],
-                ['value' => now()->toIso8601String()]
-            );
-        }
-
-        \Illuminate\Support\Facades\Cache::forget(SchoolSetting::cacheKey($schoolId));
-
-        $msg = $newState 
-            ? 'Mode Simulasi & Uji Coba berhasil DIAKTIFKAN. Siswa di DU/DI belum mulai kini dapat presensi bebas radius.'
-            : 'Mode Simulasi & Uji Coba telah DINONAKTIFKAN. Seluruh aturan jam dan geofencing kembali normal.';
-
-        if ($request->wantsJson()) {
-            return response()->json([
-                'success' => true,
-                'is_active' => $newState,
-                'message' => $msg,
-            ]);
-        }
-
-        return back()->with('success', $msg);
+        return app(SettingController::class)->toggleTestMode($request);
     }
 
     public function getTestModeStats(Request $request)
     {
-        $schoolId = $this->getSchoolId();
-        $school = School::findOrFail($schoolId);
-        $date = $request->query('date') ?: Carbon::today()->toDateString();
-
-        $attQuery = Attendance::where('school_id', $schoolId)
-            ->forDate($date)
-            ->whereHas('studentPkl.company', fn($cq) => $cq->where('is_pkl_started', false));
-
-        $journalQuery = Journal::where('school_id', $schoolId)
-            ->forDate($date)
-            ->whereHas('studentPkl.company', fn($cq) => $cq->where('is_pkl_started', false));
-
-        $journalIds = (clone $journalQuery)->pluck('id');
-        $photoCount = JournalPhoto::whereIn('journal_id', $journalIds)->count();
-
-        $reqCount = AttendanceRequest::where('school_id', $schoolId)
-            ->whereDate('start_date', '<=', $date)
-            ->whereDate('end_date', '>=', $date)
-            ->whereHas('studentPkl.company', fn($cq) => $cq->where('is_pkl_started', false))
-            ->count();
-
-        return response()->json([
-            'is_active' => $school->isTestModeActive(),
-            'date' => $date,
-            'attendances_count' => $attQuery->count(),
-            'journals_count' => $journalQuery->count(),
-            'photos_count' => $photoCount,
-            'requests_count' => $reqCount,
-        ]);
+        return app(SettingController::class)->getTestModeStats($request);
     }
 
     public function cleanTestData(Request $request)
     {
-        $schoolId = $this->getSchoolId();
-        $school = School::findOrFail($schoolId);
-        $date = $request->input('date') ?: Carbon::today()->toDateString();
-
-        $attQuery = Attendance::where('school_id', $schoolId)
-            ->forDate($date)
-            ->whereHas('studentPkl.company', fn($cq) => $cq->where('is_pkl_started', false));
-
-        $journalQuery = Journal::where('school_id', $schoolId)
-            ->forDate($date)
-            ->whereHas('studentPkl.company', fn($cq) => $cq->where('is_pkl_started', false));
-
-        $reqQuery = AttendanceRequest::where('school_id', $schoolId)
-            ->whereDate('start_date', '<=', $date)
-            ->whereDate('end_date', '>=', $date)
-            ->whereHas('studentPkl.company', fn($cq) => $cq->where('is_pkl_started', false));
-
-        $attCount = (clone $attQuery)->count();
-        $journalCount = (clone $journalQuery)->count();
-        $reqCount = (clone $reqQuery)->count();
-        $journalIds = (clone $journalQuery)->pluck('id');
-        $photoCount = JournalPhoto::whereIn('journal_id', $journalIds)->count();
-
-        $deletedFiles = 0;
-        $deleteFileHelper = function (?string $path) use (&$deletedFiles) {
-            if (empty($path)) return;
-            try {
-                if (Storage::disk('local')->exists($path)) {
-                    Storage::disk('local')->delete($path);
-                    $deletedFiles++;
-                }
-            } catch (\Throwable $e) {}
-            try {
-                if (Storage::disk('public')->exists($path)) {
-                    Storage::disk('public')->delete($path);
-                    $deletedFiles++;
-                }
-            } catch (\Throwable $e) {}
-        };
-
-        // Hapus fisik foto presensi
-        $attQuery->chunkById(200, function ($attendances) use ($deleteFileHelper) {
-            foreach ($attendances as $att) {
-                $deleteFileHelper($att->checkin_photo_path);
-                $deleteFileHelper($att->checkout_photo_path ?? null);
-            }
-        });
-
-        // Hapus fisik foto jurnal
-        JournalPhoto::whereIn('journal_id', $journalIds)->chunkById(200, function ($photos) use ($deleteFileHelper) {
-            foreach ($photos as $p) {
-                $deleteFileHelper($p->photo_path);
-            }
-        });
-
-        // Hapus fisik lampiran izin
-        $reqQuery->chunkById(200, function ($requests) use ($deleteFileHelper) {
-            foreach ($requests as $r) {
-                $deleteFileHelper($r->attachment_path);
-            }
-        });
-
-        // Hapus record DB
-        \Illuminate\Support\Facades\DB::transaction(function () use ($attQuery, $journalIds, $journalQuery, $reqQuery) {
-            JournalPhoto::whereIn('journal_id', $journalIds)->delete();
-            $journalQuery->delete();
-            $attQuery->delete();
-            $reqQuery->delete();
-        });
-
-        // Hitung ulang kuota storage sekolah
-        app(\App\Services\StorageQuotaService::class)->calculateSchoolStorage($school);
-        \Illuminate\Support\Facades\Cache::forget("school_storage_bytes_{$school->id}");
-
-        $msg = "Pembersihan batch selesai: {$attCount} presensi, {$journalCount} jurnal ({$photoCount} foto), dan {$deletedFiles} file fisik berhasil dihapus. Data siswa aktif PKL aman 100%.";
-
-        if ($request->wantsJson()) {
-            return response()->json([
-                'success' => true,
-                'message' => $msg,
-                'deleted' => [
-                    'attendances' => $attCount,
-                    'journals' => $journalCount,
-                    'photos' => $photoCount,
-                    'files' => $deletedFiles,
-                ],
-            ]);
-        }
-
-        return back()->with('success', $msg);
+        return app(SettingController::class)->cleanTestData($request);
     }
 
+    // --- Academic (Majors, Classes, Competencies, Promotion) ---
     public function majors()
     {
-        $schoolId = $this->getSchoolId();
-        $majors = Major::where('school_id', $schoolId)
-            ->with(['headTeacher.user', 'learningObjectives'])
-            ->withCount(['classes', 'learningObjectives'])
-            ->get();
-        $classes = SchoolClass::where('school_id', $schoolId)->with('major')->get();
-        $teachers = Teacher::whereHas('user', fn($q) => $q->where('school_id', $schoolId)->where('is_active', true))
-            ->with('user')
-            ->get();
-
-        return view('adminsekolah.majors', compact('majors', 'classes', 'teachers'));
+        return app(AcademicController::class)->majors();
     }
 
-    public function storeMajor(Request $request)
+    public function storeMajor(StoreMajorRequest $request)
     {
-        $schoolId = $this->getSchoolId();
-        $request->validate([
-            'code' => [
-                'required', 'string', 'max:20',
-                Rule::unique('majors', 'code')->where('school_id', $schoolId),
-            ],
-            'name' => ['required', 'string', 'max:100'],
-            'program_duration_years' => ['nullable', 'integer', 'in:3,4'],
-            'default_pkl_duration_months' => ['nullable', 'integer', 'min:1', 'max:24'],
-            'head_teacher_id' => [
-                'nullable',
-                Rule::exists('teachers', 'id')->where(fn($q) => $q->whereIn('user_id', User::where('school_id', $schoolId)->pluck('id'))),
-            ],
-        ], [
-            'code.unique' => 'Kode jurusan ini sudah digunakan.',
-        ]);
-
-        Major::create([
-            'school_id' => $schoolId,
-            'head_teacher_id' => $request->head_teacher_id,
-            'code' => strtoupper($request->code),
-            'name' => $request->name,
-            'program_duration_years' => (int) $request->input('program_duration_years', 3),
-            'default_pkl_duration_months' => (int) $request->input('default_pkl_duration_months', 6),
-        ]);
-
-        return back()->with('success', 'Jurusan keahlian berhasil ditambahkan.');
+        return app(AcademicController::class)->storeMajor($request);
     }
 
     public function updateMajor(Request $request, Major $major)
     {
-        $schoolId = $this->getSchoolId();
-        abort_if($major->school_id !== $schoolId, 403);
-
-        $request->validate([
-            'code' => [
-                'required', 'string', 'max:20',
-                Rule::unique('majors', 'code')->where('school_id', $schoolId)->ignore($major->id),
-            ],
-            'name' => ['required', 'string', 'max:100'],
-            'program_duration_years' => ['nullable', 'integer', 'in:3,4'],
-            'default_pkl_duration_months' => ['nullable', 'integer', 'min:1', 'max:24'],
-            'head_teacher_id' => [
-                'nullable',
-                Rule::exists('teachers', 'id')->where(fn($q) => $q->whereIn('user_id', User::where('school_id', $schoolId)->pluck('id'))),
-            ],
-        ], [
-            'code.unique' => 'Kode jurusan ini sudah digunakan.',
-        ]);
-
-        $major->update([
-            'head_teacher_id' => $request->head_teacher_id,
-            'code' => strtoupper($request->code),
-            'name' => $request->name,
-            'program_duration_years' => (int) $request->input('program_duration_years', $major->program_duration_years ?? 3),
-            'default_pkl_duration_months' => (int) $request->input('default_pkl_duration_months', $major->default_pkl_duration_months ?? 6),
-        ]);
-
-        return back()->with('success', 'Data jurusan berhasil diperbarui.');
+        return app(AcademicController::class)->updateMajor($request, $major);
     }
 
     public function destroyMajor(Major $major)
     {
-        $schoolId = $this->getSchoolId();
-        abort_if($major->school_id !== $schoolId, 403);
-
-        if ($major->classes()->exists()) {
-            return back()->withErrors(['major' => 'Jurusan tidak dapat dihapus karena masih memiliki rombel kelas terdaftar.']);
-        }
-
-        $major->delete();
-        return back()->with('success', 'Jurusan berhasil dihapus.');
+        return app(AcademicController::class)->destroyMajor($major);
     }
 
     public function storeMajorCompetency(Request $request, Major $major)
     {
-        $schoolId = $this->getSchoolId();
-        abort_if($major->school_id !== $schoolId, 403);
-
-        $validated = $request->validate([
-            'code' => ['required', 'string', 'max:30'],
-            'title' => ['required', 'string', 'max:255'],
-            'element_name' => ['nullable', 'string', 'max:100'],
-            'description' => ['nullable', 'string'],
-            'target_hours' => ['nullable', 'integer', 'min:0'],
-            'sort_order' => ['nullable', 'integer', 'min:0'],
-        ]);
-
-        LearningObjective::create([
-            'school_id' => $schoolId,
-            'major_id' => $major->id,
-            'code' => strtoupper($validated['code']),
-            'title' => $validated['title'],
-            'element_name' => $validated['element_name'] ?? 'Keterampilan Teknis Kejuruan',
-            'description' => $validated['description'] ?? null,
-            'target_hours' => $validated['target_hours'] ?? 0,
-            'sort_order' => $validated['sort_order'] ?? 0,
-            'is_active' => $request->boolean('is_active', true),
-        ]);
-
-        return back()->with('success', 'Capaian Pembelajaran (CP) berhasil ditambahkan ke jurusan ' . $major->code . '.');
+        return app(AcademicController::class)->storeMajorCompetency($request, $major);
     }
 
     public function updateMajorCompetency(Request $request, LearningObjective $learningObjective)
     {
-        $schoolId = $this->getSchoolId();
-        abort_if($learningObjective->school_id !== $schoolId, 403);
-
-        $validated = $request->validate([
-            'code' => ['required', 'string', 'max:30'],
-            'title' => ['required', 'string', 'max:255'],
-            'element_name' => ['nullable', 'string', 'max:100'],
-            'description' => ['nullable', 'string'],
-            'target_hours' => ['nullable', 'integer', 'min:0'],
-            'sort_order' => ['nullable', 'integer', 'min:0'],
-            'is_active' => ['nullable', 'boolean'],
-        ]);
-
-        $learningObjective->update([
-            'code' => strtoupper($validated['code']),
-            'title' => $validated['title'],
-            'element_name' => $validated['element_name'] ?? 'Keterampilan Teknis Kejuruan',
-            'description' => $validated['description'] ?? null,
-            'target_hours' => $validated['target_hours'] ?? 0,
-            'sort_order' => $validated['sort_order'] ?? 0,
-            'is_active' => $request->has('is_active') ? $request->boolean('is_active') : $learningObjective->is_active,
-        ]);
-
-        return back()->with('success', 'Data Capaian Pembelajaran berhasil diperbarui.');
+        return app(AcademicController::class)->updateMajorCompetency($request, $learningObjective);
     }
 
     public function destroyMajorCompetency(LearningObjective $learningObjective)
     {
-        $schoolId = $this->getSchoolId();
-        abort_if($learningObjective->school_id !== $schoolId, 403);
-
-        $learningObjective->delete();
-
-        return back()->with('success', 'Capaian Pembelajaran berhasil dihapus.');
+        return app(AcademicController::class)->destroyMajorCompetency($learningObjective);
     }
 
-    public function storeClass(Request $request)
+    public function storeClass(StoreClassRequest $request)
     {
-        $schoolId = $this->getSchoolId();
-        $request->validate([
-            'major_id' => ['required', Rule::exists('majors', 'id')->where('school_id', $schoolId)],
-            'name' => [
-                'required', 'string', 'max:50',
-                Rule::unique('classes', 'name')->where('school_id', $schoolId)->where('academic_year', $request->academic_year),
-            ],
-            'grade_level' => ['required', 'in:X,XI,XII,XIII'],
-            'academic_year' => ['required', 'string', 'max:15'],
-        ], [
-            'name.unique' => 'Nama rombel kelas ini sudah ada untuk tahun ajaran yang dipilih.',
-            'grade_level.in' => 'Tingkat kelas harus berupa X, XI, XII, atau XIII.',
-        ]);
-
-        $major = Major::where('school_id', $schoolId)->findOrFail($request->major_id);
-        if ($request->grade_level === 'XIII' && !$major->isFourYearProgram()) {
-            return back()->withErrors(['grade_level' => "Tingkat Kelas XIII hanya diperuntukkan bagi jurusan program 4 tahun ({$major->name} saat ini disetel program 3 tahun)."]);
-        }
-
-        SchoolClass::create([
-            'school_id' => $schoolId,
-            'major_id' => $request->major_id,
-            'name' => $request->name,
-            'grade_level' => $request->grade_level,
-            'academic_year' => $request->academic_year,
-        ]);
-
-        return back()->with('success', 'Kelas berhasil didaftarkan.');
+        return app(AcademicController::class)->storeClass($request);
     }
 
     public function updateClass(Request $request, SchoolClass $schoolClass)
     {
-        $schoolId = $this->getSchoolId();
-        abort_if($schoolClass->school_id !== $schoolId, 403);
-
-        $request->validate([
-            'major_id' => ['required', Rule::exists('majors', 'id')->where('school_id', $schoolId)],
-            'name' => [
-                'required', 'string', 'max:50',
-                Rule::unique('classes', 'name')->where('school_id', $schoolId)->where('academic_year', $request->academic_year)->ignore($schoolClass->id),
-            ],
-            'grade_level' => ['required', 'in:X,XI,XII,XIII'],
-            'academic_year' => ['required', 'string', 'max:15'],
-        ], [
-            'name.unique' => 'Nama rombel kelas ini sudah ada untuk tahun ajaran yang dipilih.',
-            'grade_level.in' => 'Tingkat kelas harus berupa X, XI, XII, atau XIII.',
-        ]);
-
-        $major = Major::where('school_id', $schoolId)->findOrFail($request->major_id);
-        if ($request->grade_level === 'XIII' && !$major->isFourYearProgram()) {
-            return back()->withErrors(['grade_level' => "Tingkat Kelas XIII hanya diperuntukkan bagi jurusan program 4 tahun ({$major->name} saat ini disetel program 3 tahun)."]);
-        }
-
-        $schoolClass->update([
-            'major_id' => $request->major_id,
-            'name' => $request->name,
-            'grade_level' => $request->grade_level,
-            'academic_year' => $request->academic_year,
-        ]);
-
-        return back()->with('success', 'Data rombel kelas berhasil diperbarui.');
+        return app(AcademicController::class)->updateClass($request, $schoolClass);
     }
 
     public function destroyClass(SchoolClass $schoolClass)
     {
-        $schoolId = $this->getSchoolId();
-        abort_if($schoolClass->school_id !== $schoolId, 403);
-
-        if ($schoolClass->students()->exists()) {
-            return back()->withErrors(['class' => 'Kelas tidak dapat dihapus karena masih memiliki siswa terdaftar di dalamnya.']);
-        }
-
-        $schoolClass->delete();
-        return back()->with('success', 'Rombel kelas berhasil dihapus.');
-    }
-
-    public function students(Request $request)
-    {
-        $schoolId = $this->getSchoolId();
-        $query = Student::whereHas('user', fn($q) => $q->where('school_id', $schoolId))
-            ->with(['user.profile', 'class.major', 'activePkl.company']);
-
-        if ($search = $request->query('search')) {
-            $query->where(function ($q) use ($search) {
-                $q->whereHas('user', fn($uq) => $uq->where('name', 'like', "%{$search}%")->orWhere('email', 'like', "%{$search}%"))
-                  ->orWhere('nisn', 'like', "%{$search}%")
-                  ->orWhere('nis', 'like', "%{$search}%")
-                  ->orWhereHas('class', fn($cq) => $cq->where('name', 'like', "%{$search}%"));
-            });
-        }
-
-        if ($majorId = $request->query('major_id')) {
-            if ($majorId !== 'all') {
-                $query->whereHas('class', fn($cq) => $cq->where('major_id', $majorId));
-            }
-        }
-
-        if ($classId = $request->query('class_id')) {
-            if ($classId !== 'all') {
-                $query->where('class_id', $classId);
-            }
-        }
-
-        if ($companyId = $request->query('company_id')) {
-            if ($companyId !== 'all') {
-                if ($companyId === 'unassigned') {
-                    $query->whereDoesntHave('activePkl');
-                } else {
-                    $query->whereHas('activePkl', fn($pq) => $pq->where('company_id', $companyId));
-                }
-            }
-        }
-
-        $students = $query->latest()->paginate(20)->withQueryString();
-        $classes = SchoolClass::where('school_id', $schoolId)->with('major')->get();
-        $majors = Major::where('school_id', $schoolId)->orderBy('name')->get();
-        $companies = Company::where('school_id', $schoolId)->orderBy('name')->get();
-
-        // Exact DB metrics across the entire school (Scalable)
-        $totalStudents = Student::whereHas('user', fn($q) => $q->where('school_id', $schoolId))->count();
-        $totalPlotted = StudentPkl::where('school_id', $schoolId)->whereIn('status', ['assigned', 'active'])->distinct('student_id')->count('student_id');
-        $totalUnplotted = max(0, $totalStudents - $totalPlotted);
-
-        return view('adminsekolah.students', compact('students', 'classes', 'majors', 'companies', 'totalStudents', 'totalPlotted', 'totalUnplotted'));
-    }
-
-    public function exportStudents(Request $request)
-    {
-        $schoolId = $this->getSchoolId();
-
-        $majorPart = 'Semua_Jurusan';
-        if ($majorId = $request->query('major_id')) {
-            if ($majorId !== 'all') {
-                $major = Major::where('school_id', $schoolId)->find($majorId);
-                if ($major) {
-                    $majorPart = Str::slug($major->name, '_');
-                }
-            }
-        }
-
-        $classPart = 'Semua_Kelas';
-        if ($classId = $request->query('class_id')) {
-            if ($classId !== 'all') {
-                $class = SchoolClass::where('school_id', $schoolId)->find($classId);
-                if ($class) {
-                    $classPart = Str::slug($class->name, '_');
-                }
-            }
-        }
-
-        $companyPart = '';
-        if ($companyId = $request->query('company_id')) {
-            if ($companyId !== 'all') {
-                if ($companyId === 'unassigned') {
-                    $companyPart = '_Belum_Ditempatkan';
-                } else {
-                    $company = Company::where('school_id', $schoolId)->find($companyId);
-                    if ($company) {
-                        $companyPart = '_' . Str::slug($company->name, '_');
-                    }
-                }
-            }
-        }
-
-        $timestamp = date('Ymd_His');
-        $filename = "Akun_Akses_Siswa_{$majorPart}_{$classPart}{$companyPart}_{$timestamp}";
-
-        AuditLogService::log(
-            'student_credentials_export',
-            'export',
-            "Mengekspor data akun dan akses siswa (Filter: {$majorPart}, {$classPart}{$companyPart})."
-        );
-
-        $filters = [
-            'search' => $request->query('search'),
-            'major_id' => $request->query('major_id'),
-            'class_id' => $request->query('class_id'),
-            'company_id' => $request->query('company_id'),
-        ];
-
-        // Format CSV jika secara spesifik diminta
-        if ($request->query('format') === 'csv') {
-            return \Maatwebsite\Excel\Facades\Excel::download(
-                new \App\Exports\StudentCredentialsExport($schoolId, $filters),
-                "{$filename}.csv",
-                \Maatwebsite\Excel\Excel::CSV
-            );
-        }
-
-        // Default: Excel .xlsx profesional dengan multi-sheet & styling rapi
-        return \Maatwebsite\Excel\Facades\Excel::download(
-            new \App\Exports\StudentCredentialsExport($schoolId, $filters),
-            "{$filename}.xlsx"
-        );
-    }
-
-    public function storeStudent(Request $request)
-    {
-        $schoolId = $this->getSchoolId();
-        $school = School::find($schoolId);
-
-        $quotaCheck = app(SubscriptionService::class)->canAddStudent($school, 1);
-        if (!$quotaCheck['allowed']) {
-            return back()->with('error', $quotaCheck['message'])->withInput();
-        }
-
-        $request->validate([
-            'class_id' => ['required', Rule::exists('classes', 'id')->where('school_id', $schoolId)],
-            'nis' => ['required', 'string', 'max:30'],
-            'nisn' => ['required', 'string', 'max:30', 'unique:students,nisn'],
-            'name' => ['required', 'string', 'max:100'],
-            'email' => ['required', 'email', 'unique:users,email'],
-            'gender' => ['required', 'in:L,P'],
-            'phone' => ['nullable', 'string', 'max:20'],
-        ]);
-
-        DB::transaction(function () use ($request, $schoolId) {
-            $user = User::create([
-                'school_id' => $schoolId,
-                'name' => $request->name,
-                'email' => $request->email,
-                'password' => Hash::make('password'),
-                'role' => 'siswa',
-                'is_active' => true,
-            ]);
-
-            Profile::create([
-                'user_id' => $user->id,
-                'gender' => $request->gender,
-                'phone' => $request->phone,
-            ]);
-
-            Student::create([
-                'user_id' => $user->id,
-                'class_id' => $request->class_id,
-                'nis' => $request->nis,
-                'nisn' => $request->nisn,
-            ]);
-        });
-
-        return back()->with('success', 'Data siswa berhasil ditambahkan.');
-    }
-
-    public function updateStudent(Request $request, Student $student)
-    {
-        $schoolId = $this->getSchoolId();
-        abort_if($student->user->school_id !== $schoolId, 403);
-
-        $request->validate([
-            'class_id' => ['required', Rule::exists('classes', 'id')->where('school_id', $schoolId)],
-            'nis' => ['required', 'string', 'max:30'],
-            'nisn' => ['required', 'string', 'max:30', Rule::unique('students', 'nisn')->ignore($student->id)],
-            'name' => ['required', 'string', 'max:100'],
-            'email' => ['required', 'email', Rule::unique('users', 'email')->ignore($student->user_id)],
-            'gender' => ['required', 'in:L,P'],
-            'phone' => ['nullable', 'string', 'max:20'],
-        ]);
-
-        DB::transaction(function () use ($request, $student) {
-            $student->user->update([
-                'name' => $request->name,
-                'email' => $request->email,
-            ]);
-
-            $student->user->profile()->updateOrCreate(
-                ['user_id' => $student->user_id],
-                [
-                    'gender' => $request->gender,
-                    'phone' => $request->phone,
-                ]
-            );
-
-            $student->update([
-                'class_id' => $request->class_id,
-                'nis' => $request->nis,
-                'nisn' => $request->nisn,
-            ]);
-        });
-
-        return back()->with('success', 'Data siswa berhasil diperbarui.');
-    }
-
-    public function resetStudentPassword(Request $request, Student $student)
-    {
-        $schoolId = $this->getSchoolId();
-        abort_if($student->user->school_id !== $schoolId, 403);
-
-        $validated = $request->validate([
-            'new_password' => ['nullable', 'string', 'min:8', 'max:100'],
-        ], [
-            'new_password.min' => 'Kata sandi baru minimal 8 karakter. Kosongkan untuk dibuatkan otomatis.',
-        ]);
-
-        $user = $student->user;
-        $newPassword = $validated['new_password'] ?? TenantProvisioningService::generateTemporaryPassword();
-
-        DB::transaction(function () use ($user, $newPassword, $student, $schoolId) {
-            $user->update([
-                'password' => $newPassword,
-                'is_active' => true,
-                'must_change_password' => true,
-            ]);
-
-            if (config('session.driver') === 'database') {
-                DB::table(config('session.table', 'sessions'))->where('user_id', $user->id)->delete();
-            }
-
-            \App\Models\StudentPasswordResetRequest::where('student_id', $student->id)
-                ->where('status', 'pending')
-                ->update([
-                    'status' => 'completed',
-                    'notes' => "Direset oleh Admin Sekolah " . Auth::user()->name . " pada " . now()->format('d/m/Y H:i'),
-                ]);
-
-            AuditLogService::log(
-                'password_reset',
-                'security',
-                "Kata sandi akun siswa ({$user->email}) direset oleh Admin Sekolah " . Auth::user()->email . '.',
-                null,
-                Auth::user(),
-                null,
-                ['target_user_id' => $user->id, 'student_id' => $student->id, 'school_id' => $schoolId]
-            );
-        });
-
-        return back()
-            ->with('success', "Kata sandi siswa {$user->name} berhasil direset. Siswa wajib menggantinya saat login berikutnya.")
-            ->with('temporary_credential', [
-                'email' => $user->email,
-                'password' => $newPassword,
-                'context' => "Siswa {$user->name}",
-            ]);
-    }
-
-    public function destroyStudent(Student $student)
-    {
-        $schoolId = $this->getSchoolId();
-        abort_if($student->user->school_id !== $schoolId, 403);
-
-        if ($student->studentPkls()->exists()) {
-            return back()->withErrors(['student' => 'Siswa tidak dapat dihapus karena sudah memiliki riwayat penugasan PKL.']);
-        }
-
-        DB::transaction(function () use ($student) {
-            $user = $student->user;
-            $student->delete();
-            if ($user) {
-                $user->profile()->delete();
-                $user->delete();
-            }
-        });
-
-        return back()->with('success', 'Data siswa dan akun login berhasil dihapus.');
-    }
-
-    public function importStudents(Request $request)
-    {
-        $schoolId = $this->getSchoolId();
-
-        $request->validate([
-            'class_id' => ['required', Rule::exists('classes', 'id')->where('school_id', $schoolId)],
-            'file' => ['required', 'file', 'mimes:csv,txt,xlsx', 'max:5120'],
-        ]);
-
-        $schoolId = $this->getSchoolId();
-        $school = School::find($schoolId);
-
-        $quotaCheck = app(SubscriptionService::class)->canAddStudent($school, count($rows));
-        if (!$quotaCheck['allowed']) {
-            return back()->with('error', $quotaCheck['message']);
-        }
-
-        $classId = $request->class_id;
-
-        $file = $request->file('file');
-        $extension = $file->getClientOriginalExtension();
-
-        $rows = [];
-        if (in_array($extension, ['csv', 'txt'])) {
-            $handle = fopen($file->getRealPath(), 'r');
-            $header = fgetcsv($handle, 1000, ',');
-            while (($data = fgetcsv($handle, 1000, ',')) !== false) {
-                if (count($data) >= 5) {
-                    $rows[] = [
-                        'nis' => trim($data[0]),
-                        'nisn' => trim($data[1]),
-                        'name' => trim($data[2]),
-                        'email' => trim($data[3]),
-                        'gender' => strtoupper(trim($data[4])),
-                    ];
-                }
-            }
-            fclose($handle);
-        } else {
-            // Read Excel with Maatwebsite Excel
-            $array = \Maatwebsite\Excel\Facades\Excel::toArray([], $file);
-            if (!empty($array) && !empty($array[0])) {
-                $sheet = $array[0];
-                // skip header
-                for ($i = 1; $i < count($sheet); $i++) {
-                    $r = $sheet[$i];
-                    if (isset($r[0], $r[1], $r[2], $r[3])) {
-                        $rows[] = [
-                            'nis' => (string) $r[0],
-                            'nisn' => (string) $r[1],
-                            'name' => (string) $r[2],
-                            'email' => (string) $r[3],
-                            'gender' => isset($r[4]) ? strtoupper((string) $r[4]) : 'L',
-                        ];
-                    }
-                }
-            }
-        }
-
-        $imported = 0;
-        $failed = [];
-
-        foreach ($rows as $index => $row) {
-            $rowNum = $index + 2;
-
-            if (empty($row['nisn']) || empty($row['email'])) {
-                $failed[] = "Baris {$rowNum}: NISN atau Email kosong.";
-                continue;
-            }
-
-            if (Student::where('nisn', $row['nisn'])->exists()) {
-                $failed[] = "Baris {$rowNum}: Duplikasi NISN '{$row['nisn']}'.";
-                continue;
-            }
-
-            if (User::where('email', $row['email'])->exists()) {
-                $failed[] = "Baris {$rowNum}: Duplikasi Email '{$row['email']}'.";
-                continue;
-            }
-
-            try {
-                DB::transaction(function () use ($schoolId, $classId, $row) {
-                    $user = User::create([
-                        'school_id' => $schoolId,
-                        'name' => $row['name'],
-                        'email' => $row['email'],
-                        'password' => Hash::make('password'),
-                        'role' => 'siswa',
-                        'is_active' => true,
-                    ]);
-
-                    Profile::create([
-                        'user_id' => $user->id,
-                        'gender' => in_array($row['gender'], ['L', 'P']) ? $row['gender'] : 'L',
-                    ]);
-
-                    Student::create([
-                        'user_id' => $user->id,
-                        'class_id' => $classId,
-                        'nis' => $row['nis'],
-                        'nisn' => $row['nisn'],
-                    ]);
-                });
-                $imported++;
-            } catch (\Exception $e) {
-                $failed[] = "Baris {$rowNum}: " . $e->getMessage();
-            }
-        }
-
-        $msg = "Impor selesai: {$imported} siswa berhasil diimpor.";
-        if (!empty($failed)) {
-            $msg .= " " . count($failed) . " baris gagal (lihat log di bawah).";
-            return back()->with('success', $msg)->with('failedRows', $failed);
-        }
-
-        return back()->with('success', $msg);
-    }
-
-    public function teachers(Request $request)
-    {
-        $schoolId = $this->getSchoolId();
-        $query = Teacher::whereHas('user', fn($q) => $q->where('school_id', $schoolId))
-            ->with(['user.profile', 'studentPkls.student.user', 'majors']);
-
-        if ($search = $request->query('search')) {
-            $query->where(function ($q) use ($search) {
-                $q->whereHas('user', fn($uq) => $uq->where('name', 'like', "%{$search}%")->orWhere('email', 'like', "%{$search}%"))
-                  ->orWhere('nip', 'like', "%{$search}%");
-            });
-        }
-
-        // Major filter
-        $selectedMajor = $request->query('major');
-        if ($selectedMajor && $selectedMajor !== 'all') {
-            if ($selectedMajor === 'lintas') {
-                $query->doesntHave('majors');
-            } else {
-                $query->whereHas('majors', fn($q) => $q->where('majors.id', $selectedMajor));
-            }
-        }
-
-        $teachers = $query->latest()->paginate(15)->withQueryString();
-        $majors = Major::where('school_id', $schoolId)->orderBy('name')->get();
-
-        // Exact DB metrics across the entire school (Scalable)
-        $totalTeachers = Teacher::whereHas('user', fn($q) => $q->where('school_id', $schoolId))->count();
-        $totalPlotted = StudentPkl::where('school_id', $schoolId)->whereIn('status', ['assigned', 'active'])->count();
-        $avgPlotted = $totalTeachers > 0 ? round($totalPlotted / $totalTeachers, 1) : 0;
-        $activeTeachersCount = Teacher::whereHas('user', fn($q) => $q->where('school_id', $schoolId))
-            ->whereHas('studentPkls', fn($q) => $q->whereIn('status', ['assigned', 'active']))
-            ->count();
-
-        return view('adminsekolah.teachers', compact('teachers', 'totalTeachers', 'totalPlotted', 'avgPlotted', 'activeTeachersCount', 'majors', 'selectedMajor'));
-    }
-
-    public function exportTeachers(Request $request)
-    {
-        $schoolId = $this->getSchoolId();
-
-        $majorPart = 'Semua_Jurusan';
-        if ($major = $request->query('major')) {
-            if ($major === 'lintas') {
-                $majorPart = 'Lintas_Jurusan';
-            } elseif ($major !== 'all') {
-                $majorModel = Major::where('school_id', $schoolId)->find($major);
-                if ($majorModel) {
-                    $majorPart = Str::slug($majorModel->name, '_');
-                }
-            }
-        }
-
-        $timestamp = date('Ymd_His');
-        $filename = "Akun_Akses_Guru_{$majorPart}_{$timestamp}";
-
-        AuditLogService::log(
-            'teacher_credentials_export',
-            'export',
-            "Mengekspor data akun dan akses guru pembimbing (Filter: {$majorPart})."
-        );
-
-        $filters = [
-            'search' => $request->query('search'),
-            'major' => $request->query('major'),
-        ];
-
-        // Format CSV jika secara spesifik diminta
-        if ($request->query('format') === 'csv') {
-            return \Maatwebsite\Excel\Facades\Excel::download(
-                new \App\Exports\TeacherCredentialsExport($schoolId, $filters),
-                "{$filename}.csv",
-                \Maatwebsite\Excel\Excel::CSV
-            );
-        }
-
-        // Default: Excel .xlsx profesional dengan multi-sheet per jurusan & styling rapi
-        return \Maatwebsite\Excel\Facades\Excel::download(
-            new \App\Exports\TeacherCredentialsExport($schoolId, $filters),
-            "{$filename}.xlsx"
-        );
-    }
-
-    public function storeTeacher(Request $request)
-    {
-        $schoolId = $this->getSchoolId();
-        $request->validate([
-            'name' => ['required', 'string', 'max:100'],
-            'email' => ['required', 'email', 'unique:users,email'],
-            'nip' => ['nullable', 'string', 'max:30'],
-            'phone' => ['nullable', 'string', 'max:20'],
-            'major_ids' => ['nullable', 'array'],
-            'major_ids.*' => [Rule::exists('majors', 'id')->where('school_id', $schoolId)],
-        ]);
-
-        $normalizedPhone = WhatsAppGatewayService::normalizePhoneNumber($request->phone);
-
-        DB::transaction(function () use ($request, $schoolId, $normalizedPhone) {
-            $user = User::create([
-                'school_id' => $schoolId,
-                'name' => $request->name,
-                'email' => $request->email,
-                'wa_number' => $normalizedPhone,
-                'password' => Hash::make('password'),
-                'role' => 'guru-pembimbing',
-                'is_active' => true,
-            ]);
-
-            Profile::create([
-                'user_id' => $user->id,
-                'gender' => 'L',
-                'phone' => $normalizedPhone ?: $request->phone,
-            ]);
-
-            $teacher = Teacher::create([
-                'user_id' => $user->id,
-                'nip' => $request->nip,
-            ]);
-
-            if ($request->has('major_ids')) {
-                $teacher->majors()->sync($request->major_ids);
-            }
-        });
-
-        return back()->with('success', 'Akun Guru Pembimbing berhasil dibuat.');
-    }
-
-    public function updateTeacher(Request $request, Teacher $teacher)
-    {
-        $schoolId = $this->getSchoolId();
-        abort_if($teacher->user->school_id !== $schoolId, 403);
-
-        $request->validate([
-            'name' => ['required', 'string', 'max:100'],
-            'email' => ['required', 'email', Rule::unique('users', 'email')->ignore($teacher->user_id)],
-            'nip' => ['nullable', 'string', 'max:30'],
-            'phone' => ['nullable', 'string', 'max:20'],
-            'major_ids' => ['nullable', 'array'],
-            'major_ids.*' => [Rule::exists('majors', 'id')->where('school_id', $schoolId)],
-        ]);
-
-        $normalizedPhone = WhatsAppGatewayService::normalizePhoneNumber($request->phone);
-
-        DB::transaction(function () use ($request, $teacher, $normalizedPhone) {
-            $teacher->user->update([
-                'name' => $request->name,
-                'email' => $request->email,
-                'wa_number' => $normalizedPhone,
-            ]);
-
-            $teacher->user->profile()->updateOrCreate(
-                ['user_id' => $teacher->user_id],
-                ['phone' => $normalizedPhone ?: $request->phone]
-            );
-
-            $teacher->update([
-                'nip' => $request->nip,
-            ]);
-
-            $teacher->majors()->sync($request->major_ids ?? []);
-        });
-
-        return back()->with('success', 'Data guru pembimbing berhasil diperbarui.');
-    }
-
-    public function resetTeacherPassword(Request $request, Teacher $teacher)
-    {
-        $schoolId = $this->getSchoolId();
-        abort_if($teacher->user->school_id !== $schoolId, 403);
-
-        $validated = $request->validate([
-            'new_password' => ['nullable', 'string', 'min:8', 'max:100'],
-        ], [
-            'new_password.min' => 'Kata sandi baru minimal 8 karakter. Kosongkan untuk dibuatkan otomatis.',
-        ]);
-
-        $user = $teacher->user;
-        $newPassword = $validated['new_password'] ?? TenantProvisioningService::generateTemporaryPassword();
-
-        $user->update([
-            'password' => $newPassword,
-            'is_active' => true,
-            'must_change_password' => true,
-        ]);
-
-        // Putus seluruh sesi aktif guru agar kata sandi lama tidak bisa dipakai lagi.
-        if (config('session.driver') === 'database') {
-            DB::table(config('session.table', 'sessions'))->where('user_id', $user->id)->delete();
-        }
-
-        AuditLogService::log(
-            'password_reset',
-            'security',
-            "Kata sandi guru pembimbing ({$user->email}) direset oleh Admin Sekolah " . Auth::user()->email . '.'
-        );
-
-        return back()
-            ->with('success', "Kata sandi {$user->name} berhasil direset. Guru wajib menggantinya saat login berikutnya.")
-            ->with('temporary_credential', [
-                'email' => $user->email,
-                'password' => $newPassword,
-                'context' => "Guru Pembimbing {$user->name}",
-            ]);
-    }
-
-    public function destroyTeacher(Teacher $teacher)
-    {
-        $schoolId = $this->getSchoolId();
-        abort_if($teacher->user->school_id !== $schoolId, 403);
-
-        if ($teacher->studentPkls()->whereIn('status', ['assigned', 'active'])->exists()) {
-            return back()->withErrors(['teacher' => 'Guru tidak dapat dihapus karena masih memiliki alokasi siswa bimbingan aktif.']);
-        }
-
-        DB::transaction(function () use ($teacher) {
-            $user = $teacher->user;
-            $teacher->delete();
-            if ($user) {
-                $user->profile()->delete();
-                $user->delete();
-            }
-        });
-
-        return back()->with('success', 'Akun guru pembimbing berhasil dihapus.');
-    }
-
-    public function companies(Request $request)
-    {
-        $schoolId = $this->getSchoolId();
-        $query = Company::where('school_id', $schoolId)
-            ->with([
-                'supervisors.user.profile',
-                'studentPkls.student.user.profile',
-                'studentPkls.student.class.major',
-                'studentPkls.teacher.user.profile',
-                'studentPkls.supervisor.user',
-                'majors',
-            ]);
-
-        // Search filter
-        if ($search = $request->query('search')) {
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('contact_person', 'like', "%{$search}%")
-                  ->orWhere('address', 'like', "%{$search}%");
-            });
-        }
-
-        // Major filter
-        $selectedMajor = $request->query('major');
-        if ($selectedMajor && $selectedMajor !== 'all') {
-            if ($selectedMajor === 'lintas') {
-                $query->doesntHave('majors');
-            } else {
-                $query->whereHas('majors', fn($q) => $q->where('majors.id', $selectedMajor));
-            }
-        }
-
-        $companies = $query->latest()->paginate(10)->withQueryString();
-        $majors = Major::where('school_id', $schoolId)->orderBy('name')->get();
-        $allTeachers = Teacher::whereHas('user', fn($q) => $q->where('school_id', $schoolId))
-            ->with(['user.profile', 'majors'])
-            ->get()
-            ->sortBy('user.name')
-            ->values();
-
-        return view('adminsekolah.companies', compact('companies', 'majors', 'selectedMajor', 'allTeachers'));
-    }
-
-    public function storeCompany(Request $request)
-    {
-        $schoolId = $this->getSchoolId();
-        $request->validate([
-            'name' => ['required', 'string', 'max:150'],
-            'address' => ['required', 'string'],
-            'contact_person' => ['required', 'string', 'max:100'],
-            'phone' => ['required', 'string', 'max:20'],
-            'work_days' => ['required', 'in:5_days,6_days,7_days'],
-            'default_start_date' => ['nullable', 'date'],
-            'default_end_date' => ['nullable', 'date', 'after_or_equal:default_start_date'],
-            'requires_industry_approval' => ['nullable', 'boolean'],
-            'is_pkl_started' => ['nullable', 'boolean'],
-            'gps_enabled' => ['nullable', 'boolean'],
-            'latitude' => ['nullable', 'numeric'],
-            'longitude' => ['nullable', 'numeric'],
-            'radius_meters' => ['nullable', 'integer', 'min:10', 'max:5000'],
-            'major_ids' => ['nullable', 'array'],
-            'major_ids.*' => [Rule::exists('majors', 'id')->where('school_id', $schoolId)],
-            // Optional initial supervisor
-            'supervisor_name' => ['nullable', 'string', 'max:100'],
-            'supervisor_email' => ['nullable', 'email', 'unique:users,email'],
-            'supervisor_position' => ['nullable', 'string', 'max:100'],
-        ]);
-
-        DB::transaction(function () use ($request, $schoolId) {
-            $company = Company::create([
-                'school_id' => $schoolId,
-                'name' => $request->name,
-                'address' => $request->address,
-                'contact_person' => $request->contact_person,
-                'phone' => $request->phone,
-                'work_days' => $request->work_days,
-                'default_start_date' => $request->default_start_date,
-                'default_end_date' => $request->default_end_date,
-                'requires_industry_approval' => $request->boolean('requires_industry_approval'),
-                'is_pkl_started' => $request->boolean('is_pkl_started'),
-                'gps_enabled' => $request->boolean('gps_enabled'),
-                'latitude' => $request->latitude,
-                'longitude' => $request->longitude,
-                'radius_meters' => $request->radius_meters ?? 100,
-            ]);
-
-            if ($request->has('major_ids')) {
-                $company->majors()->sync($request->major_ids);
-            }
-
-            if ($request->filled('supervisor_email')) {
-                $user = User::create([
-                    'school_id' => $schoolId,
-                    'name' => $request->supervisor_name ?? $request->contact_person,
-                    'email' => $request->supervisor_email,
-                    'password' => Hash::make('password'),
-                    'role' => 'pembimbing-dudi',
-                    'is_active' => true,
-                ]);
-
-                Profile::create([
-                    'user_id' => $user->id,
-                    'gender' => 'L',
-                ]);
-
-                Supervisor::create([
-                    'user_id' => $user->id,
-                    'company_id' => $company->id,
-                    'position' => $request->supervisor_position ?? 'Mentor Lapangan DU/DI',
-                ]);
-            }
-        });
-
-        return back()->with('success', 'Data Mitra DU/DI berhasil ditambahkan.');
-    }
-
-    public function updateCompany(Request $request, Company $company)
-    {
-        $schoolId = $this->getSchoolId();
-        abort_if($company->school_id !== $schoolId, 403);
-
-        $request->validate([
-            'name' => ['required', 'string', 'max:150'],
-            'address' => ['required', 'string'],
-            'contact_person' => ['required', 'string', 'max:100'],
-            'phone' => ['required', 'string', 'max:20'],
-            'work_days' => ['required', 'in:5_days,6_days,7_days'],
-            'default_start_date' => ['nullable', 'date'],
-            'default_end_date' => ['nullable', 'date', 'after_or_equal:default_start_date'],
-            'requires_industry_approval' => ['nullable', 'boolean'],
-            'is_pkl_started' => ['nullable', 'boolean'],
-            'gps_enabled' => ['nullable', 'boolean'],
-            'latitude' => ['nullable', 'numeric'],
-            'longitude' => ['nullable', 'numeric'],
-            'radius_meters' => ['nullable', 'integer', 'min:10', 'max:5000'],
-            'major_ids' => ['nullable', 'array'],
-            'major_ids.*' => [Rule::exists('majors', 'id')->where('school_id', $schoolId)],
-        ]);
-
-        DB::transaction(function () use ($request, $company) {
-            $company->update([
-                'name' => $request->name,
-                'address' => $request->address,
-                'contact_person' => $request->contact_person,
-                'phone' => $request->phone,
-                'work_days' => $request->work_days,
-                'default_start_date' => $request->default_start_date,
-                'default_end_date' => $request->default_end_date,
-                'requires_industry_approval' => $request->boolean('requires_industry_approval'),
-                'is_pkl_started' => $request->boolean('is_pkl_started'),
-                'gps_enabled' => $request->boolean('gps_enabled'),
-                'latitude' => $request->latitude,
-                'longitude' => $request->longitude,
-                'radius_meters' => $request->radius_meters ?? 100,
-            ]);
-
-            $company->majors()->sync($request->major_ids ?? []);
-        });
-
-        return back()->with('success', 'Data Mitra DU/DI berhasil diperbarui.');
-    }
-
-    public function destroyCompany(Company $company)
-    {
-        $schoolId = $this->getSchoolId();
-        abort_if($company->school_id !== $schoolId, 403);
-
-        if ($company->studentPkls()->exists()) {
-            return back()->withErrors(['company' => 'Mitra DU/DI tidak dapat dihapus karena memiliki riwayat penugasan siswa PKL.']);
-        }
-
-        DB::transaction(function () use ($company) {
-            $company->supervisors()->each(function ($sup) {
-                $user = $sup->user;
-                $sup->delete();
-                if ($user) {
-                    $user->profile()->delete();
-                    $user->delete();
-                }
-            });
-            $company->majors()->detach();
-            $company->delete();
-        });
-
-        return back()->with('success', 'Data mitra DU/DI berhasil dihapus.');
-    }
-
-    public function storeCompanySupervisor(Request $request, Company $company)
-    {
-        $schoolId = $this->getSchoolId();
-        abort_if($company->school_id !== $schoolId, 403);
-
-        $request->validate([
-            'name' => ['required', 'string', 'max:100'],
-            'email' => ['required', 'email', 'unique:users,email'],
-            'phone' => ['nullable', 'string', 'max:20'],
-            'position' => ['nullable', 'string', 'max:100'],
-        ]);
-
-        DB::transaction(function () use ($request, $schoolId, $company) {
-            $user = User::create([
-                'school_id' => $schoolId,
-                'name' => $request->name,
-                'email' => $request->email,
-                'password' => Hash::make('password'),
-                'role' => 'pembimbing-dudi',
-                'is_active' => true,
-            ]);
-
-            Profile::create([
-                'user_id' => $user->id,
-                'gender' => 'L',
-                'phone' => $request->phone,
-                'address' => $company->address,
-            ]);
-
-            Supervisor::create([
-                'user_id' => $user->id,
-                'company_id' => $company->id,
-                'position' => $request->position ?? 'Mentor Lapangan DU/DI',
-            ]);
-        });
-
-        return back()->with('success', 'Mentor DU/DI berhasil ditambahkan untuk ' . $company->name);
-    }
-
-    public function updateCompanySupervisor(Request $request, Company $company, Supervisor $supervisor)
-    {
-        $schoolId = $this->getSchoolId();
-        abort_if($company->school_id !== $schoolId || $supervisor->company_id !== $company->id, 403);
-        abort_if($supervisor->user->school_id !== $schoolId, 403);
-
-        $request->validate([
-            'name' => ['required', 'string', 'max:100'],
-            'email' => ['required', 'email', 'max:100', Rule::unique('users', 'email')->ignore($supervisor->user_id)],
-            'phone' => ['nullable', 'string', 'max:20'],
-            'position' => ['nullable', 'string', 'max:100'],
-            'password' => ['nullable', 'string', 'min:6'],
-        ]);
-
-        DB::transaction(function () use ($request, $supervisor) {
-            $user = $supervisor->user;
-            $userData = [
-                'name' => $request->name,
-                'email' => $request->email,
-            ];
-            if ($request->filled('password')) {
-                $userData['password'] = Hash::make($request->password);
-            }
-            $user->update($userData);
-
-            $supervisor->update([
-                'position' => $request->position ?? 'Mentor Lapangan DU/DI',
-            ]);
-
-            $profile = $user->profile;
-            if ($profile) {
-                $profile->update([
-                    'phone' => $request->phone,
-                ]);
-            } else {
-                Profile::create([
-                    'user_id' => $user->id,
-                    'gender' => 'L',
-                    'phone' => $request->phone,
-                ]);
-            }
-        });
-
-        return back()->with('success', 'Data mentor DU/DI ' . $request->name . ' berhasil diperbarui.');
-    }
-
-    public function destroyCompanySupervisor(Request $request, Company $company, Supervisor $supervisor)
-    {
-        $schoolId = $this->getSchoolId();
-        abort_if($company->school_id !== $schoolId || $supervisor->company_id !== $company->id, 403);
-        abort_if($supervisor->user->school_id !== $schoolId, 403);
-
-        $hasStudents = $supervisor->studentPkls()->exists();
-        $replacementId = $request->input('replacement_supervisor_id');
-        $confirmDetach = $request->boolean('confirm_detach') || $replacementId === 'detach';
-
-        if ($hasStudents && !$replacementId && !$confirmDetach) {
-            return back()->withErrors(['supervisor' => 'Mentor tidak dapat dihapus karena masih ditugaskan pada siswa PKL aktif. Silakan pilih mentor pengganti atau lepas penugasan terlebih dahulu.']);
-        }
-
-        DB::transaction(function () use ($supervisor, $company, $hasStudents, $replacementId, $confirmDetach) {
-            if ($hasStudents) {
-                if ($replacementId && $replacementId !== 'detach') {
-                    $replacement = Supervisor::where('id', $replacementId)
-                        ->where('company_id', $company->id)
-                        ->firstOrFail();
-
-                    $supervisor->studentPkls()->update(['supervisor_id' => $replacement->id]);
-                } elseif ($confirmDetach) {
-                    $supervisor->studentPkls()->update(['supervisor_id' => null]);
-                }
-            }
-
-            $user = $supervisor->user;
-            $supervisor->delete();
-            if ($user) {
-                $user->profile()->delete();
-                $user->delete();
-            }
-        });
-
-        return back()->with('success', 'Akun mentor DU/DI berhasil dihapus.');
-    }
-
-    public function reassignCompanyBatch(Request $request, Company $company)
-    {
-        $schoolId = $this->getSchoolId();
-        abort_if($company->school_id !== $schoolId, 403);
-
-        $request->validate([
-            'target_type' => ['required', 'in:teacher,supervisor,both'],
-            'teacher_id' => [
-                'nullable',
-                'required_if:target_type,teacher',
-                'required_if:target_type,both',
-                Rule::exists('teachers', 'id')->where(function ($query) use ($schoolId) {
-                    $query->whereIn('user_id', User::where('school_id', $schoolId)->select('id'));
-                }),
-            ],
-            'supervisor_id' => [
-                'nullable',
-                Rule::exists('supervisors', 'id')->where('company_id', $company->id),
-            ],
-            'filter_teacher_id' => ['nullable', 'integer'],
-            'filter_supervisor_id' => ['nullable', 'integer'],
-            'student_pkl_ids' => ['nullable', 'array'],
-            'student_pkl_ids.*' => [Rule::exists('student_pkl', 'id')->where('company_id', $company->id)],
-        ]);
-
-        $query = StudentPkl::where('company_id', $company->id)
-            ->where('school_id', $schoolId);
-
-        if ($request->filled('student_pkl_ids')) {
-            $query->whereIn('id', $request->student_pkl_ids);
-        }
-
-        if ($request->filled('filter_teacher_id')) {
-            $query->where('teacher_id', $request->filter_teacher_id);
-        }
-
-        if ($request->filled('filter_supervisor_id')) {
-            $query->where('supervisor_id', $request->filter_supervisor_id);
-        }
-
-        $updates = [];
-        if (in_array($request->target_type, ['teacher', 'both']) && $request->filled('teacher_id')) {
-            $updates['teacher_id'] = $request->teacher_id;
-        }
-
-        if (in_array($request->target_type, ['supervisor', 'both'])) {
-            $updates['supervisor_id'] = $request->filled('supervisor_id') ? $request->supervisor_id : null;
-        }
-
-        if (empty($updates)) {
-            return back()->withErrors(['batch' => 'Tidak ada perubahan pembimbing yang dipilih.']);
-        }
-
-        $count = $query->update($updates);
-
-        return back()->with('success', "Berhasil memperbarui pembimbing untuk {$count} siswa di {$company->name}.");
-    }
-
-    public function plotting(Request $request)
-    {
-        $schoolId = $this->getSchoolId();
-
-        // 1. Periods
-        $periods = PklPeriod::where('school_id', $schoolId)->withCount('studentPkls')->latest()->get();
-        $activePeriod = $periods->firstWhere('is_active', true) ?? $periods->first();
-        $selectedPeriodId = $request->query('period_id', $activePeriod?->id);
-
-        // 2. Query StudentPkls (Filter & Search)
-        $query = StudentPkl::where('school_id', $schoolId)
-            ->with(['student.user.profile', 'student.class.major', 'company.majors', 'company.supervisors.user', 'teacher.user', 'supervisor.user', 'pklPeriod']);
-
-        if ($search = $request->query('search')) {
-            $query->where(function ($q) use ($search) {
-                $q->whereHas('student.user', fn($sq) => $sq->where('name', 'like', "%{$search}%"))
-                  ->orWhereHas('student', fn($sq) => $sq->where('nisn', 'like', "%{$search}%"))
-                  ->orWhereHas('company', fn($cq) => $cq->where('name', 'like', "%{$search}%"));
-            });
-        }
-
-        if ($majorId = $request->query('major_id')) {
-            if ($majorId !== 'all') {
-                $query->whereHas('student.class', fn($cq) => $cq->where('major_id', $majorId));
-            }
-        }
-
-        if ($companyId = $request->query('company_id')) {
-            if ($companyId !== 'all') {
-                $query->where('company_id', $companyId);
-            }
-        }
-
-        if ($statusFilter = $request->query('status')) {
-            if ($statusFilter === 'active') {
-                $query->where('status', 'active')
-                      ->whereHas('company', fn($cq) => $cq->where('is_pkl_started', true));
-            } elseif ($statusFilter === 'pending_start') {
-                $query->where('status', 'active')
-                      ->whereHas('company', fn($cq) => $cq->where('is_pkl_started', false));
-            } elseif ($statusFilter === 'completed') {
-                $query->where('status', 'completed');
-            } elseif ($statusFilter === 'withdrawn') {
-                $query->where('status', 'withdrawn');
-            }
-        }
-
-        if ($periodFilter = $request->query('period')) {
-            if ($periodFilter !== 'all') {
-                $query->where('pkl_period_id', $periodFilter);
-            }
-        }
-
-        if ($teacherId = $request->query('teacher_id')) {
-            if ($teacherId !== 'all') {
-                $query->where('teacher_id', $teacherId);
-            }
-        }
-
-        $studentPkls = $query->latest()->paginate(20)->withQueryString();
-
-        // 3. All students with plotting status for active period
-        $allStudents = Student::whereHas('user', fn($q) => $q->where('school_id', $schoolId))
-            ->with(['user', 'class.major'])
-            ->get();
-
-        $plottedMap = [];
-        if ($selectedPeriodId) {
-            $plottedRecords = StudentPkl::where('school_id', $schoolId)
-                ->where('pkl_period_id', $selectedPeriodId)
-                ->with('company')
-                ->get();
-            foreach ($plottedRecords as $pr) {
-                $plottedMap[$pr->student_id] = $pr->company->name ?? 'DU/DI';
-            }
-        }
-
-        $students = $allStudents->map(function ($st) use ($plottedMap) {
-            $st->is_plotted = isset($plottedMap[$st->id]);
-            $st->plotted_company = $st->is_plotted ? $plottedMap[$st->id] : null;
-            return $st;
-        });
-
-        // 4. Other master data
-        $companies = Company::where('school_id', $schoolId)->with(['supervisors.user', 'majors'])->get();
-        $teachers = Teacher::whereHas('user', fn($q) => $q->where('school_id', $schoolId))->with('user')->get();
-        $majors = Major::where('school_id', $schoolId)->with('classes')->orderBy('name')->get();
-        $classes = SchoolClass::where('school_id', $schoolId)->with('major')->orderBy('name')->get();
-
-        // 5. KPI Stats
-        $totalStudents = $allStudents->count();
-        $totalPlotted = count($plottedMap);
-        $totalUnplotted = max(0, $totalStudents - $totalPlotted);
-        $totalCompanies = $companies->count();
-
-        return view('adminsekolah.plotting', compact(
-            'studentPkls',
-            'students',
-            'companies',
-            'periods',
-            'teachers',
-            'majors',
-            'classes',
-            'totalStudents',
-            'totalPlotted',
-            'totalUnplotted',
-            'totalCompanies'
-        ));
-    }
-
-    public function storePlotting(Request $request)
-    {
-        $schoolId = $this->getSchoolId();
-
-        $request->validate([
-            'student_id' => [
-                'required_without:student_ids',
-                'nullable',
-                Rule::exists('students', 'id')->where(function ($query) use ($schoolId) {
-                    $query->whereIn('user_id', User::where('school_id', $schoolId)->select('id'));
-                })
-            ],
-            'student_ids' => ['nullable', 'array'],
-            'student_ids.*' => [
-                Rule::exists('students', 'id')->where(function ($query) use ($schoolId) {
-                    $query->whereIn('user_id', User::where('school_id', $schoolId)->select('id'));
-                })
-            ],
-            'company_id' => [
-                'required',
-                Rule::exists('companies', 'id')->where('school_id', $schoolId)
-            ],
-            'pkl_period_id' => [
-                'required',
-                Rule::exists('pkl_periods', 'id')->where('school_id', $schoolId)
-            ],
-            'teacher_id' => [
-                'required',
-                Rule::exists('teachers', 'id')->where(function ($query) use ($schoolId) {
-                    $query->whereIn('user_id', User::where('school_id', $schoolId)->select('id'));
-                })
-            ],
-            'supervisor_id' => [
-                'nullable',
-                Rule::exists('supervisors', 'id')->where(function ($query) use ($schoolId) {
-                    $query->whereIn('user_id', User::where('school_id', $schoolId)->select('id'));
-                })
-            ],
-            'start_date' => ['nullable', 'date'],
-            'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
-        ]);
-
-        $studentIds = $request->has('student_ids') && is_array($request->student_ids) && count($request->student_ids) > 0
-            ? array_unique(array_filter($request->student_ids))
-            : ($request->filled('student_id') ? [$request->student_id] : []);
-
-        if (empty($studentIds)) {
-            return back()->withErrors(['student_id' => 'Pilih setidaknya satu siswa untuk diplot.']);
-        }
-
-        // Concurrency-safe plotting with lock and duplicate key catch
-        return DB::transaction(function () use ($schoolId, $request, $studentIds) {
-            $alreadyPlotted = StudentPkl::where('school_id', $schoolId)
-                ->where('pkl_period_id', $request->pkl_period_id)
-                ->whereIn('student_id', $studentIds)
-                ->lockForUpdate()
-                ->pluck('student_id')
-                ->toArray();
-
-            if (!empty($alreadyPlotted)) {
-                if (count($studentIds) === 1) {
-                    return back()->withErrors(['student_id' => 'Siswa sudah diplot ke DU/DI pada periode PKL yang sama.']);
-                }
-                return back()->withErrors(['student_id' => count($alreadyPlotted) . ' siswa yang dipilih sudah memiliki penugasan DU/DI di periode ini.']);
-            }
-
-            $company = Company::where('school_id', $schoolId)->find($request->company_id);
-            $period = PklPeriod::where('school_id', $schoolId)->find($request->pkl_period_id);
-
-            try {
-                foreach ($studentIds as $sId) {
-                    $student = Student::with('class.major')->find($sId);
-                    $major = $student?->class?->major;
-
-                    // Penentuan tanggal mulai penugasan
-                    $resolvedStartDate = $request->filled('start_date')
-                        ? $request->start_date
-                        : ($company?->default_start_date?->toDateString() ?? $period?->start_date?->toDateString());
-
-                    // Penentuan tanggal berakhir penugasan
-                    $resolvedEndDate = $request->filled('end_date')
-                        ? $request->end_date
-                        : ($company?->default_end_date?->toDateString() ?? null);
-
-                    // Jika tanggal berakhir belum ada, sesuaikan dengan durasi default jurusan
-                    if (!$resolvedEndDate && $resolvedStartDate && $major?->default_pkl_duration_months) {
-                        $resolvedEndDate = \Carbon\Carbon::parse($resolvedStartDate)
-                            ->addMonths($major->default_pkl_duration_months)
-                            ->toDateString();
-                    }
-
-                    // Fallback akhir ke tanggal penutupan periode
-                    $resolvedEndDate = $resolvedEndDate ?? $period?->end_date?->toDateString();
-
-                    StudentPkl::create([
-                        'school_id' => $schoolId,
-                        'student_id' => $sId,
-                        'company_id' => $request->company_id,
-                        'pkl_period_id' => $request->pkl_period_id,
-                        'teacher_id' => $request->teacher_id,
-                        'supervisor_id' => $request->supervisor_id,
-                        'start_date' => $resolvedStartDate,
-                        'end_date' => $resolvedEndDate,
-                        'status' => 'active',
-                    ]);
-                }
-            } catch (\Illuminate\Database\QueryException $e) {
-                if (str_contains($e->getMessage(), 'UNIQUE') || str_contains($e->getMessage(), 'Integrity constraint violation')) {
-                    return back()->withErrors(['student_id' => 'Siswa sudah diplot ke DU/DI pada periode PKL yang sama.']);
-                }
-                throw $e;
-            }
-
-            $count = count($studentIds);
-            return back()->with('success', "Penugasan PKL untuk {$count} siswa berhasil disimpan.");
-        });
-    }
-
-    public function reassignPlotting(Request $request, StudentPkl $studentPkl)
-    {
-        $schoolId = $this->getSchoolId();
-        abort_if($studentPkl->school_id !== $schoolId, 403);
-
-        $request->validate([
-            'teacher_id' => [
-                'required',
-                Rule::exists('teachers', 'id')->where(function ($query) use ($schoolId) {
-                    $query->whereIn('user_id', User::where('school_id', $schoolId)->select('id'));
-                }),
-            ],
-            'supervisor_id' => [
-                'nullable',
-                Rule::exists('supervisors', 'id')->where('company_id', $studentPkl->company_id),
-            ],
-            'start_date' => ['nullable', 'date'],
-            'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
-        ]);
-
-        $updateData = [
-            'teacher_id' => $request->teacher_id,
-            'supervisor_id' => $request->filled('supervisor_id') ? $request->supervisor_id : null,
-        ];
-
-        if ($request->has('start_date')) {
-            $updateData['start_date'] = $request->start_date ?: null;
-        }
-        if ($request->has('end_date')) {
-            $updateData['end_date'] = $request->end_date ?: null;
-        }
-
-        $studentPkl->update($updateData);
-
-        $studentName = $studentPkl->student->user->name ?? 'Siswa';
-        return back()->with('success', "Data penugasan dan rentang tanggal PKL untuk {$studentName} berhasil diperbarui.");
-    }
-
-    public function destroyPlotting(StudentPkl $studentPkl)
-    {
-        $schoolId = $this->getSchoolId();
-        abort_if($studentPkl->school_id !== $schoolId, 403);
-
-        $hasAttendances = $studentPkl->attendances()->exists();
-        $hasJournals = $studentPkl->journals()->exists();
-        $hasAssessment = $studentPkl->assessment()->exists();
-
-        if ($hasAttendances || $hasJournals || $hasAssessment) {
-            return back()->withErrors([
-                'student_pkl' => "Tidak dapat membatalkan plotting untuk {$studentPkl->student->user->name} karena sudah ada data riwayat presensi, jurnal, atau penilaian."
-            ]);
-        }
-
-        $studentName = $studentPkl->student->user->name;
-        $studentPkl->delete();
-
-        return back()->with('success', "Penugasan PKL untuk siswa {$studentName} berhasil dibatalkan (unplot).");
-    }
-
-    /**
-     * Kirim link monitoring orang tua secara otomatis oleh sistem ke nomor WhatsApp siswa terdaftar.
-     */
-    public function sendParentLink(Request $request, StudentPkl $studentPkl, WhatsAppGatewayService $waGateway)
-    {
-        $schoolId = $this->getSchoolId();
-        abort_if($studentPkl->school_id !== $schoolId, 403);
-
-        $student = $studentPkl->student;
-        if (!$student) {
-            return back()->with('error', 'Data siswa tidak ditemukan.');
-        }
-
-        // Pastikan token monitoring orang tua tersedia
-        if (empty($student->parent_token)) {
-            $student->regenerateParentToken();
-            $student->refresh();
-        }
-
-        // Pastikan portal monitoring aktif
-        if (!$student->is_parent_portal_active) {
-            $student->update(['is_parent_portal_active' => true]);
-        }
-
-        $user = $student->user;
-        $rawPhone = $user?->wa_number ?: ($user?->profile?->phone ?? null);
-        $normalizedPhone = WhatsAppGatewayService::normalizePhoneNumber($rawPhone);
-
-        if (empty($normalizedPhone) || !WhatsAppGatewayService::isValidIndonesianNumber($normalizedPhone)) {
-            $displayName = $user?->name ?? 'Siswa';
-            $phoneNotice = $rawPhone ? "({$rawPhone} - format nomor tidak valid)" : '(nomor HP belum terdaftar)';
-            $errorMsg = "Gagal mengirim link: Nomor WhatsApp/telepon siswa {$displayName} {$phoneNotice}. Silakan lengkapi kontak nomor telepon siswa pada menu Data Siswa terlebih dahulu.";
-
-            if ($request->wantsJson() || $request->ajax()) {
-                return response()->json(['success' => false, 'message' => $errorMsg], 422);
-            }
-
-            return back()->with('error', $errorMsg);
-        }
-
-        $parentUrl = route('parent.monitor', ['token' => $student->parent_token]);
-        $companyName = $studentPkl->company?->name ?? 'DU/DI Mitra';
-        $teacherName = $studentPkl->teacher?->user?->name ?? 'Guru Pembimbing';
-        $schoolName = $user?->school?->name ?? 'Sekolah';
-        $className = $student->class?->name ?? '-';
-        $majorName = $student->class?->major?->name ?? '-';
-
-        $message = "Yth. Orang Tua / Wali dari {$user?->name} ({$className} - {$majorName}),\n\n"
-                 . "Berikut adalah tautan resmi Portal Pemantauan Aktivitas PKL (Praktik Kerja Lapangan) putra/putri Anda:\n"
-                 . "👉 {$parentUrl}\n\n"
-                 . "🏢 Mitra DU/DI: {$companyName}\n"
-                 . "👨‍🏫 Guru Pembimbing: {$teacherName}\n\n"
-                 . "Melalui tautan di atas, Bapak/Ibu dapat memantau presensi harian, jurnal kegiatan industri, serta rekap kehadiran secara langsung tanpa perlu login atau memasukkan kata sandi.\n\n"
-                 . "Terima kasih atas bimbingan dan kerja samanya.\n"
-                 . "— Tim PKL {$schoolName}";
-
-        $sent = $waGateway->sendMessage($normalizedPhone, $message);
-
-        if ($sent) {
-            $successMsg = "Link portal pemantauan orang tua untuk {$user?->name} berhasil dikirimkan otomatis oleh sistem ke nomor siswa ({$normalizedPhone}).";
-
-            if ($request->wantsJson() || $request->ajax()) {
-                return response()->json([
-                    'success' => true,
-                    'message' => $successMsg,
-                    'phone' => $normalizedPhone,
-                    'url' => $parentUrl,
-                ]);
-            }
-
-            return back()->with('success', $successMsg);
-        }
-
-        $failMsg = "Gagal mengirim pesan otomatis ke nomor {$normalizedPhone}. Pastikan koneksi gateway WhatsApp server aktif.";
-
-        if ($request->wantsJson() || $request->ajax()) {
-            return response()->json(['success' => false, 'message' => $failMsg], 500);
-        }
-
-        return back()->with('error', $failMsg);
-    }
-
-    public function storePeriod(Request $request)
-    {
-        $schoolId = $this->getSchoolId();
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:100'],
-            'start_date' => ['required', 'date'],
-            'end_date' => ['required', 'date', 'after_or_equal:start_date'],
-            'is_active' => ['nullable', 'boolean'],
-        ]);
-
-        $period = PklPeriod::create([
-            'school_id' => $schoolId,
-            'name' => $validated['name'],
-            'start_date' => $validated['start_date'],
-            'end_date' => $validated['end_date'],
-            'is_active' => $request->boolean('is_active', true),
-        ]);
-
-        return back()->with('success', "Periode PKL '{$period->name}' berhasil ditambahkan.");
-    }
-
-    public function updatePeriod(Request $request, PklPeriod $period)
-    {
-        $schoolId = $this->getSchoolId();
-        abort_if($period->school_id !== $schoolId, 403);
-
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:100'],
-            'start_date' => ['required', 'date'],
-            'end_date' => ['required', 'date', 'after_or_equal:start_date'],
-            'is_active' => ['nullable', 'boolean'],
-        ]);
-
-        $period->update([
-            'name' => $validated['name'],
-            'start_date' => $validated['start_date'],
-            'end_date' => $validated['end_date'],
-            'is_active' => $request->boolean('is_active'),
-        ]);
-
-        return back()->with('success', "Periode PKL '{$period->name}' berhasil diperbarui.");
-    }
-
-    public function togglePeriodActive(PklPeriod $period)
-    {
-        $schoolId = $this->getSchoolId();
-        abort_if($period->school_id !== $schoolId, 403);
-
-        $period->update([
-            'is_active' => !$period->is_active,
-        ]);
-
-        $status = $period->is_active ? 'diaktifkan' : 'dinonaktifkan';
-        return back()->with('success', "Periode PKL '{$period->name}' berhasil {$status}.");
-    }
-
-    public function holidays(Request $request, HolidayService $holidayService)
-    {
-        $schoolId = $this->getSchoolId();
-        $selectedYear = (int) $request->input('year', Carbon::now()->year);
-        $selectedMonth = $request->filled('month') ? (int) $request->month : null;
-
-        $holidays = $holidayService->getHolidays($schoolId, $selectedYear, $selectedMonth);
-
-        $stats = [
-            'total' => SchoolHoliday::withoutGlobalScopes()->where('school_id', $schoolId)->whereYear('holiday_date', $selectedYear)->count(),
-            'national' => SchoolHoliday::withoutGlobalScopes()->where('school_id', $schoolId)->whereYear('holiday_date', $selectedYear)->where('is_national', true)->count(),
-            'custom' => SchoolHoliday::withoutGlobalScopes()->where('school_id', $schoolId)->whereYear('holiday_date', $selectedYear)->where('is_national', false)->count(),
-        ];
-
-        return view('adminsekolah.holidays', compact('holidays', 'selectedYear', 'selectedMonth', 'stats'));
-    }
-
-    public function storeHoliday(Request $request, HolidayService $holidayService)
-    {
-        $schoolId = $this->getSchoolId();
-
-        $validated = $request->validate([
-            'title' => ['required', 'string', 'max:150'],
-            'holiday_date' => [
-                'required',
-                'date',
-                Rule::unique('school_holidays')->where(fn($q) => $q->where('school_id', $schoolId)),
-            ],
-            'description' => ['nullable', 'string', 'max:255'],
-            'is_national' => ['nullable', 'boolean'],
-        ], [
-            'holiday_date.unique' => 'Tanggal ini sudah terdaftar sebagai hari libur.',
-        ]);
-
-        $holidayService->createHoliday($schoolId, $validated);
-
-        return back()->with('success', 'Hari libur berhasil ditambahkan.');
-    }
-
-    public function destroyHoliday(SchoolHoliday $holiday, HolidayService $holidayService)
-    {
-        $schoolId = $this->getSchoolId();
-        abort_if($holiday->school_id !== $schoolId, 403);
-
-        $holidayService->deleteHoliday($holiday);
-
-        return back()->with('success', 'Hari libur berhasil dihapus.');
-    }
-
-    public function syncNationalHolidays(Request $request, HolidayService $holidayService)
-    {
-        $schoolId = $this->getSchoolId();
-        $year = (int) $request->input('year', Carbon::now()->year);
-
-        $count = $holidayService->syncNationalHolidays($schoolId, $year);
-
-        return back()->with('success', "Berhasil mensinkronkan {$count} hari libur nasional untuk tahun {$year}.");
-    }
-
-    public function incidents(Request $request, IncidentReportService $incidentService)
-    {
-        $schoolId = $this->getSchoolId();
-        $incidents = $incidentService->getIncidentsForSchool($schoolId, $request->only(['status', 'urgency']));
-
-        $stats = [
-            'total' => IncidentReport::where('school_id', $schoolId)->count(),
-            'open' => IncidentReport::where('school_id', $schoolId)->whereIn('status', ['submitted', 'in_progress'])->count(),
-            'critical' => IncidentReport::where('school_id', $schoolId)->where('urgency', 'critical')->count(),
-            'resolved' => IncidentReport::where('school_id', $schoolId)->where('status', 'resolved')->count(),
-        ];
-
-        return view('adminsekolah.incidents', compact('incidents', 'stats'));
-    }
-
-    public function followupIncident(Request $request, IncidentReport $report, IncidentReportService $incidentService)
-    {
-        $schoolId = $this->getSchoolId();
-        abort_if($report->school_id !== $schoolId, 403);
-
-        $validated = $request->validate([
-            'action_note' => ['required', 'string', 'max:1000'],
-            'status' => ['nullable', 'in:in_progress,resolved,dismissed'],
-        ]);
-
-        $incidentService->addFollowup($report, Auth::user(), $validated['action_note'], $validated['status'] ?? null);
-
-        return back()->with('success', 'Tindak lanjut laporan kendala berhasil dicatat.');
-    }
-
-    public function certificates(Request $request, CertificateService $certificateService)
-    {
-        $schoolId = $this->getSchoolId();
-        $certificates = $certificateService->getCertificatesForSchool($schoolId, $request->only('search'));
-
-        $unissuedStudents = StudentPkl::where('school_id', $schoolId)
-            ->whereHas('assessment')
-            ->doesntHave('certificate')
-            ->with(['student.user', 'company', 'assessment'])
-            ->get();
-
-        $periods = PklPeriod::where('school_id', $schoolId)->get();
-
-        $stats = [
-            'total_issued' => Certificate::where('school_id', $schoolId)->count(),
-            'ready_to_issue' => $unissuedStudents->count(),
-            'sangat_baik' => Certificate::where('school_id', $schoolId)->where('final_predicate', 'Sangat Baik')->count(),
-        ];
-
-        return view('adminsekolah.certificates', compact('certificates', 'unissuedStudents', 'periods', 'stats'));
-    }
-
-    public function generateCertificate(Request $request, CertificateService $certificateService)
-    {
-        $school = Auth::user()->school;
-        if ($school && !$school->hasFeature('certificate')) {
-            return back()->with('error', 'Fitur penerbitan E-Sertifikat tidak aktif pada paket langganan sekolah Anda. Silakan tingkatkan paket lisensi ke paket Pro/Enterprise.');
-        }
-
-        $schoolId = $this->getSchoolId();
-        $validated = $request->validate([
-            'student_pkl_id' => ['required', 'exists:student_pkl,id'],
-        ]);
-
-        $spkl = StudentPkl::where('school_id', $schoolId)->findOrFail($validated['student_pkl_id']);
-        $certificate = $certificateService->generateForStudentPkl($spkl);
-
-        return back()->with('success', "E-Sertifikat untuk {$spkl->student->user->name} berhasil diterbitkan (No: {$certificate->certificate_number}).");
-    }
-
-    public function generateBatchCertificates(Request $request, CertificateService $certificateService)
-    {
-        $school = Auth::user()->school;
-        if ($school && !$school->hasFeature('certificate')) {
-            return back()->with('error', 'Fitur penerbitan E-Sertifikat tidak aktif pada paket langganan sekolah Anda. Silakan tingkatkan paket lisensi ke paket Pro/Enterprise.');
-        }
-
-        $schoolId = $this->getSchoolId();
-        $periodId = $request->input('pkl_period_id') ? (int) $request->input('pkl_period_id') : null;
-
-        $count = $certificateService->generateBatchForSchool($schoolId, $periodId);
-
-        return back()->with('success', "Berhasil menerbitkan {$count} E-Sertifikat baru secara massal.");
-    }
-
-    public function downloadCertificate(Certificate $certificate, CertificateService $certificateService)
-    {
-        $schoolId = $this->getSchoolId();
-        abort_if($certificate->school_id !== $schoolId, 403, 'Akses ditolak.');
-
-        try {
-            $nameSlug = Str::slug($certificate->studentPkl?->student?->user?->name ?? 'Siswa');
-            $safeCertNumber = str_replace(['/', '\\'], '-', $certificate->certificate_number);
-            $filename = "E-Sertifikat_PKL_{$nameSlug}_{$safeCertNumber}.pdf";
-
-            return $certificateService->getCachedPdfResponse($certificate, $filename);
-        } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error("Download E-Sertifikat gagal (ID: {$certificate->id}): " . $e->getMessage(), [
-                'exception' => $e,
-            ]);
-
-            return back()->with('error', 'Gagal memproses pengunduhan dokumen PDF E-Sertifikat: ' . $e->getMessage());
-        }
-    }
-
-    /**
-     * Tenant Self-Service Billing & Subscription Portal for School Admin.
-     */
-    public function billing()
-    {
-        $schoolId = $this->getSchoolId();
-        $school = School::with(['subscriptions' => function ($q) {
-            $q->latest('end_date');
-        }])->findOrFail($schoolId);
-
-        $activeSubscription = $school->activeSubscription();
-        $invoices = Invoice::where('school_id', $schoolId)->latest()->paginate(10);
-        $subscriptions = $school->subscriptions()->latest()->get();
-
-        $studentQuota = $activeSubscription?->student_quota ?? 100;
-        $currentStudentsCount = $school->students_count;
-        $quotaUsagePercent = min(100, round(($currentStudentsCount / max(1, $studentQuota)) * 100));
-
-        $storageQuotaMb = $school->storage_quota_mb;
-        $storageUsedMb = $school->storage_used_mb;
-        $storageUsagePercent = $school->storage_usage_percent;
-
-        return view('adminsekolah.billing', compact(
-            'school',
-            'activeSubscription',
-            'invoices',
-            'subscriptions',
-            'studentQuota',
-            'currentStudentsCount',
-            'quotaUsagePercent',
-            'storageQuotaMb',
-            'storageUsedMb',
-            'storageUsagePercent'
-        ));
-    }
-
-    /**
-     * Download Invoice PDF for School Admin.
-     */
-    public function downloadInvoicePdf(Invoice $invoice)
-    {
-        $schoolId = $this->getSchoolId();
-        abort_if($invoice->school_id !== $schoolId, 403, 'Akses ditolak.');
-
-        $invoice->load(['school', 'subscription']);
-        $platformName = \App\Models\PlatformSetting::get('platform_name', 'VokaTrack');
-        $platformTagline = \App\Models\PlatformSetting::get('platform_tagline', 'Enterprise Cloud');
-        $systemLogoUrl = \App\Models\PlatformSetting::getLogoUrl();
-
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('superadmin.invoice_pdf', compact(
-            'invoice',
-            'platformName',
-            'platformTagline',
-            'systemLogoUrl'
-        ))->setPaper('a4', 'portrait');
-
-        return $pdf->download("Invoice-{$invoice->invoice_number}.pdf");
+        return app(AcademicController::class)->destroyClass($schoolClass);
     }
 
     public function previewPromotion(Request $request, ClassPromotionService $promotionService)
     {
-        $schoolId = $this->getSchoolId();
-        $request->validate([
-            'current_academic_year' => ['required', 'string'],
-            'target_academic_year' => ['required', 'string'],
-        ]);
-
-        $preview = $promotionService->previewPromotion(
-            $schoolId,
-            $request->current_academic_year,
-            $request->target_academic_year
-        );
-
-        return response()->json([
-            'success' => true,
-            'preview' => $preview,
-        ]);
+        return app(AcademicController::class)->previewPromotion($request, $promotionService);
     }
 
     public function promoteClasses(Request $request, ClassPromotionService $promotionService)
     {
-        $schoolId = $this->getSchoolId();
-        $request->validate([
-            'current_academic_year' => ['required', 'string'],
-            'target_academic_year' => ['required', 'string'],
-            'class_ids' => ['nullable', 'array'],
-            'class_ids.*' => [Rule::exists('classes', 'id')->where('school_id', $schoolId)],
-        ]);
+        return app(AcademicController::class)->promoteClasses($request, $promotionService);
+    }
 
-        $stats = $promotionService->executePromotion(
-            $schoolId,
-            $request->current_academic_year,
-            $request->target_academic_year,
-            $request->input('class_ids', [])
-        );
+    // --- Students ---
+    public function students(Request $request)
+    {
+        return app(StudentController::class)->students($request);
+    }
 
-        $msg = "Proses kenaikan kelas berhasil: {$stats['promoted_students_count']} siswa naik tingkat, {$stats['graduated_students_count']} siswa dinyatakan lulus (alumni).";
-        return back()->with('success', $msg);
+    public function exportStudents(Request $request)
+    {
+        return app(StudentController::class)->exportStudents($request);
+    }
+
+    public function storeStudent(StoreStudentRequest $request)
+    {
+        return app(StudentController::class)->storeStudent($request);
+    }
+
+    public function updateStudent(UpdateStudentRequest $request, Student $student)
+    {
+        return app(StudentController::class)->updateStudent($request, $student);
+    }
+
+    public function resetStudentPassword(Request $request, Student $student)
+    {
+        return app(StudentController::class)->resetStudentPassword($request, $student);
+    }
+
+    public function destroyStudent(Student $student)
+    {
+        return app(StudentController::class)->destroyStudent($student);
+    }
+
+    public function importStudents(Request $request)
+    {
+        return app(StudentController::class)->importStudents($request);
+    }
+
+    // --- Teachers ---
+    public function teachers(Request $request)
+    {
+        return app(TeacherController::class)->teachers($request);
+    }
+
+    public function exportTeachers(Request $request)
+    {
+        return app(TeacherController::class)->exportTeachers($request);
+    }
+
+    public function storeTeacher(StoreTeacherRequest $request)
+    {
+        return app(TeacherController::class)->storeTeacher($request);
+    }
+
+    public function updateTeacher(UpdateTeacherRequest $request, Teacher $teacher)
+    {
+        return app(TeacherController::class)->updateTeacher($request, $teacher);
+    }
+
+    public function resetTeacherPassword(Request $request, Teacher $teacher)
+    {
+        return app(TeacherController::class)->resetTeacherPassword($request, $teacher);
+    }
+
+    public function destroyTeacher(Teacher $teacher)
+    {
+        return app(TeacherController::class)->destroyTeacher($teacher);
+    }
+
+    // --- Companies & Supervisors ---
+    public function companies(Request $request)
+    {
+        return app(CompanyController::class)->companies($request);
+    }
+
+    public function storeCompany(StoreCompanyRequest $request)
+    {
+        return app(CompanyController::class)->storeCompany($request);
+    }
+
+    public function updateCompany(UpdateCompanyRequest $request, Company $company)
+    {
+        return app(CompanyController::class)->updateCompany($request, $company);
+    }
+
+    public function destroyCompany(Company $company)
+    {
+        return app(CompanyController::class)->destroyCompany($company);
+    }
+
+    public function storeCompanySupervisor(Request $request, Company $company)
+    {
+        return app(CompanyController::class)->storeCompanySupervisor($request, $company);
+    }
+
+    public function updateCompanySupervisor(Request $request, Company $company, Supervisor $supervisor)
+    {
+        return app(CompanyController::class)->updateCompanySupervisor($request, $company, $supervisor);
+    }
+
+    public function destroyCompanySupervisor(Request $request, Company $company, Supervisor $supervisor)
+    {
+        return app(CompanyController::class)->destroyCompanySupervisor($request, $company, $supervisor);
+    }
+
+    public function reassignCompanyBatch(Request $request, Company $company)
+    {
+        return app(CompanyController::class)->reassignCompanyBatch($request, $company);
+    }
+
+    // --- PKL Plotting & Periods ---
+    public function plotting(Request $request)
+    {
+        return app(PlottingController::class)->plotting($request);
+    }
+
+    public function storePlotting(StorePlottingRequest $request)
+    {
+        return app(PlottingController::class)->storePlotting($request);
+    }
+
+    public function reassignPlotting(Request $request, StudentPkl $studentPkl)
+    {
+        return app(PlottingController::class)->reassignPlotting($request, $studentPkl);
+    }
+
+    public function destroyPlotting(StudentPkl $studentPkl)
+    {
+        return app(PlottingController::class)->destroyPlotting($studentPkl);
+    }
+
+    public function sendParentLink(Request $request, StudentPkl $studentPkl, WhatsAppGatewayService $waGateway)
+    {
+        return app(PlottingController::class)->sendParentLink($request, $studentPkl, $waGateway);
+    }
+
+    public function storePeriod(Request $request)
+    {
+        return app(PlottingController::class)->storePeriod($request);
+    }
+
+    public function updatePeriod(Request $request, PklPeriod $period)
+    {
+        return app(PlottingController::class)->updatePeriod($request, $period);
+    }
+
+    public function togglePeriodActive(PklPeriod $period)
+    {
+        return app(PlottingController::class)->togglePeriodActive($period);
+    }
+
+    // --- Holidays ---
+    public function holidays(Request $request, HolidayService $holidayService)
+    {
+        return app(HolidayController::class)->holidays($request, $holidayService);
+    }
+
+    public function storeHoliday(StoreHolidayRequest $request, HolidayService $holidayService)
+    {
+        return app(HolidayController::class)->storeHoliday($request, $holidayService);
+    }
+
+    public function destroyHoliday(SchoolHoliday $holiday, HolidayService $holidayService)
+    {
+        return app(HolidayController::class)->destroyHoliday($holiday, $holidayService);
+    }
+
+    public function syncNationalHolidays(Request $request, HolidayService $holidayService)
+    {
+        return app(HolidayController::class)->syncNationalHolidays($request, $holidayService);
+    }
+
+    // --- Incidents ---
+    public function incidents(Request $request, IncidentReportService $incidentService)
+    {
+        return app(IncidentController::class)->incidents($request, $incidentService);
+    }
+
+    public function followupIncident(Request $request, IncidentReport $report, IncidentReportService $incidentService)
+    {
+        return app(IncidentController::class)->followupIncident($request, $report, $incidentService);
+    }
+
+    // --- Certificates ---
+    public function certificates(Request $request, CertificateService $certificateService)
+    {
+        return app(CertificateController::class)->certificates($request, $certificateService);
+    }
+
+    public function generateCertificate(Request $request, CertificateService $certificateService)
+    {
+        return app(CertificateController::class)->generateCertificate($request, $certificateService);
+    }
+
+    public function generateBatchCertificates(Request $request, CertificateService $certificateService)
+    {
+        return app(CertificateController::class)->generateBatchCertificates($request, $certificateService);
+    }
+
+    public function downloadCertificate(Certificate $certificate, CertificateService $certificateService)
+    {
+        return app(CertificateController::class)->downloadCertificate($certificate, $certificateService);
+    }
+
+    // --- Billing ---
+    public function billing()
+    {
+        return app(BillingController::class)->billing();
+    }
+
+    public function downloadInvoicePdf(Invoice $invoice)
+    {
+        return app(BillingController::class)->downloadInvoicePdf($invoice);
     }
 }

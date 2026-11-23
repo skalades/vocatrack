@@ -520,7 +520,7 @@
         <!-- Tab Navigation Bar -->
         <div class="flex items-center bg-slate-100/80 p-1.5 rounded-2xl gap-1 text-xs font-bold overflow-x-auto">
             <button type="button" id="btn-tab-profile" onclick="switchCompanyTab('tab-profile')"
-                    class="company-tab-btn px-3.5 py-2 rounded-xl bg-indigo-600 text-white shadow-xs transition-all flex items-center space-x-1.5 shrink-0 cursor-pointer">
+                    class="company-tab-btn px-3.5 py-2 rounded-xl bg-[#0B2B25] text-[#C6F26B] font-extrabold shadow-xs transition-all flex items-center space-x-1.5 shrink-0 cursor-pointer">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
                 <span>Profil & Lokasi</span>
             </button>
@@ -722,7 +722,7 @@
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
                         <span>Ganti Pembimbing Massal</span>
                     </button>
-                    <a href="{{ route('adminsekolah.plotting') }}" class="px-3 py-1.5 rounded-xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 transition-colors shadow-xs">
+                    <a href="{{ route('adminsekolah.plotting') }}" class="px-3 py-1.5 rounded-xl bg-[#0B2B25] text-[#C6F26B] font-extrabold hover:bg-[#071E1A] transition-colors shadow-xs">
                         + Plotting Siswa
                     </a>
                 </div>
@@ -754,7 +754,7 @@
                 <span class="text-xs font-bold text-slate-800 block">Belum Ada Siswa Ditempatkan</span>
                 <p class="text-[11px] text-slate-500 mt-0.5">Belum ada siswa yang diplot ke perusahaan ini untuk periode aktif.</p>
                 <div class="mt-3">
-                    <a href="{{ route('adminsekolah.plotting') }}" class="inline-flex items-center px-3 py-1.5 rounded-xl bg-indigo-600 text-white font-bold text-xs hover:bg-indigo-700 transition shadow-xs">
+                    <a href="{{ route('adminsekolah.plotting') }}" class="inline-flex items-center px-3 py-1.5 rounded-xl bg-[#0B2B25] text-[#C6F26B] font-extrabold text-xs hover:bg-[#071E1A] transition shadow-xs">
                         + Plotting Siswa Sekarang
                     </a>
                 </div>
@@ -907,7 +907,7 @@
                     Batal
                 </button>
                 <button type="submit"
-                        class="px-4 py-2 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition shadow-xs cursor-pointer">
+                        class="px-4 py-2 rounded-xl text-xs font-extrabold text-[#C6F26B] bg-[#0B2B25] hover:bg-[#071E1A] transition shadow-xs cursor-pointer">
                     Simpan Perubahan
                 </button>
             </div>
@@ -980,7 +980,7 @@
                     Batal
                 </button>
                 <button type="submit"
-                        class="px-4 py-2 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition shadow-xs cursor-pointer">
+                        class="px-4 py-2 rounded-xl text-xs font-extrabold text-[#C6F26B] bg-[#0B2B25] hover:bg-[#071E1A] transition shadow-xs cursor-pointer">
                     Terapkan Perubahan Massal
                 </button>
             </div>
@@ -1189,7 +1189,7 @@
         // Beri style aktif pada tombol
         const activeBtn = document.getElementById('btn-' + tabId);
         if (activeBtn) {
-            activeBtn.className = "company-tab-btn px-3.5 py-2 rounded-xl bg-indigo-600 text-white shadow-xs transition-all flex items-center space-x-1.5 shrink-0 cursor-pointer";
+            activeBtn.className = "company-tab-btn px-3.5 py-2 rounded-xl bg-[#0B2B25] text-[#C6F26B] font-extrabold shadow-xs transition-all flex items-center space-x-1.5 shrink-0 cursor-pointer";
         }
     }
 

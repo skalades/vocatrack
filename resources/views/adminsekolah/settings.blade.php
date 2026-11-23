@@ -378,7 +378,7 @@
                     <div class="flex items-center gap-2 shrink-0">
                         <form method="POST" action="{{ route('adminsekolah.test-mode.toggle') }}">
                             @csrf
-                            <button type="submit" class="inline-flex items-center justify-center px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer {{ $school->isTestModeActive() ? 'bg-amber-600 hover:bg-amber-700 text-white focus:ring-2 focus:ring-amber-500/20' : 'bg-indigo-600 hover:bg-indigo-700 text-white focus:ring-2 focus:ring-indigo-500/20' }}">
+                            <button type="submit" class="inline-flex items-center justify-center px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer {{ $school->isTestModeActive() ? 'bg-amber-600 hover:bg-amber-700 text-white focus:ring-2 focus:ring-amber-500/20' : 'bg-[#0B2B25] hover:bg-[#071E1A] text-[#C6F26B] font-extrabold focus:ring-2 focus:ring-[#C6F26B]/50' }}">
                                 @if($school->isTestModeActive())
                                     <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                                     Nonaktifkan Simulasi

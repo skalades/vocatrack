@@ -9,6 +9,7 @@ use App\Models\Student;
 use App\Models\SubscriptionPlan;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class SubscriptionService
 {
@@ -73,9 +74,22 @@ class SubscriptionService
 
     /**
      * Check if a school can add student(s) based on quota.
+     * When $lock is true, acquires a pessimistic row lock within an active transaction
+     * to eliminate TOCTOU race conditions.
      */
-    public function canAddStudent(School $school, int $count = 1): array
+    public function canAddStudent(School $school, int $count = 1, bool $lock = false): array
     {
+        if ($lock) {
+            try {
+                return $this->enforceQuotaWithLock($school, $count);
+            } catch (ValidationException $e) {
+                return [
+                    'allowed' => false,
+                    'message' => $e->validator->errors()->first('quota') ?: $e->getMessage(),
+                ];
+            }
+        }
+
         $subscription = $school->activeSubscription();
         if (!$subscription) {
             return [
@@ -101,6 +115,50 @@ class SubscriptionService
                 'allowed' => false,
                 'message' => "Kuota siswa terlisensi ({$quota} siswa) telah terpenuhi. Saat ini terdaftar {$currentStudentCount} siswa. Harap tingkatkan paket langganan sekolah untuk menambah {$count} siswa lagi.",
             ];
+        }
+
+        return [
+            'allowed' => true,
+            'current' => $currentStudentCount,
+            'quota' => $quota,
+            'remaining' => $quota - $currentStudentCount,
+        ];
+    }
+
+    /**
+     * Enforce student quota with row locking to prevent TOCTOU race conditions.
+     * Must be called inside a DB::transaction.
+     * Throws ValidationException if quota exceeded or subscription invalid.
+     */
+    public function enforceQuotaWithLock(School $school, int $count = 1): array
+    {
+        $subscription = SchoolSubscription::where('school_id', $school->id)
+            ->orderByDesc('end_date')
+            ->orderByDesc('id')
+            ->lockForUpdate()
+            ->first();
+
+        if (!$subscription) {
+            throw ValidationException::withMessages([
+                'quota' => 'Sekolah belum memiliki paket langganan aktif. Hubungi Super Administrator.',
+            ]);
+        }
+
+        if ($subscription->isExpired() && !$subscription->isGracePeriod()) {
+            throw ValidationException::withMessages([
+                'quota' => 'Masa berlaku sewa sistem telah habis (' . $subscription->end_date->format('d M Y') . '). Hubungi Super Administrator untuk perpanjangan lisensi.',
+            ]);
+        }
+
+        $currentStudentCount = Student::whereHas('class', function ($q) use ($school) {
+            $q->where('school_id', $school->id);
+        })->count();
+
+        $quota = $subscription->student_quota;
+        if ($currentStudentCount + $count > $quota) {
+            throw ValidationException::withMessages([
+                'quota' => "Kuota siswa terlisensi ({$quota} siswa) telah terpenuhi. Saat ini terdaftar {$currentStudentCount} siswa. Harap tingkatkan paket langganan sekolah untuk menambah {$count} siswa lagi.",
+            ]);
         }
 
         return [

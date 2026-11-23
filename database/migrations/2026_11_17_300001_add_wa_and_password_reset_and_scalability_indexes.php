@@ -42,12 +42,27 @@ return new class extends Migration
         }
 
         // 3. Review & penambahan indeks performa tinggi untuk attendances & journals (P1-2 Scalability)
-        Schema::table('attendances', function (Blueprint $table) {
-            // Indeks komposit untuk query pencarian presensi per sekolah & tanggal
-            if (Schema::hasTable('attendances')) {
-                // Laravel Schema::hasIndex is available in modern Laravel, but try/catch or custom check ensures safety
-            }
-        });
+        if (Schema::hasTable('attendances')) {
+            Schema::table('attendances', function (Blueprint $table) {
+                if (!Schema::hasIndex('attendances', 'idx_attendances_spkl_status')) {
+                    $table->index(['student_pkl_id', 'status'], 'idx_attendances_spkl_status');
+                }
+                if (!Schema::hasIndex('attendances', 'idx_attendances_school_status_date')) {
+                    $table->index(['school_id', 'status', 'date'], 'idx_attendances_school_status_date');
+                }
+            });
+        }
+
+        if (Schema::hasTable('journals')) {
+            Schema::table('journals', function (Blueprint $table) {
+                if (!Schema::hasIndex('journals', 'idx_journals_spkl_status')) {
+                    $table->index(['student_pkl_id', 'status'], 'idx_journals_spkl_status');
+                }
+                if (!Schema::hasIndex('journals', 'idx_journals_school_status_date')) {
+                    $table->index(['school_id', 'status', 'date'], 'idx_journals_school_status_date');
+                }
+            });
+        }
     }
 
     /**
@@ -55,6 +70,28 @@ return new class extends Migration
      */
     public function down(): void
     {
+        if (Schema::hasTable('journals')) {
+            Schema::table('journals', function (Blueprint $table) {
+                if (Schema::hasIndex('journals', 'idx_journals_spkl_status')) {
+                    $table->dropIndex('idx_journals_spkl_status');
+                }
+                if (Schema::hasIndex('journals', 'idx_journals_school_status_date')) {
+                    $table->dropIndex('idx_journals_school_status_date');
+                }
+            });
+        }
+
+        if (Schema::hasTable('attendances')) {
+            Schema::table('attendances', function (Blueprint $table) {
+                if (Schema::hasIndex('attendances', 'idx_attendances_spkl_status')) {
+                    $table->dropIndex('idx_attendances_spkl_status');
+                }
+                if (Schema::hasIndex('attendances', 'idx_attendances_school_status_date')) {
+                    $table->dropIndex('idx_attendances_school_status_date');
+                }
+            });
+        }
+
         Schema::dropIfExists('student_password_reset_requests');
 
         Schema::table('users', function (Blueprint $table) {

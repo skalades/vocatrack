@@ -10,6 +10,8 @@
     $shouldPulse = $pulse ?? in_array($normalized, ['pending', 'menunggu', 'proses', 'aktif', 'active', 'hadir']);
 
     $colorClasses = match ($normalized) {
+        'forest' => 'bg-[#0B2B25] text-[#C6F26B] border-[#1D5A4D]',
+        'lime' => 'bg-[#EEF6DF] text-[#0B2B25] border-[#CDE4A3]',
         'success', 'hadir', 'approved', 'disetujui', 'aktif', 'active' => 'bg-emerald-50 text-emerald-700 border-emerald-200/80',
         'warning', 'terlambat', 'pending', 'menunggu', 'review', 'proses', 'submitted', 'revision' => 'bg-amber-50 text-amber-700 border-amber-200/80',
         'danger', 'alfa', 'rejected', 'ditolak', 'nonaktif', 'inactive' => 'bg-rose-50 text-rose-700 border-rose-200/80',
@@ -17,10 +19,12 @@
         'purple', 'sakit' => 'bg-purple-50 text-purple-700 border-purple-200/80',
         'teal', 'dinas_luar', 'wfh' => 'bg-teal-50 text-teal-700 border-teal-200/80',
         'indigo', 'luar_kantor' => 'bg-indigo-50 text-indigo-700 border-indigo-200/80',
-        default => 'bg-slate-50 text-slate-700 border-slate-200/80',
+        default => 'bg-[#F1F4EC] text-[#0B2B25] border-slate-200/80',
     };
 
     $dotColors = match ($normalized) {
+        'forest' => 'bg-[#C6F26B]',
+        'lime' => 'bg-[#0B2B25]',
         'success', 'hadir', 'approved', 'disetujui', 'aktif', 'active' => 'bg-emerald-500',
         'warning', 'terlambat', 'pending', 'menunggu', 'review', 'proses', 'submitted', 'revision' => 'bg-amber-500',
         'danger', 'alfa', 'rejected', 'ditolak', 'nonaktif', 'inactive' => 'bg-rose-500',

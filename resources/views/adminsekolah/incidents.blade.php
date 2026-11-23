@@ -213,7 +213,7 @@
                             <button type="button" onclick="document.getElementById('modal-admin-followup-{{ $inc->id }}').classList.add('hidden')" class="px-3.5 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold">
                                 Batal
                             </button>
-                            <button type="submit" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-sm">
+                            <button type="submit" class="px-4 py-2 rounded-xl bg-[#0B2B25] hover:bg-[#071E1A] text-[#C6F26B] text-xs font-extrabold shadow-sm transition-all active:scale-95 cursor-pointer">
                                 Simpan Tindak Lanjut
                             </button>
                         </div>

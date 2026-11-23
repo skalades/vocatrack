@@ -88,9 +88,10 @@ class StorageQuotaService
                 ->where('id', $school->id)
                 ->increment('storage_used_bytes', $fileSizeBytes);
 
-            $newBytes = (int) ($school->storage_used_bytes ?? 0) + $fileSizeBytes;
-            $school->storage_used_bytes = $newBytes;
-            Cache::put("school_storage_bytes_{$school->id}", $newBytes, now()->addHours(6));
+            // Fetch atomic post-increment DB value to eliminate cache drift under concurrent uploads
+            $freshBytes = (int) DB::table('schools')->where('id', $school->id)->value('storage_used_bytes');
+            $school->storage_used_bytes = $freshBytes;
+            Cache::put("school_storage_bytes_{$school->id}", $freshBytes, now()->addHours(6));
         } catch (\Throwable $e) {
             Log::warning("[STORAGE QUOTA] Could not increment storage_used_bytes for school {$school->id}: " . $e->getMessage());
         }
@@ -106,15 +107,20 @@ class StorageQuotaService
         }
 
         try {
-            $current = (int) ($school->storage_used_bytes ?? 0);
-            $newBytes = max(0, $current - $fileSizeBytes);
-
+            // Atomic decrement at database layer
             DB::table('schools')
                 ->where('id', $school->id)
-                ->update(['storage_used_bytes' => $newBytes]);
+                ->decrement('storage_used_bytes', $fileSizeBytes);
 
-            $school->storage_used_bytes = $newBytes;
-            Cache::put("school_storage_bytes_{$school->id}", $newBytes, now()->addHours(6));
+            // Safeguard: ensure storage does not underflow below zero
+            DB::table('schools')
+                ->where('id', $school->id)
+                ->where('storage_used_bytes', '<', 0)
+                ->update(['storage_used_bytes' => 0]);
+
+            $freshBytes = (int) DB::table('schools')->where('id', $school->id)->value('storage_used_bytes');
+            $school->storage_used_bytes = $freshBytes;
+            Cache::put("school_storage_bytes_{$school->id}", $freshBytes, now()->addHours(6));
         } catch (\Throwable $e) {
             Log::warning("[STORAGE QUOTA] Could not decrement storage_used_bytes for school {$school->id}: " . $e->getMessage());
         }

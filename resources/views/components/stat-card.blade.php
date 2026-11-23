@@ -14,6 +14,18 @@
     $displaySubtitle = $subtitle ?? $description ?? null;
 
     $colorMap = [
+        'forest' => [
+            'bg' => 'bg-[#0B2B25]/10',
+            'text' => 'text-[#0B2B25]',
+            'border' => 'border-[#0B2B25]/20',
+            'glow' => 'group-hover:shadow-[#0B2B25]/10',
+        ],
+        'lime' => [
+            'bg' => 'bg-[#EEF6DF]',
+            'text' => 'text-[#0B2B25]',
+            'border' => 'border-[#CDE4A3]',
+            'glow' => 'group-hover:shadow-[#C6F26B]/20',
+        ],
         'indigo' => [
             'bg' => 'bg-indigo-50/80',
             'text' => 'text-indigo-600',

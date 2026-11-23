@@ -86,8 +86,8 @@ class CertificateService
             $predicate = $overrides['final_predicate'] ?? $this->calculatePredicate((float) $finalScore);
             $issuedDate = $overrides['issued_date'] ?? date('Y-m-d');
 
-            // Cek apakah sudah pernah dibuat sertifikat
-            $existing = Certificate::where('student_pkl_id', $studentPkl->id)->first();
+            // Cek apakah sudah pernah dibuat sertifikat (dengan row-level lock)
+            $existing = Certificate::where('student_pkl_id', $studentPkl->id)->lockForUpdate()->first();
             if ($existing) {
                 $existing->update([
                     'final_score' => $finalScore,
@@ -100,22 +100,53 @@ class CertificateService
             // Generate nomor urut sertifikat format: PKL/{YEAR}/{SCHOOL_NPSN_OR_ID}/{COUNTER}
             $year = date('Y', strtotime($issuedDate));
             $schoolIdentifier = $studentPkl->school->npsn ?? ('SCH' . $studentPkl->school_id);
-            $count = Certificate::where('school_id', $studentPkl->school_id)
-                ->whereYear('issued_date', $year)
-                ->count() + 1;
-
-            $certificateNumber = sprintf("PKL/%s/%s/%04d", $year, $schoolIdentifier, $count);
             $uuid = (string) Str::uuid();
 
-            return Certificate::create([
-                'school_id' => $studentPkl->school_id,
-                'student_pkl_id' => $studentPkl->id,
-                'uuid' => $uuid,
-                'certificate_number' => $certificateNumber,
-                'final_score' => $finalScore,
-                'final_predicate' => $predicate,
-                'issued_date' => $issuedDate,
-            ]);
+            // Mekanisme anti-race condition dengan lock dan loop retry pada duplicate number
+            $maxAttempts = 5;
+            for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+                $count = Certificate::where('school_id', $studentPkl->school_id)
+                    ->whereYear('issued_date', $year)
+                    ->lockForUpdate()
+                    ->count() + ($attempt - 1) + 1;
+
+                $certificateNumber = sprintf("PKL/%s/%s/%04d", $year, $schoolIdentifier, $count);
+
+                try {
+                    return Certificate::create([
+                        'school_id' => $studentPkl->school_id,
+                        'student_pkl_id' => $studentPkl->id,
+                        'uuid' => $uuid,
+                        'certificate_number' => $certificateNumber,
+                        'final_score' => $finalScore,
+                        'final_predicate' => $predicate,
+                        'issued_date' => $issuedDate,
+                    ]);
+                } catch (\Illuminate\Database\QueryException $e) {
+                    // Jika tabrakan nomor sertifikat (unique constraint violation), coba nomor urut berikutnya
+                    if (str_contains($e->getMessage(), 'certificate_number') || str_contains($e->getMessage(), 'uk_school_certificate_number')) {
+                        if ($attempt < $maxAttempts) {
+                            continue;
+                        }
+                    }
+
+                    // Jika tabrakan student_pkl_id (proses paralel lain berhasil menyisipkan lebih dulu)
+                    $existingAfter = Certificate::where('student_pkl_id', $studentPkl->id)->lockForUpdate()->first();
+                    if ($existingAfter) {
+                        $existingAfter->update([
+                            'final_score' => $finalScore,
+                            'final_predicate' => $predicate,
+                            'issued_date' => $issuedDate,
+                        ]);
+                        return $existingAfter;
+                    }
+
+                    throw $e;
+                }
+            }
+
+            // Fallback safety (tidak akan tercapai kecuali semua attempt gagal)
+            throw new \RuntimeException('Gagal menerbitkan sertifikat karena konkurensi penomoran.');
         });
     }
 

@@ -16,10 +16,17 @@
 
     $isCheckoutMode = ($todayAttendance && !$todayAttendance->checkout_time && ($mode === 'checkout' || request('mode') === 'checkout'));
 
+    $isTestStudent = (bool) ($spkl?->isTestStudent());
+
     $isSelfieEnabled = $isCheckoutMode ? $isSchoolCheckoutSelfie : $isSchoolCheckinSelfie;
     $isGpsEnabled = $isCheckoutMode
         ? ($isSchoolCheckoutGeofence && (bool) ($spkl->company->gps_enabled ?? false))
         : ($isSchoolCheckinGeofence && (bool) ($spkl->company->gps_enabled ?? false));
+
+    // Jika siswa dalam mode simulasi uji coba (stress test), bebaskan geofencing GPS
+    if ($isTestStudent) {
+        $isGpsEnabled = false;
+    }
 
     $companyLat = $spkl->company->latitude ?? -6.200000;
     $companyLng = $spkl->company->longitude ?? 106.816666;
