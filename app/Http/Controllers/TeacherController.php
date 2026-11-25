@@ -15,6 +15,7 @@ use App\Services\AnnouncementService;
 use App\Services\AssessmentService;
 use App\Services\AttendanceService;
 use App\Services\HolidayService;
+use App\Services\ImageCompressionService;
 use App\Services\IncidentReportService;
 use App\Services\JournalService;
 use App\Services\SecureFileService;
@@ -811,12 +812,27 @@ class TeacherController extends Controller
             set_time_limit(180);
 
             $secureService = app(SecureFileService::class);
+            $compressor = app(ImageCompressionService::class);
             foreach ($spkl->journals as $journal) {
                 foreach ($journal->photos as $photo) {
                     $disk = $secureService->diskFor($photo->photo_path);
                     if ($disk && Storage::disk($disk)->exists($photo->photo_path)) {
+                        $raw = Storage::disk($disk)->get($photo->photo_path);
                         $mime = Storage::disk($disk)->mimeType($photo->photo_path) ?? 'image/jpeg';
-                        $photo->base64_data = 'data:' . $mime . ';base64,' . base64_encode(Storage::disk($disk)->get($photo->photo_path));
+                        $ext = pathinfo($photo->photo_path, PATHINFO_EXTENSION);
+
+                        if ($compressor->isHeic($raw, $ext, $mime)) {
+                            $jpeg = $compressor->decodeHeicToJpeg($raw);
+                            if ($jpeg !== null) {
+                                $raw = $jpeg;
+                                $mime = 'image/jpeg';
+                            } else {
+                                $photo->base64_data = null;
+                                continue;
+                            }
+                        }
+
+                        $photo->base64_data = 'data:' . $mime . ';base64,' . base64_encode($raw);
                     } else {
                         $photo->base64_data = null;
                     }

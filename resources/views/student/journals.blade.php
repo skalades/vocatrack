@@ -424,23 +424,43 @@
         let originalWidth = 0;
         let originalHeight = 0;
         let tempUrl = null;
+        let sourceBlob = file;
+
+        const isHeic = typeof window.vtIsHeicFile === 'function'
+            ? await window.vtIsHeicFile(file)
+            : /\.(heic|heif)$/i.test(file.name || '');
 
         // 1. Coba decode via createImageBitmap (Akselerasi hardware, mendukung HEIC di Safari iOS 15+)
         if (typeof window.createImageBitmap === 'function') {
             try {
-                const bitmap = await window.createImageBitmap(file);
+                const bitmap = await window.createImageBitmap(sourceBlob);
                 drawable = bitmap;
                 originalWidth = bitmap.width;
                 originalHeight = bitmap.height;
             } catch (bitmapErr) {
-                console.warn('createImageBitmap failed, trying Blob URL image:', bitmapErr);
+                console.warn('createImageBitmap failed, trying fallback:', bitmapErr);
             }
         }
 
-        // 2. Coba via Image element dengan URL.createObjectURL (Safari mendukung render HEIC via Blob URL)
+        // 2. Jika berkas HEIC gagal didekode native (Chrome/Edge/Firefox/Android), konversi ke JPEG dulu via heic2any
+        if (!drawable && isHeic && typeof window.vtConvertHeicBlob === 'function') {
+            try {
+                sourceBlob = await window.vtConvertHeicBlob(file, 0.88);
+                if (typeof window.createImageBitmap === 'function') {
+                    const bitmap = await window.createImageBitmap(sourceBlob);
+                    drawable = bitmap;
+                    originalWidth = bitmap.width;
+                    originalHeight = bitmap.height;
+                }
+            } catch (heicErr) {
+                console.warn('heic2any conversion failed:', heicErr);
+            }
+        }
+
+        // 3. Coba via Image element dengan URL.createObjectURL (Safari mendukung render HEIC via Blob URL)
         if (!drawable) {
             try {
-                tempUrl = URL.createObjectURL(file);
+                tempUrl = URL.createObjectURL(sourceBlob);
                 drawable = await new Promise((resolve, reject) => {
                     const img = new Image();
                     img.onload = () => resolve(img);
@@ -458,7 +478,7 @@
             }
         }
 
-        // 3. Fallback via FileReader data URL
+        // 4. Fallback via FileReader data URL
         if (!drawable) {
             drawable = await new Promise((resolve, reject) => {
                 const reader = new FileReader();
@@ -469,7 +489,7 @@
                     img.src = e.target.result;
                 };
                 reader.onerror = () => reject(new Error('Gagal membaca berkas'));
-                reader.readAsDataURL(file);
+                reader.readAsDataURL(sourceBlob);
             });
             originalWidth = drawable.width;
             originalHeight = drawable.height;

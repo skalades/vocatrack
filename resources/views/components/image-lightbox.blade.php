@@ -76,8 +76,11 @@
         const downloadLink = document.getElementById('lightbox-download-link');
         const titleEl = document.getElementById('lightbox-title');
 
-        img.src = src;
-        downloadLink.href = src;
+        const resolvedSrc = (typeof window.vtGetConvertedImageUrl === 'function' && window.vtGetConvertedImageUrl(src)) || src;
+        delete img.dataset.heicState;
+        delete img.dataset.heicOriginalSrc;
+        img.src = resolvedSrc;
+        downloadLink.href = resolvedSrc;
         if (titleEl) {
             titleEl.textContent = title || 'Resolusi Penuh';
         }

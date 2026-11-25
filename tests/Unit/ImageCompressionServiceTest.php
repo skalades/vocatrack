@@ -83,4 +83,17 @@ class ImageCompressionServiceTest extends TestCase
         $this->assertNull($this->service->compressBase64(''));
         $this->assertNull($this->service->compressBase64('invalid base64 content!!!'));
     }
+
+    public function test_detects_heic_by_magic_bytes_extension_and_mime(): void
+    {
+        $heicHeader = "\x00\x00\x00\x18ftypheic\x00\x00\x00\x00";
+        $mif1Header = "\x00\x00\x00\x18ftypmif1\x00\x00\x00\x00";
+        $jpegHeader = "\xFF\xD8\xFF\xE0\x00\x10JFIF\x00\x01";
+
+        $this->assertTrue($this->service->isHeic($heicHeader, 'bin', 'application/octet-stream'));
+        $this->assertTrue($this->service->isHeic($mif1Header, '', ''));
+        $this->assertTrue($this->service->isHeic($jpegHeader, 'HEIC', 'application/octet-stream'));
+        $this->assertTrue($this->service->isHeic($jpegHeader, 'jpg', 'image/heif'));
+        $this->assertFalse($this->service->isHeic($jpegHeader, 'jpg', 'image/jpeg'));
+    }
 }

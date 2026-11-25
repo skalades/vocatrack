@@ -169,6 +169,20 @@ class SecureFileService
         $absolute = Storage::disk($disk)->path($path);
         $mime = (new \finfo(FILEINFO_MIME_TYPE))->file($absolute) ?: 'application/octet-stream';
 
+        $compressor = app(ImageCompressionService::class);
+        $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+        $headerPreview = @file_get_contents($absolute, false, null, 0, 16) ?: '';
+
+        if ($compressor->isHeic($headerPreview, $ext, $mime)) {
+            $convertedPath = $this->resolveCachedHeicJpeg($absolute, $compressor);
+            if ($convertedPath !== null) {
+                $absolute = $convertedPath;
+                $mime = 'image/jpeg';
+            } else {
+                $mime = 'image/heic';
+            }
+        }
+
         $headers = [
             'Content-Type' => $mime,
             'X-Content-Type-Options' => 'nosniff',
@@ -181,5 +195,39 @@ class SecureFileService
         }
 
         return response()->download($absolute, basename($path), $headers);
+    }
+
+    /**
+     * Konversi berkas HEIC/HEIF ke JPEG dan simpan salinan sementara agar hemat CPU.
+     */
+    protected function resolveCachedHeicJpeg(string $absolutePath, ImageCompressionService $compressor): ?string
+    {
+        $mtime = @filemtime($absolutePath) ?: 0;
+        $cacheDir = storage_path('framework/cache/heic_jpeg');
+        $cachePath = $cacheDir . DIRECTORY_SEPARATOR . sha1($absolutePath . '|' . $mtime) . '.jpg';
+
+        if (is_file($cachePath) && filesize($cachePath) > 0) {
+            return $cachePath;
+        }
+
+        $raw = @file_get_contents($absolutePath);
+        if (!is_string($raw) || $raw === '') {
+            return null;
+        }
+
+        $jpeg = $compressor->decodeHeicToJpeg($raw);
+        if ($jpeg === null) {
+            return null;
+        }
+
+        if (!is_dir($cacheDir)) {
+            @mkdir($cacheDir, 0755, true);
+        }
+
+        if (@file_put_contents($cachePath, $jpeg) !== false) {
+            return $cachePath;
+        }
+
+        return null;
     }
 }

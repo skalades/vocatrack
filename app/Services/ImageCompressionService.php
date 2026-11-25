@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use Illuminate\Http\UploadedFile;
+use Symfony\Component\Process\ExecutableFinder;
+use Symfony\Component\Process\Process;
 
 class ImageCompressionService
 {
@@ -130,11 +132,21 @@ class ImageCompressionService
         $fallbackExt = strtolower($originalExtension ?: 'jpg');
         $fallbackMime = strtolower($originalMime ?: 'image/jpeg');
 
-        // Jika ekstensi awal heic/heif dan GD tidak mendukung decodernya
-        if ($this->isHeic($binaryData, $fallbackExt, $fallbackMime)) {
-            $src = @imagecreatefromstring($binaryData);
+        $wasHeic = $this->isHeic($binaryData, $fallbackExt, $fallbackMime);
+        $binaryDataForExif = $binaryData;
+        $src = false;
+
+        if ($wasHeic) {
+            $jpegBinary = $this->decodeHeicToJpeg($binaryData);
+            if ($jpegBinary !== null && extension_loaded('gd')) {
+                $src = @imagecreatefromstring($jpegBinary);
+                if ($src !== false) {
+                    $binaryDataForExif = $jpegBinary;
+                }
+            }
+
             if ($src === false) {
-                // Pertahankan berkas HEIC mentah tanpa merusak binary
+                // Pertahankan berkas HEIC mentah tanpa merusak binary (decoder browser akan menanganinya)
                 return [
                     'data' => $binaryData,
                     'mime' => 'image/heic',
@@ -178,7 +190,7 @@ class ImageCompressionService
         }
 
         // Perbaiki rotasi orientasi EXIF (misal foto kamera HP terbalik / miring)
-        $src = $this->fixExifOrientation($src, $binaryData);
+        $src = $this->fixExifOrientation($src, $binaryDataForExif);
 
         $origW = imagesx($src);
         $origH = imagesy($src);
@@ -224,7 +236,7 @@ class ImageCompressionService
 
         // Jika ukuran hasil kompresi lebih besar dari aslinya dan tidak ada resize yang diperlukan,
         // serta format aslinya sudah merupakan JPEG standar, pertahankan aslinya.
-        if ($scale >= 1.0 && $compressedSize >= $originalSize && in_array($fallbackExt, ['jpg', 'jpeg'], true)) {
+        if (!$wasHeic && $scale >= 1.0 && $compressedSize >= $originalSize && in_array($fallbackExt, ['jpg', 'jpeg'], true)) {
             return [
                 'data' => $binaryData,
                 'mime' => 'image/jpeg',
@@ -302,7 +314,7 @@ class ImageCompressionService
     /**
      * Periksa apakah binary/metadata mengindikasikan format HEIC/HEIF (kamera Apple).
      */
-    protected function isHeic(string $binaryData, string $extension, string $mime): bool
+    public function isHeic(string $binaryData, string $extension = '', string $mime = ''): bool
     {
         if (in_array(strtolower($extension), ['heic', 'heif'], true)) {
             return true;
@@ -315,11 +327,97 @@ class ImageCompressionService
         // Periksa signature 'ftyp' di byte ke-4 s.d. 8
         if (strlen($binaryData) >= 12 && substr($binaryData, 4, 4) === 'ftyp') {
             $brand = strtolower(substr($binaryData, 8, 4));
-            if (in_array($brand, ['heic', 'heix', 'hevc', 'mif1', 'msf1'], true)) {
+            if (in_array($brand, ['heic', 'heix', 'hevc', 'hevx', 'heim', 'heis', 'hevm', 'hevs', 'mif1', 'msf1'], true)) {
                 return true;
             }
         }
 
         return false;
+    }
+
+    /**
+     * Coba konversi binary HEIC/HEIF menjadi JPEG menggunakan decoder server yang tersedia.
+     */
+    public function decodeHeicToJpeg(string $binaryData): ?string
+    {
+        if (strlen($binaryData) < 12) {
+            return null;
+        }
+
+        // 1. PHP Imagick (jika tersedia dan mendukung HEIC)
+        if (extension_loaded('imagick') && class_exists(\Imagick::class)) {
+            try {
+                if (!empty(\Imagick::queryFormats('HEIC'))) {
+                    $imagick = new \Imagick();
+                    $imagick->readImageBlob($binaryData);
+                    $imagick->setIteratorIndex(0);
+                    $imagick->autoOrient();
+                    $imagick->setImageFormat('jpeg');
+                    $imagick->setImageCompressionQuality(88);
+                    $jpeg = $imagick->getImageBlob();
+                    $imagick->clear();
+
+                    if (is_string($jpeg) && strlen($jpeg) > 2 && substr($jpeg, 0, 2) === "\xFF\xD8") {
+                        return $jpeg;
+                    }
+                }
+            } catch (\Throwable) {
+                // Lanjut ke decoder CLI jika Imagick gagal
+            }
+        }
+
+        // 2. CLI decoders (heif-convert, ImageMagick magick, ffmpeg)
+        if (!function_exists('proc_open')) {
+            return null;
+        }
+
+        $finder = new ExecutableFinder();
+        $baseTemp = tempnam(sys_get_temp_dir(), 'vt_heic_');
+        if ($baseTemp === false) {
+            return null;
+        }
+        @unlink($baseTemp);
+
+        $inFile = $baseTemp . '.heic';
+        $outFile = $baseTemp . '.jpg';
+
+        try {
+            if (@file_put_contents($inFile, $binaryData) === false) {
+                return null;
+            }
+
+            $commands = [];
+            if ($heifConvert = $finder->find('heif-convert')) {
+                $commands[] = [$heifConvert, '-q', '88', $inFile, $outFile];
+            }
+            if ($magick = $finder->find('magick')) {
+                $commands[] = [$magick, $inFile, '-auto-orient', '-quality', '88', $outFile];
+            }
+            if ($ffmpeg = $finder->find('ffmpeg')) {
+                $commands[] = [$ffmpeg, '-y', '-hide_banner', '-loglevel', 'error', '-i', $inFile, '-frames:v', '1', '-q:v', '3', $outFile];
+            }
+
+            foreach ($commands as $cmd) {
+                @unlink($outFile);
+                $process = new Process($cmd, null, null, null, 15);
+                try {
+                    $process->run();
+                } catch (\Throwable) {
+                    continue;
+                }
+
+                if ($process->isSuccessful() && is_file($outFile) && filesize($outFile) > 2) {
+                    $jpeg = @file_get_contents($outFile);
+                    if (is_string($jpeg) && substr($jpeg, 0, 2) === "\xFF\xD8") {
+                        return $jpeg;
+                    }
+                }
+            }
+        } finally {
+            @unlink($inFile);
+            @unlink($outFile);
+        }
+
+        return null;
     }
 }

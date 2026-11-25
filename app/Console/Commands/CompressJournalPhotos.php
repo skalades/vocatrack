@@ -96,7 +96,16 @@ class CompressJournalPhotos extends Command
                 ));
 
                 if (!$dryRun) {
-                    Storage::disk($disk)->put($path, $result['data']);
+                    $targetPath = $path;
+                    if (!empty($result['extension']) && strtolower($ext) !== strtolower($result['extension'])) {
+                        $targetPath = preg_replace('/\.[^.]+$/', '.' . $result['extension'], $path) ?: ($path . '.' . $result['extension']);
+                    }
+
+                    Storage::disk($disk)->put($targetPath, $result['data']);
+                    if ($targetPath !== $path) {
+                        $photo->update(['photo_path' => $targetPath]);
+                        Storage::disk($disk)->delete($path);
+                    }
 
                     // Rekam pengurangan kuota sekolah
                     $journal = $photo->journal()->withoutGlobalScopes()->first();
