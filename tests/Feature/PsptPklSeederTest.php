@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Company;
 use App\Models\School;
 use App\Models\SchoolClass;
 use App\Models\Student;
@@ -47,5 +48,10 @@ class PsptPklSeederTest extends TestCase
 
         $syahrul = Student::where('nis', '242510643')->firstOrFail();
         $this->assertNull($syahrul->activePkl);
+
+        // Semua DU/DI PSPT default belum mulai PKL dan verifikasi jurnal langsung oleh guru pembimbing
+        $this->assertEquals(18, Company::where('school_id', $school->id)->count());
+        $this->assertEquals(0, Company::where('school_id', $school->id)->where('is_pkl_started', true)->count());
+        $this->assertEquals(0, Company::where('school_id', $school->id)->where('requires_industry_approval', true)->count());
     }
 }

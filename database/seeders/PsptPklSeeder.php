@@ -417,6 +417,8 @@ class PsptPklSeeder extends Seeder
                     'radius_meters' => 150,
                     'override_hours' => false,
                     'work_days' => '5_days',
+                    'requires_industry_approval' => false,
+                    'is_pkl_started' => false,
                 ]
             );
 

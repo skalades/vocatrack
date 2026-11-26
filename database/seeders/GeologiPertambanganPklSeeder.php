@@ -476,6 +476,11 @@ class GeologiPertambanganPklSeeder extends Seeder
             ],
         ];
 
+        $startedCompanies = [
+            'PT. DATEM',
+            'PT. SANGGA BUANA NUSANTARA',
+        ];
+
         $seededCompanies = [];
         $seededSupervisors = [];
 
@@ -495,6 +500,7 @@ class GeologiPertambanganPklSeeder extends Seeder
                     'radius_meters' => 200,
                     'override_hours' => false,
                     'work_days' => '5_days',
+                    'is_pkl_started' => in_array($cd['name'], $startedCompanies, true),
                 ]
             );
 

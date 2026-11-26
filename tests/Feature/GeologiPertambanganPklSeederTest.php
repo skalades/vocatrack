@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Company;
 use App\Models\School;
 use App\Models\SchoolClass;
 use App\Models\Student;
@@ -49,5 +50,13 @@ class GeologiPertambanganPklSeederTest extends TestCase
         $this->assertNull($nazmy->user->wa_number);
         $this->assertEquals('PT. Timah Persero, Tbk.', $nazmy->activePkl->company->name);
         $this->assertEquals('Hj. Aida Maryani S, S.Pd., M.Pd.', $nazmy->activePkl->teacher->user->name);
+
+        // Hanya PT. DATEM dan PT. SANGGA BUANA NUSANTARA yang berstatus sudah mulai PKL
+        $startedNames = Company::where('school_id', $school->id)
+            ->where('is_pkl_started', true)
+            ->orderBy('name')
+            ->pluck('name')
+            ->all();
+        $this->assertSame(['PT. DATEM', 'PT. SANGGA BUANA NUSANTARA'], $startedNames);
     }
 }
