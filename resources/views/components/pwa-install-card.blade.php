@@ -1,0 +1,85 @@
+@props([
+    'cardId' => 'student-pwa-card',
+    'title' => null,
+    'subtitle' => 'Buka lebih cepat dari layar utama & terima notifikasi meski aplikasi ditutup.',
+    'feature1' => 'Jurnal tersimpan offline',
+    'feature2' => 'Notifikasi lock screen',
+    'installButtonText' => 'Pasang Aplikasi di Layar Utama HP',
+    'pushTitle' => 'Notifikasi Background (Web Push)',
+    'pushDescription' => 'Tetap muncul di bar notifikasi & lock screen saat aplikasi ditutup.',
+    'containerClass' => 'mt-3.5',
+])
+
+@php
+    $appName = $systemName ?? 'VokaTrack';
+    $logo = $systemLogo ?? asset('images/logo.png');
+    $resolvedTitle = $title ?? "Aplikasi {$appName} di HP";
+@endphp
+
+<div id="{{ $cardId }}" class="{{ $containerClass }} bg-white rounded-[24px] p-4 sm:p-5 border border-[#0B2B25]/10 shadow-[0_4px_20px_rgba(11,43,37,0.04)] relative overflow-hidden transition-all">
+    <div class="absolute -right-6 -bottom-6 w-28 h-28 rounded-full bg-[#C6F26B]/15 pointer-events-none blur-xl" aria-hidden="true"></div>
+
+    <div class="relative z-10 flex flex-col gap-3">
+        <div class="flex items-start gap-3">
+            <div class="w-11 h-11 rounded-2xl bg-[#0B2B25]/5 border border-[#0B2B25]/10 p-1.5 flex items-center justify-center shrink-0">
+                <img src="{{ $logo }}" alt="{{ $appName }} Logo" class="w-full h-full object-contain">
+            </div>
+            <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2">
+                    <h3 class="font-bold text-sm text-[#10211D] truncate">{{ $resolvedTitle }}</h3>
+                    <span id="pwa-card-badge" class="bg-[#C6F26B]/50 text-[#0B2B25] text-[10px] font-extrabold px-2 py-0.5 rounded-full shrink-0">
+                        PWA Ready
+                    </span>
+                </div>
+                <p class="text-xs text-[#5A6B65] mt-0.5 leading-snug">{{ $subtitle }}</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 pt-1 text-[11px] font-semibold text-[#0B2B25]/80">
+            <div class="flex items-center gap-1.5 bg-[#F1F4EC] rounded-xl px-2.5 py-1.5 border border-[#0B2B25]/5">
+                <svg class="w-3.5 h-3.5 text-[#0F7A66] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                <span class="truncate">{{ $feature1 }}</span>
+            </div>
+            <div class="flex items-center gap-1.5 bg-[#F1F4EC] rounded-xl px-2.5 py-1.5 border border-[#0B2B25]/5">
+                <svg class="w-3.5 h-3.5 text-[#0F7A66] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+                <span class="truncate">{{ $feature2 }}</span>
+            </div>
+        </div>
+
+        <div id="pwa-card-action" class="pt-1">
+            <button type="button"
+                    id="btn-install-pwa-card"
+                    onclick="if(window.VokaTrackPwa?.promptInstall){window.VokaTrackPwa.promptInstall()}else{location.reload()}"
+                    class="w-full h-11 rounded-2xl bg-[#0B2B25] hover:bg-[#12382F] active:scale-[0.98] text-[#C6F26B] font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer">
+                <svg class="w-4 h-4 stroke-[2.2]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                </svg>
+                <span>{{ $installButtonText }}</span>
+            </button>
+        </div>
+
+        <div id="pwa-push-section" class="pt-2 border-t border-[#0B2B25]/8 space-y-2">
+            <div class="flex items-center justify-between gap-2">
+                <div class="min-w-0">
+                    <p class="text-xs font-bold text-[#10211D]">{{ $pushTitle }}</p>
+                    <p id="pwa-push-desc" class="text-[11px] text-[#5A6B65] leading-snug">{{ $pushDescription }}</p>
+                </div>
+                <span id="pwa-push-badge" class="bg-slate-100 text-slate-600 text-[10px] font-extrabold px-2 py-0.5 rounded-full shrink-0">
+                    Memeriksa...
+                </span>
+            </div>
+
+            <div id="pwa-push-actions" class="flex items-center gap-2">
+                <button type="button"
+                        id="btn-enable-push"
+                        onclick="window.VokaTrackPwa?.enableNotifications()"
+                        class="flex-1 h-10 rounded-xl bg-[#0F7A66] hover:bg-[#0B5E4E] active:scale-[0.98] text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                    </svg>
+                    <span>Aktifkan Notifikasi</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

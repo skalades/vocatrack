@@ -45,9 +45,9 @@ use Illuminate\Support\Facades\Route;
 // Guest Routes
 Route::get('/', [LandingController::class, 'index'])->name('landing');
 
-// PWA Web Manifest (Disajikan statis dengan cache efisien, di-generate saat pengaturan berubah)
-Route::get('/manifest.webmanifest', function () {
-    $path = public_path('manifest.webmanifest');
+// PWA Web Manifests (Siswa & Guru — di-generate saat pengaturan berubah)
+$servePwaManifest = function (string $filename) {
+    $path = public_path($filename);
     if (!file_exists($path)) {
         \App\Models\PlatformSetting::syncPwaManifest();
     }
@@ -56,7 +56,10 @@ Route::get('/manifest.webmanifest', function () {
         'Content-Type' => 'application/manifest+json; charset=utf-8',
         'Cache-Control' => 'public, max-age=86400, stale-while-revalidate=3600',
     ]);
-})->name('pwa.manifest');
+};
+
+Route::get('/manifest.webmanifest', fn () => $servePwaManifest('manifest.webmanifest'))->name('pwa.manifest');
+Route::get('/manifest-guru.webmanifest', fn () => $servePwaManifest('manifest-guru.webmanifest'))->name('pwa.manifest.teacher');
 
 Route::get('/csrf-token', function () {
     return response()->json(['token' => csrf_token()])

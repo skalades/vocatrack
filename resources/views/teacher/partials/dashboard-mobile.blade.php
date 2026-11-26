@@ -182,4 +182,7 @@
             </a>
         </section>
 
+        <!-- 7. PWA GURU & NOTIFIKASI WEB PUSH -->
+        <x-teacher.pwa-card />
+
 </div>

@@ -133,8 +133,8 @@ class PlatformSetting extends Model
     }
 
     /**
-     * Sinkronkan manifest PWA (manifest.webmanifest) dengan logo dan nama platform sistem.
-     * Bila superadmin telah mengunggah logo kustom, gunakan logo tersebut.
+     * Sinkronkan manifest PWA siswa (manifest.webmanifest) dan guru (manifest-guru.webmanifest)
+     * dengan logo dan nama platform sistem.
      */
     public static function syncPwaManifest(): void
     {
@@ -147,36 +147,55 @@ class PlatformSetting extends Model
             $appName = static::get('platform_name', 'VokaTrack');
             $description = static::get('platform_tagline', 'Presensi selfie, jurnal harian, dan laporan PKL untuk siswa SMK.');
 
-            $manifest = [
+            $studentManifest = static::buildPwaManifest($appName, $manifestLogo, [
                 'id' => '/siswa/beranda',
                 'name' => "{$appName} Siswa — Presensi & Jurnal PKL",
                 'short_name' => $appName,
                 'description' => $description,
-                'lang' => 'id',
                 'start_url' => '/siswa/beranda?source=pwa',
-                'scope' => '/',
-                'display' => 'standalone',
-                'orientation' => 'portrait',
-                'background_color' => '#F1F4EC',
-                'theme_color' => '#0B2B25',
-                'categories' => ['education', 'productivity'],
-                'icons' => [
-                    ['src' => $manifestLogo, 'sizes' => '192x192', 'type' => 'image/png', 'purpose' => 'any'],
-                    ['src' => $manifestLogo, 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'any'],
-                    ['src' => $manifestLogo, 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'maskable'],
-                    ['src' => '/icons/icon-192.png', 'sizes' => '192x192', 'type' => 'image/png', 'purpose' => 'any'],
-                    ['src' => '/icons/icon-512.png', 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'any'],
-                ],
                 'shortcuts' => [
                     ['name' => 'Presensi', 'url' => '/siswa/absensi', 'icons' => [['src' => $manifestLogo, 'sizes' => '192x192']]],
                     ['name' => 'Jurnal Harian', 'url' => '/siswa/jurnal', 'icons' => [['src' => $manifestLogo, 'sizes' => '192x192']]],
                 ],
-            ];
+            ]);
 
-            $manifestPath = public_path('manifest.webmanifest');
-            @file_put_contents($manifestPath, json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+            $teacherManifest = static::buildPwaManifest($appName, $manifestLogo, [
+                'id' => '/guru/dashboard',
+                'name' => "{$appName} Guru — Pembimbing PKL",
+                'short_name' => "{$appName} Guru",
+                'description' => 'Monitoring presensi real-time, verifikasi jurnal, supervisi, dan penilaian PKL untuk guru pembimbing.',
+                'start_url' => '/guru/dashboard?source=pwa',
+                'shortcuts' => [
+                    ['name' => 'Monitoring Siswa', 'url' => '/guru/monitoring', 'icons' => [['src' => $manifestLogo, 'sizes' => '192x192']]],
+                    ['name' => 'Verifikasi Jurnal', 'url' => '/guru/journals', 'icons' => [['src' => $manifestLogo, 'sizes' => '192x192']]],
+                    ['name' => 'Izin & Sakit', 'url' => '/guru/requests', 'icons' => [['src' => $manifestLogo, 'sizes' => '192x192']]],
+                ],
+            ]);
+
+            @file_put_contents(public_path('manifest.webmanifest'), json_encode($studentManifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+            @file_put_contents(public_path('manifest-guru.webmanifest'), json_encode($teacherManifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::warning('PlatformSetting: Gagal sinkronisasi PWA manifest: ' . $e->getMessage());
         }
+    }
+
+    protected static function buildPwaManifest(string $appName, string $manifestLogo, array $overrides): array
+    {
+        return array_merge([
+            'lang' => 'id',
+            'scope' => '/',
+            'display' => 'standalone',
+            'orientation' => 'portrait',
+            'background_color' => '#F1F4EC',
+            'theme_color' => '#0B2B25',
+            'categories' => ['education', 'productivity'],
+            'icons' => [
+                ['src' => $manifestLogo, 'sizes' => '192x192', 'type' => 'image/png', 'purpose' => 'any'],
+                ['src' => $manifestLogo, 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'any'],
+                ['src' => $manifestLogo, 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'maskable'],
+                ['src' => '/icons/icon-192.png', 'sizes' => '192x192', 'type' => 'image/png', 'purpose' => 'any'],
+                ['src' => '/icons/icon-512.png', 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'any'],
+            ],
+        ], $overrides);
     }
 }

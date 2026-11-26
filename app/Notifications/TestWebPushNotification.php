@@ -18,12 +18,16 @@ class TestWebPushNotification extends Notification
 
     public function toWebPush(object $notifiable, object $notification): WebPushMessage
     {
+        $url = ($notifiable->role ?? null) === 'guru-pembimbing'
+            ? '/guru/dashboard'
+            : '/siswa/beranda';
+
         return $this->buildWebPushMessage(
             title: 'Notifikasi VokaTrack Aktif',
-            body: 'Perangkat Anda siap menerima pembaruan jurnal, status izin, dan pengumuman PKL meski aplikasi ditutup.',
-            url: '/siswa/beranda',
+            body: 'Perangkat Anda siap menerima pembaruan penting secara langsung meski aplikasi ditutup.',
+            url: $url,
             tag: 'vokatrack-push-test',
-            actionTitle: 'Buka Beranda'
+            actionTitle: 'Buka Aplikasi'
         );
     }
 }

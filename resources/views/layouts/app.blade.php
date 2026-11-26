@@ -13,18 +13,41 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', (View::hasSection('page_title') ? View::yieldContent('page_title') . ' — ' . ($systemName ?? 'VokaTrack') : ($title ?? ($systemName ?? 'VokaTrack') . ' — Platform PKL SMK Terpadu')))</title>
     <link rel="icon" type="image/png" href="{{ $systemLogo ?? asset('images/logo.png') }}">
+    @if($currentRole === 'guru-pembimbing')
+        <link rel="manifest" href="/manifest-guru.webmanifest?v={{ substr(md5($systemLogo ?? 'v1'), 0, 8) }}">
+        <meta name="theme-color" content="#0B2B25">
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+        <meta name="apple-mobile-web-app-title" content="{{ $systemName ?? 'VokaTrack' }} Guru">
+        <link rel="apple-touch-icon" href="{{ $systemLogo ?? asset('icons/apple-touch-icon.png') }}">
+    @endif
     
     <!-- Google Fonts: Plus Jakarta Sans -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
     
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @if($currentRole === 'guru-pembimbing')
+        @vite(['resources/css/app.css', 'resources/js/app.js', 'resources/js/teacher-pwa.js'])
+    @else
+        @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @endif
     <style>
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
     </style>
 </head>
-<body data-app="{{ $appKey }}" class="h-full antialiased text-slate-800 bg-slate-50 {{ $isForestTheme ? 'selection:bg-[#C6F26B] selection:text-[#0B2B25]' : 'selection:bg-indigo-600 selection:text-white' }}">
+<body data-app="{{ $appKey }}"
+      @if($currentRole === 'guru-pembimbing')
+          data-user-id="{{ auth()->id() }}"
+          data-app-logo="{{ $systemLogo ?? asset('images/logo.png') }}"
+          data-app-name="{{ $systemName ?? 'VokaTrack' }}"
+          data-vapid-public-key="{{ config('webpush.vapid.public_key') }}"
+          data-push-subscribe-url="{{ route('push-subscriptions.store') }}"
+          data-push-unsubscribe-url="{{ route('push-subscriptions.destroy') }}"
+          data-push-test-url="{{ route('push-subscriptions.test') }}"
+      @endif
+      class="h-full antialiased text-slate-800 bg-slate-50 {{ $isForestTheme ? 'selection:bg-[#C6F26B] selection:text-[#0B2B25]' : 'selection:bg-indigo-600 selection:text-white' }}">
     <div class="min-h-full flex flex-col lg:flex-row">
 
         <!-- Mobile Drawer Backdrop -->

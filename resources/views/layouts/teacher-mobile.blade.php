@@ -8,7 +8,7 @@
     <link rel="icon" type="image/png" href="{{ $systemLogo ?? asset('images/logo.png') }}">
 
     <!-- PWA Settings for Teacher Mobile -->
-    <link rel="manifest" href="/manifest.webmanifest?v={{ substr(md5($systemLogo ?? 'v1'), 0, 8) }}">
+    <link rel="manifest" href="/manifest-guru.webmanifest?v={{ substr(md5($systemLogo ?? 'v1'), 0, 8) }}">
     <meta name="theme-color" content="#0B2B25">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -21,7 +21,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
     
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @vite(['resources/css/app.css', 'resources/js/app.js', 'resources/js/teacher-pwa.js'])
     <style>
         body { font-family: 'Plus Jakarta Sans', system-ui, sans-serif; }
         .font-space { font-family: 'Space Grotesk', system-ui, sans-serif; }
@@ -46,6 +46,10 @@
       data-user-id="{{ auth()->id() }}"
       data-app-logo="{{ $systemLogo ?? asset('images/logo.png') }}"
       data-app-name="{{ $systemName ?? 'VokaTrack' }}"
+      data-vapid-public-key="{{ config('webpush.vapid.public_key') }}"
+      data-push-subscribe-url="{{ route('push-subscriptions.store') }}"
+      data-push-unsubscribe-url="{{ route('push-subscriptions.destroy') }}"
+      data-push-test-url="{{ route('push-subscriptions.test') }}"
       data-app-timezone="{{ config('app.timezone') }}"
       class="min-h-screen bg-slate-200/90 antialiased selection:bg-[#C6F26B] selection:text-[#0B2B25] flex justify-center">
 
@@ -127,6 +131,7 @@
     <x-image-lightbox />
     <x-change-password-modal />
     <x-whatsapp-contact-modal />
+    <x-student.app-dialog />
 
     <script>
         document.addEventListener('keydown', function(e) {

@@ -819,6 +819,9 @@
                     <p class="text-[11px] text-slate-500">Belum ada pengumuman aktif. <a href="{{ route('guru.announcements') }}" class="font-bold text-[#12382F] hover:underline">Tulis pengumuman</a></p>
                 @endforelse
             </section>
+
+            {{-- PWA & Notifikasi Web Push Guru --}}
+            <x-teacher.pwa-card />
         </aside>
     </div>
 </div>

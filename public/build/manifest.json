@@ -4,8 +4,12 @@
     "name": "heic2any",
     "isDynamicEntry": true
   },
+  "_pwa-core-D1i0F0s0.js": {
+    "file": "assets/pwa-core-D1i0F0s0.js",
+    "name": "pwa-core"
+  },
   "resources/css/app.css": {
-    "file": "assets/app-BmmSNhF7.css",
+    "file": "assets/app-nARyq1kc.css",
     "src": "resources/css/app.css",
     "isEntry": true,
     "name": "app",
@@ -23,9 +27,21 @@
     ]
   },
   "resources/js/student-pwa.js": {
-    "file": "assets/student-pwa-B1JieB1q.js",
+    "file": "assets/student-pwa-C94jp6gW.js",
     "name": "student-pwa",
     "src": "resources/js/student-pwa.js",
-    "isEntry": true
+    "isEntry": true,
+    "imports": [
+      "_pwa-core-D1i0F0s0.js"
+    ]
+  },
+  "resources/js/teacher-pwa.js": {
+    "file": "assets/teacher-pwa-tqkym72N.js",
+    "name": "teacher-pwa",
+    "src": "resources/js/teacher-pwa.js",
+    "isEntry": true,
+    "imports": [
+      "_pwa-core-D1i0F0s0.js"
+    ]
   }
 }

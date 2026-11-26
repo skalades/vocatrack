@@ -42,7 +42,7 @@ class SyncPwaBranding extends Command
 
         PlatformSetting::syncPwaManifest();
 
-        $this->info("✓ Manifest PWA (public/manifest.webmanifest) berhasil disinkronkan.");
+        $this->info("✓ Manifest PWA Siswa (public/manifest.webmanifest) & Guru (public/manifest-guru.webmanifest) berhasil disinkronkan.");
 
         return self::SUCCESS;
     }

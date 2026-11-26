@@ -4,8 +4,10 @@ namespace App\Notifications;
 
 use App\Channels\WhatsAppChannel;
 use App\Models\IncidentReport;
+use App\Notifications\Concerns\SendsWebPush;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
+use NotificationChannels\WebPush\WebPushMessage;
 
 /**
  * Notifikasi darurat SOS — TIDAK di-queue agar terkirim langsung (real-time).
@@ -13,6 +15,7 @@ use Illuminate\Notifications\Notification;
  */
 class EmergencyIncidentReportedNotification extends Notification
 {
+    use SendsWebPush;
 
     public function __construct(
         public IncidentReport $incidentReport
@@ -23,11 +26,26 @@ class EmergencyIncidentReportedNotification extends Notification
         // Notifikasi darurat SOS: pesan WhatsApp dikhususkan HANYA untuk Guru Pembimbing
         // Admin sekolah menerima notifikasi in-app database, kecuali jika bertindak sebagai fallback darurat
         $role = $notifiable->role ?? null;
-        if ($role === 'guru-pembimbing' || !empty($notifiable->is_emergency_fallback)) {
-            return ['database', WhatsAppChannel::class];
-        }
+        $channels = ($role === 'guru-pembimbing' || !empty($notifiable->is_emergency_fallback))
+            ? ['database', WhatsAppChannel::class]
+            : ['database'];
 
-        return ['database'];
+        return $this->appendWebPushChannel($channels, $notifiable, 'emergency_incident');
+    }
+
+    public function toWebPush(object $notifiable, object $notification): WebPushMessage
+    {
+        $payload = $this->toArray($notifiable);
+        $isAdmin = ($notifiable->role ?? null) === 'admin-sekolah';
+
+        return $this->buildWebPushMessage(
+            title: $payload['title'],
+            body: $payload['message'],
+            url: $isAdmin ? '/admin-sekolah/incidents' : '/guru/incidents?incident_id=' . $this->incidentReport->id,
+            tag: 'sos-incident-' . $this->incidentReport->id,
+            actionTitle: 'Tinjau SOS',
+            requireInteraction: true
+        );
     }
 
     public function getNotificationType(): string

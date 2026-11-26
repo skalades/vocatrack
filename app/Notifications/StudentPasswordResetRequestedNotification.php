@@ -5,14 +5,16 @@ namespace App\Notifications;
 use App\Channels\WhatsAppChannel;
 use App\Models\Student;
 use App\Models\StudentPasswordResetRequest;
+use App\Notifications\Concerns\SendsWebPush;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
+use NotificationChannels\WebPush\WebPushMessage;
 
 class StudentPasswordResetRequestedNotification extends Notification implements ShouldQueue
 {
-    use Queueable;
+    use Queueable, SendsWebPush;
 
     public function __construct(
         public Student $student,
@@ -31,7 +33,21 @@ class StudentPasswordResetRequestedNotification extends Notification implements 
             $channels[] = WhatsAppChannel::class;
         }
 
-        return $channels;
+        return $this->appendWebPushChannel($channels, $notifiable, 'password_reset_request');
+    }
+
+    public function toWebPush(object $notifiable, object $notification): WebPushMessage
+    {
+        $payload = $this->toArray($notifiable);
+        $nisn = $this->student->nisn ?? '';
+
+        return $this->buildWebPushMessage(
+            title: $payload['title'],
+            body: $payload['message'],
+            url: '/guru/monitoring' . ($nisn ? '?q=' . urlencode($nisn) : ''),
+            tag: 'pw-reset-' . $this->resetRequest->id,
+            actionTitle: 'Buka Monitoring'
+        );
     }
 
     public function getNotificationType(): string

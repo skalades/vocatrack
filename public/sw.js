@@ -13,7 +13,7 @@
  *
  * Naikkan VERSION setiap kali isi berkas ini atau daftar PRECACHE berubah.
  */
-const VERSION = 'v2';
+const VERSION = 'v3';
 const STATIC_CACHE = `vt-static-${VERSION}`;
 const PAGES_CACHE = `vt-pages-${VERSION}`;
 const FONTS_CACHE = `vt-fonts-${VERSION}`;
@@ -23,6 +23,7 @@ const NETWORK_TIMEOUT_MS = 6000;
 const PRECACHE = [
     OFFLINE_URL,
     '/manifest.webmanifest',
+    '/manifest-guru.webmanifest',
     '/icons/icon-192.png',
     '/icons/icon-512.png',
     '/icons/apple-touch-icon.png',

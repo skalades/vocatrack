@@ -1,10 +1,5 @@
 {
-    "id": "/siswa/beranda",
-    "name": "VokaTrack Siswa \u2014 Presensi & Jurnal PKL",
-    "short_name": "VokaTrack",
-    "description": "Presensi selfie, jurnal harian, dan laporan PKL untuk siswa SMK.",
     "lang": "id",
-    "start_url": "/siswa/beranda?source=pwa",
     "scope": "/",
     "display": "standalone",
     "orientation": "portrait",
@@ -46,6 +41,11 @@
             "purpose": "any"
         }
     ],
+    "id": "/siswa/beranda",
+    "name": "VokaTrack Siswa \u2014 Presensi & Jurnal PKL",
+    "short_name": "VokaTrack",
+    "description": "Enterprise Cloud",
+    "start_url": "/siswa/beranda?source=pwa",
     "shortcuts": [
         {
             "name": "Presensi",

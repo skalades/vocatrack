@@ -1,0 +1,81 @@
+{
+    "lang": "id",
+    "scope": "/",
+    "display": "standalone",
+    "orientation": "portrait",
+    "background_color": "#F1F4EC",
+    "theme_color": "#0B2B25",
+    "categories": [
+        "education",
+        "productivity"
+    ],
+    "icons": [
+        {
+            "src": "/images/logo.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/images/logo.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/images/logo.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "/icons/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/icons/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+        }
+    ],
+    "id": "/guru/dashboard",
+    "name": "VokaTrack Guru \u2014 Pembimbing PKL",
+    "short_name": "VokaTrack Guru",
+    "description": "Monitoring presensi real-time, verifikasi jurnal, supervisi, dan penilaian PKL untuk guru pembimbing.",
+    "start_url": "/guru/dashboard?source=pwa",
+    "shortcuts": [
+        {
+            "name": "Monitoring Siswa",
+            "url": "/guru/monitoring",
+            "icons": [
+                {
+                    "src": "/images/logo.png",
+                    "sizes": "192x192"
+                }
+            ]
+        },
+        {
+            "name": "Verifikasi Jurnal",
+            "url": "/guru/journals",
+            "icons": [
+                {
+                    "src": "/images/logo.png",
+                    "sizes": "192x192"
+                }
+            ]
+        },
+        {
+            "name": "Izin & Sakit",
+            "url": "/guru/requests",
+            "icons": [
+                {
+                    "src": "/images/logo.png",
+                    "sizes": "192x192"
+                }
+            ]
+        }
+    ]
+}
