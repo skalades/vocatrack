@@ -35,9 +35,12 @@ class DatabaseSeeder extends Seeder
             Smkn4BombanaSeeder::class,
         ];
 
-        // Seeder Geologi Pertambangan opsional jika berkas ada di environment lokal/server
+        // Seeder Geologi Pertambangan & Teknik Audio Video opsional jika berkas ada di environment lokal/server
         if (class_exists(\Database\Seeders\GeologiPertambanganPklSeeder::class)) {
             array_splice($seeders, 3, 0, [\Database\Seeders\GeologiPertambanganPklSeeder::class]);
+        }
+        if (class_exists(\Database\Seeders\TeknikAudioVideoPklSeeder::class)) {
+            array_splice($seeders, 4, 0, [\Database\Seeders\TeknikAudioVideoPklSeeder::class]);
         }
 
         $this->call($seeders);
