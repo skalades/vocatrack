@@ -78,7 +78,7 @@
                     <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                     </div>
-                    <input type="text" name="search" value="{{ request('search') }}" placeholder="Cari siswa, NISN, atau DU/DI..." 
+                    <input type="text" name="search" value="{{ request('search') }}" placeholder="Cari siswa, NISN/NIS, guru, atau DU/DI..." 
                            class="w-full text-xs font-semibold pl-9.5 pr-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600">
                 </div>
 
@@ -112,7 +112,10 @@
 
                 <!-- Teacher Filter -->
                 <div class="sm:col-span-1 lg:col-span-2">
-                    <select name="teacher_id" onchange="this.form.submit()" 
+                    <select name="teacher_id" onchange="this.form.submit()"
+                            data-searchable-select
+                            data-search-placeholder="Cari nama guru atau NIP..."
+                            data-dropdown-min-width="260px"
                             class="w-full text-xs font-semibold px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600">
                         <option value="all" {{ request('teacher_id', 'all') === 'all' ? 'selected' : '' }}>Semua Guru</option>
                         @foreach($teachers as $tc)
@@ -149,6 +152,12 @@
                         @php $activeComp = $companies->firstWhere('id', request('company_id')); @endphp
                         <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 font-bold border border-indigo-200/60">
                             DU/DI: {{ Str::limit($activeComp?->name ?? request('company_id'), 18) }}
+                        </span>
+                    @endif
+                    @if(request('teacher_id') && request('teacher_id') !== 'all')
+                        @php $activeTeacher = $teachers->firstWhere('id', request('teacher_id')); @endphp
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 font-bold border border-indigo-200/60">
+                            Guru: {{ Str::limit($activeTeacher?->user?->name ?? request('teacher_id'), 22) }}
                         </span>
                     @endif
                     @if(request('status') && request('status') !== 'all')
@@ -544,7 +553,9 @@
             <!-- Guru Pembimbing Sekolah -->
             <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1.5">Guru Pembimbing Sekolah</label>
-                <select name="teacher_id" required 
+                <select name="teacher_id" required
+                        data-searchable-select
+                        data-search-placeholder="Cari nama guru atau NIP..."
                         class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium text-slate-900">
                     @foreach($teachers as $tc)
                         <option value="{{ $tc->id }}">{{ $tc->user->name }} (NIP: {{ $tc->nip ?? '-' }})</option>
@@ -600,7 +611,9 @@
             <!-- Guru Pembimbing Sekolah -->
             <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1.5">Guru Pembimbing Sekolah</label>
-                <select name="teacher_id" id="edit-plot-teacher-id" required 
+                <select name="teacher_id" id="edit-plot-teacher-id" required
+                        data-searchable-select
+                        data-search-placeholder="Cari nama guru atau NIP..."
                         class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium text-slate-900">
                     @foreach($teachers as $tc)
                         <option value="{{ $tc->id }}">{{ $tc->user->name }} (NIP: {{ $tc->nip ?? '-' }})</option>

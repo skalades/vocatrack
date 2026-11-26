@@ -14,14 +14,14 @@
 
     <!-- Filter Bar -->
     <x-card>
-        <form method="GET" action="{{ route('kajur.students') }}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            <div class="relative sm:col-span-2">
-                <input type="text" name="search" value="{{ request('search') }}" placeholder="Cari nama siswa, NISN, atau NIS..." 
+        <form method="GET" action="{{ route('kajur.students') }}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3">
+            <div class="relative sm:col-span-2 lg:col-span-4">
+                <input type="text" name="search" value="{{ request('search') }}" placeholder="Cari siswa, NISN/NIS, DU/DI, atau guru pembimbing..." 
                        class="w-full pl-9 pr-4 py-2.5 text-xs sm:text-sm rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 font-medium text-slate-900">
                 <svg class="w-4 h-4 text-slate-400 absolute left-3 top-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
             </div>
 
-            <div>
+            <div class="lg:col-span-2">
                 <select name="class_id" class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 font-medium text-slate-900">
                     <option value="">-- Semua Rombel Kelas --</option>
                     @foreach($classes as $c)
@@ -32,7 +32,23 @@
                 </select>
             </div>
 
-            <div class="flex items-center gap-2">
+            <div class="lg:col-span-3">
+                <select name="teacher_id"
+                        data-searchable-select
+                        data-searchable-variant="emerald"
+                        data-search-placeholder="Cari nama guru pembimbing..."
+                        data-dropdown-min-width="260px"
+                        class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 font-medium text-slate-900">
+                    <option value="all" {{ request('teacher_id', 'all') === 'all' ? 'selected' : '' }}>-- Semua Guru Pembimbing --</option>
+                    @foreach($teachers as $t)
+                        <option value="{{ $t->id }}" {{ request('teacher_id') == $t->id ? 'selected' : '' }}>
+                            {{ $t->user->name }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div class="sm:col-span-2 lg:col-span-3 flex items-center gap-2">
                 <select name="status" class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 font-medium text-slate-900">
                     <option value="">-- Semua Status --</option>
                     <option value="plotted" {{ request('status') === 'plotted' ? 'selected' : '' }}>Sudah Terplotting</option>
@@ -41,6 +57,11 @@
                 <x-button type="submit" variant="primary" size="md">
                     Filter
                 </x-button>
+                @if(request()->filled('search') || request()->filled('class_id') || request()->filled('status') || (request()->filled('teacher_id') && request('teacher_id') !== 'all'))
+                    <a href="{{ route('kajur.students') }}" class="px-3 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold transition-colors shrink-0">
+                        Reset
+                    </a>
+                @endif
             </div>
         </form>
     </x-card>
@@ -165,7 +186,10 @@
 
             <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1.5">Pilih Guru Pembimbing</label>
-                <select id="assign-teacher-id" name="teacher_id" required 
+                <select id="assign-teacher-id" name="teacher_id" required
+                        data-searchable-select
+                        data-searchable-variant="emerald"
+                        data-search-placeholder="Cari nama guru atau NIP..."
                         class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 font-medium text-slate-900">
                     <option value="">-- Pilih Guru Pembimbing --</option>
                     @foreach($teachers as $t)

@@ -27,7 +27,9 @@ class AcademicController extends BaseAdminSekolahController
             ->get();
         $teachers = Teacher::whereHas('user', fn($q) => $q->where('school_id', $schoolId)->where('is_active', true))
             ->with('user')
-            ->get();
+            ->get()
+            ->sortBy(fn($t) => mb_strtolower($t->user->name ?? ''))
+            ->values();
 
         return view('adminsekolah.majors', compact('majors', 'classes', 'teachers'));
     }

@@ -35,7 +35,8 @@ class CompanyController extends BaseAdminSekolahController
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
                   ->orWhere('contact_person', 'like', "%{$search}%")
-                  ->orWhere('address', 'like', "%{$search}%");
+                  ->orWhere('address', 'like', "%{$search}%")
+                  ->orWhereHas('studentPkls.teacher.user', fn($tq) => $tq->where('name', 'like', "%{$search}%"));
             });
         }
 

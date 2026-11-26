@@ -38,7 +38,8 @@ class StudentController extends BaseAdminSekolahController
                 $q->whereHas('user', fn($uq) => $uq->where('name', 'like', "%{$search}%")->orWhere('email', 'like', "%{$search}%"))
                   ->orWhere('nisn', 'like', "%{$search}%")
                   ->orWhere('nis', 'like', "%{$search}%")
-                  ->orWhereHas('class', fn($cq) => $cq->where('name', 'like', "%{$search}%"));
+                  ->orWhereHas('class', fn($cq) => $cq->where('name', 'like', "%{$search}%"))
+                  ->orWhereHas('activePkl.teacher.user', fn($tq) => $tq->where('name', 'like', "%{$search}%"));
             });
         }
 

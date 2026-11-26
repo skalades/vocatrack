@@ -143,7 +143,7 @@ abstract class BaseCsvMajorPklSeeder extends Seeder
      */
     public static function parseCoordinate(string $raw, bool $isLatitude): ?float
     {
-        $trimmed = ltrim(trim(str_replace(["\xc2\xa0", "\xa0", ' '], '', $raw)), "'");
+        $trimmed = rtrim(ltrim(trim(str_replace(["\xc2\xa0", "\xa0", ' '], '', $raw)), "'"), ',');
         if ($trimmed === '') {
             return null;
         }
@@ -161,10 +161,18 @@ abstract class BaseCsvMajorPklSeeder extends Seeder
         }
 
         $value = ((float) $digitsOnly) / 1_000_000;
+        $unsigned = ltrim($digitsOnly, '-');
+
+        // Pulihkan lintang Indonesia (-11..6) jika titik desimal hilang (misal: "-7099162415677000" -> -7.09916242)
+        if ($isLatitude && abs($value) > 90.0) {
+            $intDigits = str_starts_with($unsigned, '1') ? 2 : 1;
+            if (strlen($unsigned) > $intDigits) {
+                $value = ((float) $digitsOnly) / (10 ** (strlen($unsigned) - $intDigits));
+            }
+        }
 
         // Pulihkan bujur Indonesia (95..141) jika nol di belakang terpotong Excel sebelum pemisahan desimal (misal: "1078696" -> 107.8696)
         if (!$isLatitude && $value > 0 && $value < 90.0) {
-            $unsigned = ltrim($digitsOnly, '-');
             $intDigits = str_starts_with($unsigned, '1') ? 3 : 2;
             if (strlen($unsigned) > $intDigits) {
                 $value = ((float) $digitsOnly) / (10 ** (strlen($unsigned) - $intDigits));

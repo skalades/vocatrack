@@ -441,6 +441,200 @@
                 localStorage.setItem('dismissed_broadcast_' + id, '1');
             }
         }
+
+        // Global Searchable Select Enhancer for <select data-searchable-select>
+        (function () {
+            const protoDesc = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value');
+
+            function enhanceSelect(select) {
+                if (!select || select.dataset.searchableInit === '1') return;
+                select.dataset.searchableInit = '1';
+
+                const variant = select.getAttribute('data-searchable-variant') === 'emerald' ? 'emerald' : 'indigo';
+                const focusRing = variant === 'emerald'
+                    ? 'focus:ring-emerald-500/20 focus:border-emerald-600'
+                    : 'focus:ring-indigo-500/20 focus:border-indigo-600';
+                const activeItemClass = variant === 'emerald'
+                    ? 'bg-emerald-50 text-emerald-800 font-bold'
+                    : 'bg-indigo-50 text-indigo-700 font-bold';
+
+                const wrapper = document.createElement('div');
+                wrapper.className = 'relative w-full';
+                wrapper.setAttribute('data-searchable-wrapper', '1');
+                select.parentNode.insertBefore(wrapper, select);
+                wrapper.appendChild(select);
+
+                select.classList.add('sr-only');
+                select.tabIndex = -1;
+
+                const trigger = document.createElement('button');
+                trigger.type = 'button';
+                trigger.className = `w-full text-xs font-semibold px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 flex items-center justify-between gap-2 text-left cursor-pointer hover:bg-white focus:bg-white focus:outline-none focus:ring-2 ${focusRing} transition-all`;
+
+                const labelSpan = document.createElement('span');
+                labelSpan.className = 'truncate flex-1';
+                const chevron = document.createElement('span');
+                chevron.className = 'shrink-0 text-slate-400';
+                chevron.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>';
+                trigger.appendChild(labelSpan);
+                trigger.appendChild(chevron);
+
+                const panel = document.createElement('div');
+                panel.className = 'hidden absolute left-0 z-50 mt-1.5 w-full bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden';
+                panel.setAttribute('data-searchable-panel', '1');
+                const minWidth = select.getAttribute('data-dropdown-min-width');
+                if (minWidth) {
+                    panel.style.minWidth = minWidth;
+                }
+
+                const searchWrap = document.createElement('div');
+                searchWrap.className = 'p-2 border-b border-slate-100 bg-slate-50/80';
+                const searchInner = document.createElement('div');
+                searchInner.className = 'relative';
+                searchInner.innerHTML = '<svg class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>';
+
+                const searchInput = document.createElement('input');
+                searchInput.type = 'text';
+                searchInput.autocomplete = 'off';
+                searchInput.placeholder = select.getAttribute('data-search-placeholder') || 'Cari...';
+                searchInput.className = `w-full text-xs font-medium pl-8 pr-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 ${focusRing}`;
+                searchInner.appendChild(searchInput);
+                searchWrap.appendChild(searchInner);
+
+                const listEl = document.createElement('div');
+                listEl.className = 'max-h-56 overflow-y-auto py-1 divide-y divide-slate-50';
+
+                panel.appendChild(searchWrap);
+                panel.appendChild(listEl);
+                wrapper.appendChild(trigger);
+                wrapper.appendChild(panel);
+
+                function syncLabel() {
+                    const idx = select.selectedIndex;
+                    const opt = idx >= 0 ? select.options[idx] : select.options[0];
+                    labelSpan.textContent = opt ? opt.textContent.trim() : (select.getAttribute('data-search-placeholder') || 'Pilih...');
+                }
+
+                function renderList(term) {
+                    const q = (term || '').trim().toLowerCase();
+                    listEl.innerHTML = '';
+                    const opts = Array.from(select.options).filter(o => o.style.display !== 'none');
+                    const matches = opts.filter(o => !q || o.textContent.toLowerCase().includes(q));
+
+                    if (matches.length === 0) {
+                        const empty = document.createElement('div');
+                        empty.className = 'px-3.5 py-3 text-[11px] text-slate-400 italic text-center';
+                        empty.textContent = 'Tidak ada data yang cocok';
+                        listEl.appendChild(empty);
+                        return;
+                    }
+
+                    matches.forEach(opt => {
+                        const item = document.createElement('button');
+                        item.type = 'button';
+                        const isSelected = opt.value === select.value;
+                        item.className = `w-full text-left px-3 py-2 text-xs transition-colors flex items-center justify-between gap-2 ${
+                            opt.disabled
+                                ? 'text-slate-400 cursor-not-allowed bg-slate-50/50'
+                                : (isSelected ? activeItemClass + ' cursor-pointer' : 'text-slate-700 hover:bg-slate-50 font-medium cursor-pointer')
+                        }`;
+                        const textSpan = document.createElement('span');
+                        textSpan.className = 'truncate';
+                        textSpan.textContent = opt.textContent.trim();
+                        item.appendChild(textSpan);
+
+                        if (isSelected && !opt.disabled) {
+                            const check = document.createElement('span');
+                            check.className = 'shrink-0 text-[10px]';
+                            check.innerHTML = '&#10003;';
+                            item.appendChild(check);
+                        }
+
+                        if (!opt.disabled) {
+                            item.addEventListener('click', (e) => {
+                                e.stopPropagation();
+                                protoDesc.set.call(select, opt.value);
+                                syncLabel();
+                                panel.classList.add('hidden');
+                                select.dispatchEvent(new Event('change', { bubbles: true }));
+                            });
+                        }
+
+                        listEl.appendChild(item);
+                    });
+                }
+
+                function closePanel() {
+                    panel.classList.add('hidden');
+                }
+
+                trigger.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const willOpen = panel.classList.contains('hidden');
+                    document.querySelectorAll('[data-searchable-panel]').forEach(p => p.classList.add('hidden'));
+                    if (willOpen) {
+                        searchInput.value = '';
+                        renderList('');
+                        panel.classList.remove('hidden');
+                        setTimeout(() => searchInput.focus(), 10);
+                    }
+                });
+
+                searchInput.addEventListener('input', () => renderList(searchInput.value));
+                searchInput.addEventListener('click', (e) => e.stopPropagation());
+                searchInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape') {
+                        e.stopPropagation();
+                        closePanel();
+                        trigger.focus();
+                    } else if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const firstBtn = listEl.querySelector('button:not([disabled])');
+                        if (firstBtn) firstBtn.click();
+                    }
+                });
+
+                if (protoDesc && protoDesc.configurable) {
+                    Object.defineProperty(select, 'value', {
+                        get() {
+                            return protoDesc.get.call(this);
+                        },
+                        set(val) {
+                            protoDesc.set.call(this, val);
+                            syncLabel();
+                            if (!panel.classList.contains('hidden')) {
+                                renderList(searchInput.value);
+                            }
+                        },
+                        configurable: true,
+                    });
+                }
+
+                select.addEventListener('change', syncLabel);
+
+                const observer = new MutationObserver(() => {
+                    syncLabel();
+                    if (!panel.classList.contains('hidden')) {
+                        renderList(searchInput.value);
+                    }
+                });
+                observer.observe(select, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'disabled', 'selected'] });
+
+                syncLabel();
+            }
+
+            window.initSearchableSelects = function (root = document) {
+                root.querySelectorAll('select[data-searchable-select]').forEach(enhanceSelect);
+            };
+
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('[data-searchable-wrapper]')) {
+                    document.querySelectorAll('[data-searchable-panel]').forEach(p => p.classList.add('hidden'));
+                }
+            });
+
+            document.addEventListener('DOMContentLoaded', () => window.initSearchableSelects());
+        })();
     </script>
     <x-image-lightbox />
     <x-change-password-modal />

@@ -315,12 +315,18 @@ class KajurController extends Controller
             }
         }
 
+        if ($request->filled('teacher_id') && $request->teacher_id !== 'all') {
+            $query->whereHas('studentPkl', fn($q) => $q->where('teacher_id', $request->teacher_id));
+        }
+
         if ($request->filled('search')) {
             $search = '%' . trim($request->search) . '%';
             $query->where(function ($q) use ($search) {
                 $q->whereHas('user', fn($uq) => $uq->where('name', 'like', $search))
                   ->orWhere('nisn', 'like', $search)
-                  ->orWhere('nis', 'like', $search);
+                  ->orWhere('nis', 'like', $search)
+                  ->orWhereHas('studentPkl.company', fn($cq) => $cq->where('name', 'like', $search))
+                  ->orWhereHas('studentPkl.teacher.user', fn($tq) => $tq->where('name', 'like', $search));
             });
         }
 
@@ -335,7 +341,9 @@ class KajurController extends Controller
         $teachers = Teacher::whereHas('user', fn($q) => $q->where('school_id', $schoolId)->where('is_active', true))
             ->with('user')
             ->withCount(['studentPkls as active_mentees_count' => fn($q) => $q->where('status', 'active')])
-            ->get();
+            ->get()
+            ->sortBy(fn($t) => mb_strtolower($t->user->name ?? ''))
+            ->values();
 
         $myTeacherId = Auth::user()->teacher?->id;
 

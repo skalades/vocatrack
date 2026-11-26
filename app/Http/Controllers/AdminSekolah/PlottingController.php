@@ -35,8 +35,10 @@ class PlottingController extends BaseAdminSekolahController
         if ($search = $request->query('search')) {
             $query->where(function ($q) use ($search) {
                 $q->whereHas('student.user', fn($sq) => $sq->where('name', 'like', "%{$search}%"))
-                  ->orWhereHas('student', fn($sq) => $sq->where('nisn', 'like', "%{$search}%"))
-                  ->orWhereHas('company', fn($cq) => $cq->where('name', 'like', "%{$search}%"));
+                  ->orWhereHas('student', fn($sq) => $sq->where('nisn', 'like', "%{$search}%")->orWhere('nis', 'like', "%{$search}%"))
+                  ->orWhereHas('company', fn($cq) => $cq->where('name', 'like', "%{$search}%"))
+                  ->orWhereHas('teacher.user', fn($tq) => $tq->where('name', 'like', "%{$search}%")->orWhere('email', 'like', "%{$search}%"))
+                  ->orWhereHas('teacher', fn($tq) => $tq->where('nip', 'like', "%{$search}%"));
             });
         }
 
@@ -102,7 +104,11 @@ class PlottingController extends BaseAdminSekolahController
         });
 
         $companies = Company::where('school_id', $schoolId)->with(['supervisors.user', 'majors'])->get();
-        $teachers = Teacher::whereHas('user', fn($q) => $q->where('school_id', $schoolId))->with('user')->get();
+        $teachers = Teacher::whereHas('user', fn($q) => $q->where('school_id', $schoolId))
+            ->with('user')
+            ->get()
+            ->sortBy(fn($t) => mb_strtolower($t->user->name ?? ''))
+            ->values();
         $majors = Major::where('school_id', $schoolId)->with('classes')->orderBy('name')->get();
         $classes = SchoolClass::where('school_id', $schoolId)->with('major')->orderBy('name')->get();
 

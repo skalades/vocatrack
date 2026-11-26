@@ -318,7 +318,9 @@
             </div>
             <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1.5">Kepala Program Keahlian (Kajur)</label>
-                <select name="head_teacher_id" 
+                <select name="head_teacher_id"
+                        data-searchable-select
+                        data-search-placeholder="Cari nama guru atau NIP..."
                         class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium text-slate-900">
                     <option value="">-- Belum Ditunjuk / Pilih Nanti --</option>
                     @foreach($teachers as $t)
@@ -386,7 +388,9 @@
             </div>
             <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1.5">Wali Kelas (Opsional)</label>
-                <select name="homeroom_teacher_id" 
+                <select name="homeroom_teacher_id"
+                        data-searchable-select
+                        data-search-placeholder="Cari nama guru atau NIP..."
                         class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium text-slate-900">
                     <option value="">-- Belum Ditunjuk / Pilih Nanti --</option>
                     @foreach($teachers as $t)
@@ -451,7 +455,9 @@
             </div>
             <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1.5">Kepala Program Keahlian (Kajur)</label>
-                <select id="edit-major-head-teacher-id" name="head_teacher_id" 
+                <select id="edit-major-head-teacher-id" name="head_teacher_id"
+                        data-searchable-select
+                        data-search-placeholder="Cari nama guru atau NIP..."
                         class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium text-slate-900">
                     <option value="">-- Belum Ditunjuk / Kosongkan --</option>
                     @foreach($teachers as $t)
@@ -519,7 +525,9 @@
             </div>
             <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1.5">Wali Kelas</label>
-                <select id="edit-class-homeroom-teacher-id" name="homeroom_teacher_id" 
+                <select id="edit-class-homeroom-teacher-id" name="homeroom_teacher_id"
+                        data-searchable-select
+                        data-search-placeholder="Cari nama guru atau NIP..."
                         class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium text-slate-900">
                     <option value="">-- Belum Ditunjuk / Kosongkan --</option>
                     @foreach($teachers as $t)

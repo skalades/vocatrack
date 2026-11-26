@@ -79,7 +79,7 @@
                 <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                 </div>
-                <input type="text" name="search" value="{{ request('search') }}" placeholder="Cari nama perusahaan, PIC, atau alamat..." 
+                <input type="text" name="search" value="{{ request('search') }}" placeholder="Cari nama perusahaan, PIC, alamat, atau guru pembimbing..." 
                        class="w-full text-xs font-semibold pl-9.5 pr-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600">
             </div>
 
@@ -770,8 +770,20 @@
                 <span>Guru pembimbing sekolah yang bertugas mendampingi, memantau absensi/jurnal, dan melakukan supervisi siswa di perusahaan ini.</span>
             </div>
 
+            <div id="modal-teacher-search-wrap" class="hidden relative">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                </div>
+                <input type="text" id="modal-teacher-search" oninput="filterModalTeachers()" placeholder="Cari nama guru pembimbing, NIP, atau email..."
+                       class="w-full text-xs font-semibold pl-9 pr-4 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600">
+            </div>
+
             <div id="modal-teacher-container" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <!-- Populated by JavaScript -->
+            </div>
+
+            <div id="modal-teachers-no-match" class="hidden p-6 text-center rounded-2xl bg-slate-50 border border-slate-200/80 text-xs text-slate-500 font-semibold">
+                Tidak ada guru pembimbing di perusahaan ini yang cocok dengan pencarian Anda.
             </div>
 
             <div id="modal-teachers-empty" class="hidden p-8 text-center rounded-2xl bg-slate-50 border border-slate-200/80">
@@ -880,6 +892,8 @@
                     <span id="single-major-hint" class="text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200/60 px-2 py-0.5 rounded-md">Jurusan</span>
                 </div>
                 <select id="single-reassign-teacher-select" name="teacher_id" required
+                        data-searchable-select
+                        data-search-placeholder="Cari nama guru atau email..."
                         class="w-full text-xs p-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-semibold text-slate-800">
                     <!-- Populated dynamically -->
                 </select>
@@ -953,6 +967,8 @@
                     <span id="batch-major-hint" class="text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200/60 px-2 py-0.5 rounded-md">Jurusan DU/DI</span>
                 </div>
                 <select id="batch-teacher-select" name="teacher_id"
+                        data-searchable-select
+                        data-search-placeholder="Cari nama guru atau email..."
                         class="w-full text-xs p-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-semibold text-slate-800">
                     <!-- Populated dynamically -->
                 </select>
@@ -1310,15 +1326,22 @@
 
         const teacherContainer = document.getElementById('modal-teacher-container');
         const teachersEmpty = document.getElementById('modal-teachers-empty');
+        const teacherSearchWrap = document.getElementById('modal-teacher-search-wrap');
+        const teacherSearchInput = document.getElementById('modal-teacher-search');
+        const teachersNoMatch = document.getElementById('modal-teachers-no-match');
         teacherContainer.innerHTML = '';
+        if (teacherSearchInput) teacherSearchInput.value = '';
+        if (teachersNoMatch) teachersNoMatch.classList.add('hidden');
 
         if (teachers.length > 0) {
             teachersEmpty.classList.add('hidden');
             teacherContainer.classList.remove('hidden');
+            if (teacherSearchWrap) teacherSearchWrap.classList.remove('hidden');
 
             teachers.forEach(tc => {
                 const card = document.createElement('div');
-                card.className = "p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-start space-x-3";
+                card.className = "company-teacher-card p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-start space-x-3";
+                card.setAttribute('data-teacher-search', `${tc.name} ${tc.nip || ''} ${tc.email || ''}`.toLowerCase());
                 card.innerHTML = `
                     <div class="w-9 h-9 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs shrink-0">
                         ${tc.name.charAt(0)}
@@ -1348,6 +1371,7 @@
         } else {
             teacherContainer.classList.add('hidden');
             teachersEmpty.classList.remove('hidden');
+            if (teacherSearchWrap) teacherSearchWrap.classList.add('hidden');
         }
 
         // 4. Populasi Tab Mentor DU/DI
@@ -1450,6 +1474,24 @@
                 opt.textContent = `${t.name} ${majorText} (${t.email})`;
                 tSelect.appendChild(opt);
             });
+        }
+    }
+
+    function filterModalTeachers() {
+        const input = document.getElementById('modal-teacher-search');
+        const noMatch = document.getElementById('modal-teachers-no-match');
+        const cards = document.querySelectorAll('#modal-teacher-container .company-teacher-card');
+        if (!input) return;
+        const q = input.value.trim().toLowerCase();
+        let visible = 0;
+        cards.forEach(card => {
+            const hay = card.getAttribute('data-teacher-search') || '';
+            const show = !q || hay.includes(q);
+            card.classList.toggle('hidden', !show);
+            if (show) visible++;
+        });
+        if (noMatch) {
+            noMatch.classList.toggle('hidden', cards.length === 0 || visible > 0);
         }
     }
 
