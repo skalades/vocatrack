@@ -53,6 +53,7 @@ class StudentAccountsDataSheet implements FromCollection, WithTitle, WithEvents,
             'Jurusan',
             'Kelas / Rombel',
             'Tempat PKL / Perusahaan',
+            'Guru Pembimbing',
             'Email Akun',
             'Password Default',
             'Status Akun',
@@ -71,6 +72,7 @@ class StudentAccountsDataSheet implements FromCollection, WithTitle, WithEvents,
             $majorName = $student->class?->major?->name ?? '-';
             $className = $student->class?->name ?? '-';
             $companyName = $student->activePkl?->company?->name ?? 'Belum Diplot';
+            $teacherName = $student->activePkl?->teacher?->user?->name ?? '-';
             $status = ($user && $user->is_active) ? 'Aktif' : 'Nonaktif';
             $defaultPassword = 'password';
 
@@ -84,6 +86,7 @@ class StudentAccountsDataSheet implements FromCollection, WithTitle, WithEvents,
                 $majorName,
                 $className,
                 $companyName,
+                $teacherName,
                 $email,
                 $defaultPassword,
                 $status,
@@ -119,18 +122,19 @@ class StudentAccountsDataSheet implements FromCollection, WithTitle, WithEvents,
                     'E' => 28,  // Jurusan
                     'F' => 16,  // Kelas
                     'G' => 28,  // Tempat PKL / Perusahaan
-                    'H' => 30,  // Email
-                    'I' => 18,  // Password Default
-                    'J' => 14,  // Status
-                    'K' => 36,  // Tautan Login
-                    'L' => 48,  // Tautan Monitoring Ortu
+                    'H' => 28,  // Guru Pembimbing
+                    'I' => 30,  // Email
+                    'J' => 18,  // Password Default
+                    'K' => 14,  // Status
+                    'L' => 36,  // Tautan Login
+                    'M' => 48,  // Tautan Monitoring Ortu
                 ];
                 foreach ($widths as $col => $w) {
                     $sheet->getColumnDimension($col)->setWidth($w);
                 }
 
                 // 2. Styling Row 1 (Banner Title)
-                $sheet->mergeCells('A1:L1');
+                $sheet->mergeCells('A1:M1');
                 $sheet->getRowDimension(1)->setRowHeight(32);
                 $sheet->getStyle('A1')->applyFromArray([
                     'font' => [
@@ -145,7 +149,7 @@ class StudentAccountsDataSheet implements FromCollection, WithTitle, WithEvents,
                 ]);
 
                 // 3. Styling Row 2 (Metadata Info)
-                $sheet->mergeCells('A2:L2');
+                $sheet->mergeCells('A2:M2');
                 $sheet->getRowDimension(2)->setRowHeight(20);
                 $sheet->getStyle('A2')->applyFromArray([
                     'font' => [
@@ -164,7 +168,7 @@ class StudentAccountsDataSheet implements FromCollection, WithTitle, WithEvents,
 
                 // 4. Styling Row 4 (Table Header)
                 $sheet->getRowDimension(4)->setRowHeight(30);
-                $sheet->getStyle('A4:L4')->applyFromArray([
+                $sheet->getStyle('A4:M4')->applyFromArray([
                     'font' => [
                         'name' => 'Segoe UI',
                         'bold' => true,
@@ -195,7 +199,7 @@ class StudentAccountsDataSheet implements FromCollection, WithTitle, WithEvents,
                         $isOdd = ($row % 2 !== 0);
                         $bgColor = $isOdd ? 'F8FAFC' : 'FFFFFF';
 
-                        $sheet->getStyle("A{$row}:L{$row}")->applyFromArray([
+                        $sheet->getStyle("A{$row}:M{$row}")->applyFromArray([
                             'font' => [
                                 'name' => 'Segoe UI',
                                 'size' => 10,
@@ -221,11 +225,11 @@ class StudentAccountsDataSheet implements FromCollection, WithTitle, WithEvents,
                         $sheet->getStyle("C{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
                         $sheet->getStyle("D{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
                         $sheet->getStyle("F{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-                        $sheet->getStyle("I{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
                         $sheet->getStyle("J{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+                        $sheet->getStyle("K{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
                         // Highlight Password Default Box
-                        $sheet->getStyle("I{$row}")->applyFromArray([
+                        $sheet->getStyle("J{$row}")->applyFromArray([
                             'font' => [
                                 'bold' => true,
                                 'color' => ['rgb' => '0B2B25'],
@@ -237,9 +241,9 @@ class StudentAccountsDataSheet implements FromCollection, WithTitle, WithEvents,
                         ]);
 
                         // Status Badge Color
-                        $statusVal = $sheet->getCell("J{$row}")->getValue();
+                        $statusVal = $sheet->getCell("K{$row}")->getValue();
                         $statusColor = ($statusVal === 'Aktif') ? '047857' : 'DC2626';
-                        $sheet->getStyle("J{$row}")->applyFromArray([
+                        $sheet->getStyle("K{$row}")->applyFromArray([
                             'font' => [
                                 'bold' => true,
                                 'color' => ['rgb' => $statusColor],
@@ -247,10 +251,10 @@ class StudentAccountsDataSheet implements FromCollection, WithTitle, WithEvents,
                         ]);
 
                         // Hyperlink Styling for URLs
-                        $sheet->getStyle("K{$row}")->applyFromArray([
+                        $sheet->getStyle("L{$row}")->applyFromArray([
                             'font' => ['color' => ['rgb' => '0F7A66'], 'underline' => true],
                         ]);
-                        $sheet->getStyle("L{$row}")->applyFromArray([
+                        $sheet->getStyle("M{$row}")->applyFromArray([
                             'font' => ['color' => ['rgb' => '4F46E5'], 'underline' => true],
                         ]);
                     }

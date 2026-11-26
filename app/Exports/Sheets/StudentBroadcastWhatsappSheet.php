@@ -56,6 +56,8 @@ class StudentBroadcastWhatsappSheet implements FromCollection, WithTitle, WithEv
             $className = $student->class?->name ?? '-';
             $companyName = $student->activePkl?->company?->name;
             $companyLine = $companyName ? "• Tempat PKL: {$companyName}\n" : "";
+            $teacherName = $student->activePkl?->teacher?->user?->name;
+            $teacherLine = $teacherName ? "• Guru Pembimbing: {$teacherName}\n" : "";
             $parentUrl = route('parent.monitor', ['token' => $student->parent_token]);
 
             $waMessage = "Halo {$name}, berikut adalah informasi akses sistem VokaTrack PKL Anda:\n\n"
@@ -64,7 +66,8 @@ class StudentBroadcastWhatsappSheet implements FromCollection, WithTitle, WithEv
                        . "• Username / NISN: {$nisn}\n"
                        . "• Password Default: password\n"
                        . "• Jurusan / Kelas: {$majorName} / {$className}\n"
-                       . $companyLine . "\n"
+                       . $companyLine
+                       . $teacherLine . "\n"
                        . "👨‍👩‍👦 TAUTAN MONITORING ORANG TUA:\n"
                        . "• URL Portal Ortu: {$parentUrl}\n"
                        . "(Orang tua dapat memantau presensi, jurnal harian, dan penempatan PKL tanpa perlu login)\n\n"
