@@ -1,70 +1,86 @@
 @extends('layouts.app')
 
-@section('page_title', 'Supervisi Guru Pembimbing')
-@section('page_subtitle', 'Rekapitulasi kunjungan monitoring industri oleh guru pembimbing jurusan ' . $major->name)
+@section('page_title', 'Supervisi & Penugasan Monitoring Jurusan')
+@section('page_subtitle', 'Tugaskan petugas Monitoring 1 & 2 serta pantau Berita Acara kunjungan siswa jurusan ' . $major->name)
 
 @section('content')
 <div class="w-full space-y-6">
 
-    <x-page-header 
-        title="Supervisi & Kunjungan Industri" 
-        subtitle="Logbook kunjungan pembimbingan dan penyerahan/penjemputan siswa PKL jurusan {{ $major->name }}."
+    <x-page-header
+        title="Supervisi & Kunjungan Industri"
+        subtitle="Kelola penugasan 2x monitoring untuk siswa jurusan {{ $major->name }} dan pantau hasil kunjungan lintas pembimbing."
         badge="SUPERVISI KAJUR"
-    />
+    >
+        <x-button type="button" variant="primary" size="sm" onclick="document.getElementById('modal-kajur-assignment').classList.remove('hidden')">
+            <svg class="w-4 h-4 mr-1.5 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+            <span>Tugaskan Monitoring Jurusan</span>
+        </x-button>
+    </x-page-header>
 
-    <x-card :title="'Daftar Kunjungan Supervisi Guru (' . $supervisions->total() . ' Kunjungan Terdata)'">
-        @if($supervisions->isEmpty())
-            <x-empty-state 
-                title="Belum Ada Catatan Kunjungan" 
-                description="Guru pembimbing jurusan belum mencatat logbook kunjungan ke mitra industri."
-            />
-        @else
-            <div class="overflow-x-auto -mx-6">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="border-b border-slate-200/80 bg-slate-50/75 text-[11px] font-extrabold uppercase tracking-wider text-slate-500">
-                            <th class="py-3 px-6">Guru Pembimbing</th>
-                            <th class="py-3 px-4">Mitra DU/DI</th>
-                            <th class="py-3 px-4">Tanggal Kunjungan</th>
-                            <th class="py-3 px-6">Catatan / Hasil Evaluasi Industri</th>
-                            <th class="py-3 px-6 text-right">Berita Acara</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-100 text-xs">
-                        @foreach($supervisions as $sv)
-                            <tr class="hover:bg-slate-50/80 transition-colors">
-                                <td class="py-3 px-6">
-                                    <div class="font-bold text-slate-900">{{ $sv->teacher->user->name }}</div>
-                                    <div class="text-[11px] text-slate-400 font-mono">NIP: {{ $sv->teacher->nip ?? '-' }}</div>
-                                </td>
-                                <td class="py-3 px-4">
-                                    <span class="font-semibold text-slate-900">{{ $sv->company->name }}</span>
-                                </td>
-                                <td class="py-3 px-4 font-mono text-slate-700 whitespace-nowrap">
-                                    {{ \Carbon\Carbon::parse($sv->visit_date)->isoFormat('D MMMM Y') }}
-                                </td>
-                                <td class="py-3 px-6">
-                                    <p class="text-slate-700 line-clamp-2 leading-relaxed">
-                                        {{ $sv->notes ?? '-' }}
-                                    </p>
-                                </td>
-                                <td class="py-3 px-6 text-right whitespace-nowrap">
-                                    <a href="{{ route('guru.supervisions.pdf', $sv) }}" target="_blank" class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-lg transition-colors">
-                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                                        <span>Unduh PDF</span>
-                                    </a>
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
+    @if($errors->any())
+        <div class="bg-rose-50 border border-rose-200 text-rose-800 rounded-2xl p-4 text-xs space-y-1">
+            <div class="font-bold">Gagal menyimpan penugasan:</div>
+            <ul class="list-disc list-inside space-y-0.5">
+                @foreach($errors->all() as $err)
+                    <li>{{ $err }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
 
-            <div class="pt-4 border-t border-slate-100">
-                {{ $supervisions->links() }}
-            </div>
-        @endif
+    <!-- Filter Bar -->
+    <div class="bg-white rounded-3xl border border-slate-200/80 p-4 shadow-xs">
+        <form method="GET" action="{{ route('kajur.supervisions') }}" class="flex flex-wrap items-center gap-3">
+            <select name="pkl_period_id" onchange="this.form.submit()" class="text-xs font-semibold rounded-xl border-slate-200 bg-slate-50 focus:border-indigo-500 focus:ring-indigo-500">
+                @foreach($periods as $p)
+                    <option value="{{ $p->id }}" {{ (int) $selectedPeriodId === (int) $p->id ? 'selected' : '' }}>{{ $p->name }}</option>
+                @endforeach
+            </select>
+
+            <select name="stage" onchange="this.form.submit()" class="text-xs font-semibold rounded-xl border-slate-200 bg-slate-50 focus:border-indigo-500 focus:ring-indigo-500">
+                <option value="">Semua Tahapan</option>
+                <option value="monitoring_1" {{ request('stage') === 'monitoring_1' ? 'selected' : '' }}>Monitoring 1</option>
+                <option value="monitoring_2" {{ request('stage') === 'monitoring_2' ? 'selected' : '' }}>Monitoring 2</option>
+                <option value="insidental" {{ request('stage') === 'insidental' ? 'selected' : '' }}>Insidental</option>
+            </select>
+
+            <select name="company_id" onchange="this.form.submit()" class="text-xs font-semibold rounded-xl border-slate-200 bg-slate-50 focus:border-indigo-500 focus:ring-indigo-500">
+                <option value="">Semua DU/DI</option>
+                @foreach($companies as $c)
+                    <option value="{{ $c->id }}" {{ request('company_id') == $c->id ? 'selected' : '' }}>{{ $c->name }}</option>
+                @endforeach
+            </select>
+
+            @if(request()->hasAny(['stage', 'company_id', 'teacher_id']))
+                <a href="{{ route('kajur.supervisions', ['pkl_period_id' => $selectedPeriodId]) }}" class="text-xs font-bold text-slate-500 hover:text-rose-600">Reset Filter</a>
+            @endif
+        </form>
+    </div>
+
+    <!-- Penugasan Monitoring Jurusan -->
+    <x-card title="Penugasan Monitoring Jurusan {{ $major->code }}" noPadding>
+        <x-supervision.assignments-list :assignments="$assignments" destroyRouteName="kajur.supervisions.assignments.destroy" />
+    </x-card>
+
+    <!-- Riwayat Kunjungan & Berita Acara -->
+    <x-card :title="'Daftar Kunjungan Supervisi (' . $supervisions->total() . ' Kunjungan Terdata)'" noPadding>
+        <x-supervision.visits-list
+            :visits="$supervisions"
+            pdfRouteName="kajur.supervisions.pdf"
+            emptyDescription="Belum ada logbook kunjungan monitoring yang mencakup siswa jurusan Anda."
+        />
     </x-card>
 
 </div>
+
+<x-supervision.assignment-modal
+    modalId="modal-kajur-assignment"
+    :actionUrl="route('kajur.supervisions.assignments.store')"
+    :periods="$periods"
+    :selectedPeriodId="$selectedPeriodId"
+    :teachers="$teachers"
+    :matrix="$matrix"
+    title="Tugaskan Monitoring Siswa Jurusan {{ $major->code }}"
+    subtitle="Pilih guru atau Anda sendiri (Kajur) untuk melakukan Monitoring 1 / Monitoring 2 pada satu atau beberapa DU/DI."
+/>
 @endsection

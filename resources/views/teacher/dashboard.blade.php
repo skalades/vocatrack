@@ -765,12 +765,17 @@
                             <p class="text-xs font-bold text-slate-900 truncate">{{ $sv['company']->name }}</p>
                             <span class="text-[10px] font-semibold text-slate-400 shrink-0">{{ $sv['students'] }} siswa</span>
                         </div>
-                        <div class="grid grid-cols-4 gap-1">
+                        <div class="grid grid-cols-2 gap-2">
                             @foreach($supervisionStages as $key => $label)
-                                @php $done = $sv['done']->contains($key); @endphp
-                                <div class="space-y-1" title="{{ $label }}{{ $done ? ' — selesai' : ' — belum' }}">
-                                    <div class="h-1.5 rounded-full bg-slate-100 overflow-hidden"><div data-grow-x class="h-full rounded-full {{ $done ? 'bg-[#12382F]' : '' }}"></div></div>
-                                    <span class="block text-[9px] font-bold {{ $done ? 'text-[#12382F]' : 'text-slate-400' }} truncate">{{ $label }}</span>
+                                @php
+                                    $done = $sv['done']->contains($key);
+                                    $handler = $sv['assigned_handlers'][$key] ?? null;
+                                @endphp
+                                <div class="space-y-1" title="{{ $label }}{{ $done ? ' — selesai' : ($handler ? ' — ditugaskan ke ' . $handler : ' — belum') }}">
+                                    <div class="h-1.5 rounded-full bg-slate-100 overflow-hidden"><div data-grow-x class="h-full rounded-full {{ $done ? 'bg-[#12382F]' : ($handler ? 'bg-amber-400' : '') }}"></div></div>
+                                    <span class="block text-[10px] font-bold {{ $done ? 'text-[#12382F]' : ($handler ? 'text-amber-700' : 'text-slate-400') }} truncate">
+                                        {{ $label }}{{ !$done && $handler ? " ({$handler})" : '' }}
+                                    </span>
                                 </div>
                             @endforeach
                         </div>

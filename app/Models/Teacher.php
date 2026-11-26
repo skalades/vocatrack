@@ -78,6 +78,11 @@ class Teacher extends Model
         return $this->hasMany(SupervisionVisit::class);
     }
 
+    public function supervisionAssignments(): HasMany
+    {
+        return $this->hasMany(SupervisionAssignment::class);
+    }
+
     /**
      * Terapkan filter pencarian (case-insensitive lintas PostgreSQL/MySQL/SQLite) dan jurusan untuk admin sekolah & ekspor.
      */

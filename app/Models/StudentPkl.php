@@ -6,6 +6,7 @@ use App\Traits\BelongsToSchool;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
@@ -154,5 +155,16 @@ class StudentPkl extends Model
     public function certificate(): HasOne
     {
         return $this->hasOne(Certificate::class);
+    }
+
+    public function supervisionAssignmentItems(): HasMany
+    {
+        return $this->hasMany(SupervisionAssignmentStudent::class);
+    }
+
+    public function supervisionVisits(): BelongsToMany
+    {
+        return $this->belongsToMany(SupervisionVisit::class, 'supervision_visit_students')
+            ->withTimestamps();
     }
 }

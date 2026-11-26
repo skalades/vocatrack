@@ -6,16 +6,25 @@ use App\Traits\BelongsToSchool;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class SupervisionVisit extends Model
 {
     use HasFactory, BelongsToSchool;
+
+    public const ACTIVE_STAGES = [
+        'monitoring_1' => 'Monitoring 1 (Bulan Ke-1)',
+        'monitoring_2' => 'Monitoring 2 (Pertengahan)',
+        'insidental' => 'Kunjungan Insidental / Khusus',
+    ];
 
     protected $fillable = [
         'school_id',
         'teacher_id',
         'company_id',
         'pkl_period_id',
+        'supervision_assignment_id',
         'stage',
         'visit_date',
         'student_progress_summary',
@@ -47,6 +56,22 @@ class SupervisionVisit extends Model
     public function pklPeriod(): BelongsTo
     {
         return $this->belongsTo(PklPeriod::class);
+    }
+
+    public function assignment(): BelongsTo
+    {
+        return $this->belongsTo(SupervisionAssignment::class, 'supervision_assignment_id');
+    }
+
+    public function studentPkls(): BelongsToMany
+    {
+        return $this->belongsToMany(StudentPkl::class, 'supervision_visit_students')
+            ->withTimestamps();
+    }
+
+    public function assignmentItems(): HasMany
+    {
+        return $this->hasMany(SupervisionAssignmentStudent::class, 'supervision_visit_id');
     }
 
     public function getStageLabelAttribute(): string

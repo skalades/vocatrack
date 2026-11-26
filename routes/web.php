@@ -11,6 +11,7 @@ use App\Http\Controllers\AdminSekolah\IncidentController as AdminSekolahIncident
 use App\Http\Controllers\AdminSekolah\PlottingController as AdminSekolahPlottingController;
 use App\Http\Controllers\AdminSekolah\SettingController as AdminSekolahSettingController;
 use App\Http\Controllers\AdminSekolah\StudentController as AdminSekolahStudentController;
+use App\Http\Controllers\AdminSekolah\SupervisionController as AdminSekolahSupervisionController;
 use App\Http\Controllers\AdminSekolah\TeacherController as AdminSekolahTeacherController;
 use App\Http\Controllers\AnnouncementController;
 use App\Http\Controllers\AuthController;
@@ -248,6 +249,12 @@ Route::middleware(['auth', 'IdentifyTenant', 'role:admin-sekolah'])->prefix('adm
     Route::put('/plotting/{studentPkl}/reassign', [AdminSekolahPlottingController::class, 'reassignPlotting'])->name('adminsekolah.plotting.reassign');
     Route::delete('/plotting/{studentPkl}', [AdminSekolahPlottingController::class, 'destroyPlotting'])->name('adminsekolah.plotting.destroy');
 
+    // Penugasan & Monitoring Supervisi Lapangan
+    Route::get('/supervisions', [AdminSekolahSupervisionController::class, 'index'])->name('adminsekolah.supervisions');
+    Route::post('/supervisions/assignments', [AdminSekolahSupervisionController::class, 'storeAssignment'])->name('adminsekolah.supervisions.assignments.store');
+    Route::delete('/supervisions/assignments/{assignment}', [AdminSekolahSupervisionController::class, 'destroyAssignment'])->name('adminsekolah.supervisions.assignments.destroy');
+    Route::get('/supervisions/{supervisionVisit}/pdf', [AdminSekolahSupervisionController::class, 'downloadBeritaAcaraPdf'])->name('adminsekolah.supervisions.pdf');
+
     // Periode Pelaksanaan PKL
     Route::post('/periods', [AdminSekolahPlottingController::class, 'storePeriod'])->name('adminsekolah.periods.store');
     Route::put('/periods/{period}', [AdminSekolahPlottingController::class, 'updatePeriod'])->name('adminsekolah.periods.update');
@@ -347,6 +354,7 @@ Route::middleware(['auth', 'IdentifyTenant', 'role:guru-pembimbing'])->prefix('g
 
     // Supervisi Lapangan & Berita Acara Kunjungan Guru
     Route::get('/supervisions', [TeacherController::class, 'supervisions'])->name('guru.supervisions');
+    Route::get('/supervisions/assignments/{assignment}/company/{company}', [TeacherController::class, 'monitoringBriefing'])->name('guru.supervisions.briefing');
     Route::post('/supervisions', [TeacherController::class, 'storeSupervision'])->name('guru.supervisions.store');
     Route::get('/supervisions/{supervisionVisit}/pdf', [TeacherController::class, 'downloadBeritaAcaraPdf'])->name('guru.supervisions.pdf');
 
@@ -398,6 +406,9 @@ Route::middleware(['auth', 'IdentifyTenant', 'is-kajur'])->prefix('kajur')->grou
 
     // Supervisi Guru & Nilai
     Route::get('/supervisions', [KajurController::class, 'supervisions'])->name('kajur.supervisions');
+    Route::post('/supervisions/assignments', [KajurController::class, 'storeSupervisionAssignment'])->name('kajur.supervisions.assignments.store');
+    Route::delete('/supervisions/assignments/{assignment}', [KajurController::class, 'destroySupervisionAssignment'])->name('kajur.supervisions.assignments.destroy');
+    Route::get('/supervisions/{supervisionVisit}/pdf', [KajurController::class, 'downloadSupervisionPdf'])->name('kajur.supervisions.pdf');
     Route::get('/grades', [KajurController::class, 'grades'])->name('kajur.grades');
 
     // Capaian Pembelajaran (CP) / Elemen Kompetensi

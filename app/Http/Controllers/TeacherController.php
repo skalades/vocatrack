@@ -5,11 +5,13 @@ namespace App\Http\Controllers;
 use App\Models\Assessment;
 use App\Models\Attendance;
 use App\Models\AttendanceRequest;
+use App\Models\Company;
 use App\Models\IncidentReport;
 use App\Models\Journal;
 use App\Models\PklPeriod;
 use App\Models\SchoolSetting;
 use App\Models\StudentPkl;
+use App\Models\SupervisionAssignment;
 use App\Models\SupervisionVisit;
 use App\Services\AnnouncementService;
 use App\Services\AssessmentService;
@@ -42,7 +44,12 @@ class TeacherController extends Controller
         return $teacher;
     }
 
-    public function dashboard(AnnouncementService $announcementService, AttendanceService $attendanceService, HolidayService $holidayService)
+    public function dashboard(
+        AnnouncementService $announcementService,
+        AttendanceService $attendanceService,
+        HolidayService $holidayService,
+        SupervisionService $supervisionService
+    )
     {
         $teacher = $this->getTeacher();
         $user = Auth::user();
@@ -334,32 +341,12 @@ class TeacherController extends Controller
             ->where('urgency', 'critical')
             ->count();
 
-        // ---------- Supervisi per DU/DI ----------
-        $supervisionStages = [
-            'penyerahan' => 'Penyerahan',
-            'monitoring_1' => 'Monitoring 1',
-            'monitoring_2' => 'Monitoring 2',
-            'penjemputan' => 'Penjemputan',
-        ];
-        $visitsByCompany = SupervisionVisit::where('teacher_id', $teacher->id)
-            ->whereIn('company_id', $companies->pluck('id'))
-            ->get(['company_id', 'stage', 'visit_date'])
-            ->groupBy('company_id');
-        $supervisionProgress = $companies->map(function ($company) use ($visitsByCompany, $supervisionStages, $studentPkls) {
-            $visits = $visitsByCompany->get($company->id, collect());
-            $done = $visits->pluck('stage')->unique();
-            $doneCount = collect(array_keys($supervisionStages))->filter(fn ($s) => $done->contains($s))->count();
-            return [
-                'company' => $company,
-                'students' => $studentPkls->where('company_id', $company->id)->count(),
-                'done' => $done,
-                'done_count' => $doneCount,
-                'last_visit' => $visits->max('visit_date'),
-                'next_stage' => collect($supervisionStages)->first(fn ($label, $key) => !$done->contains($key)),
-            ];
-        })->sortBy('done_count')->values();
-        $supervisionDone = $supervisionProgress->sum('done_count');
-        $supervisionTarget = $supervisionProgress->count() * count($supervisionStages);
+        // ---------- Supervisi 2x Monitoring per DU/DI ----------
+        $supervisionData = $supervisionService->getDashboardProgressForTeacher($teacher, $companies, $studentPkls);
+        $supervisionStages = $supervisionData['supervisionStages'];
+        $supervisionProgress = $supervisionData['supervisionProgress'];
+        $supervisionDone = $supervisionData['supervisionDone'];
+        $supervisionTarget = $supervisionData['supervisionTarget'];
 
         // ---------- Penilaian ----------
         $teacherScoredCount = $studentInsights->where('teacher_scored', true)->count();
@@ -887,25 +874,66 @@ class TeacherController extends Controller
     public function supervisions(Request $request, SupervisionService $supervisionService)
     {
         $teacher = $this->getTeacher();
-        $visits = $supervisionService->getVisitsForTeacher($teacher, $request->only(['company_id', 'stage']));
+        $assignedTargets = $supervisionService->getAssignedTargetsForTeacher($teacher);
+        $visits = $supervisionService->getVisitsForTeacher(
+            $teacher,
+            $request->only(['company_id', 'stage', 'role_scope'])
+        );
 
-        $studentPkls = StudentPkl::where('teacher_id', $teacher->id)
-            ->with(['company', 'pklPeriod'])
-            ->get();
+        $formOptions = $supervisionService->getVisitFormOptionsForTeacher($teacher);
+        $companies = $formOptions['companies'];
+        $periods = $formOptions['periods'];
 
-        $companies = $studentPkls->pluck('company')->filter()->unique('id')->values();
-        $periods = $studentPkls->pluck('pklPeriod')->filter()->unique('id')->values();
+        $filterCompanies = $companies
+            ->concat($visits->getCollection()->pluck('company'))
+            ->filter()
+            ->unique('id')
+            ->sortBy('name')
+            ->values();
+
+        $pendingAssignedTargets = $assignedTargets->where('is_completed', false)->values();
+        $completedAssignedTargets = $assignedTargets->where('is_completed', true)->values();
 
         $stats = [
-            'total' => SupervisionVisit::where('teacher_id', $teacher->id)->count(),
-            'this_month' => SupervisionVisit::where('teacher_id', $teacher->id)
+            'pending_tasks' => $pendingAssignedTargets->count(),
+            'total' => $visits->total(),
+            'this_month' => SupervisionVisit::where('school_id', Auth::user()->school_id)
+                ->where(function ($q) use ($teacher) {
+                    $q->where('teacher_id', $teacher->id)
+                        ->orWhereHas('studentPkls', fn ($sq) => $sq->where('student_pkl.teacher_id', $teacher->id));
+                })
                 ->whereYear('visit_date', now()->year)
                 ->whereMonth('visit_date', now()->month)
                 ->count(),
-            'companies_count' => $companies->count(),
+            'companies_count' => $filterCompanies->count(),
         ];
 
-        return view('teacher.supervisions', compact('visits', 'companies', 'periods', 'stats'));
+        return view('teacher.supervisions', compact(
+            'teacher',
+            'visits',
+            'companies',
+            'filterCompanies',
+            'periods',
+            'stats',
+            'pendingAssignedTargets',
+            'completedAssignedTargets'
+        ));
+    }
+
+    /**
+     * Halaman briefing read-only siswa untuk petugas monitoring (otomatis tertutup saat laporan selesai).
+     */
+    public function monitoringBriefing(SupervisionAssignment $assignment, Company $company, SupervisionService $supervisionService)
+    {
+        $teacher = $this->getTeacher();
+        $briefing = $supervisionService->getReadOnlyBriefingForAssignmentCompany($teacher, $assignment, $company);
+
+        if (!$briefing) {
+            return redirect()->route('guru.supervisions')
+                ->with('error', 'Akses monitoring read-only telah ditutup karena laporan kunjungan untuk perusahaan ini sudah selesai atau tidak ditemukan.');
+        }
+
+        return view('teacher.supervision-briefing', compact('teacher', 'briefing'));
     }
 
     public function storeSupervision(Request $request, SupervisionService $supervisionService)
@@ -922,6 +950,9 @@ class TeacherController extends Controller
                 'required',
                 Rule::exists('pkl_periods', 'id')->where('school_id', $schoolId),
             ],
+            'supervision_assignment_id' => ['nullable', 'integer'],
+            'student_pkl_ids' => ['nullable', 'array'],
+            'student_pkl_ids.*' => ['integer'],
             'stage' => ['required', 'in:penyerahan,monitoring_1,monitoring_2,penjemputan,insidental'],
             'visit_date' => ['required', 'date'],
             'student_progress_summary' => ['required', 'string', 'min:10'],
@@ -931,15 +962,6 @@ class TeacherController extends Controller
             'photo_with_supervisor' => ['nullable', 'image', 'max:4096'],
         ]);
 
-        $hasStudents = StudentPkl::where('teacher_id', $teacher->id)
-            ->where('company_id', $validated['company_id'])
-            ->where('pkl_period_id', $validated['pkl_period_id'])
-            ->exists();
-
-        if (!$hasStudents) {
-            return back()->withErrors(['company_id' => 'Anda tidak memiliki alokasi siswa bimbingan aktif pada mitra industri dan periode ini.'])->withInput();
-        }
-
         $supervisionService->createVisit(
             $teacher,
             $validated,
@@ -947,23 +969,21 @@ class TeacherController extends Controller
             $request->file('photo_with_supervisor')
         );
 
-        return back()->with('success', 'Log kunjungan supervisi berhasil dicatat dan Berita Acara siap diunduh.');
+        return redirect()->route('guru.supervisions')->with('success', 'Log kunjungan supervisi berhasil dicatat dan Berita Acara siap diunduh.');
     }
 
     public function downloadBeritaAcaraPdf(SupervisionVisit $supervisionVisit, SupervisionService $supervisionService)
     {
-        $teacher = $this->getTeacher();
+        $this->getTeacher();
 
-        if ($supervisionVisit->teacher_id !== $teacher->id && Auth::user()->role !== 'admin-sekolah') {
+        if (!$supervisionService->canViewVisit(Auth::user(), $supervisionVisit)) {
             abort(403, 'Akses ditolak: Anda tidak memiliki wewenang untuk mengunduh dokumen Berita Acara ini.');
         }
 
         try {
             $pdf = $supervisionService->generateBeritaAcaraPdf($supervisionVisit);
-            $dateStr = $supervisionVisit->visit_date ? $supervisionVisit->visit_date->format('Ymd') : date('Ymd');
-            $companySlug = Str::slug($supervisionVisit->company->name ?? 'DUDI');
 
-            return $pdf->download("Berita_Acara_Supervisi_{$companySlug}_{$dateStr}.pdf");
+            return $pdf->download($supervisionService->buildBeritaAcaraFilename($supervisionVisit));
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error("Download Berita Acara PDF gagal (Visit ID: {$supervisionVisit->id}): " . $e->getMessage(), [
                 'exception' => $e,

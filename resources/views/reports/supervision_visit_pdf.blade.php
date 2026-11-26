@@ -164,10 +164,17 @@
     <!-- IDENTITAS SUPERVISI -->
     <table class="meta-table">
         <tr>
-            <td class="meta-label">Nama Guru Pembimbing</td>
+            <td class="meta-label">{{ !empty($hasDifferentAdvisor) ? 'Petugas Supervisi / Monitoring' : 'Nama Guru Pembimbing' }}</td>
             <td class="meta-sep">:</td>
             <td class="meta-value"><strong>{{ $visit->teacher->user->name ?? '-' }}</strong> (NIP: {{ $visit->teacher->nip ?? '-' }})</td>
         </tr>
+        @if($visit->assignment?->assignment_number)
+            <tr>
+                <td class="meta-label">Nomor Surat Tugas</td>
+                <td class="meta-sep">:</td>
+                <td class="meta-value">{{ $visit->assignment->assignment_number }}</td>
+            </tr>
+        @endif
         <tr>
             <td class="meta-label">Tempat PKL (DU/DI)</td>
             <td class="meta-sep">:</td>
@@ -195,11 +202,14 @@
     <table class="data-table">
         <thead>
             <tr>
-                <th style="width: 6%; text-align: center;">No</th>
-                <th style="width: 32%;">Nama Siswa</th>
-                <th style="width: 18%;">NIS / NISN</th>
-                <th style="width: 26%;">Kelas / Jurusan</th>
-                <th style="width: 18%; text-align: center;">Status</th>
+                <th style="width: 5%; text-align: center;">No</th>
+                <th style="width: {{ !empty($hasDifferentAdvisor) ? '26%' : '32%' }};">Nama Siswa</th>
+                <th style="width: 17%;">NIS / NISN</th>
+                <th style="width: {{ !empty($hasDifferentAdvisor) ? '20%' : '28%' }};">Kelas / Jurusan</th>
+                @if(!empty($hasDifferentAdvisor))
+                    <th style="width: 20%;">Guru Pembimbing</th>
+                @endif
+                <th style="width: 12%; text-align: center;">Status</th>
             </tr>
         </thead>
         <tbody>
@@ -209,13 +219,16 @@
                     <td><strong>{{ $spkl->student->user->name ?? '-' }}</strong></td>
                     <td>{{ $spkl->student->nis ?? '-' }} / {{ $spkl->student->nisn ?? '-' }}</td>
                     <td>{{ $spkl->student->class->name ?? '-' }}</td>
+                    @if(!empty($hasDifferentAdvisor))
+                        <td>{{ $spkl->teacher->user->name ?? '-' }}</td>
+                    @endif
                     <td style="text-align: center;">
                         <span style="color: #059669; font-weight: bold; text-transform: capitalize;">{{ $spkl->status }}</span>
                     </td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="5" style="text-align: center; color: #94a3b8; padding: 10px;">
+                    <td colspan="{{ !empty($hasDifferentAdvisor) ? 6 : 5 }}" style="text-align: center; color: #94a3b8; padding: 10px;">
                         Data siswa bimbingan pada DU/DI ini tidak ditemukan.
                     </td>
                 </tr>
@@ -257,7 +270,7 @@
             </td>
             <td>
                 Dibuat oleh,<br>
-                <strong>Guru Pembimbing PKL</strong>
+                <strong>{{ !empty($hasDifferentAdvisor) ? 'Petugas Supervisi / Monitoring' : 'Guru Pembimbing PKL' }}</strong>
                 <div class="sig-space"></div>
                 <div class="sig-name">( {{ $visit->teacher->user->name ?? 'Guru Pembimbing' }} )</div>
                 <div class="sig-role">NIP. {{ $visit->teacher->nip ?? '........................' }}</div>

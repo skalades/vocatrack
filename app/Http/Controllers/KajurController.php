@@ -14,15 +14,18 @@ use App\Models\Profile;
 use App\Models\SchoolClass;
 use App\Models\Student;
 use App\Models\StudentPkl;
+use App\Models\SupervisionAssignment;
 use App\Models\SupervisionVisit;
 use App\Models\Supervisor;
 use App\Models\Teacher;
 use App\Models\User;
+use App\Services\SupervisionService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 
 class KajurController extends Controller
@@ -501,28 +504,112 @@ class KajurController extends Controller
     }
 
     /**
-     * Monitoring rekap kunjungan supervisi guru pembimbing ke DU/DI.
+     * Monitoring rekap kunjungan supervisi, penugasan monitoring jurusan, dan Berita Acara.
      */
-    public function supervisions(Request $request)
+    public function supervisions(Request $request, SupervisionService $supervisionService)
     {
         $schoolId = $this->getSchoolId();
         $major = $this->getHeadedMajor();
 
-        $classIds = $major->classes()->pluck('id');
-        $studentIds = Student::whereIn('class_id', $classIds)->pluck('id');
-        $teacherIds = StudentPkl::where('school_id', $schoolId)
-            ->whereIn('student_id', $studentIds)
-            ->whereNotNull('teacher_id')
-            ->distinct()
-            ->pluck('teacher_id');
+        $periods = PklPeriod::where('school_id', $schoolId)->latest()->get();
+        $activePeriod = $periods->firstWhere('is_active', true) ?? $periods->first();
+        $selectedPeriodId = (int) ($request->query('pkl_period_id') ?: ($activePeriod?->id ?? 0));
 
-        $supervisions = SupervisionVisit::where('school_id', $schoolId)
-            ->whereIn('teacher_id', $teacherIds)
-            ->with(['teacher.user', 'company'])
-            ->latest('visit_date')
-            ->paginate(15);
+        $teachers = Teacher::whereHas('user', fn ($q) => $q->where('school_id', $schoolId)->where('is_active', true))
+            ->with(['user', 'headedMajors', 'majors'])
+            ->get()
+            ->sortBy(fn (Teacher $t) => $t->user?->name ?? '')
+            ->values();
 
-        return view('kajur.supervisions', compact('major', 'supervisions'));
+        $assignments = $supervisionService->getAssignments(
+            $schoolId,
+            $request->only(['pkl_period_id', 'stage', 'teacher_id', 'company_id']),
+            $major
+        );
+
+        $supervisions = $supervisionService->getVisitsForMajor(
+            $schoolId,
+            $major,
+            $request->only(['company_id', 'stage', 'teacher_id'])
+        );
+
+        $matrix = $selectedPeriodId > 0
+            ? $supervisionService->getCompanyMonitoringMatrix($schoolId, $selectedPeriodId, $major)
+            : collect();
+
+        $companies = $matrix->pluck('company')->filter()->unique('id')->values();
+
+        return view('kajur.supervisions', compact(
+            'major',
+            'periods',
+            'selectedPeriodId',
+            'teachers',
+            'companies',
+            'assignments',
+            'supervisions',
+            'matrix'
+        ));
+    }
+
+    public function storeSupervisionAssignment(Request $request, SupervisionService $supervisionService)
+    {
+        $schoolId = $this->getSchoolId();
+        $major = $this->getHeadedMajor();
+
+        $validated = $request->validate([
+            'teacher_id' => ['required', 'integer'],
+            'pkl_period_id' => ['required', Rule::exists('pkl_periods', 'id')->where('school_id', $schoolId)],
+            'stage' => ['required', 'in:monitoring_1,monitoring_2'],
+            'assignment_number' => ['nullable', 'string', 'max:100'],
+            'scheduled_date' => ['nullable', 'date'],
+            'notes' => ['nullable', 'string', 'max:1000'],
+            'company_ids' => ['nullable', 'array'],
+            'company_ids.*' => ['integer'],
+            'student_pkl_ids' => ['nullable', 'array'],
+            'student_pkl_ids.*' => ['integer'],
+        ], [
+            'teacher_id.required' => 'Pilih guru atau Kajur petugas monitoring terlebih dahulu.',
+            'pkl_period_id.required' => 'Pilih periode PKL terlebih dahulu.',
+            'stage.required' => 'Pilih tahap monitoring (Monitoring 1 atau Monitoring 2).',
+        ]);
+
+        if (empty($validated['student_pkl_ids']) && empty($validated['company_ids'])) {
+            return back()->withErrors(['company_ids' => 'Pilih minimal satu DU/DI atau siswa jurusan Anda.'])->withInput();
+        }
+
+        $assignment = $supervisionService->createAssignment(Auth::user(), $schoolId, $validated, $major);
+        $companiesCount = $assignment->items->pluck('company_id')->unique()->count();
+        $studentsCount = $assignment->items->count();
+
+        return back()->with('success', "Penugasan {$assignment->stage_short_label} jurusan {$major->code} untuk {$assignment->teacher->user->name} berhasil dibuat ({$companiesCount} DU/DI, {$studentsCount} siswa).");
+    }
+
+    public function destroySupervisionAssignment(SupervisionAssignment $assignment, SupervisionService $supervisionService)
+    {
+        abort_if((int) $assignment->school_id !== $this->getSchoolId(), 403);
+        $major = $this->getHeadedMajor();
+
+        $result = $supervisionService->cancelPendingAssignment($assignment, $major);
+        $message = $result['deleted_assignment']
+            ? 'Penugasan monitoring berhasil dibatalkan.'
+            : "Sebanyak {$result['removed_items']} target siswa jurusan yang belum selesai berhasil dilepaskan.";
+
+        return back()->with('success', $message);
+    }
+
+    public function downloadSupervisionPdf(SupervisionVisit $supervisionVisit, SupervisionService $supervisionService)
+    {
+        abort_if(!$supervisionService->canViewVisit(Auth::user(), $supervisionVisit), 403, 'Akses ditolak: Anda tidak memiliki wewenang mengunduh Berita Acara ini.');
+
+        try {
+            $pdf = $supervisionService->generateBeritaAcaraPdf($supervisionVisit);
+
+            return $pdf->download($supervisionService->buildBeritaAcaraFilename($supervisionVisit));
+        } catch (\Throwable $e) {
+            Log::error("Download Berita Acara PDF Kajur gagal (Visit ID: {$supervisionVisit->id}): " . $e->getMessage(), ['exception' => $e]);
+
+            return back()->with('error', 'Gagal mengunduh Berita Acara PDF: ' . $e->getMessage());
+        }
     }
 
     /**
