@@ -191,8 +191,9 @@
     <script>
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') {
-                document.querySelectorAll('#checkout-modal, #request-modal, #mobile-notification-drawer, #home-announcement-modal, [id^="modal-"]').forEach(m => m.classList.add('hidden'));
+                document.querySelectorAll('#checkout-modal, #request-modal, #mobile-notification-drawer, #home-announcement-modal, [id^="modal-"]:not(#modal-change-password)').forEach(m => m.classList.add('hidden'));
                 document.body.style.overflow = '';
+                if (window.closeChangePasswordModal) closeChangePasswordModal();
                 if (window.closeSosModal) window.closeSosModal();
                 if (window.closeFakeGpsModal) window.closeFakeGpsModal();
                 if (window.closePermissionGuideModal) window.closePermissionGuideModal();

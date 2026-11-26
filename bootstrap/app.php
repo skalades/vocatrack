@@ -19,7 +19,10 @@ return Application::configure(basePath: dirname(__DIR__))
             'is-walikelas' => \App\Http\Middleware\EnsureIsHomeroomTeacher::class,
             'feature' => \App\Http\Middleware\CheckFeatureEntitlement::class,
         ]);
-        $middleware->appendToGroup('web', \App\Http\Middleware\AttachMonitoringContext::class);
+        $middleware->appendToGroup('web', [
+            \App\Http\Middleware\AttachMonitoringContext::class,
+            \App\Http\Middleware\EnsureDefaultPasswordChanged::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Laporkan exception ke Sentry (no-op bila SENTRY_LARAVEL_DSN kosong).

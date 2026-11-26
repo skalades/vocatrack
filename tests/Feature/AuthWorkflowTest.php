@@ -318,4 +318,110 @@ class AuthWorkflowTest extends TestCase
         ]);
         $response2->assertSessionHasErrors('password');
     }
+
+    public function test_first_login_with_default_password_redirects_to_change_password_form(): void
+    {
+        $defaultUser = User::create([
+            'school_id' => $this->school->id,
+            'name' => 'Siswa Baru Default',
+            'email' => 'siswadefault@otentikasi.sch.id',
+            'password' => bcrypt(User::DEFAULT_PASSWORD),
+            'role' => 'siswa',
+            'is_active' => true,
+        ]);
+
+        Student::create([
+            'user_id' => $defaultUser->id,
+            'class_id' => $this->student->class_id,
+            'nis' => '2026999',
+            'nisn' => '0099998888',
+        ]);
+
+        // Login menggunakan password default sistem ('password')
+        $loginResponse = $this->post(route('login.post'), [
+            'email' => '0099998888',
+            'password' => User::DEFAULT_PASSWORD,
+        ]);
+
+        $loginResponse->assertRedirect(route('password.first-login'));
+        $this->assertAuthenticatedAs($defaultUser);
+
+        // Tidak boleh bypass langsung ke dashboard sebelum ganti password
+        $this->get(route('student.home'))
+            ->assertRedirect(route('password.first-login'));
+
+        // Halaman form ubah sandi pertama kali tampil konsisten
+        $this->get(route('password.first-login'))
+            ->assertOk()
+            ->assertSee('Buat Kata Sandi Baru')
+            ->assertSee($defaultUser->email);
+
+        // Tidak boleh mengganti dengan kata sandi default sistem ('password') lagi
+        $this->from(route('password.first-login'))
+            ->post(route('password.first-login.update'), [
+                'password' => User::DEFAULT_PASSWORD,
+                'password_confirmation' => User::DEFAULT_PASSWORD,
+            ])
+            ->assertRedirect(route('password.first-login'))
+            ->assertSessionHasErrors('password');
+
+        // Berhasil mengganti kata sandi ke yang aman dan langsung diarahkan ke dasbor role
+        $updateResponse = $this->post(route('password.first-login.update'), [
+            'password' => 'SandiBaruSiswa99!',
+            'password_confirmation' => 'SandiBaruSiswa99!',
+        ]);
+
+        $updateResponse->assertRedirect(route('student.home'));
+        $updateResponse->assertSessionHas('success');
+
+        $defaultUser->refresh();
+        $this->assertFalse($defaultUser->isUsingDefaultPassword());
+        $this->assertFalse($defaultUser->must_change_password);
+        $this->assertTrue(\Illuminate\Support\Facades\Hash::check('SandiBaruSiswa99!', $defaultUser->password));
+
+        $this->assertDatabaseHas('activity_logs', [
+            'action' => 'password_changed_first_login',
+            'module' => 'auth',
+            'user_id' => $defaultUser->id,
+        ]);
+
+        // Setelah diganti, dashboard bisa diakses normal
+        $this->get(route('student.home'))->assertOk();
+    }
+
+    public function test_first_login_honors_intended_url_after_changing_default_password(): void
+    {
+        $defaultAdmin = User::create([
+            'school_id' => $this->school->id,
+            'name' => 'Admin Default',
+            'email' => 'admindefault@otentikasi.sch.id',
+            'password' => bcrypt(User::DEFAULT_PASSWORD),
+            'role' => 'admin-sekolah',
+            'is_active' => true,
+        ]);
+
+        session(['url.intended' => route('adminsekolah.students')]);
+
+        $this->post(route('login.post'), [
+            'email' => 'admindefault@otentikasi.sch.id',
+            'password' => User::DEFAULT_PASSWORD,
+        ])->assertRedirect(route('password.first-login'));
+
+        $this->post(route('password.first-login.update'), [
+            'password' => 'AdminAman2026!',
+            'password_confirmation' => 'AdminAman2026!',
+        ])->assertRedirect(route('adminsekolah.students'));
+    }
+
+    public function test_login_with_non_default_password_does_not_show_first_login_form(): void
+    {
+        $this->post(route('login.post'), [
+            'email' => 'admin@otentikasi.sch.id',
+            'password' => 'AdminSecret123!',
+        ])->assertRedirect(route('adminsekolah.dashboard'));
+
+        // Akses langsung ke route first-login otomatis dialihkan ke dasbor karena bukan sandi default
+        $this->get(route('password.first-login'))
+            ->assertRedirect(route('adminsekolah.dashboard'));
+    }
 }

@@ -14,14 +14,22 @@
                     <p class="text-[11px] text-slate-400">Jaga keamanan akun Anda secara mandiri</p>
                 </div>
             </div>
-            <button type="button" onclick="closeChangePasswordModal()" class="p-1.5 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition-colors">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-            </button>
+            @if(empty($forcePasswordChange))
+                <button type="button" onclick="closeChangePasswordModal()" class="p-1.5 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            @endif
         </div>
 
         @if(!empty($forcePasswordChange))
             <div class="p-3 rounded-2xl bg-amber-50 border border-amber-200 text-[11px] font-semibold text-amber-800">
                 Akun Anda masih memakai kata sandi sementara dari administrator. Demi keamanan, ganti kata sandi sekarang sebelum melanjutkan.
+            </div>
+        @endif
+
+        @if(isset($errors) && ($errors->has('current_password') || $errors->has('password')))
+            <div class="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-[11px] font-semibold text-rose-800">
+                {{ $errors->first('current_password') ?: $errors->first('password') }}
             </div>
         @endif
 
@@ -77,9 +85,11 @@
 
             <!-- Tombol Aksi -->
             <div class="flex items-center justify-end space-x-2 pt-2 border-t border-slate-100">
-                <x-button type="button" variant="secondary" size="md" onclick="closeChangePasswordModal()">
-                    Batal
-                </x-button>
+                @if(empty($forcePasswordChange))
+                    <x-button type="button" variant="secondary" size="md" onclick="closeChangePasswordModal()">
+                        Batal
+                    </x-button>
+                @endif
                 <x-button type="submit" variant="primary" size="md">
                     Simpan Kata Sandi
                 </x-button>

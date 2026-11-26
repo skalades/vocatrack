@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -31,6 +32,10 @@ class AuthController extends Controller
                 return view('auth.login')->withErrors([
                     'email' => 'Sesi Anda telah dihentikan karena akun atau sekolah Anda sedang nonaktif.',
                 ]);
+            }
+
+            if (session('force_default_password_change') && $user->isUsingDefaultPassword()) {
+                return redirect()->route('password.first-login');
             }
 
             return $this->redirectBasedOnRole($user);
@@ -101,6 +106,15 @@ class AuthController extends Controller
             // Berhasil login: reset hit rate limiting dan regenerasi session ID
             RateLimiter::clear($throttleKey);
             $request->session()->regenerate();
+
+            // Jika pengguna masih memakai kata sandi default sistem ('password'), wajibkan ubah sandi saat login pertama
+            if ($credentials['password'] === User::DEFAULT_PASSWORD) {
+                $request->session()->put('force_default_password_change', true);
+
+                return redirect()->route('password.first-login');
+            }
+
+            $request->session()->forget('force_default_password_change');
 
             return $this->redirectBasedOnRole($user, true);
         }
@@ -219,28 +233,72 @@ class AuthController extends Controller
     }
 
     /**
-     * Memperbarui kata sandi secara mandiri untuk seluruh level user (Superadmin, Admin Sekolah, Kepsek, Guru, DUDI, Siswa).
+     * Tampilkan form wajib ganti kata sandi saat pengguna masih memakai sandi default sistem.
      */
-    public function changePassword(Request $request)
+    public function showFirstLoginPasswordForm(Request $request)
     {
-        $validated = $request->validate([
-            'current_password' => ['required', 'string', 'current_password'],
-            'password' => ['required', 'string', 'min:8', 'confirmed', 'different:current_password'],
-        ], [
-            'current_password.required' => 'Kata sandi saat ini wajib diisi.',
-            'current_password.current_password' => 'Kata sandi saat ini yang Anda masukkan salah.',
-            'password.required' => 'Kata sandi baru wajib diisi.',
-            'password.min' => 'Kata sandi baru minimal harus 8 karakter.',
-            'password.confirmed' => 'Konfirmasi kata sandi baru tidak cocok.',
-            'password.different' => 'Kata sandi baru tidak boleh sama dengan kata sandi saat ini.',
-        ]);
-
         /** @var \App\Models\User $user */
         $user = Auth::user();
+
+        if (!$user->isUsingDefaultPassword()) {
+            $request->session()->forget('force_default_password_change');
+
+            return $this->redirectBasedOnRole($user, true);
+        }
+
+        return view('auth.first-login-password', [
+            'user' => $user,
+        ]);
+    }
+
+    /**
+     * Simpan kata sandi baru saat login pertama dari sandi default sistem.
+     */
+    public function updateFirstLoginPassword(Request $request)
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
+        $validated = $request->validate([
+            'password' => $this->newPasswordRules($user),
+        ], $this->passwordValidationMessages());
+
         $user->update([
             'password' => Hash::make($validated['password']),
             'must_change_password' => false,
         ]);
+
+        $request->session()->forget('force_default_password_change');
+
+        AuditLogService::log(
+            action: 'password_changed_first_login',
+            module: 'auth',
+            description: "Pengguna {$user->name} ({$user->email} - role: {$user->role}) mengganti kata sandi default sistem saat login pertama."
+        );
+
+        return $this->redirectBasedOnRole($user, true)
+            ->with('success', 'Kata sandi baru berhasil disimpan. Akun Anda kini lebih aman.');
+    }
+
+    /**
+     * Memperbarui kata sandi secara mandiri untuk seluruh level user (Superadmin, Admin Sekolah, Kepsek, Guru, DUDI, Siswa).
+     */
+    public function changePassword(Request $request)
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
+        $validated = $request->validate([
+            'current_password' => ['required', 'string', 'current_password'],
+            'password' => $this->newPasswordRules($user),
+        ], $this->passwordValidationMessages());
+
+        $user->update([
+            'password' => Hash::make($validated['password']),
+            'must_change_password' => false,
+        ]);
+
+        $request->session()->forget('force_default_password_change');
 
         AuditLogService::log(
             action: 'password_changed_self',
@@ -249,6 +307,40 @@ class AuthController extends Controller
         );
 
         return back()->with('success', 'Kata sandi Anda berhasil diperbarui.');
+    }
+
+    /**
+     * Aturan validasi kata sandi baru yang konsisten untuk ganti sandi mandiri & login pertama.
+     */
+    protected function newPasswordRules(User $user): array
+    {
+        return [
+            'required',
+            'string',
+            'min:8',
+            'confirmed',
+            Rule::notIn([User::DEFAULT_PASSWORD]),
+            function (string $attribute, mixed $value, \Closure $fail) use ($user): void {
+                if (Hash::check((string) $value, $user->password)) {
+                    $fail('Kata sandi baru tidak boleh sama dengan kata sandi saat ini.');
+                }
+            },
+        ];
+    }
+
+    /**
+     * Pesan validasi kata sandi berbahasa Indonesia.
+     */
+    protected function passwordValidationMessages(): array
+    {
+        return [
+            'current_password.required' => 'Kata sandi saat ini wajib diisi.',
+            'current_password.current_password' => 'Kata sandi saat ini yang Anda masukkan salah.',
+            'password.required' => 'Kata sandi baru wajib diisi.',
+            'password.min' => 'Kata sandi baru minimal harus 8 karakter.',
+            'password.confirmed' => 'Konfirmasi kata sandi baru tidak cocok.',
+            'password.not_in' => 'Kata sandi baru tidak boleh menggunakan kata sandi default sistem.',
+        ];
     }
 
     /**

@@ -137,7 +137,8 @@
     <script>
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') {
-                document.querySelectorAll('[id^="modal-"], #image-lightbox-modal, #change-password-modal, #whatsapp-contact-modal').forEach(m => m.classList.add('hidden'));
+                document.querySelectorAll('[id^="modal-"]:not(#modal-change-password), #image-lightbox-modal, #whatsapp-contact-modal').forEach(m => m.classList.add('hidden'));
+                if (window.closeChangePasswordModal) closeChangePasswordModal();
                 document.body.style.overflow = '';
             }
         });

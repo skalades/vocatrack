@@ -9,11 +9,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Hash;
 use NotificationChannels\WebPush\HasPushSubscriptions;
 
 class User extends Authenticatable
 {
     use HasFactory, Notifiable, HasPushSubscriptions;
+
+    public const DEFAULT_PASSWORD = 'password';
 
     protected $fillable = [
         'school_id',
@@ -116,6 +119,14 @@ class User extends Authenticatable
             return in_array($this->role, $roles, true);
         }
         return $this->role === $roles;
+    }
+
+    /**
+     * Periksa apakah pengguna masih memakai kata sandi default sistem ('password').
+     */
+    public function isUsingDefaultPassword(): bool
+    {
+        return filled($this->password) && Hash::check(self::DEFAULT_PASSWORD, $this->password);
     }
 
     public function school(): BelongsTo

@@ -102,6 +102,8 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/impersonate/{user}', [ImpersonationController::class, 'start'])->name('impersonate.start');
 
     // Self-Service Password Change & Contact/Preferences for All User Levels
+    Route::get('/first-login/change-password', [AuthController::class, 'showFirstLoginPasswordForm'])->name('password.first-login');
+    Route::post('/first-login/change-password', [AuthController::class, 'updateFirstLoginPassword'])->name('password.first-login.update');
     Route::post('/profile/change-password', [AuthController::class, 'changePassword'])->name('profile.change-password');
     Route::post('/profile/contact-preferences', [AuthController::class, 'updateContactAndPreferences'])->name('profile.contact-preferences');
 });
