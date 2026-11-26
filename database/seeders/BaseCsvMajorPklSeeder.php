@@ -249,6 +249,7 @@ abstract class BaseCsvMajorPklSeeder extends Seeder
 
             $rows[] = [
                 'nis' => $nis,
+                'nisn' => $this->normalizeText((string) ($raw[17] ?? '')),
                 'name' => $name,
                 'class_name' => $this->normalizeText((string) ($raw[2] ?? '')),
                 'major_code' => $this->normalizeText((string) ($raw[3] ?? $this->majorCode())),
@@ -564,12 +565,13 @@ abstract class BaseCsvMajorPklSeeder extends Seeder
 
         foreach ($rows as $row) {
             $nis = $row['nis'];
+            $nisn = $row['nisn'] !== '' ? $row['nisn'] : $nis;
             $targetClass = $classesByName[$row['class_name']] ?? null;
             $company = $companiesByName[$row['company_name']] ?? null;
             $teacherKey = $this->resolveTeacherIdentity($row['teacher_raw'])['key'];
             $teacher = $teachersByKey[$teacherKey] ?? null;
 
-            if (!$targetClass || !$company || !$teacher) {
+            if (!$targetClass) {
                 continue;
             }
 
@@ -601,6 +603,7 @@ abstract class BaseCsvMajorPklSeeder extends Seeder
                 $student->update([
                     'class_id' => $targetClass->id,
                     'nis' => $nis,
+                    'nisn' => $nisn,
                     'is_parent_portal_active' => true,
                 ]);
             } else {
@@ -608,10 +611,14 @@ abstract class BaseCsvMajorPklSeeder extends Seeder
                     'user_id' => $studentUser->id,
                     'class_id' => $targetClass->id,
                     'nis' => $nis,
-                    'nisn' => $nis,
+                    'nisn' => $nisn,
                     'parent_token' => Str::random(32),
                     'is_parent_portal_active' => true,
                 ]);
+            }
+
+            if (!$company || !$teacher) {
+                continue;
             }
 
             $spklAttributes = [
