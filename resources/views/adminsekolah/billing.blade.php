@@ -145,6 +145,7 @@
         </div>
     </x-card>
 
+    @if(config('services.billing.show_invoice_history', false))
     <!-- Table: Invoices History -->
     <x-card noPadding>
         <div class="p-5 border-b border-slate-100 flex items-center justify-between">
@@ -218,6 +219,7 @@
             </div>
         @endif
     </x-card>
+    @endif
 
 </div>
 @endsection

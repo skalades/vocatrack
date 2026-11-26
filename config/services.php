@@ -52,4 +52,8 @@ return [
         'enabled' => env('WHATSAPP_GATEWAY_ENABLED', true),
     ],
 
+    'billing' => [
+        'show_invoice_history' => (bool) env('SHOW_SCHOOL_INVOICE_HISTORY', false),
+    ],
+
 ];

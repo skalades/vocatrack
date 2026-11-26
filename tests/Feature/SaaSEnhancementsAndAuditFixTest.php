@@ -230,11 +230,20 @@ class SaaSEnhancementsAndAuditFixTest extends TestCase
         $invoice = Invoice::where('school_id', $this->school->id)->first();
         $this->assertNotNull($invoice);
 
-        // School Admin can view billing page
+        // School Admin can view billing page (riwayat tagihan dinonaktifkan sementara secara default)
         $response = $this->actingAs($this->schoolAdmin)->get(route('adminsekolah.billing'));
         $response->assertStatus(200);
         $response->assertSee('Paket Pro Enterprise');
-        $response->assertSee($invoice->invoice_number);
+        $response->assertDontSee('Riwayat Tagihan & Faktur Sewa', false);
+        $response->assertDontSee($invoice->invoice_number);
+
+        // Saat diaktifkan kembali lewat konfigurasi, riwayat tagihan tampil kembali
+        config()->set('services.billing.show_invoice_history', true);
+        $this->actingAs($this->schoolAdmin)
+            ->get(route('adminsekolah.billing'))
+            ->assertStatus(200)
+            ->assertSee('Riwayat Tagihan & Faktur Sewa', false)
+            ->assertSee($invoice->invoice_number);
 
         // School Admin can download their invoice PDF
         $responsePdf = $this->actingAs($this->schoolAdmin)->get(route('adminsekolah.invoices.pdf', $invoice->id));

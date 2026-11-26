@@ -17,7 +17,9 @@ class BillingController extends BaseAdminSekolahController
         }])->findOrFail($schoolId);
 
         $activeSubscription = $school->activeSubscription();
-        $invoices = Invoice::where('school_id', $schoolId)->latest()->paginate(10);
+        $invoices = config('services.billing.show_invoice_history', false)
+            ? Invoice::where('school_id', $schoolId)->latest()->paginate(10)
+            : collect();
         $subscriptions = $school->subscriptions()->latest()->get();
 
         $studentQuota = $activeSubscription?->student_quota ?? 100;
