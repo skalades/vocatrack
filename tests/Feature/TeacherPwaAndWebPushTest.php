@@ -137,6 +137,7 @@ class TeacherPwaAndWebPushTest extends TestCase
         $this->assertStringContainsString('data-vapid-public-key="BTeacherVapidKey"', $mobileHtml);
         $this->assertStringContainsString('id="teacher-pwa-card"', $mobileHtml);
         $this->assertStringContainsString('id="pwa-push-section"', $mobileHtml);
+        $this->assertStringNotContainsString('&amp;amp;', $mobileHtml);
 
         // Desktop view
         $desktopHtml = $this->actingAs($this->teacherUser)
