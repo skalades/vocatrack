@@ -221,4 +221,59 @@ class ViewRenderingTest extends TestCase
         $v500 = view('errors.500')->render();
         $this->assertStringContainsString('Terjadi Gangguan pada Server', $v500);
     }
+
+    public function test_creator_branding_renders_across_footers(): void
+    {
+        foreach ([
+            '/login' => 200,
+            '/forgot-password' => 200,
+            '/verify/cert/nonexistent-uuid' => 200,
+            '/pantau/nonexistent-token' => 404,
+        ] as $url => $expectedStatus) {
+            $resp = $this->get($url);
+            $resp->assertStatus($expectedStatus);
+            $resp->assertSee('Aplikasi ini dibuat oleh');
+            $resp->assertSee('https://nadirlabs.net');
+            $resp->assertSee('images/nadir-logo.png');
+        }
+
+        if (\App\Http\Controllers\LandingController::ENABLED) {
+            $landing = $this->get('/');
+            $landing->assertStatus(200);
+            $landing->assertSee('Aplikasi ini dibuat oleh');
+            $landing->assertSee('https://nadirlabs.net');
+            $landing->assertSee('images/nadir-logo.png');
+        }
+
+        $superadmin = User::where('email', 'superadmin@vokatrack.id')->first();
+        if ($superadmin) {
+            $this->actingAs($superadmin)
+                ->get(route('superadmin.dashboard'))
+                ->assertStatus(200)
+                ->assertSee('Aplikasi ini dibuat oleh')
+                ->assertSee('https://nadirlabs.net');
+        }
+
+        $student = User::where('role', 'siswa')->first();
+        if ($student) {
+            $this->actingAs($student)
+                ->get(route('student.home'))
+                ->assertStatus(200)
+                ->assertSee('Aplikasi ini dibuat oleh')
+                ->assertSee('https://nadirlabs.net');
+        }
+
+        $teacher = User::where('role', 'guru-pembimbing')->first();
+        if ($teacher) {
+            $this->actingAs($teacher)
+                ->get(route('guru.dashboard', ['view' => 'mobile']))
+                ->assertStatus(200)
+                ->assertSee('Aplikasi ini dibuat oleh')
+                ->assertSee('https://nadirlabs.net');
+        }
+
+        $err404 = view('errors.404')->render();
+        $this->assertStringContainsString('Aplikasi ini dibuat oleh', $err404);
+        $this->assertStringContainsString('https://nadirlabs.net', $err404);
+    }
 }

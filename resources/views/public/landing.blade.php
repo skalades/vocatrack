@@ -439,6 +439,11 @@
         </div>
         <div class="text-xs">© {{ date('Y') }} {{ $systemName ?? 'VokaTrack' }}</div>
     </div>
+    <div class="border-t border-white/10">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex justify-center">
+            <x-creator-branding variant="dark" class="justify-center text-[#A9C2B9]/90" />
+        </div>
+    </div>
 </footer>
 
 <script>

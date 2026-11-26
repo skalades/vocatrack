@@ -181,6 +181,7 @@
         <div class="max-w-4xl mx-auto px-4 space-y-1">
             <p>&copy; {{ date('Y') }} VokaTrack Digital Certification System. Seluruh hak cipta dilindungi.</p>
             <p class="text-[11px] text-slate-600">Sistem Penjaminan Mutu & Verifikasi Sertifikasi Vokasi Terpadu.</p>
+            <x-creator-branding variant="dark" class="justify-center pt-2 text-slate-400" />
         </div>
     </footer>
 

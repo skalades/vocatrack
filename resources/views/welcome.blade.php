@@ -100,8 +100,9 @@
     </main>
 
     <!-- Footer -->
-    <footer class="border-t border-slate-800/60 py-8 text-center text-xs text-slate-500">
-        &copy; {{ date('Y') }} VokaTrack Enterprise. Platform Praktik Kerja Lapangan Vokasi Indonesia.
+    <footer class="border-t border-slate-800/60 py-8 text-center text-xs text-slate-500 space-y-3">
+        <div>&copy; {{ date('Y') }} VokaTrack Enterprise. Platform Praktik Kerja Lapangan Vokasi Indonesia.</div>
+        <x-creator-branding variant="dark" class="justify-center text-slate-400" />
     </footer>
 </body>
 </html>

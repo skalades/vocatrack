@@ -139,6 +139,7 @@
                 <p class="text-center text-[11px] text-[#8B9F95] mt-5 font-medium">
                     &copy; {{ date('Y') }} {{ $systemName ?? 'VokaTrack' }} · Sistem Presensi GPS & Jurnal PKL SMK
                 </p>
+                <x-creator-branding variant="light" class="justify-center mt-2.5 text-[#647A70]" />
             </div>
         </main>
     </div>

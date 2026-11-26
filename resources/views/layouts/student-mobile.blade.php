@@ -148,9 +148,15 @@
         @endif
 
         <!-- Main Content Area -->
-        <main class="flex-1 {{ request()->routeIs(['student.home', 'student.attendance', 'student.journals']) ? '' : 'px-4 pt-4 pb-32' }}">
+        <main class="flex-1 {{ request()->routeIs(['student.home', 'student.attendance', 'student.journals']) ? '' : 'px-4 pt-4 pb-6' }}">
             @yield('content')
         </main>
+
+        @if(!request()->routeIs('student.attendance') || !empty($todayAttendance))
+            <footer class="px-4 py-4 mt-auto">
+                <x-creator-branding variant="light" class="justify-center text-[#5A6B65]" />
+            </footer>
+        @endif
 
         <!-- Floating Modern Student Bottom Dock (Otomatis disembunyikan saat layar kamera presensi) -->
         @if(!request()->routeIs('student.attendance') || !empty($todayAttendance))

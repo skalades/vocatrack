@@ -114,6 +114,10 @@
             @yield('content')
         </main>
 
+        <footer class="px-3.5 pt-2 pb-4 mt-auto">
+            <x-creator-branding variant="light" class="justify-center text-[#5A6B65]" />
+        </footer>
+
         <!-- Floating Bottom Dock Navigation -->
         <x-teacher.nav-dock />
 

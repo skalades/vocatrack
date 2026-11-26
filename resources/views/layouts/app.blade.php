@@ -322,8 +322,8 @@
             </div>
 
             <!-- Content Area -->
-            <main class="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto animate-fade-in {{ $role === 'guru-pembimbing' ? 'pb-28 lg:pb-8' : '' }}">
-                <div class="max-w-[1600px] mx-auto w-full">
+            <main class="flex-1 flex flex-col p-4 sm:p-6 lg:p-8 overflow-y-auto animate-fade-in {{ $role === 'guru-pembimbing' ? 'pb-28 lg:pb-8' : '' }}">
+                <div class="max-w-[1600px] mx-auto w-full flex-1 flex flex-col">
                     <!-- Global Platform Announcements / Broadcasts -->
                     @php
                         $activeBroadcasts = \Illuminate\Support\Facades\Schema::hasTable('platform_announcements')
@@ -349,7 +349,14 @@
                         </div>
                     @endforeach
 
-                    @yield('content')
+                    <div class="flex-1">
+                        @yield('content')
+                    </div>
+
+                    <footer class="mt-10 pt-5 border-t border-slate-200/80 flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] text-slate-500">
+                        <span>&copy; {{ date('Y') }} {{ $systemName ?? 'VokaTrack' }} &middot; {{ $systemTagline ?? 'Enterprise Cloud' }}</span>
+                        <x-creator-branding variant="light" class="justify-center sm:justify-end" />
+                    </footer>
                 </div>
             </main>
 

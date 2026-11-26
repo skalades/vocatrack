@@ -26,7 +26,7 @@
         }
     </style>
 </head>
-<body class="min-h-screen bg-pattern flex items-center justify-center p-4 sm:p-6 relative overflow-hidden antialiased selection:bg-[#C6F26B] selection:text-[#0B2B25]">
+<body class="min-h-screen bg-pattern flex flex-col items-center justify-center p-4 sm:p-6 relative overflow-hidden antialiased selection:bg-[#C6F26B] selection:text-[#0B2B25]">
 
     <!-- Ambient Rings Backdrop -->
     <div class="fixed inset-0 pointer-events-none -z-10 overflow-hidden flex items-center justify-center" aria-hidden="true">
@@ -74,6 +74,10 @@
             </button>
         </div>
     </div>
+
+    <footer class="mt-6">
+        <x-creator-branding variant="light" class="justify-center text-[#0B2B25]/60" />
+    </footer>
 
 </body>
 </html>

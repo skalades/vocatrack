@@ -346,5 +346,9 @@
 
     </main>
 
+    <footer class="max-w-xl w-full mx-auto px-4 pb-6 pt-1">
+        <x-creator-branding variant="light" class="justify-center text-[#5A6B65]" />
+    </footer>
+
 </body>
 </html>
