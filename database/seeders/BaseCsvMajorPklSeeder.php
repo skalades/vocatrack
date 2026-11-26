@@ -144,6 +144,9 @@ abstract class BaseCsvMajorPklSeeder extends Seeder
     public static function parseCoordinate(string $raw, bool $isLatitude): ?float
     {
         $trimmed = rtrim(ltrim(trim(str_replace(["\xc2\xa0", "\xa0", ' '], '', $raw)), "'"), ',');
+        if (preg_match('/^-?\d+\.\d+\.$/', $trimmed) === 1) {
+            $trimmed = rtrim($trimmed, '.');
+        }
         if ($trimmed === '') {
             return null;
         }
@@ -479,16 +482,17 @@ abstract class BaseCsvMajorPklSeeder extends Seeder
             if (
                 !isset($grouped[$name]['work_hours'])
                 && $row['checkin_start'] !== null
-                && $row['checkin_late'] !== null
                 && $row['checkout_start'] !== null
             ) {
-                $alfaCutoff = $row['checkin_late'] >= '11:00:00'
-                    ? Carbon::createFromTimeString($row['checkin_late'])->addHour()->format('H:i:s')
+                $checkinLate = $row['checkin_late']
+                    ?? Carbon::createFromTimeString($row['checkin_start'])->addHour()->format('H:i:s');
+                $alfaCutoff = $checkinLate >= '11:00:00'
+                    ? Carbon::createFromTimeString($checkinLate)->addHour()->format('H:i:s')
                     : '11:00:00';
 
                 $grouped[$name]['work_hours'] = [
                     'checkin_start' => $row['checkin_start'],
-                    'checkin_late' => $row['checkin_late'],
+                    'checkin_late' => $checkinLate,
                     'checkin_alfa' => $alfaCutoff,
                     'checkout_start' => $row['checkout_start'],
                 ];
