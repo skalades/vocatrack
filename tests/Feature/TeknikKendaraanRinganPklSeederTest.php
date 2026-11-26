@@ -44,10 +44,16 @@ class TeknikKendaraanRinganPklSeederTest extends TestCase
         $this->assertSame('Ali Aji Santoso, S.Pd', $tkro2->homeroomTeacher?->user?->name);
         $this->assertSame('Santi Susanti, S.Pd., M.Si', $tkro3->homeroomTeacher?->user?->name);
 
-        // 2. Total siswa (93), guru (18), dan DUDI TKR (33)
+        // 2. Total siswa (95 incl. 2 belum plotting), guru (18), dan DUDI TKR (33)
         $studentIds = Student::whereIn('class_id', [$tkro1->id, $tkro2->id, $tkro3->id])->pluck('id');
-        $this->assertCount(93, $studentIds);
+        $this->assertCount(95, $studentIds);
         $this->assertSame(18, $major->teachers()->count());
+
+        $afgan = Student::with('user')->where('nis', '242510395')->firstOrFail();
+        $revan = Student::with('user')->where('nis', '242510417')->firstOrFail();
+        $this->assertSame($tkro2->id, $afgan->class_id);
+        $this->assertSame($tkro2->id, $revan->class_id);
+        $this->assertSame(0, StudentPkl::whereIn('student_id', [$afgan->id, $revan->id])->count());
 
         $melany = Student::with('user.profile')->where('nis', '242510446')->firstOrFail();
         $this->assertSame('P', $melany->user?->profile?->gender);
@@ -56,6 +62,7 @@ class TeknikKendaraanRinganPklSeederTest extends TestCase
             ->whereHas('majors', fn ($q) => $q->where('majors.id', $major->id))
             ->get();
         $this->assertCount(33, $companies);
+        $this->assertNull($companies->firstWhere('name', '-'));
         $this->assertSame(0, Supervisor::whereIn('company_id', $companies->pluck('id'))->count());
 
         foreach ($companies as $company) {
@@ -82,15 +89,19 @@ class TeknikKendaraanRinganPklSeederTest extends TestCase
         $this->assertNull($tigaBersaudara->latitude);
         $this->assertNull($tigaBersaudara->longitude);
 
-        // 5. Cabang PT. DIPO INTERNASIONAL PAHALA OTOMOTIF (Garut vs Rancaekek) tetap terpisah
+        // 5. PT. DIPO INTERNASIONAL vs PT. DIPO INTERNATIONAL PAHALA OTOMOTIF sesuai plotting live
         $dipoGarut = $companies->firstWhere('name', 'PT. DIPO INTERNASIONAL PAHALA OTOMOTIF');
-        $dipoRancaekek = $companies->firstWhere('name', 'PT. DIPO INTERNASIONAL PAHALA OTOMOTIF (Rancaekek)');
+        $dipoInternational = $companies->firstWhere('name', 'PT. DIPO INTERNATIONAL PAHALA OTOMOTIF');
         $this->assertNotNull($dipoGarut);
-        $this->assertNotNull($dipoRancaekek);
+        $this->assertNotNull($dipoInternational);
         $this->assertEqualsWithDelta(-7.20393534, $dipoGarut->latitude, 0.000001);
         $this->assertEqualsWithDelta(107.89115447, $dipoGarut->longitude, 0.000001);
-        $this->assertEqualsWithDelta(-6.90131409, $dipoRancaekek->latitude, 0.000001);
-        $this->assertEqualsWithDelta(107.75840731, $dipoRancaekek->longitude, 0.000001);
+        $this->assertEqualsWithDelta(-7.20393534, $dipoInternational->latitude, 0.000001);
+        $this->assertEqualsWithDelta(107.89115447, $dipoInternational->longitude, 0.000001);
+
+        $fahmi = Student::where('nis', '242510400')->firstOrFail();
+        $fahmiSpkl = StudentPkl::where('student_id', $fahmi->id)->firstOrFail();
+        $this->assertSame($dipoGarut->id, $fahmiSpkl->company_id);
 
         // 6. Seluruh plotting TKR memiliki supervisor_id = null & guru dapat langsung menyetujui jurnal
         $spkls = StudentPkl::with('teacher.user')->whereIn('student_id', $studentIds)->get();

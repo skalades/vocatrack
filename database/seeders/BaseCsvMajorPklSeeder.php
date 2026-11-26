@@ -252,15 +252,15 @@ abstract class BaseCsvMajorPklSeeder extends Seeder
 
             $rows[] = [
                 'nis' => $nis,
-                'nisn' => $this->normalizeText((string) ($raw[17] ?? '')),
+                'nisn' => $this->normalizeOptionalText((string) ($raw[17] ?? '')),
                 'name' => $name,
                 'class_name' => $this->normalizeText((string) ($raw[2] ?? '')),
                 'major_code' => $this->normalizeText((string) ($raw[3] ?? $this->majorCode())),
                 'phone' => $this->normalizePhone((string) ($raw[4] ?? '')),
-                'teacher_raw' => $this->normalizeText((string) ($raw[5] ?? '')),
-                'homeroom_raw' => $this->normalizeText((string) ($raw[6] ?? '')),
-                'company_name' => $this->normalizeText((string) ($raw[7] ?? '')),
-                'company_address' => $this->normalizeText((string) ($raw[8] ?? '')),
+                'teacher_raw' => $this->normalizeOptionalText((string) ($raw[5] ?? '')),
+                'homeroom_raw' => $this->normalizeOptionalText((string) ($raw[6] ?? '')),
+                'company_name' => $this->normalizeOptionalText((string) ($raw[7] ?? '')),
+                'company_address' => $this->normalizeOptionalText((string) ($raw[8] ?? '')),
                 'latitude' => static::parseCoordinate((string) ($raw[9] ?? ''), true),
                 'longitude' => static::parseCoordinate((string) ($raw[10] ?? ''), false),
                 'radius_meters' => max(50, (int) preg_replace('/[^0-9]/', '', (string) ($raw[11] ?? '100')) ?: 100),
@@ -283,6 +283,13 @@ abstract class BaseCsvMajorPklSeeder extends Seeder
         $cleaned = preg_replace('/\s+/', ' ', $cleaned) ?? $cleaned;
 
         return trim($cleaned);
+    }
+
+    private function normalizeOptionalText(string $value): string
+    {
+        $normalized = $this->normalizeText($value);
+
+        return $normalized === '-' ? '' : $normalized;
     }
 
     private function normalizePhone(string $raw): ?string
@@ -365,6 +372,41 @@ abstract class BaseCsvMajorPklSeeder extends Seeder
     }
 
     /**
+     * Buat atau perbarui akun pengguna tanpa menimpa password yang sudah diubah.
+     */
+    private function upsertUser(
+        string $email,
+        int $schoolId,
+        string $name,
+        string $role,
+        ?string $waNumber = null,
+        ?User $existingUser = null
+    ): User {
+        $user = $existingUser ?? User::where('email', $email)->first();
+
+        $attributes = [
+            'school_id' => $schoolId,
+            'name' => $name,
+            'role' => $role,
+            'is_active' => true,
+        ];
+        if ($waNumber !== null) {
+            $attributes['wa_number'] = $waNumber;
+        }
+
+        if ($user) {
+            $user->update($attributes);
+
+            return $user;
+        }
+
+        return User::create($attributes + [
+            'email' => $email,
+            'password' => $this->defaultPasswordHash(),
+        ]);
+    }
+
+    /**
      * @return array<string, Teacher>
      */
     private function syncTeachers(School $school, Major $major, array $rows): array
@@ -381,15 +423,11 @@ abstract class BaseCsvMajorPklSeeder extends Seeder
 
         $teachersByKey = [];
         foreach ($uniqueIdentities as $key => $identity) {
-            $user = User::updateOrCreate(
-                ['email' => $identity['email']],
-                [
-                    'school_id' => $school->id,
-                    'name' => $identity['name'],
-                    'password' => $this->defaultPasswordHash(),
-                    'role' => 'guru-pembimbing',
-                    'is_active' => true,
-                ]
+            $user = $this->upsertUser(
+                $identity['email'],
+                $school->id,
+                $identity['name'],
+                'guru-pembimbing'
             );
 
             Profile::updateOrCreate(
@@ -582,27 +620,34 @@ abstract class BaseCsvMajorPklSeeder extends Seeder
             $email = "siswa.{$nis}@" . static::EMAIL_DOMAIN;
             $gender = $this->resolveStudentGender($row['name'], $nis);
 
-            $studentUser = User::updateOrCreate(
-                ['email' => $email],
-                [
-                    'school_id' => $school->id,
-                    'name' => $row['name'],
-                    'password' => $this->defaultPasswordHash(),
-                    'role' => 'siswa',
-                    'is_active' => true,
-                ]
+            $existingStudent = Student::with('user')
+                ->where('nis', $nis)
+                ->whereHas('user', fn ($q) => $q->where('school_id', $school->id))
+                ->first();
+
+            $studentUser = $this->upsertUser(
+                $email,
+                $school->id,
+                $row['name'],
+                'siswa',
+                $row['phone'],
+                $existingStudent?->user
             );
+
+            $profileAttributes = [
+                'gender' => $gender,
+                'address' => 'Kabupaten Garut, Jawa Barat',
+            ];
+            if ($row['phone'] !== null) {
+                $profileAttributes['phone'] = $row['phone'];
+            }
 
             Profile::updateOrCreate(
                 ['user_id' => $studentUser->id],
-                [
-                    'gender' => $gender,
-                    'phone' => $row['phone'],
-                    'address' => 'Kabupaten Garut, Jawa Barat',
-                ]
+                $profileAttributes
             );
 
-            $student = Student::where('user_id', $studentUser->id)->first();
+            $student = $existingStudent ?? Student::where('user_id', $studentUser->id)->first();
             if ($student) {
                 $student->update([
                     'class_id' => $targetClass->id,

@@ -45,17 +45,19 @@ class DesainKomunikasiVisualAndMasterSeederTest extends TestCase
         $dkv1 = SchoolClass::with('homeroomTeacher.user')->where('school_id', $school->id)->where('name', 'XII DKV 1')->firstOrFail();
         $dkv2 = SchoolClass::with('homeroomTeacher.user')->where('school_id', $school->id)->where('name', 'XII DKV 2')->firstOrFail();
         $this->assertSame('Andri Riswanto, S.T., M.Pd.', $dkv1->homeroomTeacher?->user?->name);
-        $this->assertSame('Neng Syamsiah, S.Pd., M.Pd.', $dkv2->homeroomTeacher?->user?->name);
+        $this->assertSame('Eneng Syamsiyah, S.Pd., M.Pd.', $dkv2->homeroomTeacher?->user?->name);
 
-        // 2. Total siswa, guru, dan DUDI DKV
+        // 2. Total siswa (73 incl. ALGA belum plotting), guru (12), dan DUDI DKV (22)
         $dkvStudentIds = Student::whereIn('class_id', [$dkv1->id, $dkv2->id])->pluck('id');
-        $this->assertCount(72, $dkvStudentIds);
-        $this->assertSame(6, $dkvMajor->teachers()->count());
+        $this->assertCount(73, $dkvStudentIds);
+        $this->assertSame(12, $dkvMajor->teachers()->count());
 
         $dkvCompanies = Company::where('school_id', $school->id)
             ->whereHas('majors', fn ($q) => $q->where('majors.id', $dkvMajor->id))
             ->get();
         $this->assertCount(22, $dkvCompanies);
+        $this->assertNull($dkvCompanies->firstWhere('name', '-'));
+        $this->assertNull($dkvCompanies->firstWhere('name', 'PT-003'));
         $this->assertSame(0, Supervisor::whereIn('company_id', $dkvCompanies->pluck('id'))->count());
 
         foreach ($dkvCompanies as $company) {
@@ -82,9 +84,20 @@ class DesainKomunikasiVisualAndMasterSeederTest extends TestCase
         $this->assertEqualsWithDelta(-7.190132, $paGarut->latitude, 0.000001);
         $this->assertEqualsWithDelta(107.896393, $paGarut->longitude, 0.000001);
 
-        // 4. Normalisasi no WA yang kehilangan angka 0 di awal
+        // 4. Normalisasi no WA yang kehilangan angka 0 di awal & sinkronisasi ke wa_number + siswa belum plotting
         $adriansyah = Student::with('user.profile')->where('nis', '242510538')->firstOrFail();
         $this->assertSame('08212765812', $adriansyah->user->profile->phone);
+        $this->assertSame('08212765812', $adriansyah->user->wa_number);
+
+        $alvidia = Student::with('user.profile')->where('nis', '242510539')->firstOrFail();
+        $this->assertSame('08212765812', $alvidia->user->profile->phone);
+        $this->assertSame('08212765812', $alvidia->user->wa_number);
+
+        $alga = Student::with('user')->where('nis', '242510575')->firstOrFail();
+        $this->assertSame('ALGA', $alga->user->name);
+        $this->assertSame(0, StudentPkl::where('student_id', $alga->id)->count());
+
+        $this->assertNull(Student::where('nis', '2425107')->first());
 
         // 5. Plotting DKV tanpa pembimbing DU/DI & guru dapat langsung menyetujui jurnal
         $spkls = StudentPkl::with('teacher.user')->whereIn('student_id', $dkvStudentIds)->get();

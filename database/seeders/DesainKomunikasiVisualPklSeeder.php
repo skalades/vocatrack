@@ -85,9 +85,44 @@ class DesainKomunikasiVisualPklSeeder extends BaseCsvMajorPklSeeder
                 'email' => 'depi.gustianti@smkn2garut.sch.id',
                 'gender' => 'P',
             ],
-            'NENG SYAMSIAH' => [
-                'name' => 'Neng Syamsiah, S.Pd., M.Pd.',
+            'ENENG SYAMSIYAH' => [
+                'name' => 'Eneng Syamsiyah, S.Pd., M.Pd.',
                 'email' => 'neng.syamsiah@smkn2garut.sch.id',
+                'gender' => 'P',
+            ],
+            'NENG SYAMSIAH' => [
+                'name' => 'Eneng Syamsiyah, S.Pd., M.Pd.',
+                'email' => 'neng.syamsiah@smkn2garut.sch.id',
+                'gender' => 'P',
+            ],
+            'ENENG SYAMSIAH' => [
+                'name' => 'Eneng Syamsiah, S.Pd.',
+                'email' => 'eneng.syamsiah@smkn2garut.sch.id',
+                'gender' => 'P',
+            ],
+            'HJ. AIDA MARYANI' => [
+                'name' => 'Hj. Aida Maryani S, S.Pd., M.Pd.',
+                'email' => 'aida.maryani@smkn2garut.sch.id',
+                'gender' => 'P',
+            ],
+            'EVIE KUNIASIH' => [
+                'name' => 'Evie Kuniasih, S.Pd.',
+                'email' => 'evie.kuniasih@smkn2garut.sch.id',
+                'gender' => 'P',
+            ],
+            'ZULFA FADZLU HUDIYA' => [
+                'name' => 'Zulfa Fadzlu Hudiya, S.Pd.',
+                'email' => 'zulfa.fadzlu@smkn2garut.sch.id',
+                'gender' => 'L',
+            ],
+            'INA MARLINA PANTISA' => [
+                'name' => 'Ina Marlina Pantisa, S.Pd.',
+                'email' => 'ina.marlina@smkn2garut.sch.id',
+                'gender' => 'P',
+            ],
+            'HJ. SITI HASANATY' => [
+                'name' => 'Hj. Siti Hasanaty, S.Pd., M.Si',
+                'email' => 'siti.hasanaty@smkn2garut.sch.id',
                 'gender' => 'P',
             ],
         ];
