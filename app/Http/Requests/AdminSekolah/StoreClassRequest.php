@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\AdminSekolah;
 
+use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -18,6 +19,10 @@ class StoreClassRequest extends FormRequest
 
         return [
             'major_id' => ['required', Rule::exists('majors', 'id')->where('school_id', $schoolId)],
+            'homeroom_teacher_id' => [
+                'nullable',
+                Rule::exists('teachers', 'id')->where(fn($q) => $q->whereIn('user_id', User::where('school_id', $schoolId)->pluck('id'))),
+            ],
             'name' => [
                 'required', 'string', 'max:50',
                 Rule::unique('classes', 'name')->where('school_id', $schoolId)->where('academic_year', $this->academic_year),

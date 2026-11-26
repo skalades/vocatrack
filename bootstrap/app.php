@@ -15,6 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'IdentifyTenant' => \App\Http\Middleware\IdentifyTenant::class,
             'role' => \App\Http\Middleware\CheckRole::class,
             'is-kajur' => \App\Http\Middleware\EnsureIsMajorHead::class,
+            'is-walikelas' => \App\Http\Middleware\EnsureIsHomeroomTeacher::class,
             'feature' => \App\Http\Middleware\CheckFeatureEntitlement::class,
         ]);
         $middleware->appendToGroup('web', \App\Http\Middleware\AttachMonitoringContext::class);

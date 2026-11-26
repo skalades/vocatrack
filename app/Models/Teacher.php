@@ -46,6 +46,27 @@ class Teacher extends Model
         return $this->headedMajors()->exists();
     }
 
+    public function homeroomClasses(): HasMany
+    {
+        return $this->hasMany(SchoolClass::class, 'homeroom_teacher_id')
+            ->orderByDesc('academic_year')
+            ->orderBy('name');
+    }
+
+    public function primaryHomeroomClass(): ?SchoolClass
+    {
+        return $this->homeroomClasses()->first();
+    }
+
+    public function isHomeroomTeacher(?int $classId = null): bool
+    {
+        if ($classId) {
+            return $this->homeroomClasses()->where('id', $classId)->exists();
+        }
+
+        return $this->homeroomClasses()->exists();
+    }
+
     public function studentPkls(): HasMany
     {
         return $this->hasMany(StudentPkl::class);

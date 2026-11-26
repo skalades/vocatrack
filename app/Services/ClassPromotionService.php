@@ -16,7 +16,7 @@ class ClassPromotionService
     {
         $classes = SchoolClass::where('school_id', $schoolId)
             ->where('academic_year', $currentAcademicYear)
-            ->with(['major', 'students' => fn($q) => $q->where('academic_status', 'active')])
+            ->with(['major', 'homeroomTeacher.user', 'students' => fn($q) => $q->where('academic_status', 'active')])
             ->get();
 
         $preview = [];
@@ -45,6 +45,7 @@ class ClassPromotionService
                 'grade_level' => $class->grade_level,
                 'major_name' => $class->major?->name ?? '-',
                 'major_code' => $class->major?->code ?? '-',
+                'homeroom_teacher_name' => $class->homeroomTeacher?->user?->name,
                 'is_four_year' => $isFourYear,
                 'student_count' => $studentCount,
                 'action_type' => $actionType,
@@ -65,9 +66,10 @@ class ClassPromotionService
         int $schoolId,
         string $currentAcademicYear,
         string $targetAcademicYear,
-        array $selectedClassIds = []
+        array $selectedClassIds = [],
+        bool $preserveHomeroomTeacher = false
     ): array {
-        return DB::transaction(function () use ($schoolId, $currentAcademicYear, $targetAcademicYear, $selectedClassIds) {
+        return DB::transaction(function () use ($schoolId, $currentAcademicYear, $targetAcademicYear, $selectedClassIds, $preserveHomeroomTeacher) {
             $query = SchoolClass::where('school_id', $schoolId)
                 ->where('academic_year', $currentAcademicYear)
                 ->with(['major', 'students' => fn($q) => $q->where('academic_status', 'active')]);
@@ -109,8 +111,13 @@ class ClassPromotionService
                         ],
                         [
                             'grade_level' => $nextGrade,
+                            'homeroom_teacher_id' => $preserveHomeroomTeacher ? $class->homeroom_teacher_id : null,
                         ]
                     );
+
+                    if ($preserveHomeroomTeacher && !$targetClass->wasRecentlyCreated && !$targetClass->homeroom_teacher_id && $class->homeroom_teacher_id) {
+                        $targetClass->update(['homeroom_teacher_id' => $class->homeroom_teacher_id]);
+                    }
 
                     if ($targetClass->wasRecentlyCreated) {
                         $stats['new_classes_created']++;

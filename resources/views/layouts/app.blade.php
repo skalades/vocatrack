@@ -207,12 +207,20 @@
                         <span>{{ auth()->user()->school->name ?? 'VokaTrack Cloud Platform' }}</span>
                     </div>
 
-                    @if(auth()->user()->isKajur())
+                    @if(auth()->user()->isKajur() || auth()->user()->isWaliKelas())
                         <div class="hidden sm:inline-flex items-center p-0.5 rounded-xl bg-slate-100 border border-slate-200">
-                            <a href="{{ route('kajur.dashboard') }}" class="flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-lg transition-all {{ request()->is('kajur*') ? 'bg-white text-emerald-800 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900 font-medium' }}">
-                                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                                <span>Kajur {{ auth()->user()->headedMajor()?->code }}</span>
-                            </a>
+                            @if(auth()->user()->isKajur())
+                                <a href="{{ route('kajur.dashboard') }}" class="flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-lg transition-all {{ request()->is('kajur*') ? 'bg-white text-emerald-800 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900 font-medium' }}">
+                                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                                    <span>Kajur {{ auth()->user()->headedMajor()?->code }}</span>
+                                </a>
+                            @endif
+                            @if(auth()->user()->isWaliKelas())
+                                <a href="{{ route('walikelas.dashboard') }}" class="flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-lg transition-all {{ request()->is('wali-kelas*') ? 'bg-white text-teal-800 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900 font-medium' }}">
+                                    <span class="w-2 h-2 rounded-full bg-teal-500"></span>
+                                    <span>Wali Kelas {{ auth()->user()->primaryHomeroomClass()?->name }}</span>
+                                </a>
+                            @endif
                             <a href="{{ route('guru.dashboard') }}" class="flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-lg transition-all {{ request()->is('guru*') ? 'bg-white text-indigo-800 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900 font-medium' }}">
                                 <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
                                 <span>Bimbingan ({{ auth()->user()->teacher?->studentPkls()->where('status', 'active')->count() ?? 0 }})</span>

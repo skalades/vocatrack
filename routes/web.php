@@ -38,6 +38,7 @@ use App\Http\Controllers\SuperAdmin\TenantController;
 use App\Http\Controllers\SuperAdmin\WhatsAppGatewayController;
 use App\Http\Controllers\SupervisorController;
 use App\Http\Controllers\TeacherController;
+use App\Http\Controllers\WaliKelasController;
 use Illuminate\Support\Facades\Route;
 
 // Guest Routes
@@ -384,6 +385,25 @@ Route::middleware(['auth', 'IdentifyTenant', 'is-kajur'])->prefix('kajur')->grou
     Route::post('/competencies', [KajurController::class, 'storeCompetency'])->name('kajur.competencies.store');
     Route::put('/competencies/{learningObjective}', [KajurController::class, 'updateCompetency'])->name('kajur.competencies.update');
     Route::delete('/competencies/{learningObjective}', [KajurController::class, 'destroyCompetency'])->name('kajur.competencies.destroy');
+});
+
+// 4.2 Wali Kelas (Homeroom Teacher) Routes
+Route::middleware(['auth', 'IdentifyTenant', 'is-walikelas'])->prefix('wali-kelas')->group(function () {
+    Route::get('/dashboard', [WaliKelasController::class, 'dashboard'])->name('walikelas.dashboard');
+    Route::get('/students', [WaliKelasController::class, 'students'])->name('walikelas.students');
+    Route::post('/students/{student}/reset-password', [WaliKelasController::class, 'resetStudentPassword'])->middleware('throttle:5,1')->name('walikelas.students.reset-password');
+    Route::get('/attendance', [WaliKelasController::class, 'attendance'])->name('walikelas.attendance');
+    Route::get('/journals', [WaliKelasController::class, 'journals'])->name('walikelas.journals');
+    Route::get('/incidents', [WaliKelasController::class, 'incidents'])->name('walikelas.incidents');
+    Route::get('/grades', [WaliKelasController::class, 'grades'])->name('walikelas.grades');
+
+    // Link Monitoring Portal Orang Tua khusus rombel ampuannya
+    Route::get('/parent-links', [ParentLinkController::class, 'walikelasIndex'])->name('walikelas.parent-links');
+    Route::post('/parent-links/batch-generate', [ParentLinkController::class, 'walikelasBatchGenerate'])->name('walikelas.parent-links.batch-generate');
+    Route::post('/parent-links/batch-toggle', [ParentLinkController::class, 'walikelasBatchToggle'])->name('walikelas.parent-links.batch-toggle');
+    Route::get('/parent-links/export', [ParentLinkController::class, 'walikelasExport'])->name('walikelas.parent-links.export');
+    Route::post('/parent-links/{student}/regenerate', [ParentLinkController::class, 'walikelasRegenerateSingle'])->name('walikelas.parent-links.regenerate');
+    Route::post('/parent-links/{student}/toggle', [ParentLinkController::class, 'walikelasToggleSingle'])->name('walikelas.parent-links.toggle');
 });
 
 // 5. Pembimbing DU/DI Routes

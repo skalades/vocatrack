@@ -144,6 +144,14 @@ class AuthController extends Controller
 
         $targetRoute = $roleRoutes[$user->role] ?? null;
 
+        // Guru yang hanya ditugaskan sebagai Wali Kelas (belum membimbing PKL dan bukan Kajur) langsung masuk ke panel Wali Kelas
+        if ($user->role === 'guru-pembimbing'
+            && !$user->isKajur()
+            && $user->isWaliKelas()
+            && !($user->teacher?->studentPkls()->exists())) {
+            $targetRoute = 'walikelas.dashboard';
+        }
+
         // Cegah redirect loop jika peran tidak dikenali
         if (!$targetRoute) {
             Auth::logout();
@@ -165,7 +173,7 @@ class AuthController extends Controller
                 'super-admin' => ['/super-admin', '/notifications'],
                 'admin-sekolah' => ['/admin-sekolah', '/notifications'],
                 'kepala-sekolah' => ['/kepala-sekolah', '/notifications'],
-                'guru-pembimbing' => ['/guru', '/notifications'],
+                'guru-pembimbing' => ['/guru', '/kajur', '/wali-kelas', '/notifications'],
                 'pembimbing-dudi' => ['/dudi', '/notifications'],
                 'siswa' => ['/siswa', '/notifications'],
             ];

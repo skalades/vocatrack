@@ -11,11 +11,13 @@
 
     <!-- Hero Header Banner -->
     <x-page-header 
-        :title="$roleType === 'admin' ? 'Kelola Link Portal Monitoring Orang Tua' : 'Link Monitoring Orang Tua Siswa'" 
+        :title="$roleType === 'admin' ? 'Kelola Link Portal Monitoring Orang Tua' : ($roleType === 'walikelas' ? 'Link Portal Orang Tua Rombel' : 'Link Monitoring Orang Tua Siswa')" 
         :subtitle="$roleType === 'admin' 
             ? 'Generate tautan pemantauan PKL untuk orang tua/wali siswa secara massal dan ekspor data per jurusan & rombel untuk dibagikan.' 
-            : 'Generate dan kelola tautan pemantauan PKL untuk orang tua siswa bimbingan atau rombel binaan Anda, serta ekspor file untuk dibagikan ke paguyuban orang tua.'"
-        :badge="$roleType === 'admin' ? 'MANAJEMEN SEKOLAH' : 'GURU PEMBIMBING'"
+            : ($roleType === 'walikelas'
+                ? 'Generate, kelola, dan ekspor tautan pemantauan PKL khusus untuk orang tua siswa pada rombongan belajar yang Anda ampu.'
+                : 'Generate dan kelola tautan pemantauan PKL untuk orang tua siswa bimbingan atau rombel binaan Anda, serta ekspor file untuk dibagikan ke paguyuban orang tua.')"
+        :badge="$roleType === 'admin' ? 'MANAJEMEN SEKOLAH' : ($roleType === 'walikelas' ? 'WALI KELAS' : 'GURU PEMBIMBING')"
     >
         <button type="button" 
                 onclick="document.getElementById('modal-wa-broadcast').classList.remove('hidden')" 

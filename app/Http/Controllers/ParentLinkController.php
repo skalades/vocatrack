@@ -379,4 +379,170 @@ class ParentLinkController extends Controller
         $msg = $newState ? 'diaktifkan' : 'dinonaktifkan';
         return back()->with('success', "Akses portal orang tua untuk {$student->user->name} berhasil {$msg}.");
     }
+
+    protected function computeStats(int $schoolId, array $filters, ?int $teacherId = null, ?array $allowedClassIds = null): array
+    {
+        $baseStatQuery = $this->parentService->getStudentsQuery($schoolId, [
+            'scope' => $filters['scope'] ?? 'bimbingan',
+            'major_id' => $filters['major_id'] ?? 'all',
+            'class_id' => $filters['class_id'] ?? 'all',
+        ], $teacherId, $allowedClassIds);
+
+        return [
+            'total' => (clone $baseStatQuery)->count(),
+            'has_token' => (clone $baseStatQuery)->whereNotNull('parent_token')->where('parent_token', '!=', '')->count(),
+            'missing_token' => (clone $baseStatQuery)->where(function ($q) {
+                $q->whereNull('parent_token')->orWhere('parent_token', '');
+            })->count(),
+            'active_portal' => (clone $baseStatQuery)->where('is_parent_portal_active', true)->whereNotNull('parent_token')->where('parent_token', '!=', '')->count(),
+            'inactive_portal' => (clone $baseStatQuery)->where('is_parent_portal_active', false)->count(),
+        ];
+    }
+
+    /**
+     * -------------------------------------------------------------
+     * BAGIAN WALI KELAS
+     * -------------------------------------------------------------
+     */
+
+    public function walikelasIndex(Request $request)
+    {
+        $schoolId = $this->getSchoolId();
+        $classIds = Auth::user()->homeroom_class_ids;
+        abort_if(empty($classIds), 403, 'Anda belum ditunjuk sebagai Wali Kelas.');
+
+        $filters = [
+            'major_id' => $request->get('major_id', 'all'),
+            'class_id' => $request->get('class_id', 'all'),
+            'token_status' => $request->get('token_status', 'all'),
+            'portal_status' => $request->get('portal_status', 'all'),
+            'search' => $request->get('search'),
+        ];
+
+        $filterOptions = $this->parentService->getFilterOptions($schoolId, null, $classIds);
+        $students = $this->parentService->getStudentsQuery($schoolId, $filters, null, $classIds)
+            ->latest('students.id')
+            ->paginate(20)
+            ->withQueryString();
+        $stats = $this->computeStats($schoolId, $filters, null, $classIds);
+
+        return view('walikelas.parent-links', [
+            'students' => $students,
+            'majors' => $filterOptions['majors'],
+            'classes' => $filterOptions['classes'],
+            'stats' => $stats,
+            'filters' => $filters,
+            'roleType' => 'walikelas',
+        ]);
+    }
+
+    public function walikelasBatchGenerate(Request $request)
+    {
+        $schoolId = $this->getSchoolId();
+        $classIds = Auth::user()->homeroom_class_ids;
+        abort_if(empty($classIds), 403, 'Anda belum ditunjuk sebagai Wali Kelas.');
+
+        $request->validate([
+            'mode' => ['required', 'in:selected,filter'],
+            'student_ids' => ['required_if:mode,selected', 'array'],
+            'student_ids.*' => ['integer', 'exists:students,id'],
+            'force_regenerate' => ['nullable', 'boolean'],
+            'major_id' => ['nullable'],
+            'class_id' => ['nullable'],
+        ]);
+
+        $force = (bool) $request->input('force_regenerate', false);
+
+        if ($request->input('mode') === 'selected') {
+            $count = $this->parentService->batchGenerateTokens(
+                $request->input('student_ids', []),
+                $schoolId,
+                $force,
+                null,
+                $classIds
+            );
+        } else {
+            $filters = [
+                'major_id' => $request->input('major_id', 'all'),
+                'class_id' => $request->input('class_id', 'all'),
+            ];
+            $count = $this->parentService->batchGenerateByFilter(
+                $schoolId,
+                $filters,
+                $force,
+                null,
+                $classIds
+            );
+        }
+
+        $verb = $force ? 'diperbarui / dibuat ulang' : 'dibuat';
+        return back()->with('success', "Berhasil! Sebanyak {$count} tautan monitoring orang tua siswa telah {$verb}.");
+    }
+
+    public function walikelasBatchToggle(Request $request)
+    {
+        $schoolId = $this->getSchoolId();
+        $classIds = Auth::user()->homeroom_class_ids;
+        abort_if(empty($classIds), 403, 'Anda belum ditunjuk sebagai Wali Kelas.');
+
+        $request->validate([
+            'student_ids' => ['required', 'array'],
+            'student_ids.*' => ['integer', 'exists:students,id'],
+            'is_active' => ['required', 'boolean'],
+        ]);
+
+        $isActive = (bool) $request->input('is_active');
+        $count = $this->parentService->batchTogglePortal(
+            $request->input('student_ids'),
+            $schoolId,
+            $isActive,
+            null,
+            $classIds
+        );
+
+        $statusText = $isActive ? 'diaktifkan' : 'dinonaktifkan';
+        return back()->with('success', "Akses portal monitoring orang tua untuk {$count} siswa berhasil {$statusText}.");
+    }
+
+    public function walikelasExport(Request $request)
+    {
+        $schoolId = $this->getSchoolId();
+        $classIds = Auth::user()->homeroom_class_ids;
+        abort_if(empty($classIds), 403, 'Anda belum ditunjuk sebagai Wali Kelas.');
+
+        $filters = [
+            'major_id' => $request->get('major_id', 'all'),
+            'class_id' => $request->get('class_id', 'all'),
+            'token_status' => $request->get('token_status', 'all'),
+            'portal_status' => $request->get('portal_status', 'all'),
+            'search' => $request->get('search'),
+            'student_ids' => $request->get('student_ids'),
+        ];
+
+        return $this->parentService->exportStudentsCsvStream($schoolId, $filters, null, $classIds);
+    }
+
+    public function walikelasRegenerateSingle(Student $student)
+    {
+        $schoolId = $this->getSchoolId();
+        $classIds = Auth::user()->homeroom_class_ids;
+        abort_unless($student->user->school_id === $schoolId && in_array((int) $student->class_id, $classIds, true), 403, 'Akses ditolak.');
+
+        $this->parentService->regenerateToken($student);
+
+        return back()->with('success', "Tautan monitoring orang tua untuk {$student->user->name} berhasil diperbarui.");
+    }
+
+    public function walikelasToggleSingle(Request $request, Student $student)
+    {
+        $schoolId = $this->getSchoolId();
+        $classIds = Auth::user()->homeroom_class_ids;
+        abort_unless($student->user->school_id === $schoolId && in_array((int) $student->class_id, $classIds, true), 403, 'Akses ditolak.');
+
+        $newState = !$student->is_parent_portal_active;
+        $this->parentService->togglePortal($student, $newState);
+
+        $msg = $newState ? 'diaktifkan' : 'dinonaktifkan';
+        return back()->with('success', "Akses portal orang tua untuk {$student->user->name} berhasil {$msg}.");
+    }
 }

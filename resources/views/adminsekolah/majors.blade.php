@@ -224,6 +224,18 @@
                                     <span class="text-[11px] text-slate-500 block truncate font-medium mt-0.5">
                                         {{ $c->major->name }} &bull; TA {{ $c->academic_year }}
                                     </span>
+                                    <div class="mt-1">
+                                        @if($c->homeroomTeacher)
+                                            <span class="inline-flex items-center gap-1 font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200/60 text-[11px]">
+                                                <svg class="w-3 h-3 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                                                Wali Kelas: {{ $c->homeroomTeacher->user->name }}
+                                            </span>
+                                        @else
+                                            <span class="inline-flex items-center text-slate-400 italic text-[11px]">
+                                                Wali Kelas: Belum Ditunjuk
+                                            </span>
+                                        @endif
+                                    </div>
                                 </div>
                             </div>
                             <div class="flex items-center gap-1.5 shrink-0">
@@ -234,6 +246,7 @@
                                         onclick="openEditClassModal({{ json_encode([
                                             'id' => $c->id,
                                             'major_id' => $c->major_id,
+                                            'homeroom_teacher_id' => $c->homeroom_teacher_id,
                                             'name' => $c->name,
                                             'grade_level' => $c->grade_level,
                                             'academic_year' => $c->academic_year,
@@ -371,6 +384,17 @@
                 <input type="text" name="name" required placeholder="Contoh: XII RPL 1" 
                        class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium text-slate-900">
             </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1.5">Wali Kelas (Opsional)</label>
+                <select name="homeroom_teacher_id" 
+                        class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium text-slate-900">
+                    <option value="">-- Belum Ditunjuk / Pilih Nanti --</option>
+                    @foreach($teachers as $t)
+                        <option value="{{ $t->id }}">{{ $t->user->name }} (NIP: {{ $t->nip ?? '-' }})</option>
+                    @endforeach
+                </select>
+                <p class="text-[11px] text-slate-400 mt-1">Guru yang ditunjuk otomatis memiliki akses ke panel Wali Kelas.</p>
+            </div>
             <div class="flex items-center justify-end space-x-2.5 pt-3 border-t border-slate-100">
                 <x-button type="button" variant="secondary" size="md" onclick="document.getElementById('modal-add-class').classList.add('hidden')">
                     Batal
@@ -492,6 +516,16 @@
                 <label class="block text-xs font-bold text-slate-700 mb-1.5">Nama Rombel / Kelas</label>
                 <input type="text" id="edit-class-name" name="name" required 
                        class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium text-slate-900">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1.5">Wali Kelas</label>
+                <select id="edit-class-homeroom-teacher-id" name="homeroom_teacher_id" 
+                        class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium text-slate-900">
+                    <option value="">-- Belum Ditunjuk / Kosongkan --</option>
+                    @foreach($teachers as $t)
+                        <option value="{{ $t->id }}">{{ $t->user->name }} (NIP: {{ $t->nip ?? '-' }})</option>
+                    @endforeach
+                </select>
             </div>
             <div class="flex items-center justify-end space-x-2.5 pt-3 border-t border-slate-100">
                 <x-button type="button" variant="secondary" size="md" onclick="document.getElementById('modal-edit-class').classList.add('hidden')">
@@ -632,6 +666,11 @@
                 </p>
             </div>
 
+            <label class="flex items-center gap-2.5 p-3 rounded-2xl bg-slate-50 border border-slate-200 cursor-pointer text-xs text-slate-700">
+                <input type="checkbox" name="preserve_homeroom_teacher" value="1" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                <span>Pertahankan penugasan <strong>Wali Kelas</strong> saat ini pada rombel tahun ajaran baru</span>
+            </label>
+
             <div class="flex items-center justify-end space-x-2.5 pt-3 border-t border-slate-100 shrink-0">
                 <x-button type="button" variant="secondary" size="md" onclick="document.getElementById('modal-promote-classes').classList.add('hidden')">
                     Batal
@@ -748,6 +787,7 @@
     function openEditClassModal(data) {
         document.getElementById('edit-class-form').action = data.update_url;
         document.getElementById('edit-class-major-id').value = data.major_id;
+        document.getElementById('edit-class-homeroom-teacher-id').value = data.homeroom_teacher_id || '';
         document.getElementById('edit-class-grade-level').value = data.grade_level;
         document.getElementById('edit-class-academic-year').value = data.academic_year;
         document.getElementById('edit-class-name').value = data.name;

@@ -7,6 +7,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Collection;
 
 class User extends Authenticatable
 {
@@ -85,6 +86,26 @@ class User extends Authenticatable
     public function getHeadedMajorIdsAttribute(): array
     {
         return $this->teacher?->headedMajors()->pluck('id')->toArray() ?? [];
+    }
+
+    public function isWaliKelas(?int $classId = null): bool
+    {
+        return (bool) $this->teacher?->isHomeroomTeacher($classId);
+    }
+
+    public function homeroomClasses(): Collection
+    {
+        return $this->teacher?->homeroomClasses()->with('major')->get() ?? collect();
+    }
+
+    public function primaryHomeroomClass(): ?SchoolClass
+    {
+        return $this->teacher?->primaryHomeroomClass();
+    }
+
+    public function getHomeroomClassIdsAttribute(): array
+    {
+        return $this->teacher?->homeroomClasses()->pluck('id')->map(fn ($id) => (int) $id)->toArray() ?? [];
     }
 
     public function hasRole(string|array $roles): bool

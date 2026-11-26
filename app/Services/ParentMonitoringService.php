@@ -179,11 +179,30 @@ class ParentMonitoringService
     }
 
     /**
+     * Terapkan isolasi cakupan akses (Guru Pembimbing dan/atau Wali Kelas).
+     */
+    protected function applyAccessScope(Builder $query, ?int $teacherId = null, ?array $allowedClassIds = null, ?string $scopeOverride = null): void
+    {
+        if ($allowedClassIds !== null) {
+            $query->whereIn('class_id', empty($allowedClassIds) ? [-1] : $allowedClassIds);
+        }
+
+        if ($teacherId) {
+            $scope = $scopeOverride ?? 'bimbingan';
+            if ($scope === 'bimbingan') {
+                $query->whereHas('studentPkls', function ($q) use ($teacherId) {
+                    $q->where('teacher_id', $teacherId);
+                });
+            }
+        }
+    }
+
+    /**
      * Bangun query daftar siswa terisolasi per sekolah untuk manajemen link ortu.
      * Mendukung pemfilteran jurusan, rombel, status token, status aktif portal, pencarian nama/NISN/NIS,
-     * serta scoping khusus guru pembimbing.
+     * serta scoping khusus guru pembimbing atau wali kelas.
      */
-    public function getStudentsQuery(int $schoolId, array $filters = [], ?int $teacherId = null): Builder
+    public function getStudentsQuery(int $schoolId, array $filters = [], ?int $teacherId = null, ?array $allowedClassIds = null): Builder
     {
         $query = Student::whereHas('user', function ($q) use ($schoolId) {
                 $q->where('school_id', $schoolId);
@@ -195,15 +214,7 @@ class ParentMonitoringService
                 'activePkl.teacher.user',
             ]);
 
-        // Scoping jika diakses oleh Guru Pembimbing
-        if ($teacherId) {
-            $scope = $filters['scope'] ?? 'bimbingan';
-            if ($scope === 'bimbingan') {
-                $query->whereHas('studentPkls', function ($q) use ($teacherId) {
-                    $q->where('teacher_id', $teacherId);
-                });
-            }
-        }
+        $this->applyAccessScope($query, $teacherId, $allowedClassIds, $filters['scope'] ?? 'bimbingan');
 
         // Filter berdasarkan Jurusan (Major)
         if (!empty($filters['major_id']) && $filters['major_id'] !== 'all') {
@@ -259,12 +270,20 @@ class ParentMonitoringService
     /**
      * Dapatkan opsi Jurusan dan Rombel untuk dropdown filter sekolah.
      */
-    public function getFilterOptions(int $schoolId, ?int $teacherId = null): array
+    public function getFilterOptions(int $schoolId, ?int $teacherId = null, ?array $allowedClassIds = null): array
     {
-        $majors = Major::where('school_id', $schoolId)->orderBy('name')->get();
         $classesQuery = SchoolClass::where('school_id', $schoolId)->with('major')->orderBy('name');
+        if ($allowedClassIds !== null) {
+            $classesQuery->whereIn('id', empty($allowedClassIds) ? [-1] : $allowedClassIds);
+        }
 
         $classes = $classesQuery->get();
+
+        $majorsQuery = Major::where('school_id', $schoolId)->orderBy('name');
+        if ($allowedClassIds !== null) {
+            $majorsQuery->whereIn('id', $classes->pluck('major_id')->unique()->all() ?: [-1]);
+        }
+        $majors = $majorsQuery->get();
 
         return [
             'majors' => $majors,
@@ -274,9 +293,9 @@ class ParentMonitoringService
 
     /**
      * Generate atau perbarui parent token secara batch berdasarkan daftar ID siswa.
-     * Menggunakan pengecekan ketat tenant isolasi per sekolah dan pembimbing jika ada.
+     * Menggunakan pengecekan ketat tenant isolasi per sekolah dan pembimbing/wali kelas jika ada.
      */
-    public function batchGenerateTokens(array $studentIds, int $schoolId, bool $forceRegenerate = false, ?int $teacherId = null): int
+    public function batchGenerateTokens(array $studentIds, int $schoolId, bool $forceRegenerate = false, ?int $teacherId = null, ?array $allowedClassIds = null): int
     {
         if (empty($studentIds)) {
             return 0;
@@ -285,12 +304,7 @@ class ParentMonitoringService
         $query = Student::whereIn('id', $studentIds)
             ->whereHas('user', fn($q) => $q->where('school_id', $schoolId));
 
-        if ($teacherId) {
-            $scope = request()->input('scope', 'bimbingan');
-            if ($scope === 'bimbingan') {
-                $query->whereHas('studentPkls', fn($q) => $q->where('teacher_id', $teacherId));
-            }
-        }
+        $this->applyAccessScope($query, $teacherId, $allowedClassIds, request()->input('scope', 'bimbingan'));
 
         $students = $query->get();
         $updatedCount = 0;
@@ -311,9 +325,9 @@ class ParentMonitoringService
     /**
      * Generate atau perbarui parent token secara batch berdasarkan filter rombel dan jurusan aktif.
      */
-    public function batchGenerateByFilter(int $schoolId, array $filters = [], bool $forceRegenerate = false, ?int $teacherId = null): int
+    public function batchGenerateByFilter(int $schoolId, array $filters = [], bool $forceRegenerate = false, ?int $teacherId = null, ?array $allowedClassIds = null): int
     {
-        $query = $this->getStudentsQuery($schoolId, $filters, $teacherId);
+        $query = $this->getStudentsQuery($schoolId, $filters, $teacherId, $allowedClassIds);
 
         if (!$forceRegenerate) {
             $query->where(function ($q) {
@@ -338,7 +352,7 @@ class ParentMonitoringService
     /**
      * Toggle status aktif portal orang tua secara massal untuk siswa terpilih.
      */
-    public function batchTogglePortal(array $studentIds, int $schoolId, bool $isActive, ?int $teacherId = null): int
+    public function batchTogglePortal(array $studentIds, int $schoolId, bool $isActive, ?int $teacherId = null, ?array $allowedClassIds = null): int
     {
         if (empty($studentIds)) {
             return 0;
@@ -347,12 +361,7 @@ class ParentMonitoringService
         $query = Student::whereIn('id', $studentIds)
             ->whereHas('user', fn($q) => $q->where('school_id', $schoolId));
 
-        if ($teacherId) {
-            $scope = request()->input('scope', 'bimbingan');
-            if ($scope === 'bimbingan') {
-                $query->whereHas('studentPkls', fn($q) => $q->where('teacher_id', $teacherId));
-            }
-        }
+        $this->applyAccessScope($query, $teacherId, $allowedClassIds, request()->input('scope', 'bimbingan'));
 
         return $query->update(['is_parent_portal_active' => $isActive]);
     }
@@ -384,9 +393,9 @@ class ParentMonitoringService
      * Ekspor daftar link monitoring orang tua ke file CSV dengan encoding UTF-8 BOM,
      * dikelompokkan dan difilter berdasarkan Jurusan dan Rombel (atau siswa terpilih).
      */
-    public function exportStudentsCsvStream(int $schoolId, array $filters = [], ?int $teacherId = null): StreamedResponse
+    public function exportStudentsCsvStream(int $schoolId, array $filters = [], ?int $teacherId = null, ?array $allowedClassIds = null): StreamedResponse
     {
-        $query = $this->getStudentsQuery($schoolId, $filters, $teacherId)
+        $query = $this->getStudentsQuery($schoolId, $filters, $teacherId, $allowedClassIds)
             ->join('classes', 'students.class_id', '=', 'classes.id')
             ->join('users', 'students.user_id', '=', 'users.id')
             ->orderBy('classes.name', 'asc')

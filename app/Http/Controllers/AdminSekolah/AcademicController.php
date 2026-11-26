@@ -22,7 +22,9 @@ class AcademicController extends BaseAdminSekolahController
             ->with(['headTeacher.user', 'learningObjectives'])
             ->withCount(['classes', 'learningObjectives'])
             ->get();
-        $classes = SchoolClass::where('school_id', $schoolId)->with('major')->get();
+        $classes = SchoolClass::where('school_id', $schoolId)
+            ->with(['major', 'homeroomTeacher.user'])
+            ->get();
         $teachers = Teacher::whereHas('user', fn($q) => $q->where('school_id', $schoolId)->where('is_active', true))
             ->with('user')
             ->get();
@@ -170,6 +172,7 @@ class AcademicController extends BaseAdminSekolahController
         SchoolClass::create([
             'school_id' => $schoolId,
             'major_id' => $request->major_id,
+            'homeroom_teacher_id' => $request->homeroom_teacher_id ?: null,
             'name' => $request->name,
             'grade_level' => $request->grade_level,
             'academic_year' => $request->academic_year,
@@ -185,6 +188,10 @@ class AcademicController extends BaseAdminSekolahController
 
         $request->validate([
             'major_id' => ['required', Rule::exists('majors', 'id')->where('school_id', $schoolId)],
+            'homeroom_teacher_id' => [
+                'nullable',
+                Rule::exists('teachers', 'id')->where(fn($q) => $q->whereIn('user_id', User::where('school_id', $schoolId)->pluck('id'))),
+            ],
             'name' => [
                 'required', 'string', 'max:50',
                 Rule::unique('classes', 'name')->where('school_id', $schoolId)->where('academic_year', $request->academic_year)->ignore($schoolClass->id),
@@ -203,6 +210,7 @@ class AcademicController extends BaseAdminSekolahController
 
         $schoolClass->update([
             'major_id' => $request->major_id,
+            'homeroom_teacher_id' => $request->homeroom_teacher_id ?: null,
             'name' => $request->name,
             'grade_level' => $request->grade_level,
             'academic_year' => $request->academic_year,
@@ -252,13 +260,15 @@ class AcademicController extends BaseAdminSekolahController
             'target_academic_year' => ['required', 'string'],
             'class_ids' => ['nullable', 'array'],
             'class_ids.*' => [Rule::exists('classes', 'id')->where('school_id', $schoolId)],
+            'preserve_homeroom_teacher' => ['nullable', 'boolean'],
         ]);
 
         $stats = $promotionService->executePromotion(
             $schoolId,
             $request->current_academic_year,
             $request->target_academic_year,
-            $request->input('class_ids', [])
+            $request->input('class_ids', []),
+            $request->boolean('preserve_homeroom_teacher', false)
         );
 
         $msg = "Proses kenaikan kelas berhasil: {$stats['promoted_students_count']} siswa naik tingkat, {$stats['graduated_students_count']} siswa dinyatakan lulus (alumni).";

@@ -17,6 +17,7 @@ class SchoolClass extends Model
     protected $fillable = [
         'school_id',
         'major_id',
+        'homeroom_teacher_id',
         'name',
         'grade_level',
         'academic_year',
@@ -25,6 +26,11 @@ class SchoolClass extends Model
     public function major(): BelongsTo
     {
         return $this->belongsTo(Major::class);
+    }
+
+    public function homeroomTeacher(): BelongsTo
+    {
+        return $this->belongsTo(Teacher::class, 'homeroom_teacher_id');
     }
 
     public function students(): HasMany
