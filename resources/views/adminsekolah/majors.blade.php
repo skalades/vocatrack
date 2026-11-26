@@ -12,6 +12,12 @@
         subtitle="Struktur program keahlian vokasi dan pembagian rombel kelas siswa peserta Praktik Kerja Lapangan."
         badge="MANAJEMEN SEKOLAH"
     >
+        <a href="{{ route('adminsekolah.teachers.export-leadership') }}"
+           class="inline-flex items-center justify-center font-bold rounded-xl transition-all shadow-xs cursor-pointer bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-3 py-1.5 text-xs"
+           title="Unduh Excel (.xlsx) akun login & format WA untuk seluruh Kepala Program (Kajur) dan Wali Kelas">
+            <svg class="w-4 h-4 mr-1.5 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            <span>Ekspor Akun Kajur &amp; Wali Kelas (Excel)</span>
+        </a>
         <x-button type="button" variant="outline" size="sm" onclick="document.getElementById('modal-promote-classes').classList.remove('hidden')" class="border-indigo-200 text-indigo-700 hover:bg-indigo-50">
             <svg class="w-4 h-4 mr-1.5 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
             <span>Kenaikan Kelas & Kelulusan</span>
@@ -82,6 +88,12 @@
             :subtitle="$majors->count() . ' Program Keahlian Terdaftar'"
         >
             <x-slot:headerActions>
+                <a href="{{ route('adminsekolah.teachers.export-leadership', ['role' => 'kajur']) }}"
+                   class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-bold transition-colors mr-1.5"
+                   title="Unduh Excel (.xlsx) akun Kepala Program Keahlian (Kajur)">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    <span>Ekspor Kajur</span>
+                </a>
                 <x-button type="button" variant="primary" size="xs" onclick="document.getElementById('modal-add-major').classList.remove('hidden')">
                     <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                     + Jurusan
@@ -196,6 +208,12 @@
             :subtitle="$classes->count() . ' Rombel Kelas Aktif Terdata'"
         >
             <x-slot:headerActions>
+                <a href="{{ route('adminsekolah.teachers.export-leadership', ['role' => 'walikelas']) }}"
+                   class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-bold transition-colors mr-1.5"
+                   title="Unduh Excel (.xlsx) akun Wali Kelas">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    <span>Ekspor Wali Kelas</span>
+                </a>
                 <x-button type="button" variant="primary" size="xs" onclick="document.getElementById('modal-add-class').classList.remove('hidden')">
                     <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                     + Kelas

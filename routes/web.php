@@ -220,6 +220,7 @@ Route::middleware(['auth', 'IdentifyTenant', 'role:admin-sekolah'])->prefix('adm
     // Teachers & Excel Export
     Route::get('/teachers', [AdminSekolahTeacherController::class, 'teachers'])->name('adminsekolah.teachers');
     Route::get('/teachers/export', [AdminSekolahTeacherController::class, 'exportTeachers'])->name('adminsekolah.teachers.export');
+    Route::get('/teachers/export-leadership', [AdminSekolahTeacherController::class, 'exportLeadership'])->name('adminsekolah.teachers.export-leadership');
     Route::post('/teachers', [AdminSekolahTeacherController::class, 'storeTeacher'])->name('adminsekolah.teachers.store');
     Route::put('/teachers/{teacher}', [AdminSekolahTeacherController::class, 'updateTeacher'])->name('adminsekolah.teachers.update');
     Route::post('/teachers/{teacher}/reset-password', [AdminSekolahTeacherController::class, 'resetTeacherPassword'])->name('adminsekolah.teachers.reset-password');

@@ -18,6 +18,12 @@
             <svg class="w-4 h-4 mr-1.5 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
             <span>Ekspor Akun (Excel)</span>
         </a>
+        <a href="{{ route('adminsekolah.teachers.export-leadership', request()->only(['search', 'major'])) }}" 
+           class="inline-flex items-center justify-center font-bold rounded-xl transition-all shadow-xs cursor-pointer bg-white hover:bg-emerald-50 text-emerald-800 border border-emerald-200 px-3 py-1.5 text-xs"
+           title="Unduh data akun login & format WA khusus Kepala Program (Kajur) dan Wali Kelas (.xlsx)">
+            <svg class="w-4 h-4 mr-1.5 stroke-[2] text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            <span>Ekspor Kajur &amp; Wali Kelas (Excel)</span>
+        </a>
         <x-button type="button" variant="primary" size="sm" onclick="document.getElementById('modal-add-teacher').classList.remove('hidden')">
             <svg class="w-4 h-4 mr-1.5 stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
             <span>+ Tambah Guru Pembimbing</span>
@@ -119,7 +125,7 @@
                 </div>
             </form>
 
-            <div class="flex items-center justify-between lg:justify-end gap-2">
+            <div class="flex flex-wrap items-center justify-between lg:justify-end gap-2">
                 <span class="text-xs text-slate-500 font-semibold whitespace-nowrap">
                     @if(request()->filled('search') || (request()->filled('major') && request('major') !== 'all'))
                         {{ $teachers->total() }} Guru Ditemukan
@@ -127,8 +133,20 @@
                         {{ $teachers->total() }} Guru Terdaftar
                     @endif
                 </span>
+                <a href="{{ route('adminsekolah.teachers.export-leadership', array_merge(request()->only(['search', 'major']), ['role' => 'kajur'])) }}"
+                   class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold transition-all shadow-xs shrink-0 cursor-pointer"
+                   title="Unduh Excel (.xlsx) khusus akun & WA Kepala Jurusan (Kajur)">
+                    <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    <span>Ekspor Kajur</span>
+                </a>
+                <a href="{{ route('adminsekolah.teachers.export-leadership', array_merge(request()->only(['search', 'major']), ['role' => 'walikelas'])) }}"
+                   class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold transition-all shadow-xs shrink-0 cursor-pointer"
+                   title="Unduh Excel (.xlsx) khusus akun & WA Wali Kelas">
+                    <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    <span>Ekspor Wali Kelas</span>
+                </a>
                 <a href="{{ route('adminsekolah.teachers.export', request()->only(['search', 'major'])) }}"
-                   class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-xs shrink-0 cursor-pointer ml-2"
+                   class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-xs shrink-0 cursor-pointer"
                    title="Unduh file Excel (.xlsx) data akun & password guru lengkap dengan sheet per jurusan">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                     <span>Ekspor Akun Guru (Excel)</span>
@@ -180,6 +198,20 @@
                                     <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200">
                                         Lintas Jurusan
                                     </span>
+                                @endif
+                                @if($t->headedMajors->isNotEmpty() || $t->homeroomClasses->isNotEmpty())
+                                    <div class="flex flex-wrap gap-1 mt-1">
+                                        @foreach($t->headedMajors as $hm)
+                                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/70" title="Kepala Program {{ $hm->name }}">
+                                                Kajur {{ $hm->code }}
+                                            </span>
+                                        @endforeach
+                                        @foreach($t->homeroomClasses as $hc)
+                                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200/70" title="Wali Kelas {{ $hc->name }}">
+                                                Wali: {{ $hc->name }}
+                                            </span>
+                                        @endforeach
+                                    </div>
                                 @endif
                             </td>
                             <td class="py-3.5 px-4 font-mono text-[11px] text-slate-600 min-w-[160px]">

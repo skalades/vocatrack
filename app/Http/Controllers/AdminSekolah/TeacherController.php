@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\AdminSekolah;
 
+use App\Exports\LeadershipCredentialsExport;
 use App\Exports\TeacherCredentialsExport;
 use App\Http\Requests\AdminSekolah\StoreTeacherRequest;
 use App\Http\Requests\AdminSekolah\UpdateTeacherRequest;
@@ -29,7 +30,7 @@ class TeacherController extends BaseAdminSekolahController
         $selectedMajor = $request->query('major');
 
         $query = Teacher::whereHas('user', fn($q) => $q->where('school_id', $schoolId))
-            ->with(['user.profile', 'studentPkls.student.user', 'majors'])
+            ->with(['user.profile', 'studentPkls.student.user', 'majors', 'headedMajors', 'homeroomClasses'])
             ->applyAdminFilters($search, $selectedMajor);
 
         $teachers = $query->latest('teachers.id')->paginate(15)->withQueryString();
@@ -49,21 +50,11 @@ class TeacherController extends BaseAdminSekolahController
     public function exportTeachers(Request $request)
     {
         $schoolId = $this->getSchoolId();
-
-        $majorPart = 'Semua_Jurusan';
-        if ($major = $request->query('major')) {
-            if ($major === 'lintas') {
-                $majorPart = 'Lintas_Jurusan';
-            } elseif ($major !== 'all') {
-                $majorModel = Major::where('school_id', $schoolId)->find($major);
-                if ($majorModel) {
-                    $majorPart = Str::slug($majorModel->name, '_');
-                }
-            }
-        }
-
-        $timestamp = date('Ymd_His');
-        $filename = "Akun_Akses_Guru_{$majorPart}_{$timestamp}";
+        $majorPart = $this->resolveMajorSlugPart($schoolId, $request);
+        $filters = [
+            'search' => $request->query('search'),
+            'major' => $request->query('major'),
+        ];
 
         AuditLogService::log(
             'teacher_credentials_export',
@@ -71,25 +62,77 @@ class TeacherController extends BaseAdminSekolahController
             "Mengekspor data akun dan akses guru pembimbing (Filter: {$majorPart})."
         );
 
+        return $this->downloadSpreadsheet(
+            new TeacherCredentialsExport($schoolId, $filters),
+            "Akun_Akses_Guru_{$majorPart}",
+            $request->query('format')
+        );
+    }
+
+    public function exportLeadership(Request $request)
+    {
+        $schoolId = $this->getSchoolId();
+        $role = match ($request->query('role')) {
+            LeadershipCredentialsExport::ROLE_KAJUR => LeadershipCredentialsExport::ROLE_KAJUR,
+            LeadershipCredentialsExport::ROLE_WALIKELAS => LeadershipCredentialsExport::ROLE_WALIKELAS,
+            default => LeadershipCredentialsExport::ROLE_ALL,
+        };
+
+        $majorPart = $this->resolveMajorSlugPart($schoolId, $request);
         $filters = [
             'search' => $request->query('search'),
             'major' => $request->query('major'),
         ];
 
-        // Format CSV jika secara spesifik diminta
-        if ($request->query('format') === 'csv') {
-            return Excel::download(
-                new TeacherCredentialsExport($schoolId, $filters),
-                "{$filename}.csv",
-                \Maatwebsite\Excel\Excel::CSV
-            );
+        $roleLabel = match ($role) {
+            LeadershipCredentialsExport::ROLE_KAJUR => 'Kajur',
+            LeadershipCredentialsExport::ROLE_WALIKELAS => 'Wali Kelas',
+            default => 'Kajur & Wali Kelas',
+        };
+        $filePrefix = match ($role) {
+            LeadershipCredentialsExport::ROLE_KAJUR => "Akun_Akses_Kajur_{$majorPart}",
+            LeadershipCredentialsExport::ROLE_WALIKELAS => "Akun_Akses_Wali_Kelas_{$majorPart}",
+            default => "Akun_Akses_Kajur_Wali_Kelas_{$majorPart}",
+        };
+
+        AuditLogService::log(
+            'leadership_credentials_export',
+            'export',
+            "Mengekspor data akun dan akses {$roleLabel} (Filter: {$majorPart})."
+        );
+
+        return $this->downloadSpreadsheet(
+            new LeadershipCredentialsExport($schoolId, $filters, $role),
+            $filePrefix,
+            $request->query('format')
+        );
+    }
+
+    private function resolveMajorSlugPart(int $schoolId, Request $request): string
+    {
+        $major = $request->query('major');
+        if ($major === 'lintas') {
+            return 'Lintas_Jurusan';
+        }
+        if ($major && $major !== 'all') {
+            $majorModel = Major::where('school_id', $schoolId)->find($major);
+            if ($majorModel) {
+                return Str::slug($majorModel->name, '_');
+            }
         }
 
-        // Default: Excel .xlsx profesional dengan multi-sheet per jurusan & styling rapi
-        return Excel::download(
-            new TeacherCredentialsExport($schoolId, $filters),
-            "{$filename}.xlsx"
-        );
+        return 'Semua_Jurusan';
+    }
+
+    private function downloadSpreadsheet(object $export, string $baseName, ?string $format)
+    {
+        $filename = $baseName . '_' . date('Ymd_His');
+
+        if ($format === 'csv') {
+            return Excel::download($export, "{$filename}.csv", \Maatwebsite\Excel\Excel::CSV);
+        }
+
+        return Excel::download($export, "{$filename}.xlsx");
     }
 
     public function storeTeacher(StoreTeacherRequest $request)
