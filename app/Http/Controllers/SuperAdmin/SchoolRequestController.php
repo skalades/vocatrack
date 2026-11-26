@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\SuperAdmin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\LandingController;
 use App\Http\Requests\SuperAdmin\ApproveSchoolRequest;
 use App\Http\Requests\SuperAdmin\RejectSchoolRequest;
 use App\Models\PlatformSetting;
@@ -149,6 +150,8 @@ class SchoolRequestController extends Controller
 
     public function storePublicSchoolRequest(Request $request)
     {
+        abort_unless(LandingController::ENABLED, 404);
+
         $demoUrl = route('landing') . '#demo';
         $success = 'Terima kasih! Permohonan demo berhasil dikirim. Tim VokaTrack akan menghubungi Anda melalui kontak yang terdaftar.';
 

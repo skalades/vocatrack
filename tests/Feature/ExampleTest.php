@@ -16,6 +16,12 @@ class ExampleTest extends TestCase
      */
     public function test_landing_page_renders_with_plans_and_demo_form(): void
     {
+        if (!\App\Http\Controllers\LandingController::ENABLED) {
+            $this->get('/')->assertRedirect(route('login'));
+            $this->get('/login')->assertOk();
+            return;
+        }
+
         SubscriptionPlan::create([
             'code' => 'pro-yearly', 'name' => 'Paket Pro Tahunan', 'price' => 6000000, 'billing_period' => 'yearly',
             'max_students' => 300, 'max_storage_mb' => 20480, 'features' => ['certificate' => true], 'is_active' => true, 'is_popular' => true,
@@ -46,6 +52,15 @@ class ExampleTest extends TestCase
 
     public function test_demo_request_from_landing_is_stored_and_redirects_to_form(): void
     {
+        if (!\App\Http\Controllers\LandingController::ENABLED) {
+            $this->post(route('public.request-demo'), [
+                'school_name' => 'SMK Landing', 'npsn' => '55556666', 'contact_name' => 'Pak Humas',
+                'email' => 'humas@landing.sch.id', 'phone' => '081234567890', 'estimated_students' => 120,
+            ])->assertNotFound();
+            $this->assertSame(0, SchoolRequest::count());
+            return;
+        }
+
         $superAdmin = \App\Models\User::create([
             'name' => 'SA', 'email' => 'sa@x.id', 'password' => 'secret-123', 'role' => 'super-admin', 'is_active' => true,
         ]);
@@ -91,6 +106,14 @@ class ExampleTest extends TestCase
 
         auth()->logout();
 
+        if (!\App\Http\Controllers\LandingController::ENABLED) {
+            $this->post(route('public.request-demo'), [
+                'school_name' => 'SMK Nomor Baru', 'npsn' => '99990000', 'contact_name' => 'X',
+                'email' => 'x@baru.sch.id', 'phone' => '0812',
+            ])->assertNotFound();
+            return;
+        }
+
         $this->post(route('public.request-demo'), [
             'school_name' => 'SMK Nomor Baru', 'npsn' => '99990000', 'contact_name' => 'X',
             'email' => 'x@baru.sch.id', 'phone' => '0812',
@@ -100,6 +123,13 @@ class ExampleTest extends TestCase
 
     public function test_demo_request_honeypot_and_invalid_npsn(): void
     {
+        if (!\App\Http\Controllers\LandingController::ENABLED) {
+            $this->post(route('public.request-demo'), [
+                'school_name' => 'SMK Salah', 'npsn' => 'ABCDEFGH', 'contact_name' => 'X', 'email' => 'x@x.id', 'phone' => '0',
+            ])->assertNotFound();
+            return;
+        }
+
         $this->post(route('public.request-demo'), [
             'school_name' => 'Bot', 'npsn' => '77778888', 'contact_name' => 'Bot', 'email' => 'bot@x.id',
             'phone' => '0', 'website' => 'http://spam.example',

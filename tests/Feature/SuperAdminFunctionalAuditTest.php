@@ -561,8 +561,16 @@ class SuperAdminFunctionalAuditTest extends TestCase
             'notes' => 'Ingin mencoba sistem PKL online untuk 200 siswa.',
         ];
 
-        $pubResponse = $this->post(route('public.request-demo'), $payload);
-        $pubResponse->assertSessionHas('success');
+        if (\App\Http\Controllers\LandingController::ENABLED) {
+            $pubResponse = $this->post(route('public.request-demo'), $payload);
+            $pubResponse->assertSessionHas('success');
+        } else {
+            $this->post(route('public.request-demo'), $payload)->assertNotFound();
+            \App\Models\SchoolRequest::create(array_merge(
+                \Illuminate\Support\Arr::only($payload, ['npsn', 'school_name', 'contact_name', 'email', 'phone', 'notes']),
+                ['estimated_students' => 200, 'status' => 'pending']
+            ));
+        }
 
         $this->assertDatabaseHas('school_requests', [
             'npsn' => '20209999',
