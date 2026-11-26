@@ -35,15 +35,20 @@ class DatabaseSeeder extends Seeder
             Smkn4BombanaSeeder::class,
         ];
 
-        // Seeder Geologi Pertambangan, Teknik Audio Video & Farmasi Industri opsional jika berkas ada di environment lokal/server
-        if (class_exists(\Database\Seeders\GeologiPertambanganPklSeeder::class)) {
-            array_splice($seeders, 3, 0, [\Database\Seeders\GeologiPertambanganPklSeeder::class]);
-        }
-        if (class_exists(\Database\Seeders\TeknikAudioVideoPklSeeder::class)) {
-            array_splice($seeders, 4, 0, [\Database\Seeders\TeknikAudioVideoPklSeeder::class]);
-        }
-        if (class_exists(\Database\Seeders\FarmasiIndustriPklSeeder::class)) {
-            array_splice($seeders, 5, 0, [\Database\Seeders\FarmasiIndustriPklSeeder::class]);
+        // Seeder modular SMKN 2 Garut (GP, TAV, FI, DKV, & master siswa belum terplotting) opsional jika berkas tersedia
+        $optionalSmkn2Seeders = [
+            \Database\Seeders\GeologiPertambanganPklSeeder::class,
+            \Database\Seeders\TeknikAudioVideoPklSeeder::class,
+            \Database\Seeders\FarmasiIndustriPklSeeder::class,
+            \Database\Seeders\DesainKomunikasiVisualPklSeeder::class,
+            \Database\Seeders\Smkn2GarutMasterStudentSeeder::class,
+        ];
+        $insertAt = 3;
+        foreach ($optionalSmkn2Seeders as $optionalSeeder) {
+            if (class_exists($optionalSeeder)) {
+                array_splice($seeders, $insertAt, 0, [$optionalSeeder]);
+                $insertAt++;
+            }
         }
 
         $this->call($seeders);

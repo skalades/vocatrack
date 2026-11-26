@@ -24,6 +24,8 @@ abstract class BaseCsvMajorPklSeeder extends Seeder
     protected const EMAIL_DOMAIN = 'smkn2garut.sch.id';
     protected const ACADEMIC_YEAR = '2026/2027';
 
+    private ?string $defaultPasswordHash = null;
+
     abstract protected function csvRelativePath(): string;
 
     abstract protected function majorCode(): string;
@@ -243,8 +245,16 @@ abstract class BaseCsvMajorPklSeeder extends Seeder
     private function normalizePhone(string $raw): ?string
     {
         $digits = preg_replace('/[^0-9]/', '', ltrim(trim($raw), "'"));
+        if ($digits === null || $digits === '') {
+            return null;
+        }
 
-        return ($digits !== null && $digits !== '') ? $digits : null;
+        // Pulihkan angka 0 di depan yang hilang akibat format angka Excel (misal: 8212765812 -> 08212765812)
+        if (str_starts_with($digits, '8') && strlen($digits) >= 8) {
+            $digits = '0' . $digits;
+        }
+
+        return $digits;
     }
 
     private function normalizeTime(string $raw): ?string
@@ -254,7 +264,7 @@ abstract class BaseCsvMajorPklSeeder extends Seeder
             return null;
         }
 
-        if (preg_match('/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/', $trimmed, $m) !== 1) {
+        if (preg_match('/^(\d{1,2})[:.](\d{2})(?:[:.](\d{2}))?$/', $trimmed, $m) !== 1) {
             return null;
         }
 
@@ -291,6 +301,11 @@ abstract class BaseCsvMajorPklSeeder extends Seeder
         ];
     }
 
+    protected function defaultPasswordHash(): string
+    {
+        return $this->defaultPasswordHash ??= Hash::make('password');
+    }
+
     /**
      * @return array<string, Teacher>
      */
@@ -313,7 +328,7 @@ abstract class BaseCsvMajorPklSeeder extends Seeder
                 [
                     'school_id' => $school->id,
                     'name' => $identity['name'],
-                    'password' => Hash::make('password'),
+                    'password' => $this->defaultPasswordHash(),
                     'role' => 'guru-pembimbing',
                     'is_active' => true,
                 ]
@@ -497,7 +512,7 @@ abstract class BaseCsvMajorPklSeeder extends Seeder
                 [
                     'school_id' => $school->id,
                     'name' => $row['name'],
-                    'password' => Hash::make('password'),
+                    'password' => $this->defaultPasswordHash(),
                     'role' => 'siswa',
                     'is_active' => true,
                 ]
