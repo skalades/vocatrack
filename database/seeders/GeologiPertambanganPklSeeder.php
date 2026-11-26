@@ -22,19 +22,16 @@ use Illuminate\Support\Str;
 class GeologiPertambanganPklSeeder extends Seeder
 {
     /**
-     * Jalankan seeder modular untuk data Penempatan Siswa PKL Jurusan Teknik Geologi Pertambangan (GP).
-     * Mencakup:
-     * 1. Jurusan & Kelas GP (XII GP 1 & XII GP 2)
-     * 2. Kepala Jurusan & 6 Guru Pembimbing Kejuruan GP
-     * 3. 12 Instansi / DUDI Pertambangan & Eksplorasi beserta Pembimbing DUDI
-     * 4. 68 Siswa Lengkap (User, Profile, NIS/NISN, Parent Portal Token, & Plotting PKL Aktif)
+     * Seeder modular Penempatan Siswa PKL Jurusan Teknik Geologi Pertambangan (GP) SMKN 2 Garut (disinkronkan dengan data live):
+     * 1. Jurusan & Kelas GP (XII GP 1 & XII GP 2) beserta Wali Kelas masing-masing
+     * 2. Kepala Jurusan & Guru Pembimbing PKL GP (15 guru aktif di plotting + Yandi Rusyandi)
+     * 3. 11 Instansi / DU/DI Pertambangan & Eksplorasi beserta Pembimbing DU/DI
+     * 4. 68 Siswa Lengkap (User, Profile, NIS/NISN, No. WhatsApp, & Plotting PKL Aktif)
      */
     public function run(): void
     {
-        // 1. Dapatkan referensi Sekolah SMKN 2 Garut
         $school = School::where('npsn', '20209203')->first() ?? School::firstOrFail();
 
-        // 2. Buat atau dapatkan Jurusan Teknik Geologi Pertambangan (GP)
         $majorGp = Major::firstOrCreate(
             [
                 'school_id' => $school->id,
@@ -45,32 +42,7 @@ class GeologiPertambanganPklSeeder extends Seeder
             ]
         );
 
-        // 3. Buat atau dapatkan Kelas XII GP 1 & XII GP 2
-        $classGp1 = SchoolClass::firstOrCreate(
-            [
-                'school_id' => $school->id,
-                'name' => 'XII GP 1',
-            ],
-            [
-                'major_id' => $majorGp->id,
-                'grade_level' => 'XII',
-                'academic_year' => '2026/2027',
-            ]
-        );
-
-        $classGp2 = SchoolClass::firstOrCreate(
-            [
-                'school_id' => $school->id,
-                'name' => 'XII GP 2',
-            ],
-            [
-                'major_id' => $majorGp->id,
-                'grade_level' => 'XII',
-                'academic_year' => '2026/2027',
-            ]
-        );
-
-        // 3.5. Capaian Pembelajaran (CP) Kurikulum Merdeka Jurusan Geologi Pertambangan
+        // 1. Capaian Pembelajaran (CP) Kurikulum Merdeka Jurusan Geologi Pertambangan
         $gpLearningObjectives = [
             [
                 'code' => 'GP-CP01',
@@ -132,107 +104,187 @@ class GeologiPertambanganPklSeeder extends Seeder
             );
         }
 
-        // 4. Bersihkan data dummy lama Geologi Pertambangan jika ada
-        $dummyStudentEmails = [
-            'rendi@smkn2garut.sch.id',
-            'gina@smkn2garut.sch.id',
-            'dika@smkn2garut.sch.id',
-        ];
-        $dummyUsers = User::with(['student', 'profile'])->where('school_id', $school->id)->whereIn('email', $dummyStudentEmails)->get();
-        foreach ($dummyUsers as $du) {
-            if ($du->student) {
-                StudentPkl::where('student_id', $du->student->id)->delete();
-                $du->student->delete();
-            }
-            $du->profile?->delete();
-            $du->delete();
-        }
-
-        // Hapus dummy company lama jika ada
-        $dummyCompanyNames = [
-            'PT Aneka Tambang Tbk - Unit Bisnis Geomin & Eksplorasi Mineral',
-            'PSDMBP Badan Geologi - Kementerian ESDM',
-            'PT Timah Tbk - Divisi Eksplorasi Darat & Pemboran Tambang',
-        ];
-        $dummyCompanies = Company::with(['supervisors.user.profile'])->where('school_id', $school->id)->whereIn('name', $dummyCompanyNames)->get();
-        foreach ($dummyCompanies as $dc) {
-            StudentPkl::where('company_id', $dc->id)->delete();
-            foreach ($dc->supervisors as $spv) {
-                $spvUser = $spv->user;
-                $spv->delete();
-                $spvUser?->profile?->delete();
-                $spvUser?->delete();
-            }
-            $dc->majors()->detach();
-            $dc->delete();
-        }
-
-        // 5. Guru Pembimbing Kejuruan (6 Guru sesuai data)
+        // 2. Guru Pembimbing & Wali Kelas Jurusan GP
+        $passwordHash = Hash::make('password');
         $teachersData = [
-            'Danang Kusumah, S.T.' => [
+            'DANANG' => [
                 'name' => 'Danang Kusumah, S.T.',
+                'base_name' => 'Danang Kusumah',
                 'email' => 'danang.kusumah@smkn2garut.sch.id',
                 'nip' => '198305152010011012',
                 'gender' => 'L',
                 'phone' => '081223450011',
                 'address' => 'Tarogong Kaler, Kabupaten Garut',
+                'attach_gp_major' => true,
             ],
-            'Yandi Rusyandi, S.Pd., M.Pd' => [
+            'YANDI' => [
                 'name' => 'Yandi Rusyandi, S.Pd., M.Pd',
+                'base_name' => 'Yandi Rusyandi',
                 'email' => 'yandi.rusyandi@smkn2garut.sch.id',
                 'nip' => '198108202008011009',
                 'gender' => 'L',
                 'phone' => '081223450012',
                 'address' => 'Jl. Pembangunan No. 88, Garut',
+                'attach_gp_major' => true,
             ],
-            'Abdul Hakim, S.T., M.T.' => [
+            'ABDUL_HAKIM' => [
                 'name' => 'Abdul Hakim, S.T., M.T.',
+                'base_name' => 'Abdul Hakim',
                 'email' => 'abdul.hakim@smkn2garut.sch.id',
                 'nip' => '197904122006041008',
                 'gender' => 'L',
                 'phone' => '081223450013',
                 'address' => 'Tarogong Kidul, Kabupaten Garut',
+                'attach_gp_major' => true,
             ],
-            'Herdi Pebryana Putra, S.T.' => [
-                'name' => 'Herdi Pebryana Putra, S.T.',
-                'email' => 'guru@smkn2garut.sch.id', // Akun utama guru / kajur GP
+            'HERDI' => [
+                'name' => 'Herdi Febriyana, S.T.',
+                'base_name' => 'Herdi Febriyana',
+                'email' => 'guru@smkn2garut.sch.id',
                 'nip' => '198702142011011003',
                 'gender' => 'L',
                 'phone' => '081223344552',
                 'address' => 'Jl. Pembangunan No. 42, Garut Kota',
+                'attach_gp_major' => true,
             ],
-            'Cahya Nugraha, S.T., M.T.' => [
+            'CAHYA' => [
                 'name' => 'Cahya Nugraha, S.T., M.T.',
+                'base_name' => 'Cahya Nugraha',
                 'email' => 'cahya.nugraha@smkn2garut.sch.id',
                 'nip' => '198411032009021003',
                 'gender' => 'L',
                 'phone' => '081223450014',
                 'address' => 'Samarang, Kabupaten Garut',
+                'attach_gp_major' => true,
             ],
-            'Adbel Yuki Edward, S.T, M.T.' => [
-                'name' => 'Adbel Yuki Edward, S.T, M.T.',
+            'ADBEL' => [
+                'name' => 'Adbel Yuki Edwar, S.T.',
+                'base_name' => 'Adbel Yuki Edwar',
                 'email' => 'adbel.yuki@smkn2garut.sch.id',
                 'nip' => '198607192011011007',
                 'gender' => 'L',
                 'phone' => '081223450015',
                 'address' => 'Garut Kota, Kabupaten Garut',
+                'attach_gp_major' => true,
+            ],
+            'ERIKA' => [
+                'name' => 'Erika Silviani, S.T.',
+                'base_name' => 'Erika Silviani',
+                'email' => 'erika.silviani@smkn2garut.sch.id',
+                'nip' => null,
+                'gender' => 'P',
+                'phone' => null,
+                'address' => 'Garut, Jawa Barat',
+                'attach_gp_major' => true,
+            ],
+            'NISA' => [
+                'name' => 'Nisa Dwi Nuranti, S.Pd.',
+                'base_name' => 'Nisa Dwi Nuranti',
+                'email' => 'nisa.dwi.nuranti@smkn2garut.sch.id',
+                'nip' => null,
+                'gender' => 'P',
+                'phone' => null,
+                'address' => 'Garut, Jawa Barat',
+                'attach_gp_major' => true,
+            ],
+            'YAYU' => [
+                'name' => 'Yayu Sri Oktaviani, S.Pd.',
+                'base_name' => 'Yayu Sri Oktaviani',
+                'email' => 'yayu.sri.oktaviani@smkn2garut.sch.id',
+                'nip' => null,
+                'gender' => 'P',
+                'phone' => null,
+                'address' => 'Garut, Jawa Barat',
+                'attach_gp_major' => false,
+            ],
+            'EMA' => [
+                'name' => 'Ema Rosilawati Nasution, S.Pd.',
+                'base_name' => 'Ema Rosilawati Nasution',
+                'email' => 'ema.rosilawati.nasution@smkn2garut.sch.id',
+                'nip' => null,
+                'gender' => 'P',
+                'phone' => null,
+                'address' => 'Garut, Jawa Barat',
+                'attach_gp_major' => false,
+            ],
+            'ANGGARA' => [
+                'name' => 'Anggara Agung Budiman, S.Pd.',
+                'base_name' => 'Anggara Agung Budiman',
+                'email' => 'anggara.agung.budiman@smkn2garut.sch.id',
+                'nip' => null,
+                'gender' => 'L',
+                'phone' => null,
+                'address' => 'Garut, Jawa Barat',
+                'attach_gp_major' => false,
+            ],
+            'SITI_BUDIARTI' => [
+                'name' => 'Siti Budiarti, S.H.',
+                'base_name' => 'Siti Budiarti',
+                'email' => 'siti.budiarti@smkn2garut.sch.id',
+                'nip' => null,
+                'gender' => 'P',
+                'phone' => null,
+                'address' => 'Garut, Jawa Barat',
+                'attach_gp_major' => false,
+            ],
+            'NENI' => [
+                'name' => 'Neni Setiani, S.Pd.',
+                'base_name' => 'Neni Setiani',
+                'email' => 'neni.setiani@smkn2garut.sch.id',
+                'nip' => null,
+                'gender' => 'P',
+                'phone' => null,
+                'address' => 'Garut, Jawa Barat',
+                'attach_gp_major' => false,
+            ],
+            'MUSTOFA' => [
+                'name' => 'Mustofa, M.Pd.',
+                'base_name' => 'Mustofa',
+                'email' => 'mustofa@smkn2garut.sch.id',
+                'nip' => null,
+                'gender' => 'L',
+                'phone' => null,
+                'address' => 'Garut, Jawa Barat',
+                'attach_gp_major' => false,
+            ],
+            'AAP' => [
+                'name' => 'Aap Solehudin, S.Pd.',
+                'base_name' => 'Aap Solehudin',
+                'email' => 'aap.solehudin@smkn2garut.sch.id',
+                'nip' => null,
+                'gender' => 'L',
+                'phone' => null,
+                'address' => 'Garut, Jawa Barat',
+                'attach_gp_major' => false,
+            ],
+            'AIDA' => [
+                'name' => 'Hj. Aida Maryani S, S.Pd., M.Pd.',
+                'base_name' => 'Hj. Aida Maryani S',
+                'email' => 'aida.maryani@smkn2garut.sch.id',
+                'nip' => null,
+                'gender' => 'P',
+                'phone' => null,
+                'address' => 'Garut, Jawa Barat',
+                'attach_gp_major' => false,
             ],
         ];
 
         $seededTeachers = [];
         foreach ($teachersData as $key => $td) {
-            $user = User::updateOrCreate(
-                ['email' => $td['email']],
-                [
+            $user = $this->findExistingTeacherUser($school->id, $td['email'], $td['base_name']);
+
+            if (!$user) {
+                $user = User::create([
                     'school_id' => $school->id,
                     'name' => $td['name'],
-                    'password' => Hash::make('password'),
+                    'email' => $td['email'],
+                    'password' => $passwordHash,
                     'role' => 'guru-pembimbing',
                     'is_active' => true,
-                ]
-            );
+                ]);
+            }
 
-            Profile::updateOrCreate(
+            Profile::firstOrCreate(
                 ['user_id' => $user->id],
                 [
                     'gender' => $td['gender'],
@@ -241,23 +293,53 @@ class GeologiPertambanganPklSeeder extends Seeder
                 ]
             );
 
-            $teacher = Teacher::updateOrCreate(
+            $teacher = Teacher::firstOrCreate(
                 ['user_id' => $user->id],
                 ['nip' => $td['nip']]
             );
 
-            $teacher->majors()->syncWithoutDetaching([$majorGp->id]);
+            if ($td['attach_gp_major']) {
+                $teacher->majors()->syncWithoutDetaching([$majorGp->id]);
+            }
+
             $seededTeachers[$key] = $teacher;
         }
 
-        // Tetapkan Herdi Pebryana Putra, S.T. sebagai Kepala Jurusan (Kajur) GP
-        if (isset($seededTeachers['Herdi Pebryana Putra, S.T.'])) {
+        // Tetapkan Kepala Jurusan (Kajur) GP jika belum ditetapkan
+        if (!$majorGp->head_teacher_id && isset($seededTeachers['HERDI'])) {
             $majorGp->update([
-                'head_teacher_id' => $seededTeachers['Herdi Pebryana Putra, S.T.']->id,
+                'head_teacher_id' => $seededTeachers['HERDI']->id,
             ]);
         }
 
-        // 6. Dapatkan atau buat Periode PKL aktif
+        // 3. Kelas XII GP 1 & XII GP 2 beserta Wali Kelas sesuai data live
+        $classGp1 = SchoolClass::updateOrCreate(
+            [
+                'school_id' => $school->id,
+                'name' => 'XII GP 1',
+            ],
+            [
+                'major_id' => $majorGp->id,
+                'homeroom_teacher_id' => $seededTeachers['ERIKA']->id,
+                'grade_level' => 'XII',
+                'academic_year' => '2026/2027',
+            ]
+        );
+
+        $classGp2 = SchoolClass::updateOrCreate(
+            [
+                'school_id' => $school->id,
+                'name' => 'XII GP 2',
+            ],
+            [
+                'major_id' => $majorGp->id,
+                'homeroom_teacher_id' => $seededTeachers['NISA']->id,
+                'grade_level' => 'XII',
+                'academic_year' => '2026/2027',
+            ]
+        );
+
+        // 4. Periode PKL aktif
         $period = PklPeriod::where('school_id', $school->id)->where('is_active', true)->first();
         if (!$period) {
             $period = PklPeriod::create([
@@ -269,7 +351,7 @@ class GeologiPertambanganPklSeeder extends Seeder
             ]);
         }
 
-        // 7. Data 12 DUDI / Instansi Penempatan PKL Geologi Pertambangan
+        // 5. Data 11 Instansi / DU/DI GP (disamakan dengan nama instansi live)
         $companiesData = [
             'PT. SANGGA BUANA NUSANTARA' => [
                 'name' => 'PT. SANGGA BUANA NUSANTARA',
@@ -293,8 +375,8 @@ class GeologiPertambanganPklSeeder extends Seeder
                 'supervisor_email' => 'spv.gunungbatujajar@mining.co.id',
                 'supervisor_gender' => 'L',
             ],
-            'PT. TIMAH Tbk.' => [
-                'name' => 'PT. TIMAH Tbk.',
+            'PT. Timah Persero, Tbk.' => [
+                'name' => 'PT. Timah Persero, Tbk.',
                 'address' => 'Jl. Jendral Soedirman 51 Pangkalpinang 33121 Bangka Belitung',
                 'contact_person' => 'Ir. Bambang Triyono, S.T., M.Sc.',
                 'phone' => '0717-4258000',
@@ -315,8 +397,8 @@ class GeologiPertambanganPklSeeder extends Seeder
                 'supervisor_email' => 'spv.datem@datem.co.id',
                 'supervisor_gender' => 'L',
             ],
-            'PT. PERTAMINA GEOTHERMAL ENERGI AREA KAMOJANG' => [
-                'name' => 'PT. PERTAMINA GEOTHERMAL ENERGI AREA KAMOJANG',
+            'Pertamina Geothermal Energy' => [
+                'name' => 'Pertamina Geothermal Energy',
                 'address' => 'Jl. Laksana, Kec. Ibun, Kabupaten Bandung, Jawa Barat',
                 'contact_person' => 'Dwi Prasetyo, S.T., M.T.',
                 'phone' => '022-85920000',
@@ -337,8 +419,8 @@ class GeologiPertambanganPklSeeder extends Seeder
                 'supervisor_email' => 'spv.sbi@solusibangun.id',
                 'supervisor_gender' => 'L',
             ],
-            'ATR BPN Kab. Garut' => [
-                'name' => 'ATR BPN Kab. Garut',
+            'ATR BPN' => [
+                'name' => 'ATR BPN',
                 'address' => 'Jl. Suherman, Jati, Kec. Tarogong Kaler, Kabupaten Garut, Jawa Barat 44151',
                 'contact_person' => 'Rahmat Kurniawan, S.SiT.',
                 'phone' => '0262-233451',
@@ -359,8 +441,8 @@ class GeologiPertambanganPklSeeder extends Seeder
                 'supervisor_email' => 'spv.tekmira@esdm.go.id',
                 'supervisor_gender' => 'L',
             ],
-            'PT. GEOSERVICES LTD' => [
-                'name' => 'PT. GEOSERVICES LTD',
+            'PT. GEOSERVICE' => [
+                'name' => 'PT. GEOSERVICE',
                 'address' => 'Jl. Jababeka Raya, Mekarmukti, Kec. Cikarang Utara, Kab. Bekasi, Jawa Barat 17530',
                 'contact_person' => 'Ir. Dedi Supriyadi, M.Sc.',
                 'phone' => '021-8934567',
@@ -381,8 +463,8 @@ class GeologiPertambanganPklSeeder extends Seeder
                 'supervisor_email' => 'spv.bhadrapinggala@bpsmining.com',
                 'supervisor_gender' => 'L',
             ],
-            'PT. ARYA SWASCIPTA REKAYASA' => [
-                'name' => 'PT. ARYA SWASCIPTA REKAYASA',
+            'PT. ARYA SWASCIPTA REKAYASA/PT. MAHATMA' => [
+                'name' => 'PT. ARYA SWASCIPTA REKAYASA/PT. MAHATMA',
                 'address' => 'Jl. Pahlawan No. 95, Sukaluyu, Kec. Cibeunying, Kota Bandung, Jawa Barat 40123',
                 'contact_person' => 'Firman Maulana, S.T.',
                 'phone' => '022-2503411',
@@ -390,17 +472,6 @@ class GeologiPertambanganPklSeeder extends Seeder
                 'longitude' => 107.63210000,
                 'supervisor_name' => 'Firman Maulana, S.T.',
                 'supervisor_email' => 'spv.aryaswascipta@asrekayasa.co.id',
-                'supervisor_gender' => 'L',
-            ],
-            'PT. MAHATMA' => [
-                'name' => 'PT. MAHATMA',
-                'address' => 'Jl. Indramayu 8 No. 1 Antapani Kidul, Kec. Antapani Kota Bandung Jawa Barat 40291',
-                'contact_person' => 'Wahyu Nugroho, S.T.',
-                'phone' => '022-7104523',
-                'latitude' => -6.91890000,
-                'longitude' => 107.65980000,
-                'supervisor_name' => 'Wahyu Nugroho, S.T.',
-                'supervisor_email' => 'spv.mahatma@mahatma.co.id',
                 'supervisor_gender' => 'L',
             ],
         ];
@@ -429,18 +500,18 @@ class GeologiPertambanganPklSeeder extends Seeder
 
             $company->majors()->syncWithoutDetaching([$majorGp->id]);
 
-            $supervisorUser = User::updateOrCreate(
+            $supervisorUser = User::firstOrCreate(
                 ['email' => $cd['supervisor_email']],
                 [
                     'school_id' => $school->id,
                     'name' => $cd['supervisor_name'],
-                    'password' => Hash::make('password'),
+                    'password' => $passwordHash,
                     'role' => 'pembimbing-dudi',
                     'is_active' => true,
                 ]
             );
 
-            Profile::updateOrCreate(
+            Profile::firstOrCreate(
                 ['user_id' => $supervisorUser->id],
                 [
                     'gender' => $cd['supervisor_gender'],
@@ -449,7 +520,7 @@ class GeologiPertambanganPklSeeder extends Seeder
                 ]
             );
 
-            $supervisor = Supervisor::updateOrCreate(
+            $supervisor = Supervisor::firstOrCreate(
                 ['user_id' => $supervisorUser->id],
                 [
                     'company_id' => $company->id,
@@ -461,98 +532,86 @@ class GeologiPertambanganPklSeeder extends Seeder
             $seededSupervisors[$key] = $supervisor;
         }
 
-        // 8. Data 68 Siswa Jurusan Geologi Pertambangan & Plotting Penempatan
+        // 6. Data 68 Siswa Jurusan Geologi Pertambangan & Plotting Penempatan sesuai data live
         $studentsRaw = [
-            // PT. SANGGA BUANA NUSANTARA (8 siswa - XII GP 2 - Danang Kusumah, S.T.)
-            ['name' => 'ANDIKA SATRIA SAPUTRA', 'nis' => '242510503', 'nisn' => '0094286823', 'company' => 'PT. SANGGA BUANA NUSANTARA', 'teacher' => 'Danang Kusumah, S.T.', 'class' => 'XII GP 2'],
-            ['name' => 'IBNU ALI HAJJ', 'nis' => '242510513', 'nisn' => '3070590887', 'company' => 'PT. SANGGA BUANA NUSANTARA', 'teacher' => 'Danang Kusumah, S.T.', 'class' => 'XII GP 2'],
-            ['name' => 'MUHAMAD IRFAN ARDIANSYAH', 'nis' => '242510519', 'nisn' => '0095567392', 'company' => 'PT. SANGGA BUANA NUSANTARA', 'teacher' => 'Danang Kusumah, S.T.', 'class' => 'XII GP 2'],
-            ['name' => 'MUHAMMAD RIZKI SAPUTRA', 'nis' => '242510524', 'nisn' => '0098666825', 'company' => 'PT. SANGGA BUANA NUSANTARA', 'teacher' => 'Danang Kusumah, S.T.', 'class' => 'XII GP 2'],
-            ['name' => 'MOHAMAD FATHAN RAMADANI', 'nis' => '242510517', 'nisn' => '0098722997', 'company' => 'PT. SANGGA BUANA NUSANTARA', 'teacher' => 'Danang Kusumah, S.T.', 'class' => 'XII GP 2'],
-            ['name' => 'RENZA TAUFIK YUGASWARA', 'nis' => '242510531', 'nisn' => '0094397515', 'company' => 'PT. SANGGA BUANA NUSANTARA', 'teacher' => 'Danang Kusumah, S.T.', 'class' => 'XII GP 2'],
-            ['name' => 'REFIE WIBAWA SAPUTRA', 'nis' => '242510530', 'nisn' => '0095029468', 'company' => 'PT. SANGGA BUANA NUSANTARA', 'teacher' => 'Danang Kusumah, S.T.', 'class' => 'XII GP 2'],
-            ['name' => 'AFFANDI DANUNINGRAT', 'nis' => '242510502', 'nisn' => '0086089719', 'company' => 'PT. SANGGA BUANA NUSANTARA', 'teacher' => 'Danang Kusumah, S.T.', 'class' => 'XII GP 2'],
-            // CV. GUNUNG BATUJAJAR (4 siswa - XII GP 2 - Yandi Rusyandi, S.Pd., M.Pd)
-            ['name' => 'MUHAMMAD RAFA SYAMLA IMANI', 'nis' => '242510523', 'nisn' => '3094845475', 'company' => 'CV. GUNUNG BATUJAJAR', 'teacher' => 'Yandi Rusyandi, S.Pd., M.Pd', 'class' => 'XII GP 2'],
-            ['name' => 'NOFA ADITHYA DWI HERYANTO', 'nis' => '242510527', 'nisn' => '0093063341', 'company' => 'CV. GUNUNG BATUJAJAR', 'teacher' => 'Yandi Rusyandi, S.Pd., M.Pd', 'class' => 'XII GP 2'],
-            ['name' => 'REZA SETYA ROLAND PRATAMA', 'nis' => '242510532', 'nisn' => '0096056982', 'company' => 'CV. GUNUNG BATUJAJAR', 'teacher' => 'Yandi Rusyandi, S.Pd., M.Pd', 'class' => 'XII GP 2'],
-            ['name' => 'RIDHO RIZKI HABIBI', 'nis' => '242510534', 'nisn' => '0092109182', 'company' => 'CV. GUNUNG BATUJAJAR', 'teacher' => 'Yandi Rusyandi, S.Pd., M.Pd', 'class' => 'XII GP 2'],
-            // PT. TIMAH Tbk. (18 siswa - Abdul Hakim, S.T., M.T. - 12 di XII GP 1, 6 di XII GP 2)
-            ['name' => 'ANUGRAH ILMAN NURHADI', 'nis' => '242510467', 'nisn' => '0092253991', 'company' => 'PT. TIMAH Tbk.', 'teacher' => 'Abdul Hakim, S.T., M.T.', 'class' => 'XII GP 1'],
-            ['name' => 'AZRIL MUHAMAD ASSYURO', 'nis' => '242510468', 'nisn' => '0098499926', 'company' => 'PT. TIMAH Tbk.', 'teacher' => 'Abdul Hakim, S.T., M.T.', 'class' => 'XII GP 1'],
-            ['name' => 'FARUK FIRMANSYAH AZIZ', 'nis' => '242510474', 'nisn' => '0105262820', 'company' => 'PT. TIMAH Tbk.', 'teacher' => 'Abdul Hakim, S.T., M.T.', 'class' => 'XII GP 1'],
-            ['name' => 'GHASSAN FATIH RAYYAN', 'nis' => '242510475', 'nisn' => '0094512375', 'company' => 'PT. TIMAH Tbk.', 'teacher' => 'Abdul Hakim, S.T., M.T.', 'class' => 'XII GP 1'],
-            ['name' => 'IHSAN TAMYIZ', 'nis' => '242510477', 'nisn' => '0082580068', 'company' => 'PT. TIMAH Tbk.', 'teacher' => 'Abdul Hakim, S.T., M.T.', 'class' => 'XII GP 1'],
-            ['name' => 'IKMAL LATHIF DARAJAT', 'nis' => '242510478', 'nisn' => '0085330049', 'company' => 'PT. TIMAH Tbk.', 'teacher' => 'Abdul Hakim, S.T., M.T.', 'class' => 'XII GP 1'],
-            ['name' => 'MUHAMMAD AKBAR ZAELANI', 'nis' => '242510484', 'nisn' => '0093723103', 'company' => 'PT. TIMAH Tbk.', 'teacher' => 'Abdul Hakim, S.T., M.T.', 'class' => 'XII GP 1'],
-            ['name' => 'FAREL ELSANDI', 'nis' => '242510473', 'nisn' => '0097324725', 'company' => 'PT. TIMAH Tbk.', 'teacher' => 'Abdul Hakim, S.T., M.T.', 'class' => 'XII GP 1'],
-            ['name' => 'NAZMY HUDZAIFAH FAZRA NURHIKMAT', 'nis' => '242510489', 'nisn' => '0093490485', 'company' => 'PT. TIMAH Tbk.', 'teacher' => 'Abdul Hakim, S.T., M.T.', 'class' => 'XII GP 1'],
-            ['name' => 'REVAN JANUAR', 'nis' => '242510496', 'nisn' => '0092167743', 'company' => 'PT. TIMAH Tbk.', 'teacher' => 'Abdul Hakim, S.T., M.T.', 'class' => 'XII GP 1'],
-            ['name' => 'VINCENT ACHMAD FAUZI', 'nis' => '242510500', 'nisn' => '0081888616', 'company' => 'PT. TIMAH Tbk.', 'teacher' => 'Abdul Hakim, S.T., M.T.', 'class' => 'XII GP 1'],
-            ['name' => 'ZAHRAN HAIKAL GURSIDA', 'nis' => '242510501', 'nisn' => '0094267185', 'company' => 'PT. TIMAH Tbk.', 'teacher' => 'Abdul Hakim, S.T., M.T.', 'class' => 'XII GP 1'],
-            ['name' => 'AZFAR SHAZWAN MALAZI', 'nis' => '242510504', 'nisn' => '0094394213', 'company' => 'PT. TIMAH Tbk.', 'teacher' => 'Abdul Hakim, S.T., M.T.', 'class' => 'XII GP 2'],
-            ['name' => 'FARHAN NAIF RAYHANA', 'nis' => '242510508', 'nisn' => '0097323758', 'company' => 'PT. TIMAH Tbk.', 'teacher' => 'Abdul Hakim, S.T., M.T.', 'class' => 'XII GP 2'],
-            ['name' => 'TRIYOSEPH MARCHELIANO', 'nis' => '242510536', 'nisn' => '0097348577', 'company' => 'PT. TIMAH Tbk.', 'teacher' => 'Abdul Hakim, S.T., M.T.', 'class' => 'XII GP 2'],
-            ['name' => 'HADI WIJAYA', 'nis' => '242510511', 'nisn' => '0089755605', 'company' => 'PT. TIMAH Tbk.', 'teacher' => 'Abdul Hakim, S.T., M.T.', 'class' => 'XII GP 2'],
-            ['name' => 'HARLAN JULIAN ABDULAH', 'nis' => '242510512', 'nisn' => '0099880763', 'company' => 'PT. TIMAH Tbk.', 'teacher' => 'Abdul Hakim, S.T., M.T.', 'class' => 'XII GP 2'],
-            ['name' => 'MUHAMMAD AZKA ALAWI', 'nis' => '242510522', 'nisn' => '0096900374', 'company' => 'PT. TIMAH Tbk.', 'teacher' => 'Abdul Hakim, S.T., M.T.', 'class' => 'XII GP 2'],
-            // PT. DATEM (14 siswa - Herdi Pebryana Putra, S.T. - 11 di XII GP 1, 3 di XII GP 2)
-            ['name' => 'DIKA HERMAWAN', 'nis' => '242510470', 'nisn' => '0089330696', 'company' => 'PT. DATEM', 'teacher' => 'Herdi Pebryana Putra, S.T.', 'class' => 'XII GP 1'],
-            ['name' => 'FADLI YUDHA PRASETIA RAMDANI', 'nis' => '242510471', 'nisn' => '0085711691', 'company' => 'PT. DATEM', 'teacher' => 'Herdi Pebryana Putra, S.T.', 'class' => 'XII GP 1'],
-            ['name' => 'FAISAL FAHRI RAMADHAN', 'nis' => '242510472', 'nisn' => '0081495350', 'company' => 'PT. DATEM', 'teacher' => 'Herdi Pebryana Putra, S.T.', 'class' => 'XII GP 1'],
-            ['name' => 'KEVIN OKTAVIAN REVANO', 'nis' => '242510480', 'nisn' => '0094170221', 'company' => 'PT. DATEM', 'teacher' => 'Herdi Pebryana Putra, S.T.', 'class' => 'XII GP 1'],
-            ['name' => 'LANGIT KRESNA HARZADI', 'nis' => '242510481', 'nisn' => '0082682201', 'company' => 'PT. DATEM', 'teacher' => 'Herdi Pebryana Putra, S.T.', 'class' => 'XII GP 1'],
-            ['name' => 'MUHAMMAD HAWARI MAOLANA', 'nis' => '242510486', 'nisn' => '0096979330', 'company' => 'PT. DATEM', 'teacher' => 'Herdi Pebryana Putra, S.T.', 'class' => 'XII GP 1'],
-            ['name' => 'PASHA KAISAR FIRMANSYAH', 'nis' => '242510491', 'nisn' => '0089786866', 'company' => 'PT. DATEM', 'teacher' => 'Herdi Pebryana Putra, S.T.', 'class' => 'XII GP 1'],
-            ['name' => 'RANDY PUTRA ANDIKA', 'nis' => '242510493', 'nisn' => '0092359360', 'company' => 'PT. DATEM', 'teacher' => 'Herdi Pebryana Putra, S.T.', 'class' => 'XII GP 1'],
-            ['name' => 'RIDHO AHMAD PAMUNGKAS', 'nis' => '242510497', 'nisn' => '0095993883', 'company' => 'PT. DATEM', 'teacher' => 'Herdi Pebryana Putra, S.T.', 'class' => 'XII GP 1'],
-            ['name' => 'SYAHDAN TRI ATALA', 'nis' => '242510499', 'nisn' => '0096266478', 'company' => 'PT. DATEM', 'teacher' => 'Herdi Pebryana Putra, S.T.', 'class' => 'XII GP 1'],
-            ['name' => 'BINTANG MALIK AS SHIDIQ', 'nis' => '242510505', 'nisn' => '0096583456', 'company' => 'PT. DATEM', 'teacher' => 'Herdi Pebryana Putra, S.T.', 'class' => 'XII GP 2'],
-            ['name' => 'RIDHO JULIANSYAH', 'nis' => '242510533', 'nisn' => '0098587030', 'company' => 'PT. DATEM', 'teacher' => 'Herdi Pebryana Putra, S.T.', 'class' => 'XII GP 2'],
-            ['name' => 'MUHAMAD SYAFIK AL AKBAR', 'nis' => '242510520', 'nisn' => '0079405198', 'company' => 'PT. DATEM', 'teacher' => 'Herdi Pebryana Putra, S.T.', 'class' => 'XII GP 2'],
-            ['name' => 'NOVALDIO', 'nis' => '242510490', 'nisn' => '3087103824', 'company' => 'PT. DATEM', 'teacher' => 'Herdi Pebryana Putra, S.T.', 'class' => 'XII GP 1'],
-            // PT. PERTAMINA GEOTHERMAL ENERGI AREA KAMOJANG (4 siswa - Cahya Nugraha, S.T., M.T. - 3 di XII GP 1, 1 di XII GP 2)
-            ['name' => 'CARREL MUNJID AL RASYID', 'nis' => '242510469', 'nisn' => '0083191727', 'company' => 'PT. PERTAMINA GEOTHERMAL ENERGI AREA KAMOJANG', 'teacher' => 'Cahya Nugraha, S.T., M.T.', 'class' => 'XII GP 1'],
-            ['name' => 'KENNINO FARRAS', 'nis' => '242510479', 'nisn' => '3093095601', 'company' => 'PT. PERTAMINA GEOTHERMAL ENERGI AREA KAMOJANG', 'teacher' => 'Cahya Nugraha, S.T., M.T.', 'class' => 'XII GP 1'],
-            ['name' => 'RIVAL KARTONO', 'nis' => '242510498', 'nisn' => '0083482124', 'company' => 'PT. PERTAMINA GEOTHERMAL ENERGI AREA KAMOJANG', 'teacher' => 'Cahya Nugraha, S.T., M.T.', 'class' => 'XII GP 1'],
-            ['name' => 'MUHAMMAD ADZKA ALINDRA', 'nis' => '242510521', 'nisn' => '0098003728', 'company' => 'PT. PERTAMINA GEOTHERMAL ENERGI AREA KAMOJANG', 'teacher' => 'Cahya Nugraha, S.T., M.T.', 'class' => 'XII GP 2'],
-            // PT. Solusi Bangun Indonesia (7 siswa - XII GP 1 - Adbel Yuki Edward, S.T, M.T.)
-            ['name' => 'HAURA ANNISA AWWALIYAH', 'nis' => '242510476', 'nisn' => '3082524222', 'company' => 'PT. Solusi Bangun Indonesia', 'teacher' => 'Adbel Yuki Edward, S.T, M.T.', 'class' => 'XII GP 1'],
-            ['name' => 'MOH. TRISTAN MAULANA IBRAHIM', 'nis' => '242510482', 'nisn' => '0098284999', 'company' => 'PT. Solusi Bangun Indonesia', 'teacher' => 'Adbel Yuki Edward, S.T, M.T.', 'class' => 'XII GP 1'],
-            ['name' => 'MUHAMAD FATHUR ROHMAN', 'nis' => '242510483', 'nisn' => '0081677595', 'company' => 'PT. Solusi Bangun Indonesia', 'teacher' => 'Adbel Yuki Edward, S.T, M.T.', 'class' => 'XII GP 1'],
-            ['name' => 'MUHAMMAD FAUZAN', 'nis' => '242510485', 'nisn' => '0095191695', 'company' => 'PT. Solusi Bangun Indonesia', 'teacher' => 'Adbel Yuki Edward, S.T, M.T.', 'class' => 'XII GP 1'],
-            ['name' => 'NADHIF MUSYAFFA AL GHANI', 'nis' => '242510488', 'nisn' => '0097114236', 'company' => 'PT. Solusi Bangun Indonesia', 'teacher' => 'Adbel Yuki Edward, S.T, M.T.', 'class' => 'XII GP 1'],
-            ['name' => 'PIKI PAHRURRAZI', 'nis' => '242510492', 'nisn' => '0095192399', 'company' => 'PT. Solusi Bangun Indonesia', 'teacher' => 'Adbel Yuki Edward, S.T, M.T.', 'class' => 'XII GP 1'],
-            ['name' => 'MUHAMMAD KAHFI', 'nis' => '242510487', 'nisn' => '0099412440', 'company' => 'PT. Solusi Bangun Indonesia', 'teacher' => 'Adbel Yuki Edward, S.T, M.T.', 'class' => 'XII GP 1'],
-            // ATR BPN Kab. Garut (1 siswa - XII GP 2 - Yandi Rusyandi, S.Pd., M.Pd)
-            ['name' => 'FANI SOFIANTI', 'nis' => '242510507', 'nisn' => '0095772575', 'company' => 'ATR BPN Kab. Garut', 'teacher' => 'Yandi Rusyandi, S.Pd., M.Pd', 'class' => 'XII GP 2'],
-            // BBPMB tekMIRA (4 siswa - XII GP 2 - Cahya Nugraha, S.T., M.T.)
-            ['name' => 'FITRI RAMDANI', 'nis' => '242510509', 'nisn' => '0098648868', 'company' => 'BBPMB tekMIRA', 'teacher' => 'Cahya Nugraha, S.T., M.T.', 'class' => 'XII GP 2'],
-            ['name' => 'ILHAM BAHIR ADITYA', 'nis' => '242510515', 'nisn' => '0081794543', 'company' => 'BBPMB tekMIRA', 'teacher' => 'Cahya Nugraha, S.T., M.T.', 'class' => 'XII GP 2'],
-            ['name' => 'PANJI PUTRA RAMADHAN', 'nis' => '242510528', 'nisn' => '0087934205', 'company' => 'BBPMB tekMIRA', 'teacher' => 'Cahya Nugraha, S.T., M.T.', 'class' => 'XII GP 2'],
-            ['name' => 'SATRIO RAIZAL ABDULLAH', 'nis' => '242510535', 'nisn' => '0091098552', 'company' => 'BBPMB tekMIRA', 'teacher' => 'Cahya Nugraha, S.T., M.T.', 'class' => 'XII GP 2'],
-            // PT. GEOSERVICES LTD (4 siswa - Cahya Nugraha, S.T., M.T. - 1 di XII GP 1, 3 di XII GP 2)
-            ['name' => 'REIHAN MAHAPUTRA ADINATHA', 'nis' => '242510495', 'nisn' => '0093127445', 'company' => 'PT. GEOSERVICES LTD', 'teacher' => 'Cahya Nugraha, S.T., M.T.', 'class' => 'XII GP 1'],
-            ['name' => 'FITRIA KHOERUNNISA', 'nis' => '242510510', 'nisn' => '0092511104', 'company' => 'PT. GEOSERVICES LTD', 'teacher' => 'Cahya Nugraha, S.T., M.T.', 'class' => 'XII GP 2'],
-            ['name' => 'IKHSAN AHMAD RIFAI', 'nis' => '242510514', 'nisn' => '3097495595', 'company' => 'PT. GEOSERVICES LTD', 'teacher' => 'Cahya Nugraha, S.T., M.T.', 'class' => 'XII GP 2'],
-            ['name' => 'KESYHA APRILIANI', 'nis' => '242510516', 'nisn' => '0091514548', 'company' => 'PT. GEOSERVICES LTD', 'teacher' => 'Cahya Nugraha, S.T., M.T.', 'class' => 'XII GP 2'],
-            // PT. BHADRA PINGGALA SEJAHTERA MINING SERVICE (2 siswa - XII GP 2 - Yandi Rusyandi, S.Pd., M.Pd)
-            ['name' => 'MUHAMAD DIAZ FADLUROHMAN', 'nis' => '242510518', 'nisn' => '0093287983', 'company' => 'PT. BHADRA PINGGALA SEJAHTERA MINING SERVICE', 'teacher' => 'Yandi Rusyandi, S.Pd., M.Pd', 'class' => 'XII GP 2'],
-            ['name' => 'NADHIF FATONI', 'nis' => '242510525', 'nisn' => '0098569417', 'company' => 'PT. BHADRA PINGGALA SEJAHTERA MINING SERVICE', 'teacher' => 'Yandi Rusyandi, S.Pd., M.Pd', 'class' => 'XII GP 2'],
-            // PT. ARYA SWASCIPTA REKAYASA (1 siswa - XII GP 2 - Herdi Pebryana Putra, S.T.)
-            ['name' => 'NAZIL AHKAM MUSABBIH', 'nis' => '242510526', 'nisn' => '0097486431', 'company' => 'PT. ARYA SWASCIPTA REKAYASA', 'teacher' => 'Herdi Pebryana Putra, S.T.', 'class' => 'XII GP 2'],
-            // PT. MAHATMA (1 siswa - XII GP 2 - Herdi Pebryana Putra, S.T.)
-            ['name' => 'RADINAN AZKA NAJMUR RASYAD', 'nis' => '242510529', 'nisn' => '0091140603', 'company' => 'PT. MAHATMA', 'teacher' => 'Herdi Pebryana Putra, S.T.', 'class' => 'XII GP 2'],
+            // XII GP 1 (34 siswa)
+            ['nis' => '242510467', 'nisn' => '0092253991', 'name' => 'Anugrah Ilman Nurhadi', 'class' => 'XII GP 1', 'company' => 'PT. Timah Persero, Tbk.', 'teacher' => 'ABDUL_HAKIM', 'gender' => 'L', 'phone' => '082120836755'],
+            ['nis' => '242510468', 'nisn' => '0098499926', 'name' => 'Azril Muhamad Assyuro', 'class' => 'XII GP 1', 'company' => 'PT. Timah Persero, Tbk.', 'teacher' => 'ABDUL_HAKIM', 'gender' => 'L', 'phone' => '082120836755'],
+            ['nis' => '242510469', 'nisn' => '0083191727', 'name' => 'Carrel Munjid Al Rasyid', 'class' => 'XII GP 1', 'company' => 'Pertamina Geothermal Energy', 'teacher' => 'ABDUL_HAKIM', 'gender' => 'L', 'phone' => '0895701092083'],
+            ['nis' => '242510470', 'nisn' => '0089330696', 'name' => 'Dika Hermawan', 'class' => 'XII GP 1', 'company' => 'PT. DATEM', 'teacher' => 'DANANG', 'gender' => 'L', 'phone' => '087834362181'],
+            ['nis' => '242510471', 'nisn' => '0085711691', 'name' => 'Fadli Yudha Prasetia Ramdani', 'class' => 'XII GP 1', 'company' => 'PT. DATEM', 'teacher' => 'DANANG', 'gender' => 'L', 'phone' => '082130463982'],
+            ['nis' => '242510472', 'nisn' => '0081495350', 'name' => 'Faisal Fahri Ramadhan', 'class' => 'XII GP 1', 'company' => 'PT. DATEM', 'teacher' => 'DANANG', 'gender' => 'L', 'phone' => '081223858781'],
+            ['nis' => '242510473', 'nisn' => '0097324725', 'name' => 'Farel Elsandi', 'class' => 'XII GP 1', 'company' => 'PT. Timah Persero, Tbk.', 'teacher' => 'ADBEL', 'gender' => 'L', 'phone' => '0895357280899'],
+            ['nis' => '242510474', 'nisn' => '0105262820', 'name' => 'Faruk Firmansyah Aziz', 'class' => 'XII GP 1', 'company' => 'PT. Timah Persero, Tbk.', 'teacher' => 'ADBEL', 'gender' => 'L', 'phone' => '085222532531'],
+            ['nis' => '242510475', 'nisn' => '0094512375', 'name' => 'Ghassan Fatih Rayyan', 'class' => 'XII GP 1', 'company' => 'PT. Timah Persero, Tbk.', 'teacher' => 'ADBEL', 'gender' => 'L', 'phone' => '083150070444'],
+            ['nis' => '242510476', 'nisn' => '3082524222', 'name' => 'Haura Annisa Awwaliyah', 'class' => 'XII GP 1', 'company' => 'PT. Solusi Bangun Indonesia', 'teacher' => 'CAHYA', 'gender' => 'P', 'phone' => '08812055703'],
+            ['nis' => '242510477', 'nisn' => '0082580068', 'name' => 'Ihsan Tamyiz', 'class' => 'XII GP 1', 'company' => 'PT. Timah Persero, Tbk.', 'teacher' => 'CAHYA', 'gender' => 'L', 'phone' => '08815726580'],
+            ['nis' => '242510478', 'nisn' => '0085330049', 'name' => 'Ikmal Lathif Darajat', 'class' => 'XII GP 1', 'company' => 'PT. Timah Persero, Tbk.', 'teacher' => 'ERIKA', 'gender' => 'L', 'phone' => '085213573992'],
+            ['nis' => '242510479', 'nisn' => '3093095601', 'name' => 'Kennino Farras', 'class' => 'XII GP 1', 'company' => 'Pertamina Geothermal Energy', 'teacher' => 'ERIKA', 'gender' => 'L', 'phone' => '089510196636'],
+            ['nis' => '242510480', 'nisn' => '0094170221', 'name' => 'Kevin Oktavian Revano', 'class' => 'XII GP 1', 'company' => 'PT. DATEM', 'teacher' => 'HERDI', 'gender' => 'L', 'phone' => '0895418798833'],
+            ['nis' => '242510481', 'nisn' => '0082682201', 'name' => 'Langit Kresna Harzadi', 'class' => 'XII GP 1', 'company' => 'PT. DATEM', 'teacher' => 'HERDI', 'gender' => 'L', 'phone' => '0882001779457'],
+            ['nis' => '242510482', 'nisn' => '0098284999', 'name' => 'Moh. Tristan Maulana Ibrahim', 'class' => 'XII GP 1', 'company' => 'PT. Solusi Bangun Indonesia', 'teacher' => 'MUSTOFA', 'gender' => 'L', 'phone' => '089601850101'],
+            ['nis' => '242510483', 'nisn' => '0081677595', 'name' => 'Muhamad Fathur Rohman', 'class' => 'XII GP 1', 'company' => 'PT. Solusi Bangun Indonesia', 'teacher' => 'MUSTOFA', 'gender' => 'L', 'phone' => '0895329813878'],
+            ['nis' => '242510484', 'nisn' => '0093723103', 'name' => 'Muhammad Akbar Zaelani', 'class' => 'XII GP 1', 'company' => 'PT. Timah Persero, Tbk.', 'teacher' => 'SITI_BUDIARTI', 'gender' => 'L', 'phone' => '083181379089'],
+            ['nis' => '242510485', 'nisn' => '0095191695', 'name' => 'Muhammad Fauzan', 'class' => 'XII GP 1', 'company' => 'PT. Solusi Bangun Indonesia', 'teacher' => 'SITI_BUDIARTI', 'gender' => 'L', 'phone' => '089509107970'],
+            ['nis' => '242510486', 'nisn' => '0096979330', 'name' => 'Muhammad Hawari Maolana', 'class' => 'XII GP 1', 'company' => 'PT. DATEM', 'teacher' => 'EMA', 'gender' => 'L', 'phone' => '085134917274'],
+            ['nis' => '242510487', 'nisn' => '0099412440', 'name' => 'Muhammad Kahfi', 'class' => 'XII GP 1', 'company' => 'PT. Solusi Bangun Indonesia', 'teacher' => 'EMA', 'gender' => 'L', 'phone' => '089677080848'],
+            ['nis' => '242510488', 'nisn' => '0097114236', 'name' => 'Nadhif Musyaffa Al Ghani', 'class' => 'XII GP 1', 'company' => 'PT. Solusi Bangun Indonesia', 'teacher' => 'AIDA', 'gender' => 'L', 'phone' => '08132207207'],
+            ['nis' => '242510489', 'nisn' => '0093490485', 'name' => 'Nazmy Hudzaifah Fazra Nurhikmat', 'class' => 'XII GP 1', 'company' => 'PT. Timah Persero, Tbk.', 'teacher' => 'AIDA', 'gender' => 'L', 'phone' => null],
+            ['nis' => '242510490', 'nisn' => '3087103824', 'name' => 'Novaldio', 'class' => 'XII GP 1', 'company' => 'PT. DATEM', 'teacher' => 'YAYU', 'gender' => 'L', 'phone' => '085129917927'],
+            ['nis' => '242510491', 'nisn' => '0089786866', 'name' => 'Pasha Kaisar Firmansyah', 'class' => 'XII GP 1', 'company' => 'PT. DATEM', 'teacher' => 'YAYU', 'gender' => 'L', 'phone' => '081225545067'],
+            ['nis' => '242510492', 'nisn' => '0095192399', 'name' => 'Piki Pahrurrazi', 'class' => 'XII GP 1', 'company' => 'PT. Solusi Bangun Indonesia', 'teacher' => 'YAYU', 'gender' => 'L', 'phone' => '083130090906'],
+            ['nis' => '242510493', 'nisn' => '0092359360', 'name' => 'Randy Putra Andika', 'class' => 'XII GP 1', 'company' => 'PT. DATEM', 'teacher' => 'NENI', 'gender' => 'L', 'phone' => '085351598504'],
+            ['nis' => '242510495', 'nisn' => '0093127445', 'name' => 'Reihan Mahaputra Adinatha', 'class' => 'XII GP 1', 'company' => 'PT. GEOSERVICE', 'teacher' => 'NENI', 'gender' => 'L', 'phone' => '085245808200'],
+            ['nis' => '242510496', 'nisn' => '0092167743', 'name' => 'Revan Januar', 'class' => 'XII GP 1', 'company' => 'PT. Timah Persero, Tbk.', 'teacher' => 'ANGGARA', 'gender' => 'L', 'phone' => '088218588481'],
+            ['nis' => '242510497', 'nisn' => '0095993883', 'name' => 'Ridho Ahmad Pamungkas', 'class' => 'XII GP 1', 'company' => 'PT. DATEM', 'teacher' => 'ANGGARA', 'gender' => 'L', 'phone' => '08812249340'],
+            ['nis' => '242510498', 'nisn' => '0083482124', 'name' => 'Rival Kartono', 'class' => 'XII GP 1', 'company' => 'Pertamina Geothermal Energy', 'teacher' => 'NISA', 'gender' => 'L', 'phone' => '0895361428214'],
+            ['nis' => '242510499', 'nisn' => '0096266478', 'name' => 'Syahdan Tri Atala', 'class' => 'XII GP 1', 'company' => 'PT. DATEM', 'teacher' => 'NISA', 'gender' => 'L', 'phone' => '083867016036'],
+            ['nis' => '242510500', 'nisn' => '0081888616', 'name' => 'Vincent Achmad Fauzi', 'class' => 'XII GP 1', 'company' => 'PT. Timah Persero, Tbk.', 'teacher' => 'CAHYA', 'gender' => 'L', 'phone' => '089670364500'],
+            ['nis' => '242510501', 'nisn' => '0094267185', 'name' => 'Zahran Haikal Gursida', 'class' => 'XII GP 1', 'company' => 'PT. Timah Persero, Tbk.', 'teacher' => 'ERIKA', 'gender' => 'L', 'phone' => '0895365783300'],
+
+            // XII GP 2 (34 siswa)
+            ['nis' => '242510502', 'nisn' => '0086089719', 'name' => 'Affandi Danuningrat', 'class' => 'XII GP 2', 'company' => 'PT. SANGGA BUANA NUSANTARA', 'teacher' => 'ABDUL_HAKIM', 'gender' => 'L', 'phone' => '082295216348'],
+            ['nis' => '242510503', 'nisn' => '0094286823', 'name' => 'Andika Satria Saputra', 'class' => 'XII GP 2', 'company' => 'PT. SANGGA BUANA NUSANTARA', 'teacher' => 'ABDUL_HAKIM', 'gender' => 'L', 'phone' => '0895428870900', 'demo_alias' => 'siswa@smkn2garut.sch.id'],
+            ['nis' => '242510504', 'nisn' => '0094394213', 'name' => 'Azfar Shazwan Malazi', 'class' => 'XII GP 2', 'company' => 'PT. Timah Persero, Tbk.', 'teacher' => 'ABDUL_HAKIM', 'gender' => 'L', 'phone' => '081998294746'],
+            ['nis' => '242510505', 'nisn' => '0096583456', 'name' => 'Bintang Malik As Shidiq', 'class' => 'XII GP 2', 'company' => 'PT. DATEM', 'teacher' => 'DANANG', 'gender' => 'L', 'phone' => '089637393455'],
+            ['nis' => '242510507', 'nisn' => '0095772575', 'name' => 'Fani Sofianti', 'class' => 'XII GP 2', 'company' => 'ATR BPN', 'teacher' => 'DANANG', 'gender' => 'P', 'phone' => '08886008478'],
+            ['nis' => '242510508', 'nisn' => '0097323758', 'name' => 'Farhan Naif Rayhana', 'class' => 'XII GP 2', 'company' => 'PT. Timah Persero, Tbk.', 'teacher' => 'DANANG', 'gender' => 'L', 'phone' => '087766337114'],
+            ['nis' => '242510509', 'nisn' => '0098648868', 'name' => 'Fitri Ramdani', 'class' => 'XII GP 2', 'company' => 'BBPMB tekMIRA', 'teacher' => 'ADBEL', 'gender' => 'P', 'phone' => '0895619882728'],
+            ['nis' => '242510510', 'nisn' => '0092511104', 'name' => 'Fitria Khoerunnisa', 'class' => 'XII GP 2', 'company' => 'PT. GEOSERVICE', 'teacher' => 'ADBEL', 'gender' => 'P', 'phone' => '088806303767'],
+            ['nis' => '242510511', 'nisn' => '0089755605', 'name' => 'Hadi Wijaya', 'class' => 'XII GP 2', 'company' => 'PT. Timah Persero, Tbk.', 'teacher' => 'ADBEL', 'gender' => 'L', 'phone' => '08317097554'],
+            ['nis' => '242510512', 'nisn' => '0099880763', 'name' => 'Harlan Julian Abdulah', 'class' => 'XII GP 2', 'company' => 'PT. Timah Persero, Tbk.', 'teacher' => 'CAHYA', 'gender' => 'L', 'phone' => '083179280589'],
+            ['nis' => '242510513', 'nisn' => '3070590887', 'name' => 'Ibnu Ali Hajj', 'class' => 'XII GP 2', 'company' => 'PT. SANGGA BUANA NUSANTARA', 'teacher' => 'CAHYA', 'gender' => 'L', 'phone' => '081779173659'],
+            ['nis' => '242510514', 'nisn' => '3097495595', 'name' => 'Ikhsan Ahmad Rifai', 'class' => 'XII GP 2', 'company' => 'PT. GEOSERVICE', 'teacher' => 'ERIKA', 'gender' => 'L', 'phone' => '0881023702719'],
+            ['nis' => '242510515', 'nisn' => '0081794543', 'name' => 'Ilham Bahir Aditya', 'class' => 'XII GP 2', 'company' => 'BBPMB tekMIRA', 'teacher' => 'ERIKA', 'gender' => 'L', 'phone' => '088806313688'],
+            ['nis' => '242510516', 'nisn' => '0091514548', 'name' => 'Kesyha Apriliani', 'class' => 'XII GP 2', 'company' => 'PT. GEOSERVICE', 'teacher' => 'HERDI', 'gender' => 'P', 'phone' => '083878683481'],
+            ['nis' => '242510517', 'nisn' => '0098722997', 'name' => 'Mohamad Fathan Ramadani', 'class' => 'XII GP 2', 'company' => 'PT. SANGGA BUANA NUSANTARA', 'teacher' => 'HERDI', 'gender' => 'L', 'phone' => '0895400968743'],
+            ['nis' => '242510518', 'nisn' => '0093287983', 'name' => 'Muhamad Diaz Fadlurohman', 'class' => 'XII GP 2', 'company' => 'PT. BHADRA PINGGALA SEJAHTERA MINING SERVICE', 'teacher' => 'MUSTOFA', 'gender' => 'L', 'phone' => '0895428923232'],
+            ['nis' => '242510519', 'nisn' => '0095567392', 'name' => 'Muhamad Irfan Ardiansyah', 'class' => 'XII GP 2', 'company' => 'PT. SANGGA BUANA NUSANTARA', 'teacher' => 'MUSTOFA', 'gender' => 'L', 'phone' => '089643296805'],
+            ['nis' => '242510520', 'nisn' => '0079405198', 'name' => 'Muhamad Syafik Al Akbar', 'class' => 'XII GP 2', 'company' => 'PT. DATEM', 'teacher' => 'SITI_BUDIARTI', 'gender' => 'L', 'phone' => '088971830807'],
+            ['nis' => '242510521', 'nisn' => '0098003728', 'name' => 'Muhammad Adzka Alindra', 'class' => 'XII GP 2', 'company' => 'Pertamina Geothermal Energy', 'teacher' => 'SITI_BUDIARTI', 'gender' => 'L', 'phone' => '0882002818333'],
+            ['nis' => '242510522', 'nisn' => '0096900374', 'name' => 'Muhammad Azka Alawi', 'class' => 'XII GP 2', 'company' => 'PT. Timah Persero, Tbk.', 'teacher' => 'EMA', 'gender' => 'L', 'phone' => '087830862644'],
+            ['nis' => '242510523', 'nisn' => '3094845475', 'name' => 'Muhammad Rafa Syamla Imani', 'class' => 'XII GP 2', 'company' => 'CV. GUNUNG BATUJAJAR', 'teacher' => 'EMA', 'gender' => 'L', 'phone' => '083128674306'],
+            ['nis' => '242510524', 'nisn' => '0098666825', 'name' => 'Muhammad Rizki Saputra', 'class' => 'XII GP 2', 'company' => 'PT. SANGGA BUANA NUSANTARA', 'teacher' => 'AAP', 'gender' => 'L', 'phone' => '089654187694'],
+            ['nis' => '242510525', 'nisn' => '0098569417', 'name' => 'Nadhif Fathoni', 'class' => 'XII GP 2', 'company' => 'PT. BHADRA PINGGALA SEJAHTERA MINING SERVICE', 'teacher' => 'AAP', 'gender' => 'L', 'phone' => '0895604010805'],
+            ['nis' => '242510526', 'nisn' => '0097486431', 'name' => 'Nazil Ahkam Musabbih', 'class' => 'XII GP 2', 'company' => 'PT. ARYA SWASCIPTA REKAYASA/PT. MAHATMA', 'teacher' => 'YAYU', 'gender' => 'L', 'phone' => '0895385347578'],
+            ['nis' => '242510527', 'nisn' => '0093063341', 'name' => 'Nofa Adithya Dwi Heryanto', 'class' => 'XII GP 2', 'company' => 'CV. GUNUNG BATUJAJAR', 'teacher' => 'YAYU', 'gender' => 'L', 'phone' => '085962871630'],
+            ['nis' => '242510528', 'nisn' => '0087934205', 'name' => 'Panji Putra Ramadhan', 'class' => 'XII GP 2', 'company' => 'BBPMB tekMIRA', 'teacher' => 'YAYU', 'gender' => 'L', 'phone' => '083117368236'],
+            ['nis' => '242510529', 'nisn' => '0091140603', 'name' => 'Radinan Azka Najmur Rasyad', 'class' => 'XII GP 2', 'company' => 'PT. ARYA SWASCIPTA REKAYASA/PT. MAHATMA', 'teacher' => 'NENI', 'gender' => 'L', 'phone' => '0895385283945'],
+            ['nis' => '242510530', 'nisn' => '0095029468', 'name' => 'Refie Wibawa Saputra', 'class' => 'XII GP 2', 'company' => 'PT. SANGGA BUANA NUSANTARA', 'teacher' => 'NENI', 'gender' => 'L', 'phone' => '085794787104'],
+            ['nis' => '242510531', 'nisn' => '0094397515', 'name' => 'Renza Taufik Yugaswara', 'class' => 'XII GP 2', 'company' => 'PT. SANGGA BUANA NUSANTARA', 'teacher' => 'ANGGARA', 'gender' => 'L', 'phone' => '083852210483'],
+            ['nis' => '242510532', 'nisn' => '0096056982', 'name' => 'Reza Setya Roland Pratama', 'class' => 'XII GP 2', 'company' => 'CV. GUNUNG BATUJAJAR', 'teacher' => 'ANGGARA', 'gender' => 'L', 'phone' => '083163813694'],
+            ['nis' => '242510533', 'nisn' => '0098587030', 'name' => 'Ridho Juliansyah', 'class' => 'XII GP 2', 'company' => 'PT. DATEM', 'teacher' => 'NISA', 'gender' => 'L', 'phone' => '0895336550744'],
+            ['nis' => '242510534', 'nisn' => '0092109182', 'name' => 'Ridho Rizki Habibi', 'class' => 'XII GP 2', 'company' => 'CV. GUNUNG BATUJAJAR', 'teacher' => 'NISA', 'gender' => 'L', 'phone' => '0895371941040'],
+            ['nis' => '242510535', 'nisn' => '0091098552', 'name' => 'Satrio Raizal Abdullah', 'class' => 'XII GP 2', 'company' => 'BBPMB tekMIRA', 'teacher' => 'CAHYA', 'gender' => 'L', 'phone' => '0895353584200'],
+            ['nis' => '242510536', 'nisn' => '0097348577', 'name' => 'Triyoseph Marcheliano', 'class' => 'XII GP 2', 'company' => 'PT. Timah Persero, Tbk.', 'teacher' => 'ERIKA', 'gender' => 'L', 'phone' => '081292892652'],
         ];
 
-        $femaleNames = ['HAURA ANNISA AWWALIYAH', 'FANI SOFIANTI', 'FITRI RAMDANI', 'FITRIA KHOERUNNISA', 'KESYHA APRILIANI'];
         $studentCounter = 0;
 
-        foreach ($studentsRaw as $index => $st) {
-            $number = $index + 1;
+        foreach ($studentsRaw as $st) {
             $nis = $st['nis'];
             $nisn = $st['nisn'];
-            $gender = in_array(strtoupper($st['name']), $femaleNames) ? 'P' : 'L';
 
             $targetClass = ($st['class'] === 'XII GP 1') ? $classGp1 : $classGp2;
             $company = $seededCompanies[$st['company']] ?? null;
@@ -563,19 +622,21 @@ class GeologiPertambanganPklSeeder extends Seeder
                 continue;
             }
 
-            // Siswa 1 mendapatkan alias 'siswa@smkn2garut.sch.id' untuk memudahkan login demo
-            $email = ($number === 1) ? 'siswa@smkn2garut.sch.id' : "siswa.{$nis}@smkn2garut.sch.id";
+            $email = $st['demo_alias'] ?? "siswa.{$nis}@smkn2garut.sch.id";
 
-            // 1. Akun User Siswa
-            $studentUser = User::where('school_id', $school->id)
-                ->where('role', 'siswa')
-                ->where('name', $st['name'])
+            // Cocokkan siswa existing berdasarkan NIS atau NISN (aman untuk data live tanpa menghapus relasi)
+            $existingStudent = Student::whereHas('user', fn ($q) => $q->where('school_id', $school->id))
+                ->where(function ($q) use ($nis, $nisn) {
+                    $q->where('nis', $nis)->orWhere('nisn', $nisn);
+                })
+                ->with('user')
                 ->first();
 
+            $studentUser = $existingStudent?->user;
             if ($studentUser) {
                 $studentUser->update([
-                    'email' => $email,
-                    'password' => Hash::make('password'),
+                    'name' => $st['name'],
+                    'wa_number' => $st['phone'],
                     'is_active' => true,
                 ]);
             } else {
@@ -584,25 +645,24 @@ class GeologiPertambanganPklSeeder extends Seeder
                     [
                         'school_id' => $school->id,
                         'name' => $st['name'],
-                        'password' => Hash::make('password'),
+                        'wa_number' => $st['phone'],
+                        'password' => $passwordHash,
                         'role' => 'siswa',
                         'is_active' => true,
                     ]
                 );
             }
 
-            // 2. Profil Siswa
             Profile::updateOrCreate(
                 ['user_id' => $studentUser->id],
                 [
-                    'gender' => $gender,
-                    'phone' => '08' . rand(11, 99) . rand(1000000, 9999999),
+                    'gender' => $st['gender'],
+                    'phone' => $st['phone'],
                     'address' => 'Kabupaten Garut, Jawa Barat',
                 ]
             );
 
-            // 3. Rekord Siswa (Student)
-            $student = Student::where('user_id', $studentUser->id)->first();
+            $student = $existingStudent ?? Student::where('user_id', $studentUser->id)->first();
             if ($student) {
                 $student->update([
                     'class_id' => $targetClass->id,
@@ -621,7 +681,6 @@ class GeologiPertambanganPklSeeder extends Seeder
                 ]);
             }
 
-            // 4. Plotting PKL Siswa (StudentPkl)
             StudentPkl::updateOrCreate(
                 [
                     'student_id' => $student->id,
@@ -641,13 +700,40 @@ class GeologiPertambanganPklSeeder extends Seeder
 
         if (isset($this->command)) {
             $majorGp->loadMissing('headTeacher.user');
-            $this->command->info("✅ [GeologiPertambanganPklSeeder] Berhasil men-seed data Geologi Pertambangan SMKN 2 Garut:");
+            $this->command->info("✅ [GeologiPertambanganPklSeeder] Berhasil menyinkronkan data GP SMKN 2 Garut:");
             $this->command->info("   - Jurusan: {$majorGp->name} ({$majorGp->code})");
-            $this->command->info("   - Kepala Jurusan: " . ($majorGp->headTeacher?->user?->name ?? 'Herdi Pebryana Putra, S.T.'));
-            $this->command->info("   - Kelas: XII GP 1 (34 siswa) & XII GP 2 (34 siswa)");
+            $this->command->info("   - Kepala Jurusan: " . ($majorGp->headTeacher?->user?->name ?? '-'));
+            $this->command->info("   - Kelas: XII GP 1 (Wali: Erika Silviani, S.T.) & XII GP 2 (Wali: Nisa Dwi Nuranti, S.Pd.)");
             $this->command->info("   - Guru Pembimbing: " . count($seededTeachers) . " guru");
-            $this->command->info("   - Total Instansi / DUDI: " . count($seededCompanies) . " perusahaan");
+            $this->command->info("   - Total Instansi / DU/DI: " . count($seededCompanies) . " perusahaan");
             $this->command->info("   - Total Siswa & Plotting PKL: {$studentCounter} siswa aktif");
         }
+    }
+
+    private function findExistingTeacherUser(int $schoolId, string $email, string $baseName): ?User
+    {
+        $byEmail = User::where('email', $email)->first();
+        if ($byEmail) {
+            return $byEmail;
+        }
+
+        $targetClean = $this->normalizeBaseName($baseName);
+
+        return User::where('school_id', $schoolId)
+            ->where('role', 'guru-pembimbing')
+            ->get()
+            ->first(function (User $u) use ($targetClean) {
+                $existingClean = $this->normalizeBaseName(explode(',', $u->name)[0]);
+
+                return $existingClean === $targetClean;
+            });
+    }
+
+    private function normalizeBaseName(string $name): string
+    {
+        $clean = Str::lower(trim($name));
+        $clean = preg_replace('/^(hj\.?|h\.?|drs\.?|dra\.?|ir\.?|dr\.?|apt\.?)\s+/i', '', $clean) ?? $clean;
+
+        return trim($clean);
     }
 }
