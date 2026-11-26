@@ -139,6 +139,16 @@ class TenantController extends Controller
             $data['managers'] = User::where('school_id', $school->id)
                 ->whereIn('role', ['admin-sekolah', 'kepala-sekolah'])
                 ->orderBy('role')->orderBy('name')->get();
+
+            // Wali Kelas & Kajur adalah tugas tambahan pada akun guru-pembimbing (relasi kelas & jurusan).
+            $data['waliKelasCount'] = $school->classes()
+                ->whereNotNull('homeroom_teacher_id')
+                ->distinct()
+                ->count('homeroom_teacher_id');
+            $data['kajurCount'] = $school->majors()
+                ->whereNotNull('head_teacher_id')
+                ->distinct()
+                ->count('head_teacher_id');
         }
         if ($tab === 'aktivitas') {
             $data['logs'] = ActivityLog::with('user')->where('school_id', $school->id)->latest()->paginate(20)->withQueryString();

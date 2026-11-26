@@ -417,6 +417,16 @@
                             <div class="flex justify-between"><dt class="text-slate-500">{{ $text }}</dt><dd class="font-bold text-slate-900">{{ $roleCounts[$role] ?? 0 }}</dd></div>
                         @endforeach
                     </dl>
+                    <dl class="mt-3 pt-3 border-t border-slate-100 space-y-2 text-xs">
+                        <div class="flex justify-between">
+                            <dt class="text-slate-500">Wali Kelas <span class="text-[10px] text-slate-400">(tugas tambahan guru)</span></dt>
+                            <dd class="font-bold text-slate-900">{{ $waliKelasCount ?? 0 }}</dd>
+                        </div>
+                        <div class="flex justify-between">
+                            <dt class="text-slate-500">Kepala Jurusan <span class="text-[10px] text-slate-400">(tugas tambahan guru)</span></dt>
+                            <dd class="font-bold text-slate-900">{{ $kajurCount ?? 0 }}</dd>
+                        </div>
+                    </dl>
                 </x-card>
             </div>
         </div>

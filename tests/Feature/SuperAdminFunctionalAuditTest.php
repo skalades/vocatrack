@@ -647,4 +647,55 @@ class SuperAdminFunctionalAuditTest extends TestCase
         $this->assertEquals(5120, $this->school1->fresh()->storage_quota_mb);
         $this->assertEquals(150, $this->school1->fresh()->activeSubscription()->student_quota);
     }
+
+    /**
+     * 18. Audit School Users Tab Displays Wali Kelas and Kajur Counts
+     */
+    public function test_school_users_tab_displays_wali_kelas_and_kajur_counts(): void
+    {
+        $guruUser = \App\Models\User::create([
+            'school_id' => $this->school1->id,
+            'name' => 'Guru Wali',
+            'email' => 'guruwali@smk1.sch.id',
+            'password' => 'secret-123',
+            'role' => 'guru-pembimbing',
+            'is_active' => true,
+        ]);
+        $teacher = \App\Models\Teacher::create(['user_id' => $guruUser->id, 'nip' => '19900101']);
+
+        $major = \App\Models\Major::create([
+            'school_id' => $this->school1->id,
+            'head_teacher_id' => $teacher->id,
+            'code' => 'RPL',
+            'name' => 'Rekayasa Perangkat Lunak',
+        ]);
+
+        // Satu guru mengampu 2 kelas: dihitung 1 akun Wali Kelas (distinct)
+        \App\Models\SchoolClass::create([
+            'school_id' => $this->school1->id,
+            'major_id' => $major->id,
+            'homeroom_teacher_id' => $teacher->id,
+            'name' => 'XI RPL 1',
+            'grade_level' => 'XI',
+            'academic_year' => '2026/2027',
+        ]);
+        \App\Models\SchoolClass::create([
+            'school_id' => $this->school1->id,
+            'major_id' => $major->id,
+            'homeroom_teacher_id' => $teacher->id,
+            'name' => 'XI RPL 2',
+            'grade_level' => 'XI',
+            'academic_year' => '2026/2027',
+        ]);
+
+        $response = $this->actingAs($this->superAdmin)->get(
+            route('superadmin.schools.show', ['school' => $this->school1->id, 'tab' => 'pengguna'])
+        );
+
+        $response->assertStatus(200)
+            ->assertViewHas('waliKelasCount', 1)
+            ->assertViewHas('kajurCount', 1)
+            ->assertSee('Wali Kelas')
+            ->assertSee('Kepala Jurusan');
+    }
 }
