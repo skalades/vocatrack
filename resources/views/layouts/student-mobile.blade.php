@@ -49,6 +49,10 @@
       data-app-logo="{{ $systemLogo ?? asset('images/logo.png') }}"
       data-app-name="{{ $systemName ?? 'VokaTrack' }}"
       data-journal-store-url="{{ route('student.journal.store') }}"
+      data-vapid-public-key="{{ config('webpush.vapid.public_key') }}"
+      data-push-subscribe-url="{{ route('push-subscriptions.store') }}"
+      data-push-unsubscribe-url="{{ route('push-subscriptions.destroy') }}"
+      data-push-test-url="{{ route('push-subscriptions.test') }}"
       data-app-timezone="{{ config('app.timezone') }}"
       class="min-h-screen bg-slate-200/80 antialiased selection:bg-[#C6F26B] selection:text-[#0B2B25] flex justify-center">
 

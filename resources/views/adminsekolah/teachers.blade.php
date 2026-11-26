@@ -74,37 +74,60 @@
     <!-- Table Card -->
     <x-card noPadding>
         <!-- Table Search Toolbar -->
-        <div class="p-4 sm:p-5 bg-white border-b border-slate-100 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
-            <div class="relative flex-1 max-w-md">
-                <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+        <div class="p-4 sm:p-5 bg-white border-b border-slate-100 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+            <form method="GET" action="{{ route('adminsekolah.teachers') }}" id="teacher-filter-form" class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 flex-1">
+                <div class="relative flex-1 max-w-md">
+                    <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    </div>
+                    <input type="text"
+                           name="search"
+                           id="teacher-search-input"
+                           value="{{ request('search') }}"
+                           placeholder="Cari nama guru, NIP, email, nomor HP, atau jurusan..."
+                           autocomplete="off"
+                           class="w-full text-xs font-semibold pl-9.5 pr-9 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all">
+                    @if(request()->filled('search'))
+                        <a href="{{ route('adminsekolah.teachers', request()->only('major')) }}"
+                           class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600"
+                           title="Hapus kata kunci pencarian">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </a>
+                    @endif
                 </div>
-                <input type="text" id="teacher-search-input" onkeyup="filterTeachersTable()" placeholder="Cari nama guru, NIP, atau email..." 
-                       class="w-full text-xs font-semibold pl-9.5 pr-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all">
-            </div>
 
-            <div class="flex items-center gap-2">
-                <form method="GET" action="{{ route('adminsekolah.teachers') }}" class="flex items-center gap-2">
-                    <select name="major" onchange="this.form.submit()" 
-                            class="text-xs font-bold px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
-                        <option value="all" {{ ($selectedMajor ?? 'all') === 'all' ? 'selected' : '' }}>Semua Jurusan</option>
-                        <option value="lintas" {{ ($selectedMajor ?? '') === 'lintas' ? 'selected' : '' }}>Lintas Jurusan</option>
-                        @foreach($majors as $m)
-                            <option value="{{ $m->id }}" {{ ($selectedMajor ?? '') == $m->id ? 'selected' : '' }}>
-                                {{ $m->code }} - {{ $m->name }}
-                            </option>
-                        @endforeach
-                    </select>
-                    @if(request()->filled('major') && request('major') !== 'all')
-                        <a href="{{ route('adminsekolah.teachers') }}" class="px-2.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold transition-colors">
+                <select name="major" onchange="this.form.submit()"
+                        class="text-xs font-bold px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600">
+                    <option value="all" {{ ($selectedMajor ?? 'all') === 'all' ? 'selected' : '' }}>Semua Jurusan</option>
+                    <option value="lintas" {{ ($selectedMajor ?? '') === 'lintas' ? 'selected' : '' }}>Lintas Jurusan</option>
+                    @foreach($majors as $m)
+                        <option value="{{ $m->id }}" {{ ($selectedMajor ?? '') == $m->id ? 'selected' : '' }}>
+                            {{ $m->code }} - {{ $m->name }}
+                        </option>
+                    @endforeach
+                </select>
+
+                <div class="flex items-center gap-2">
+                    <button type="submit" class="px-3.5 py-2.5 rounded-xl bg-[#0B2B25] hover:bg-[#071E1A] text-[#C6F26B] text-xs font-extrabold transition-colors shadow-xs cursor-pointer">
+                        Cari
+                    </button>
+                    @if(request()->filled('search') || (request()->filled('major') && request('major') !== 'all'))
+                        <a href="{{ route('adminsekolah.teachers') }}" class="px-3 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold transition-colors">
                             Reset
                         </a>
                     @endif
-                </form>
-                <span class="text-xs text-slate-500 font-semibold hidden md:inline ml-2">
-                    {{ $teachers->total() }} Guru Terdaftar
+                </div>
+            </form>
+
+            <div class="flex items-center justify-between lg:justify-end gap-2">
+                <span class="text-xs text-slate-500 font-semibold whitespace-nowrap">
+                    @if(request()->filled('search') || (request()->filled('major') && request('major') !== 'all'))
+                        {{ $teachers->total() }} Guru Ditemukan
+                    @else
+                        {{ $teachers->total() }} Guru Terdaftar
+                    @endif
                 </span>
-                <a href="{{ route('adminsekolah.teachers.export', request()->only(['search', 'major'])) }}" 
+                <a href="{{ route('adminsekolah.teachers.export', request()->only(['search', 'major'])) }}"
                    class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-xs shrink-0 cursor-pointer ml-2"
                    title="Unduh file Excel (.xlsx) data akun & password guru lengkap dengan sheet per jurusan">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
@@ -210,12 +233,21 @@
                     @empty
                         <tr>
                             <td colspan="6" class="py-12">
-                                <x-empty-state 
-                                    title="Belum Ada Guru Pembimbing" 
-                                    description="Tambahkan akun guru pembimbing untuk memandu dan mengevaluasi siswa peserta PKL."
-                                    actionLabel="+ Tambah Guru Sekarang"
-                                    actionClick="document.getElementById('modal-add-teacher').classList.remove('hidden')"
-                                />
+                                @if(request()->filled('search') || (request()->filled('major') && request('major') !== 'all'))
+                                    <x-empty-state
+                                        title="Guru Tidak Ditemukan"
+                                        description="Tidak ada guru pembimbing yang cocok dengan kata kunci atau filter jurusan yang dipilih."
+                                        actionLabel="Reset Pencarian"
+                                        actionUrl="{{ route('adminsekolah.teachers') }}"
+                                    />
+                                @else
+                                    <x-empty-state 
+                                        title="Belum Ada Guru Pembimbing" 
+                                        description="Tambahkan akun guru pembimbing untuk memandu dan mengevaluasi siswa peserta PKL."
+                                        actionLabel="+ Tambah Guru Sekarang"
+                                        actionClick="document.getElementById('modal-add-teacher').classList.remove('hidden')"
+                                    />
+                                @endif
                             </td>
                         </tr>
                     @endforelse
@@ -379,14 +411,19 @@
         });
     }
 
-    function filterTeachersTable() {
-        const query = document.getElementById('teacher-search-input').value.toLowerCase();
-        const rows = document.querySelectorAll('.teacher-row');
-        rows.forEach(row => {
-            const text = row.textContent.toLowerCase();
-            row.style.display = text.includes(query) ? '' : 'none';
+    (function () {
+        const form = document.getElementById('teacher-filter-form');
+        const input = document.getElementById('teacher-search-input');
+        if (!form || !input) return;
+
+        let debounceTimer = null;
+        input.addEventListener('input', () => {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                form.submit();
+            }, 450);
         });
-    }
+    })();
 
     function openEditTeacherModal(data) {
         document.getElementById('edit-teacher-form').action = data.update_url;

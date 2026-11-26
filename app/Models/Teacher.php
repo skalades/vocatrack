@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -75,5 +76,41 @@ class Teacher extends Model
     public function supervisionVisits(): HasMany
     {
         return $this->hasMany(SupervisionVisit::class);
+    }
+
+    /**
+     * Terapkan filter pencarian (case-insensitive lintas PostgreSQL/MySQL/SQLite) dan jurusan untuk admin sekolah & ekspor.
+     */
+    public function scopeApplyAdminFilters(Builder $query, ?string $search = null, ?string $major = null): Builder
+    {
+        $term = trim((string) $search);
+        if ($term !== '') {
+            $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], mb_strtolower($term));
+            $like = "%{$escaped}%";
+
+            $query->where(function (Builder $q) use ($like) {
+                $q->whereHas('user', function (Builder $uq) use ($like) {
+                    $uq->whereRaw('LOWER(name) LIKE ?', [$like])
+                        ->orWhereRaw('LOWER(email) LIKE ?', [$like])
+                        ->orWhereRaw('LOWER(COALESCE(wa_number, \'\')) LIKE ?', [$like])
+                        ->orWhereHas('profile', fn (Builder $pq) => $pq->whereRaw('LOWER(COALESCE(phone, \'\')) LIKE ?', [$like]));
+                })
+                    ->orWhereRaw('LOWER(COALESCE(nip, \'\')) LIKE ?', [$like])
+                    ->orWhereHas('majors', function (Builder $mq) use ($like) {
+                        $mq->whereRaw('LOWER(name) LIKE ?', [$like])
+                            ->orWhereRaw('LOWER(code) LIKE ?', [$like]);
+                    });
+            });
+        }
+
+        if ($major && $major !== 'all') {
+            if ($major === 'lintas') {
+                $query->doesntHave('majors');
+            } else {
+                $query->whereHas('majors', fn (Builder $mq) => $mq->where('majors.id', $major));
+            }
+        }
+
+        return $query;
     }
 }

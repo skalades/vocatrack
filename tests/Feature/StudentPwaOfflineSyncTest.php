@@ -201,4 +201,35 @@ class StudentPwaOfflineSyncTest extends TestCase
         \App\Models\PlatformSetting::forget('system_logo');
         $this->artisan('vokatrack:sync-pwa')->assertSuccessful();
     }
+
+    public function test_csrf_token_endpoint_returns_no_store_json_token(): void
+    {
+        $response = $this->actingAs($this->studentUser)
+            ->getJson(route('csrf.token'))
+            ->assertOk()
+            ->assertJsonStructure(['token']);
+
+        $this->assertStringContainsString('no-store', (string) $response->headers->get('Cache-Control'));
+    }
+
+    public function test_token_mismatch_on_login_redirects_gracefully_instead_of_419(): void
+    {
+        $request = \Illuminate\Http\Request::create(route('login.post'), 'POST', [
+            'email' => 'siswa@pwa.sch.id',
+        ]);
+        $request->setLaravelSession(app('session.store'));
+
+        $response = app(\Illuminate\Contracts\Debug\ExceptionHandler::class)
+            ->render($request, new \Illuminate\Session\TokenMismatchException());
+
+        $this->assertTrue($response->isRedirect(route('login')));
+
+        $jsonRequest = \Illuminate\Http\Request::create(route('student.journal.store'), 'POST');
+        $jsonRequest->headers->set('Accept', 'application/json');
+        $jsonResponse = app(\Illuminate\Contracts\Debug\ExceptionHandler::class)
+            ->render($jsonRequest, new \Illuminate\Session\TokenMismatchException());
+
+        $this->assertSame(419, $jsonResponse->getStatusCode());
+        $this->assertStringContainsString('"csrf_expired":true', $jsonResponse->getContent());
+    }
 }

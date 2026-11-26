@@ -38,24 +38,8 @@ class TeacherCredentialsExport implements WithMultipleSheets
         }
 
         $query = Teacher::whereHas('user', fn($q) => $q->where('school_id', $this->schoolId))
-            ->with(['user.profile', 'majors', 'headedMajors', 'studentPkls']);
-
-        if (!empty($this->filters['search'])) {
-            $search = $this->filters['search'];
-            $query->where(function ($q) use ($search) {
-                $q->whereHas('user', fn($uq) => $uq->where('name', 'like', "%{$search}%")->orWhere('email', 'like', "%{$search}%"))
-                  ->orWhere('nip', 'like', "%{$search}%");
-            });
-        }
-
-        if (!empty($this->filters['major']) && $this->filters['major'] !== 'all') {
-            if ($this->filters['major'] === 'lintas') {
-                $query->doesntHave('majors');
-            } else {
-                $majorId = $this->filters['major'];
-                $query->whereHas('majors', fn($q) => $q->where('majors.id', $majorId));
-            }
-        }
+            ->with(['user.profile', 'majors', 'headedMajors', 'studentPkls'])
+            ->applyAdminFilters($this->filters['search'] ?? null, $this->filters['major'] ?? null);
 
         $teachers = $query->latest('teachers.id')->get();
 

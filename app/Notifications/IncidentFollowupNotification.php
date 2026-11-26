@@ -4,13 +4,15 @@ namespace App\Notifications;
 
 use App\Models\IncidentFollowup;
 use App\Models\IncidentReport;
+use App\Notifications\Concerns\SendsWebPush;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
+use NotificationChannels\WebPush\WebPushMessage;
 
 class IncidentFollowupNotification extends Notification implements ShouldQueue
 {
-    use Queueable;
+    use Queueable, SendsWebPush;
 
     public function __construct(
         public IncidentReport $report,
@@ -20,7 +22,21 @@ class IncidentFollowupNotification extends Notification implements ShouldQueue
 
     public function via(object $notifiable): array
     {
-        return ['database'];
+        return $this->appendWebPushChannel(['database'], $notifiable, 'incident_followup');
+    }
+
+    public function toWebPush(object $notifiable, object $notification): WebPushMessage
+    {
+        $payload = $this->toArray($notifiable);
+
+        return $this->buildWebPushMessage(
+            title: $payload['title'],
+            body: $payload['message'],
+            url: ($notifiable->role ?? null) === 'siswa' ? '/siswa/kendala' : '/guru/incidents',
+            tag: 'incident-' . $this->report->id,
+            actionTitle: 'Lihat Tindak Lanjut',
+            requireInteraction: true
+        );
     }
 
     public function toArray(object $notifiable): array

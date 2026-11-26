@@ -3,14 +3,16 @@
 namespace App\Notifications;
 
 use App\Models\AttendanceRequest;
+use App\Notifications\Concerns\SendsWebPush;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
+use NotificationChannels\WebPush\WebPushMessage;
 
 class RequestStatusUpdatedNotification extends Notification implements ShouldQueue
 {
-    use Queueable;
+    use Queueable, SendsWebPush;
 
     public function __construct(
         public AttendanceRequest $request,
@@ -26,7 +28,21 @@ class RequestStatusUpdatedNotification extends Notification implements ShouldQue
             $channels[] = 'mail';
         }
 
-        return $channels;
+        return $this->appendWebPushChannel($channels, $notifiable, 'request_status');
+    }
+
+    public function toWebPush(object $notifiable, object $notification): WebPushMessage
+    {
+        $payload = $this->toArray($notifiable);
+
+        return $this->buildWebPushMessage(
+            title: $payload['title'],
+            body: $payload['message'],
+            url: $payload['url'],
+            tag: 'request-' . $this->request->id,
+            actionTitle: 'Lihat Presensi',
+            requireInteraction: $this->status !== 'approved'
+        );
     }
 
     public function getNotificationType(): string

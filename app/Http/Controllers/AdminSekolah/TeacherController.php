@@ -25,26 +25,14 @@ class TeacherController extends BaseAdminSekolahController
     public function teachers(Request $request)
     {
         $schoolId = $this->getSchoolId();
-        $query = Teacher::whereHas('user', fn($q) => $q->where('school_id', $schoolId))
-            ->with(['user.profile', 'studentPkls.student.user', 'majors']);
-
-        if ($search = $request->query('search')) {
-            $query->where(function ($q) use ($search) {
-                $q->whereHas('user', fn($uq) => $uq->where('name', 'like', "%{$search}%")->orWhere('email', 'like', "%{$search}%"))
-                  ->orWhere('nip', 'like', "%{$search}%");
-            });
-        }
-
+        $search = trim((string) $request->query('search', ''));
         $selectedMajor = $request->query('major');
-        if ($selectedMajor && $selectedMajor !== 'all') {
-            if ($selectedMajor === 'lintas') {
-                $query->doesntHave('majors');
-            } else {
-                $query->whereHas('majors', fn($q) => $q->where('majors.id', $selectedMajor));
-            }
-        }
 
-        $teachers = $query->latest()->paginate(15)->withQueryString();
+        $query = Teacher::whereHas('user', fn($q) => $q->where('school_id', $schoolId))
+            ->with(['user.profile', 'studentPkls.student.user', 'majors'])
+            ->applyAdminFilters($search, $selectedMajor);
+
+        $teachers = $query->latest('teachers.id')->paginate(15)->withQueryString();
         $majors = Major::where('school_id', $schoolId)->orderBy('name')->get();
 
         // Exact DB metrics across the entire school (Scalable)

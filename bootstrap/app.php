@@ -11,6 +11,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->trustProxies(at: '*');
         $middleware->alias([
             'IdentifyTenant' => \App\Http\Middleware\IdentifyTenant::class,
             'role' => \App\Http\Middleware\CheckRole::class,
@@ -24,7 +25,11 @@ return Application::configure(basePath: dirname(__DIR__))
         // Laporkan exception ke Sentry (no-op bila SENTRY_LARAVEL_DSN kosong).
         \Sentry\Laravel\Integration::handles($exceptions);
 
-        $exceptions->render(function (\Illuminate\Session\TokenMismatchException $e, \Illuminate\Http\Request $request) {
+        $exceptions->render(function (\Symfony\Component\HttpKernel\Exception\HttpException $e, \Illuminate\Http\Request $request) {
+            if ($e->getStatusCode() !== 419) {
+                return null;
+            }
+
             if ($request->is('logout') || $request->routeIs('logout')) {
                 \Illuminate\Support\Facades\Auth::logout();
                 $request->session()->invalidate();
@@ -32,5 +37,24 @@ return Application::configure(basePath: dirname(__DIR__))
 
                 return redirect()->route('login')->with('success', 'Sesi Anda telah berakhir. Anda telah keluar dari sistem.');
             }
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Token keamanan formulir kedaluwarsa. Silakan coba kirim ulang.',
+                    'csrf_expired' => true,
+                ], 419);
+            }
+
+            $request->session()->regenerateToken();
+
+            if ($request->is('login') || $request->routeIs('login.post')) {
+                return redirect()->route('login')
+                    ->withInput($request->only('email', 'remember'))
+                    ->with('error', 'Halaman masuk terbuka terlalu lama. Token keamanan diperbarui, silakan klik Masuk kembali.');
+            }
+
+            return redirect()->back()
+                ->withInput($request->except(['password', 'password_confirmation', '_token']))
+                ->with('error', 'Token keamanan formulir diperbarui karena halaman lama terbuka. Silakan kirim ulang.');
         });
     })->create();

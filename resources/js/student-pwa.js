@@ -15,6 +15,10 @@
 const body = document.body;
 const USER_ID = body.dataset.userId || '';
 const STORE_URL = body.dataset.journalStoreUrl || '';
+const VAPID_PUBLIC_KEY = body.dataset.vapidPublicKey || '';
+const PUSH_SUBSCRIBE_URL = body.dataset.pushSubscribeUrl || '/push-subscriptions';
+const PUSH_UNSUBSCRIBE_URL = body.dataset.pushUnsubscribeUrl || '/push-subscriptions';
+const PUSH_TEST_URL = body.dataset.pushTestUrl || '/push-subscriptions/test';
 const APP_TZ = body.dataset.appTimezone || 'Asia/Jakarta';
 
 const DB_NAME = 'vokatrack-pwa';
@@ -170,13 +174,35 @@ async function enqueueJournal(form) {
 // ---------------------------------------------------------------------------
 
 let syncing = false;
+let lastCsrfRefreshAt = Date.now();
+
+function applyCsrfToken(token) {
+    if (!token) return;
+    document.querySelector('meta[name="csrf-token"]')?.setAttribute('content', token);
+    document.querySelectorAll('input[name="_token"]').forEach((input) => {
+        input.value = token;
+    });
+    lastCsrfRefreshAt = Date.now();
+}
 
 async function refreshCsrfToken() {
-    const res = await fetch('/siswa/beranda', { credentials: 'same-origin', cache: 'no-store' });
-    const html = await res.text();
-    const token = html.match(/<meta name="csrf-token" content="([^"]+)"/)?.[1];
-    if (token) document.querySelector('meta[name="csrf-token"]')?.setAttribute('content', token);
-    return token;
+    if (!navigator.onLine) return csrfToken();
+    try {
+        const res = await fetch('/csrf-token', {
+            credentials: 'same-origin',
+            cache: 'no-store',
+            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        });
+        if (!res.ok) return csrfToken();
+        const data = await res.json().catch(() => null);
+        if (data?.token) {
+            applyCsrfToken(data.token);
+            return data.token;
+        }
+    } catch (e) {
+        // biarkan token saat ini jika jaringan belum stabil
+    }
+    return csrfToken();
 }
 
 async function postJournal(item, token) {
@@ -684,7 +710,336 @@ function bindInstallPrompt() {
     window.addEventListener('appinstalled', () => {
         document.getElementById('vt-install-chip')?.remove();
         syncPwaCardState();
+        syncPushUiState();
     });
+}
+
+// ---------------------------------------------------------------------------
+// Web Push Notification (Android Chrome/Edge/Samsung Internet & iOS 16.4+ PWA)
+// ---------------------------------------------------------------------------
+
+function isIosDevice() {
+    return (/iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream)
+        || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
+function isStandaloneMode() {
+    return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+}
+
+function supportsWebPush() {
+    return window.isSecureContext
+        && 'serviceWorker' in navigator
+        && 'PushManager' in window
+        && 'Notification' in window;
+}
+
+function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const raw = window.atob(base64);
+    const output = new Uint8Array(raw.length);
+    for (let i = 0; i < raw.length; i += 1) {
+        output[i] = raw.charCodeAt(i);
+    }
+    return output;
+}
+
+function detectPushEncoding() {
+    const supported = window.PushManager?.supportedContentEncodings;
+    if (Array.isArray(supported) && supported.length > 0) {
+        return supported.includes('aes128gcm') ? 'aes128gcm' : supported[0];
+    }
+    return 'aes128gcm';
+}
+
+async function getActiveRegistration() {
+    if (!('serviceWorker' in navigator) || !window.isSecureContext) return null;
+    const existing = await navigator.serviceWorker.getRegistration('/');
+    if (existing) return existing;
+    return navigator.serviceWorker.register('/sw.js', { scope: '/', updateViaCache: 'none' });
+}
+
+async function savePushSubscriptionToServer(subscription) {
+    const json = subscription.toJSON ? subscription.toJSON() : {};
+    const keys = json.keys || {};
+    if (!subscription.endpoint || !keys.p256dh || !keys.auth) {
+        throw new Error('Data langganan push tidak lengkap.');
+    }
+
+    const res = await fetch(PUSH_SUBSCRIBE_URL, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': csrfToken(),
+            'X-Requested-With': 'XMLHttpRequest',
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+            endpoint: subscription.endpoint,
+            keys: {
+                p256dh: keys.p256dh,
+                auth: keys.auth,
+            },
+            content_encoding: detectPushEncoding(),
+        }),
+    });
+
+    if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.message || 'Gagal menyimpan langganan notifikasi.');
+    }
+
+    if (USER_ID) {
+        safeStorage(() => localStorage.setItem('vt-push-synced-user', USER_ID));
+    }
+}
+
+async function getPushState() {
+    const isIos = isIosDevice();
+    const isStandalone = isStandaloneMode();
+
+    if (isIos && !isStandalone) {
+        return { state: 'ios-install-required', subscribed: false, isIos, isStandalone };
+    }
+
+    if (!supportsWebPush() || !VAPID_PUBLIC_KEY) {
+        return { state: 'unsupported', subscribed: false, isIos, isStandalone };
+    }
+
+    const permission = Notification.permission;
+    if (permission === 'denied') {
+        return { state: 'denied', subscribed: false, isIos, isStandalone };
+    }
+
+    let subscribed = false;
+    try {
+        const reg = await navigator.serviceWorker.getRegistration('/');
+        const sub = await reg?.pushManager?.getSubscription();
+        subscribed = Boolean(sub);
+    } catch (e) {
+        subscribed = false;
+    }
+
+    if (permission === 'granted' && subscribed) {
+        return { state: 'active', subscribed: true, isIos, isStandalone };
+    }
+
+    return { state: 'ready', subscribed: false, isIos, isStandalone };
+}
+
+async function syncPushUiState() {
+    const section = document.getElementById('pwa-push-section');
+    if (!section) return;
+
+    const badge = document.getElementById('pwa-push-badge');
+    const desc = document.getElementById('pwa-push-desc');
+    const actions = document.getElementById('pwa-push-actions');
+    if (!badge || !desc || !actions) return;
+
+    const info = await getPushState();
+
+    if (info.state === 'active') {
+        badge.className = 'bg-[#DDF3EC] text-[#0F7A66] text-[10px] font-extrabold px-2 py-0.5 rounded-full shrink-0';
+        badge.textContent = 'Aktif';
+        desc.textContent = 'Notifikasi akan muncul di bar notifikasi & lock screen walau aplikasi ditutup.';
+        actions.innerHTML = `
+            <button type="button" onclick="window.VokaTrackPwa?.sendTestNotification()"
+                    class="flex-1 h-10 rounded-xl bg-[#0B2B25] hover:bg-[#12382F] active:scale-[0.98] text-[#C6F26B] font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+                <span>Kirim Tes Notifikasi</span>
+            </button>
+            <button type="button" onclick="window.VokaTrackPwa?.disableNotifications()"
+                    class="h-10 px-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs transition-all cursor-pointer">
+                Matikan
+            </button>`;
+        return;
+    }
+
+    if (info.state === 'ios-install-required') {
+        badge.className = 'bg-amber-100 text-amber-800 text-[10px] font-extrabold px-2 py-0.5 rounded-full shrink-0';
+        badge.textContent = 'Pasang PWA Dulu';
+        desc.textContent = 'Di iPhone/iPad (iOS 16.4+), pasang ke Layar Utama dulu (Share ⎋ → Tambah ke Layar Utama), lalu buka dari ikon aplikasi untuk mengaktifkan notifikasi.';
+        actions.innerHTML = `
+            <button type="button" onclick="window.VokaTrackPwa?.promptInstall()"
+                    class="flex-1 h-10 rounded-xl bg-amber-500 hover:bg-amber-600 active:scale-[0.98] text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer">
+                <span>Panduan Pasang di iPhone/iPad</span>
+            </button>`;
+        return;
+    }
+
+    if (info.state === 'denied') {
+        badge.className = 'bg-rose-100 text-rose-700 text-[10px] font-extrabold px-2 py-0.5 rounded-full shrink-0';
+        badge.textContent = 'Diblokir';
+        desc.textContent = 'Izin notifikasi diblokir di browser. Buka Setelan Situs browser → Notifikasi → Izinkan.';
+        actions.innerHTML = `
+            <button type="button" onclick="window.VokaTrackPwa?.showPermissionHelp()"
+                    class="flex-1 h-10 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer">
+                <span>Cara Mengizinkan Notifikasi</span>
+            </button>`;
+        return;
+    }
+
+    if (info.state === 'unsupported') {
+        badge.className = 'bg-slate-100 text-slate-600 text-[10px] font-extrabold px-2 py-0.5 rounded-full shrink-0';
+        badge.textContent = !VAPID_PUBLIC_KEY ? 'Belum Aktif' : 'Tidak Didukung';
+        desc.textContent = !VAPID_PUBLIC_KEY
+            ? 'Kunci notifikasi push server belum dikonfigurasi oleh admin.'
+            : 'Perangkat/browser ini belum mendukung Web Push. Gunakan Android (Chrome/Edge/Samsung Internet) atau iOS 16.4+ mode PWA lewat HTTPS.';
+        actions.innerHTML = '';
+        return;
+    }
+
+    // state === 'ready'
+    badge.className = 'bg-[#C6F26B]/50 text-[#0B2B25] text-[10px] font-extrabold px-2 py-0.5 rounded-full shrink-0';
+    badge.textContent = 'Siap Diaktifkan';
+    desc.textContent = info.isIos
+        ? 'Aplikasi PWA sudah terpasang. Ketuk tombol di bawah untuk mengizinkan notifikasi iOS.'
+        : 'Aktifkan agar status jurnal, izin, & pengumuman muncul di lock screen walau aplikasi ditutup.';
+    actions.innerHTML = `
+        <button type="button" onclick="window.VokaTrackPwa?.enableNotifications()"
+                class="flex-1 h-10 rounded-xl bg-[#0F7A66] hover:bg-[#0B5E4E] active:scale-[0.98] text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+            <span>Aktifkan Notifikasi</span>
+        </button>`;
+}
+
+function showPermissionHelp() {
+    alertDialog({
+        tone: 'warning',
+        eyebrow: 'Izin Notifikasi Diblokir',
+        title: 'Cara Mengaktifkan Notifikasi',
+        message: isIosDevice()
+            ? 'Buka Pengaturan iPhone/iPad → cari aplikasi VokaTrack → Notifikasi → aktifkan Izinkan Notifikasi.'
+            : 'Di Chrome/Edge/Samsung Internet: ketuk ikon gembok/setelan di sebelah URL → Izin / Notifikasi → pilih Izinkan, lalu muat ulang halaman.',
+        confirmText: 'Mengerti',
+    });
+}
+
+async function enableNotifications() {
+    if (isIosDevice() && !isStandaloneMode()) {
+        await promptInstall();
+        return false;
+    }
+
+    if (!supportsWebPush()) {
+        await alertDialog({
+            tone: 'warning',
+            eyebrow: 'Browser Tidak Mendukung',
+            title: 'Web Push Belum Tersedia',
+            message: 'Pastikan Anda mengakses melalui HTTPS menggunakan Android (Chrome, Edge, Samsung Internet) atau iPhone/iPad (iOS 16.4+ yang sudah dipasang ke Layar Utama).',
+            confirmText: 'Tutup',
+        });
+        return false;
+    }
+
+    if (!VAPID_PUBLIC_KEY) {
+        showToast('Konfigurasi VAPID server belum tersedia.', 'error');
+        return false;
+    }
+
+    try {
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') {
+            await syncPushUiState();
+            if (permission === 'denied') {
+                showPermissionHelp();
+            } else {
+                showToast('Izin notifikasi belum disetujui.', 'info');
+            }
+            return false;
+        }
+
+        const reg = await getActiveRegistration();
+        await navigator.serviceWorker.ready;
+        const activeReg = await navigator.serviceWorker.ready || reg;
+
+        let sub = await activeReg.pushManager.getSubscription();
+        if (!sub) {
+            sub = await activeReg.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+            });
+        }
+
+        await savePushSubscriptionToServer(sub);
+        await syncPushUiState();
+        showToast('Notifikasi aktif! Pemberitahuan akan muncul walau aplikasi ditutup.', 'success');
+        return true;
+    } catch (err) {
+        showToast(err?.message || 'Gagal mengaktifkan notifikasi push.', 'error');
+        await syncPushUiState();
+        return false;
+    }
+}
+
+async function disableNotifications() {
+    try {
+        const reg = await navigator.serviceWorker?.getRegistration('/');
+        const sub = await reg?.pushManager?.getSubscription();
+        if (sub) {
+            await fetch(PUSH_UNSUBSCRIBE_URL, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken(),
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify({ endpoint: sub.endpoint }),
+            }).catch(() => {});
+            await sub.unsubscribe();
+        }
+        safeStorage(() => localStorage.removeItem('vt-push-synced-user'));
+        await syncPushUiState();
+        showToast('Notifikasi background dimatikan untuk perangkat ini.', 'info');
+    } catch (e) {
+        showToast('Gagal mematikan notifikasi.', 'error');
+    }
+}
+
+async function sendTestNotification() {
+    try {
+        const res = await fetch(PUSH_TEST_URL, {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': csrfToken(),
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            credentials: 'same-origin',
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+            showToast(data.message || 'Gagal mengirim tes notifikasi.', 'error');
+            return false;
+        }
+        showToast(data.message || 'Tes notifikasi dikirim!', 'success');
+        return true;
+    } catch (e) {
+        showToast('Tidak dapat menghubungi server untuk tes notifikasi.', 'error');
+        return false;
+    }
+}
+
+async function syncExistingPushSubscription() {
+    if (!USER_ID || !VAPID_PUBLIC_KEY || !supportsWebPush()) return;
+    if (Notification.permission !== 'granted') return;
+
+    try {
+        const reg = await navigator.serviceWorker.ready;
+        const sub = await reg?.pushManager?.getSubscription();
+        if (!sub) return;
+
+        const lastSyncedUser = safeStorage(() => localStorage.getItem('vt-push-synced-user'));
+        if (lastSyncedUser !== USER_ID) {
+            await savePushSubscriptionToServer(sub);
+        }
+    } catch (e) {
+        // abaikan sinkronisasi latar yang gagal sementara
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -700,11 +1055,19 @@ bindInstallPrompt();
 
 renderQueueUi().then(() => syncQueue());
 syncPwaCardState();
+syncPushUiState();
+syncExistingPushSubscription();
 
 window.addEventListener('online', () => { bannerDismissed = false; renderQueueUi(); syncQueue(); });
 window.addEventListener('offline', () => { bannerDismissed = false; renderQueueUi(); });
 document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') syncQueue();
+    if (document.visibilityState === 'visible') {
+        if (navigator.onLine && Date.now() - lastCsrfRefreshAt > 5 * 60 * 1000) {
+            refreshCsrfToken();
+        }
+        syncQueue();
+        syncPushUiState();
+    }
 });
 setInterval(() => syncQueue(), 60000);
 
@@ -712,6 +1075,11 @@ window.VokaTrackPwa = {
     syncQueue,
     queueAll,
     promptInstall,
+    enableNotifications,
+    disableNotifications,
+    sendTestNotification,
+    showPermissionHelp,
+    getPushState,
     isOnline: () => navigator.onLine,
-    isStandalone: () => window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true,
+    isStandalone: isStandaloneMode,
 };

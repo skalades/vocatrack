@@ -23,6 +23,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ParentLinkController;
 use App\Http\Controllers\ParentMonitoringController;
 use App\Http\Controllers\PklMapController;
+use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\SecureFileController;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\SuperAdmin\AuditLogController;
@@ -57,8 +58,13 @@ Route::get('/manifest.webmanifest', function () {
     ]);
 })->name('pwa.manifest');
 
+Route::get('/csrf-token', function () {
+    return response()->json(['token' => csrf_token()])
+        ->header('Cache-Control', 'no-store, no-cache, must-revalidate');
+})->name('csrf.token');
+
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
-Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:30,1')->name('login.post');
+Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:180,1')->name('login.post');
 Route::match(['get', 'post'], '/logout', [AuthController::class, 'logout'])->name('logout');
 Route::get('/forgot-password', [\App\Http\Controllers\PasswordResetController::class, 'showForgotForm'])->name('password.request');
 Route::post('/forgot-password', [\App\Http\Controllers\PasswordResetController::class, 'requestReset'])->middleware('throttle:5,15')->name('password.email');
@@ -82,6 +88,11 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
     Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
+
+    // Web Push Subscriptions (PWA Android & iOS 16.4+)
+    Route::post('/push-subscriptions', [PushSubscriptionController::class, 'store'])->name('push-subscriptions.store');
+    Route::delete('/push-subscriptions', [PushSubscriptionController::class, 'destroy'])->name('push-subscriptions.destroy');
+    Route::post('/push-subscriptions/test', [PushSubscriptionController::class, 'sendTest'])->middleware('throttle:6,1')->name('push-subscriptions.test');
 
     // Impersonation Routes
     Route::post('/impersonate/leave', [ImpersonationController::class, 'stop'])->name('impersonate.leave');

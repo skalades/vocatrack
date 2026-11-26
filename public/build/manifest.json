@@ -5,7 +5,7 @@
     "isDynamicEntry": true
   },
   "resources/css/app.css": {
-    "file": "assets/app-CgS_MIDr.css",
+    "file": "assets/app-BmmSNhF7.css",
     "src": "resources/css/app.css",
     "isEntry": true,
     "name": "app",
@@ -23,7 +23,7 @@
     ]
   },
   "resources/js/student-pwa.js": {
-    "file": "assets/student-pwa-CtW6JVfm.js",
+    "file": "assets/student-pwa-B1JieB1q.js",
     "name": "student-pwa",
     "src": "resources/js/student-pwa.js",
     "isEntry": true

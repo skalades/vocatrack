@@ -21,7 +21,7 @@
                     </span>
                 </div>
                 <p class="text-xs text-[#5A6B65] mt-0.5 leading-snug">
-                    Buka lebih cepat dari layar utama &amp; tetap bisa mengisi jurnal tanpa sinyal.
+                    Buka lebih cepat dari layar utama &amp; terima notifikasi meski aplikasi ditutup.
                 </p>
             </div>
         </div>
@@ -33,8 +33,8 @@
                 <span class="truncate">Jurnal tersimpan offline</span>
             </div>
             <div class="flex items-center gap-1.5 bg-[#F1F4EC] rounded-xl px-2.5 py-1.5 border border-[#0B2B25]/5">
-                <svg class="w-3.5 h-3.5 text-[#0F7A66] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                <span class="truncate">Tanpa unduh Play Store</span>
+                <svg class="w-3.5 h-3.5 text-[#0F7A66] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+                <span class="truncate">Notifikasi lock screen</span>
             </div>
         </div>
 
@@ -49,6 +49,33 @@
                 </svg>
                 <span>Pasang Aplikasi di Layar Utama HP</span>
             </button>
+        </div>
+
+        {{-- Pengaturan Notifikasi Web Push (Android & iOS 16.4+ PWA) --}}
+        <div id="pwa-push-section" class="pt-2 border-t border-[#0B2B25]/8 space-y-2">
+            <div class="flex items-center justify-between gap-2">
+                <div class="min-w-0">
+                    <p class="text-xs font-bold text-[#10211D]">Notifikasi Background (Web Push)</p>
+                    <p id="pwa-push-desc" class="text-[11px] text-[#5A6B65] leading-snug">
+                        Tetap muncul di bar notifikasi &amp; lock screen saat aplikasi ditutup.
+                    </p>
+                </div>
+                <span id="pwa-push-badge" class="bg-slate-100 text-slate-600 text-[10px] font-extrabold px-2 py-0.5 rounded-full shrink-0">
+                    Memeriksa...
+                </span>
+            </div>
+
+            <div id="pwa-push-actions" class="flex items-center gap-2">
+                <button type="button"
+                        id="btn-enable-push"
+                        onclick="window.VokaTrackPwa?.enableNotifications()"
+                        class="flex-1 h-10 rounded-xl bg-[#0F7A66] hover:bg-[#0B5E4E] active:scale-[0.98] text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                    </svg>
+                    <span>Aktifkan Notifikasi</span>
+                </button>
+            </div>
         </div>
     </div>
 </div>

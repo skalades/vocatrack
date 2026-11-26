@@ -5,11 +5,13 @@ namespace App\Services;
 use App\Models\Announcement;
 use App\Models\AnnouncementRead;
 use App\Models\User;
+use App\Notifications\AnnouncementPublishedNotification;
 use Carbon\Carbon;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -113,7 +115,7 @@ class AnnouncementService
             $imagePath = $imageFile->storeAs($dir, $fileName, 'public');
         }
 
-        return Announcement::create([
+        $announcement = Announcement::create([
             'school_id' => $schoolId,
             'author_id' => $author->id,
             'title' => $data['title'],
@@ -126,6 +128,34 @@ class AnnouncementService
             'is_active' => isset($data['is_active']) ? (bool)$data['is_active'] : true,
             'published_at' => Carbon::now(),
         ]);
+
+        $this->notifyTargetedStudents($announcement);
+
+        return $announcement;
+    }
+
+    /**
+     * Kirim notifikasi in-app & Web Push ke siswa target ketika pengumuman aktif diterbitkan.
+     */
+    protected function notifyTargetedStudents(Announcement $announcement): void
+    {
+        if (! $announcement->is_active || ! in_array($announcement->target_role, ['all', 'siswa'], true)) {
+            return;
+        }
+
+        $query = User::query()
+            ->where('school_id', $announcement->school_id)
+            ->where('role', 'siswa')
+            ->where('is_active', true);
+
+        if ($announcement->target_major_id) {
+            $majorId = $announcement->target_major_id;
+            $query->whereHas('student.class', fn (Builder $q) => $q->where('major_id', $majorId));
+        }
+
+        $query->chunkById(200, function (Collection $students) use ($announcement): void {
+            Notification::send($students, new AnnouncementPublishedNotification($announcement));
+        });
     }
 
     /**

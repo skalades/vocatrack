@@ -13,7 +13,7 @@
  *
  * Naikkan VERSION setiap kali isi berkas ini atau daftar PRECACHE berubah.
  */
-const VERSION = 'v1';
+const VERSION = 'v2';
 const STATIC_CACHE = `vt-static-${VERSION}`;
 const PAGES_CACHE = `vt-pages-${VERSION}`;
 const FONTS_CACHE = `vt-fonts-${VERSION}`;
@@ -54,6 +54,61 @@ self.addEventListener('message', (event) => {
     if (type === 'clear-pages') {
         event.waitUntil(caches.delete(PAGES_CACHE));
     }
+});
+
+// ---------------------------------------------------------------------------
+// Web Push Notifications (Android Chrome/Edge/Samsung Internet & iOS 16.4+ PWA)
+// ---------------------------------------------------------------------------
+
+self.addEventListener('push', (event) => {
+    let payload = {};
+    if (event.data) {
+        try {
+            payload = event.data.json();
+        } catch (e) {
+            payload = { title: 'VokaTrack PKL', body: event.data.text() };
+        }
+    }
+
+    const title = payload.title || 'VokaTrack PKL';
+    const targetUrl = (payload.data && payload.data.url) || payload.url || '/siswa/beranda';
+    const options = {
+        body: payload.body || 'Ada pembaruan baru di aplikasi PKL Anda.',
+        icon: payload.icon || '/icons/icon-192.png',
+        badge: payload.badge || '/icons/icon-192.png',
+        tag: payload.tag || (payload.data && payload.data.tag) || 'vokatrack-notif',
+        renotify: payload.renotify !== false,
+        requireInteraction: Boolean(payload.requireInteraction),
+        vibrate: Array.isArray(payload.vibrate) ? payload.vibrate : [150, 80, 150],
+        actions: Array.isArray(payload.actions) ? payload.actions : [],
+        data: {
+            url: targetUrl,
+        },
+    };
+
+    event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener('notificationclick', (event) => {
+    event.notification.close();
+    const rawUrl = (event.notification.data && event.notification.data.url) || '/siswa/beranda';
+    const targetUrl = new URL(rawUrl, self.location.origin).href;
+
+    event.waitUntil(
+        self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+            for (const client of clientList) {
+                if (client.url.startsWith(self.location.origin) && 'focus' in client) {
+                    if ('navigate' in client && client.url !== targetUrl) {
+                        return client.navigate(targetUrl).then((navClient) => (navClient || client).focus());
+                    }
+                    return client.focus();
+                }
+            }
+            if (self.clients.openWindow) {
+                return self.clients.openWindow(targetUrl);
+            }
+        })
+    );
 });
 
 self.addEventListener('fetch', (event) => {

@@ -140,6 +140,10 @@ class PlatformSetting extends Model
     {
         try {
             $logoUrl = static::getLogoUrl();
+            $manifestLogo = parse_url($logoUrl, PHP_URL_PATH) ?: '/images/logo.png';
+            if (!str_starts_with($manifestLogo, '/')) {
+                $manifestLogo = '/' . $manifestLogo;
+            }
             $appName = static::get('platform_name', 'VokaTrack');
             $description = static::get('platform_tagline', 'Presensi selfie, jurnal harian, dan laporan PKL untuk siswa SMK.');
 
@@ -157,15 +161,15 @@ class PlatformSetting extends Model
                 'theme_color' => '#0B2B25',
                 'categories' => ['education', 'productivity'],
                 'icons' => [
-                    ['src' => $logoUrl, 'sizes' => '192x192', 'type' => 'image/png', 'purpose' => 'any'],
-                    ['src' => $logoUrl, 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'any'],
-                    ['src' => $logoUrl, 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'maskable'],
+                    ['src' => $manifestLogo, 'sizes' => '192x192', 'type' => 'image/png', 'purpose' => 'any'],
+                    ['src' => $manifestLogo, 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'any'],
+                    ['src' => $manifestLogo, 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'maskable'],
                     ['src' => '/icons/icon-192.png', 'sizes' => '192x192', 'type' => 'image/png', 'purpose' => 'any'],
                     ['src' => '/icons/icon-512.png', 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'any'],
                 ],
                 'shortcuts' => [
-                    ['name' => 'Presensi', 'url' => '/siswa/absensi', 'icons' => [['src' => $logoUrl, 'sizes' => '192x192']]],
-                    ['name' => 'Jurnal Harian', 'url' => '/siswa/jurnal', 'icons' => [['src' => $logoUrl, 'sizes' => '192x192']]],
+                    ['name' => 'Presensi', 'url' => '/siswa/absensi', 'icons' => [['src' => $manifestLogo, 'sizes' => '192x192']]],
+                    ['name' => 'Jurnal Harian', 'url' => '/siswa/jurnal', 'icons' => [['src' => $manifestLogo, 'sizes' => '192x192']]],
                 ],
             ];
 
