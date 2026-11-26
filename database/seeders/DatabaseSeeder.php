@@ -35,13 +35,14 @@ class DatabaseSeeder extends Seeder
             Smkn4BombanaSeeder::class,
         ];
 
-        // Seeder modular SMKN 2 Garut (GP, TAV, FI, DKV, TL, & master siswa belum terplotting) opsional jika berkas tersedia
+        // Seeder modular SMKN 2 Garut (GP, TAV, FI, DKV, TL, TEI, & master siswa belum terplotting) opsional jika berkas tersedia
         $optionalSmkn2Seeders = [
             \Database\Seeders\GeologiPertambanganPklSeeder::class,
             \Database\Seeders\TeknikAudioVideoPklSeeder::class,
             \Database\Seeders\FarmasiIndustriPklSeeder::class,
             \Database\Seeders\DesainKomunikasiVisualPklSeeder::class,
             \Database\Seeders\TeknikLogistikPklSeeder::class,
+            \Database\Seeders\TeknikElektronikaIndustriPklSeeder::class,
             \Database\Seeders\Smkn2GarutMasterStudentSeeder::class,
         ];
         $insertAt = 3;

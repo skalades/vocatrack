@@ -161,6 +161,16 @@ abstract class BaseCsvMajorPklSeeder extends Seeder
         }
 
         $value = ((float) $digitsOnly) / 1_000_000;
+
+        // Pulihkan bujur Indonesia (95..141) jika nol di belakang terpotong Excel sebelum pemisahan desimal (misal: "1078696" -> 107.8696)
+        if (!$isLatitude && $value > 0 && $value < 90.0) {
+            $unsigned = ltrim($digitsOnly, '-');
+            $intDigits = str_starts_with($unsigned, '1') ? 3 : 2;
+            if (strlen($unsigned) > $intDigits) {
+                $value = ((float) $digitsOnly) / (10 ** (strlen($unsigned) - $intDigits));
+            }
+        }
+
         $limit = $isLatitude ? 90.0 : 180.0;
 
         return abs($value) <= $limit ? round($value, 8) : null;
@@ -226,6 +236,8 @@ abstract class BaseCsvMajorPklSeeder extends Seeder
             $checkinStart = $this->normalizeTime((string) ($raw[12] ?? ''));
             $checkinLate = $this->normalizeTime((string) ($raw[13] ?? ''));
             $checkoutStart = $this->normalizeTime((string) ($raw[14] ?? ''));
+            $startDate = $this->normalizeDate((string) ($raw[15] ?? ''));
+            $endDate = $this->normalizeDate((string) ($raw[16] ?? ''));
 
             $rows[] = [
                 'nis' => $nis,
@@ -243,6 +255,8 @@ abstract class BaseCsvMajorPklSeeder extends Seeder
                 'checkin_start' => $checkinStart,
                 'checkin_late' => $checkinLate,
                 'checkout_start' => $checkoutStart,
+                'start_date' => $startDate,
+                'end_date' => $endDate,
             ];
         }
 
@@ -288,6 +302,20 @@ abstract class BaseCsvMajorPklSeeder extends Seeder
         return sprintf('%02d:%02d:%02d', (int) $m[1], (int) $m[2], (int) ($m[3] ?? 0));
     }
 
+    private function normalizeDate(string $raw): ?string
+    {
+        $trimmed = trim($raw);
+        if ($trimmed === '') {
+            return null;
+        }
+
+        try {
+            return Carbon::parse($trimmed)->toDateString();
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
     /**
      * @return array{key: string, name: string, email: string, gender: string}
      */
@@ -299,7 +327,7 @@ abstract class BaseCsvMajorPklSeeder extends Seeder
         foreach ($this->teacherCatalog() as $prefix => $meta) {
             if (str_starts_with($upper, $prefix)) {
                 return [
-                    'key' => $prefix,
+                    'key' => $meta['email'],
                     'name' => $meta['name'],
                     'email' => $meta['email'],
                     'gender' => $meta['gender'],
@@ -309,11 +337,12 @@ abstract class BaseCsvMajorPklSeeder extends Seeder
 
         $baseName = trim(explode(',', $normalized)[0]);
         $slug = Str::slug($baseName, '.');
+        $email = ($slug !== '' ? $slug : 'guru.' . Str::lower($this->majorCode())) . '@' . static::EMAIL_DOMAIN;
 
         return [
-            'key' => $upper,
+            'key' => $email,
             'name' => $normalized,
-            'email' => ($slug !== '' ? $slug : 'guru.' . Str::lower($this->majorCode())) . '@' . static::EMAIL_DOMAIN,
+            'email' => $email,
             'gender' => 'L',
         ];
     }
@@ -455,6 +484,12 @@ abstract class BaseCsvMajorPklSeeder extends Seeder
                     'checkout_start' => $row['checkout_start'],
                 ];
             }
+            if (!isset($grouped[$name]['default_start_date']) && $row['start_date'] !== null) {
+                $grouped[$name]['default_start_date'] = $row['start_date'];
+            }
+            if (!isset($grouped[$name]['default_end_date']) && $row['end_date'] !== null) {
+                $grouped[$name]['default_end_date'] = $row['end_date'];
+            }
         }
 
         $companiesByName = [];
@@ -473,24 +508,33 @@ abstract class BaseCsvMajorPklSeeder extends Seeder
             $radiusMeters = !empty($info['radii']) ? max($info['radii']) : 100;
             $customWorkHours = $info['work_hours'] ?? null;
 
+            $companyAttributes = [
+                'address' => $info['address'] !== '' ? $info['address'] : 'Kabupaten Garut, Jawa Barat',
+                'contact_person' => 'Pihak Instansi / DU/DI',
+                'phone' => '-',
+                'gps_enabled' => $selectedCoord !== null,
+                'latitude' => $selectedCoord['lat'] ?? null,
+                'longitude' => $selectedCoord['lng'] ?? null,
+                'radius_meters' => $radiusMeters,
+                'override_hours' => $customWorkHours !== null,
+                'custom_work_hours' => $customWorkHours,
+                'work_days' => '5_days',
+                'requires_industry_approval' => $this->requiresIndustryApproval(),
+            ];
+
+            if (!empty($info['default_start_date'])) {
+                $companyAttributes['default_start_date'] = $info['default_start_date'];
+            }
+            if (!empty($info['default_end_date'])) {
+                $companyAttributes['default_end_date'] = $info['default_end_date'];
+            }
+
             $company = Company::updateOrCreate(
                 [
                     'school_id' => $school->id,
                     'name' => $name,
                 ],
-                [
-                    'address' => $info['address'] !== '' ? $info['address'] : 'Kabupaten Garut, Jawa Barat',
-                    'contact_person' => 'Pihak Instansi / DU/DI',
-                    'phone' => '-',
-                    'gps_enabled' => $selectedCoord !== null,
-                    'latitude' => $selectedCoord['lat'] ?? null,
-                    'longitude' => $selectedCoord['lng'] ?? null,
-                    'radius_meters' => $radiusMeters,
-                    'override_hours' => $customWorkHours !== null,
-                    'custom_work_hours' => $customWorkHours,
-                    'work_days' => '5_days',
-                    'requires_industry_approval' => $this->requiresIndustryApproval(),
-                ]
+                $companyAttributes
             );
 
             $company->majors()->syncWithoutDetaching([$major->id]);
@@ -562,18 +606,26 @@ abstract class BaseCsvMajorPklSeeder extends Seeder
                 ]);
             }
 
+            $spklAttributes = [
+                'school_id' => $school->id,
+                'company_id' => $company->id,
+                'teacher_id' => $teacher->id,
+                'supervisor_id' => null,
+                'status' => 'active',
+            ];
+            if ($row['start_date'] !== null) {
+                $spklAttributes['start_date'] = $row['start_date'];
+            }
+            if ($row['end_date'] !== null) {
+                $spklAttributes['end_date'] = $row['end_date'];
+            }
+
             StudentPkl::updateOrCreate(
                 [
                     'student_id' => $student->id,
                     'pkl_period_id' => $period->id,
                 ],
-                [
-                    'school_id' => $school->id,
-                    'company_id' => $company->id,
-                    'teacher_id' => $teacher->id,
-                    'supervisor_id' => null,
-                    'status' => 'active',
-                ]
+                $spklAttributes
             );
 
             $count++;
