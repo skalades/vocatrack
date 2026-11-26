@@ -412,4 +412,25 @@ class MonitoringAssignmentTest extends TestCase
         $this->assertDatabaseCount('supervision_visits', 2);
         $this->assertEquals(1, SupervisionAssignmentStudent::count() + 1);
     }
+
+    public function test_monitoring_one_seeder_is_idempotent_and_generates_pdf_ready_visits(): void
+    {
+        // Jalankan seeder dua kali berturut-turut
+        $this->seed(\Database\Seeders\MonitoringOneSeeder::class);
+        $firstVisitCount = SupervisionVisit::count();
+        $this->assertGreaterThan(0, $firstVisitCount);
+
+        $this->seed(\Database\Seeders\MonitoringOneSeeder::class);
+        $this->assertEquals($firstVisitCount, SupervisionVisit::count());
+
+        $visit = SupervisionVisit::where('stage', 'monitoring_1')->first();
+        $this->assertNotNull($visit);
+        $this->assertGreaterThan(0, $visit->studentPkls()->count());
+
+        // Verifikasi ekspor PDF langsung berhasil untuk admin sekolah
+        $this->actingAs($this->adminUser);
+        $pdfRes = $this->get(route('adminsekolah.supervisions.pdf', $visit->id));
+        $pdfRes->assertOk();
+        $this->assertStringContainsString('application/pdf', $pdfRes->headers->get('Content-Type'));
+    }
 }
