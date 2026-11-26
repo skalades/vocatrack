@@ -2,6 +2,7 @@
 
 namespace App\Notifications\Concerns;
 
+use App\Models\PlatformSetting;
 use NotificationChannels\WebPush\WebPushChannel;
 use NotificationChannels\WebPush\WebPushMessage;
 
@@ -51,11 +52,13 @@ trait SendsWebPush
         string $actionTitle = 'Buka Aplikasi',
         bool $requireInteraction = false
     ): WebPushMessage {
+        $logoPath = PlatformSetting::getPwaLogoPath();
+
         return (new WebPushMessage)
             ->title($title)
             ->body($body)
-            ->icon('/icons/icon-192.png')
-            ->badge('/icons/icon-192.png')
+            ->icon($logoPath)
+            ->badge($logoPath)
             ->tag($tag)
             ->renotify()
             ->requireInteraction($requireInteraction)

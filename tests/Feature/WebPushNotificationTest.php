@@ -241,9 +241,26 @@ class WebPushNotificationTest extends TestCase
         $this->assertContains(WebPushChannel::class, $incidentNotif->via($this->studentUser));
 
         $pushArray = $journalNotif->toWebPush($this->studentUser, $journalNotif)->toArray();
-        $this->assertSame('/icons/icon-192.png', $pushArray['icon']);
-        $this->assertSame('/icons/icon-192.png', $pushArray['badge']);
+        $expectedLogo = \App\Models\PlatformSetting::getPwaLogoPath();
+        $this->assertSame($expectedLogo, $pushArray['icon']);
+        $this->assertSame($expectedLogo, $pushArray['badge']);
         $this->assertSame('/siswa/jurnal', $pushArray['data']['url']);
+
+        // Saat Super Admin mengunggah logo sistem kustom, ikon Web Push & manifest mengikuti logo sistem saja
+        \Illuminate\Support\Facades\Storage::fake('public');
+        \Illuminate\Http\UploadedFile::fake()->image('system_custom.png', 512, 512)->storeAs('branding', 'system_custom.png', 'public');
+        \App\Models\PlatformSetting::set('system_logo', 'branding/system_custom.png');
+        $this->artisan('vokatrack:sync-pwa')->assertSuccessful();
+
+        $customPush = $journalNotif->toWebPush($this->studentUser, $journalNotif)->toArray();
+        $this->assertStringContainsString('system_custom.png', $customPush['icon']);
+
+        $teacherManifest = $this->get('/manifest-guru.webmanifest')->assertOk()->json();
+        $this->assertCount(3, $teacherManifest['icons']);
+        $this->assertStringContainsString('system_custom.png', $teacherManifest['icons'][0]['src']);
+
+        \App\Models\PlatformSetting::forget('system_logo');
+        $this->artisan('vokatrack:sync-pwa')->assertSuccessful();
     }
 
     public function test_announcement_creation_notifies_only_targeted_students(): void

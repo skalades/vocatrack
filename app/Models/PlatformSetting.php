@@ -133,21 +133,29 @@ class PlatformSetting extends Model
     }
 
     /**
+     * Ambil path relatif logo sistem aktif untuk PWA manifest & Web Push icon.
+     */
+    public static function getPwaLogoPath(): string
+    {
+        $path = parse_url(static::getLogoUrl(), PHP_URL_PATH) ?: '/images/logo.png';
+
+        return str_starts_with($path, '/') ? $path : '/' . $path;
+    }
+
+    /**
      * Sinkronkan manifest PWA siswa (manifest.webmanifest) dan guru (manifest-guru.webmanifest)
      * dengan logo dan nama platform sistem.
      */
     public static function syncPwaManifest(): void
     {
         try {
-            $logoUrl = static::getLogoUrl();
-            $manifestLogo = parse_url($logoUrl, PHP_URL_PATH) ?: '/images/logo.png';
-            if (!str_starts_with($manifestLogo, '/')) {
-                $manifestLogo = '/' . $manifestLogo;
-            }
+            $customLogo = static::get('system_logo');
+            $hasCustomLogo = $customLogo && Storage::disk('public')->exists($customLogo);
+            $manifestLogo = static::getPwaLogoPath();
             $appName = static::get('platform_name', 'VokaTrack');
             $description = static::get('platform_tagline', 'Presensi selfie, jurnal harian, dan laporan PKL untuk siswa SMK.');
 
-            $studentManifest = static::buildPwaManifest($appName, $manifestLogo, [
+            $studentManifest = static::buildPwaManifest($manifestLogo, $hasCustomLogo, [
                 'id' => '/siswa/beranda',
                 'name' => "{$appName} Siswa — Presensi & Jurnal PKL",
                 'short_name' => $appName,
@@ -159,7 +167,7 @@ class PlatformSetting extends Model
                 ],
             ]);
 
-            $teacherManifest = static::buildPwaManifest($appName, $manifestLogo, [
+            $teacherManifest = static::buildPwaManifest($manifestLogo, $hasCustomLogo, [
                 'id' => '/guru/dashboard',
                 'name' => "{$appName} Guru — Pembimbing PKL",
                 'short_name' => "{$appName} Guru",
@@ -179,8 +187,26 @@ class PlatformSetting extends Model
         }
     }
 
-    protected static function buildPwaManifest(string $appName, string $manifestLogo, array $overrides): array
+    protected static function buildPwaManifest(string $manifestLogo, bool $hasCustomLogo, array $overrides): array
     {
+        $ext = strtolower(pathinfo($manifestLogo, PATHINFO_EXTENSION));
+        $mimeType = match ($ext) {
+            'jpg', 'jpeg' => 'image/jpeg',
+            'webp' => 'image/webp',
+            default => 'image/png',
+        };
+
+        $icons = [
+            ['src' => $manifestLogo, 'sizes' => '192x192', 'type' => $mimeType, 'purpose' => 'any'],
+            ['src' => $manifestLogo, 'sizes' => '512x512', 'type' => $mimeType, 'purpose' => 'any'],
+            ['src' => $manifestLogo, 'sizes' => '512x512', 'type' => $mimeType, 'purpose' => 'maskable'],
+        ];
+
+        if (! $hasCustomLogo) {
+            $icons[] = ['src' => '/icons/icon-192.png', 'sizes' => '192x192', 'type' => 'image/png', 'purpose' => 'any'];
+            $icons[] = ['src' => '/icons/icon-512.png', 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'any'];
+        }
+
         return array_merge([
             'lang' => 'id',
             'scope' => '/',
@@ -189,13 +215,7 @@ class PlatformSetting extends Model
             'background_color' => '#F1F4EC',
             'theme_color' => '#0B2B25',
             'categories' => ['education', 'productivity'],
-            'icons' => [
-                ['src' => $manifestLogo, 'sizes' => '192x192', 'type' => 'image/png', 'purpose' => 'any'],
-                ['src' => $manifestLogo, 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'any'],
-                ['src' => $manifestLogo, 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'maskable'],
-                ['src' => '/icons/icon-192.png', 'sizes' => '192x192', 'type' => 'image/png', 'purpose' => 'any'],
-                ['src' => '/icons/icon-512.png', 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'any'],
-            ],
+            'icons' => $icons,
         ], $overrides);
     }
 }

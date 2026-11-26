@@ -13,7 +13,7 @@
  *
  * Naikkan VERSION setiap kali isi berkas ini atau daftar PRECACHE berubah.
  */
-const VERSION = 'v3';
+const VERSION = 'v4';
 const STATIC_CACHE = `vt-static-${VERSION}`;
 const PAGES_CACHE = `vt-pages-${VERSION}`;
 const FONTS_CACHE = `vt-fonts-${VERSION}`;
@@ -75,8 +75,8 @@ self.addEventListener('push', (event) => {
     const targetUrl = (payload.data && payload.data.url) || payload.url || '/siswa/beranda';
     const options = {
         body: payload.body || 'Ada pembaruan baru di aplikasi PKL Anda.',
-        icon: payload.icon || '/icons/icon-192.png',
-        badge: payload.badge || '/icons/icon-192.png',
+        icon: payload.icon || '/images/logo.png',
+        badge: payload.badge || '/images/logo.png',
         tag: payload.tag || (payload.data && payload.data.tag) || 'vokatrack-notif',
         renotify: payload.renotify !== false,
         requireInteraction: Boolean(payload.requireInteraction),
