@@ -53,6 +53,16 @@ abstract class BaseCsvMajorPklSeeder extends Seeder
     abstract protected function resolveStudentGender(string $name, string $nis): string;
 
     /**
+     * Alias kode jurusan yang sudah ada di database (misal TL -> LOG).
+     *
+     * @return array<int, string>
+     */
+    protected function majorCodeAliases(): array
+    {
+        return [];
+    }
+
+    /**
      * Apakah seluruh perusahaan pada seeder ini melewati persetujuan Pembimbing DU/DI.
      */
     protected function requiresIndustryApproval(): bool
@@ -85,15 +95,7 @@ abstract class BaseCsvMajorPklSeeder extends Seeder
 
         $school = School::where('npsn', static::SCHOOL_NPSN)->first() ?? School::firstOrFail();
 
-        $major = Major::firstOrCreate(
-            [
-                'school_id' => $school->id,
-                'code' => $this->majorCode(),
-            ],
-            [
-                'name' => $this->majorName(),
-            ]
-        );
+        $major = $this->resolveMajor($school);
 
         $this->seedLearningObjectives($school, $major);
 
@@ -137,11 +139,11 @@ abstract class BaseCsvMajorPklSeeder extends Seeder
 
     /**
      * Normalisasi koordinat baik format desimal standar maupun format ribuan/titik ganda rusak dari Excel
-     * (contoh: "-7,222,980" -> -7.22298, "107.550.769." -> 107.550769, "-6.86980796" -> -6.86980796).
+     * (contoh: "-7,222,980" -> -7.22298, "107.550.769." -> 107.550769, "'107.90707464" -> 107.90707464).
      */
     public static function parseCoordinate(string $raw, bool $isLatitude): ?float
     {
-        $trimmed = trim(str_replace(["\xc2\xa0", "\xa0", ' '], '', $raw));
+        $trimmed = ltrim(trim(str_replace(["\xc2\xa0", "\xa0", ' '], '', $raw)), "'");
         if ($trimmed === '') {
             return null;
         }
@@ -162,6 +164,21 @@ abstract class BaseCsvMajorPklSeeder extends Seeder
         $limit = $isLatitude ? 90.0 : 180.0;
 
         return abs($value) <= $limit ? round($value, 8) : null;
+    }
+
+    protected function resolveMajor(School $school): Major
+    {
+        $codes = array_values(array_unique(array_merge([$this->majorCode()], $this->majorCodeAliases())));
+        $existing = Major::where('school_id', $school->id)->whereIn('code', $codes)->first();
+        if ($existing) {
+            return $existing;
+        }
+
+        return Major::create([
+            'school_id' => $school->id,
+            'code' => $this->majorCode(),
+            'name' => $this->majorName(),
+        ]);
     }
 
     private function seedLearningObjectives(School $school, Major $major): void
