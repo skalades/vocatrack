@@ -241,6 +241,17 @@
                     @endif
                 </a>
 
+                <!-- Teacher Self-Service Profile Button -->
+                <button type="button"
+                        onclick="openTeacherProfileModal()"
+                        title="Profil & NIP Guru"
+                        class="flex items-center justify-center w-8 h-8 rounded-full text-white/80 hover:bg-white/15 hover:text-[#C6F26B] transition-colors cursor-pointer">
+                    <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <circle cx="12" cy="8" r="4"/>
+                        <path stroke-linecap="round" d="M20 21a8 8 0 1 0-16 0"/>
+                    </svg>
+                </button>
+
                 <!-- WhatsApp Modal Button -->
                 <button type="button" 
                         onclick="openWhatsAppContactModal()" 

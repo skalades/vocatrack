@@ -131,6 +131,7 @@
     <x-image-lightbox />
     <x-change-password-modal />
     <x-whatsapp-contact-modal />
+    <x-teacher.profile-modal />
     <x-student.app-dialog />
 
     <script>

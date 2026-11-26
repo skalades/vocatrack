@@ -14,16 +14,19 @@ use App\Models\SupervisionVisit;
 use App\Services\AnnouncementService;
 use App\Services\AssessmentService;
 use App\Services\AttendanceService;
+use App\Services\AuditLogService;
 use App\Services\HolidayService;
 use App\Services\ImageCompressionService;
 use App\Services\IncidentReportService;
 use App\Services\JournalService;
 use App\Services\SecureFileService;
 use App\Services\SupervisionService;
+use App\Services\WhatsAppGatewayService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -968,5 +971,62 @@ class TeacherController extends Controller
 
             return back()->with('error', 'Gagal memproses pengunduhan dokumen Berita Acara PDF: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Pembaruan profil mandiri oleh Guru Pembimbing (Nama, NIP, dan Nomor HP/WhatsApp).
+     */
+    public function updateProfile(Request $request)
+    {
+        $teacher = $this->getTeacher();
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:100'],
+            'nip' => ['nullable', 'string', 'max:30'],
+            'phone' => ['nullable', 'string', 'max:25'],
+        ], [
+            'name.required' => 'Nama lengkap wajib diisi.',
+            'name.max' => 'Nama lengkap maksimal 100 karakter.',
+            'nip.max' => 'NIP maksimal 30 karakter.',
+            'phone.max' => 'Nomor HP/WhatsApp maksimal 25 karakter.',
+        ]);
+
+        $normalizedPhone = null;
+        if (filled($validated['phone'] ?? null)) {
+            $normalizedPhone = WhatsAppGatewayService::normalizePhoneNumber($validated['phone']);
+            if (! WhatsAppGatewayService::isValidIndonesianNumber($normalizedPhone)) {
+                return back()
+                    ->withErrors(['phone' => 'Format nomor HP/WhatsApp tidak valid. Gunakan format 08xx atau 628xx (minimal 10 digit).'])
+                    ->withInput();
+            }
+        }
+
+        $nip = filled($validated['nip'] ?? null) ? trim($validated['nip']) : null;
+
+        DB::transaction(function () use ($user, $teacher, $validated, $nip, $normalizedPhone) {
+            $user->update([
+                'name' => trim($validated['name']),
+                'wa_number' => $normalizedPhone,
+            ]);
+
+            $user->profile()->updateOrCreate(
+                ['user_id' => $user->id],
+                ['phone' => $normalizedPhone]
+            );
+
+            $teacher->update([
+                'nip' => $nip,
+            ]);
+        });
+
+        AuditLogService::log(
+            action: 'teacher_profile_updated',
+            module: 'profile',
+            description: "Guru pembimbing {$user->name} memperbarui profil mandiri (NIP/Nama/Nomor HP)."
+        );
+
+        return back()->with('success', 'Profil guru pembimbing berhasil diperbarui.');
     }
 }

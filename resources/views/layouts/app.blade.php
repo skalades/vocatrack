@@ -260,6 +260,15 @@
                         </a>
                     @endif
                     <x-notification-center :isMobile="false" />
+                    @if($role === 'guru-pembimbing')
+                        <button type="button" onclick="openTeacherProfileModal()" class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition-colors cursor-pointer" title="Ubah Profil, NIP & Nomor HP">
+                            <svg class="w-3.5 h-3.5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <circle cx="12" cy="8" r="4" stroke-width="2"/>
+                                <path stroke-linecap="round" stroke-width="2" d="M20 21a8 8 0 1 0-16 0"/>
+                            </svg>
+                            <span class="hidden sm:inline">Profil</span>
+                        </button>
+                    @endif
                     <button type="button" onclick="openWhatsAppContactModal()" class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-colors cursor-pointer" title="Nomor WhatsApp Notifikasi Darurat SOS">
                         <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
                             <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2zm.01 1.67c4.54 0 8.24 3.7 8.24 8.24 0 2.2-.86 4.28-2.42 5.84a8.19 8.19 0 0 1-5.82 2.41c-1.46 0-2.9-.38-4.17-1.11l-.3-.17-3.1.81.83-3.02-.2-.31a8.16 8.16 0 0 1-1.25-4.45c0-4.54 3.7-8.24 8.24-8.24zm4.51 11.66c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.13-1.06-.39-2.02-1.24-.75-.67-1.26-1.49-1.41-1.74-.15-.25-.02-.39.11-.51.11-.11.25-.29.37-.43.13-.15.17-.25.25-.42.08-.17.04-.32-.02-.45-.06-.13-.56-1.35-.77-1.84-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.44.06-.67.31-.23.25-.88.86-.88 2.1 0 1.24.9 2.44 1.03 2.61.13.17 1.77 2.7 4.29 3.79.6.26 1.07.41 1.43.53.6.19 1.15.16 1.58.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.15-1.18-.06-.11-.22-.18-.47-.31z"/>
@@ -662,6 +671,9 @@
     <x-image-lightbox />
     <x-change-password-modal />
     <x-whatsapp-contact-modal />
+    @if($role === 'guru-pembimbing')
+        <x-teacher.profile-modal />
+    @endif
 
     @stack('scripts')
 </body>

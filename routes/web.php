@@ -370,6 +370,9 @@ Route::middleware(['auth', 'IdentifyTenant', 'role:guru-pembimbing'])->prefix('g
 
     // Peta Interaktif Sebaran Siswa PKL Bimbingan & DU/DI
     Route::get('/peta-sebaran', [PklMapController::class, 'guruMap'])->name('guru.map');
+
+    // Update Profil Mandiri Guru Pembimbing (Nama, NIP, Nomor HP/WA)
+    Route::post('/profile', [TeacherController::class, 'updateProfile'])->name('guru.profile.update');
 });
 
 // 4.1 Kepala Jurusan / Kepala Program Keahlian Routes

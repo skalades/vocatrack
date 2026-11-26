@@ -278,6 +278,12 @@ class AuthController extends Controller
             'notification_preferences' => $validated['notification_preferences'] ?? $user->notification_preferences,
         ]);
 
+        if ($user->profile) {
+            $user->profile->update(['phone' => $wa]);
+        } else {
+            $user->profile()->create(['phone' => $wa]);
+        }
+
         AuditLogService::log(
             action: 'profile_contact_updated',
             module: 'profile',
