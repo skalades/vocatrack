@@ -124,7 +124,7 @@ class Student extends Model
         $targetDate = $date ?? \Carbon\Carbon::today();
         $query = $this->studentPkls()
             ->whereIn('status', ['assigned', 'active'])
-            ->with(array_unique(array_merge(['pklPeriod'], $relations)))
+            ->with(array_unique(array_merge(['pklPeriod', 'company'], $relations)))
             ->orderByDesc('start_date')
             ->orderByDesc('id');
 

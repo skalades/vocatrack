@@ -249,7 +249,7 @@
                                 <span class="text-[10px] text-slate-500 font-mono whitespace-nowrap block mt-0.5">
                                     {{ $sp->effective_start_date ? $sp->effective_start_date->format('d M Y') : '-' }} &rarr; {{ $sp->effective_end_date ? $sp->effective_end_date->format('d M Y') : '-' }}
                                 </span>
-                                @if($sp->start_date || $sp->end_date)
+                                @if($sp->start_date || $sp->end_date || $sp->company?->default_start_date || $sp->company?->default_end_date)
                                     <span class="inline-flex items-center px-1.5 py-0.2 rounded text-[9px] font-bold bg-purple-50 text-purple-700 border border-purple-200 mt-0.5">
                                         Jadwal Khusus DU/DI
                                     </span>

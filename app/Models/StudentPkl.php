@@ -35,12 +35,28 @@ class StudentPkl extends Model
 
     public function getEffectiveStartDateAttribute(): ?\Carbon\Carbon
     {
-        return $this->start_date ? \Carbon\Carbon::parse($this->start_date) : $this->pklPeriod?->start_date;
+        if ($this->start_date) {
+            return \Carbon\Carbon::parse($this->start_date);
+        }
+
+        if ($this->company?->default_start_date) {
+            return \Carbon\Carbon::parse($this->company->default_start_date);
+        }
+
+        return $this->pklPeriod?->start_date;
     }
 
     public function getEffectiveEndDateAttribute(): ?\Carbon\Carbon
     {
-        return $this->end_date ? \Carbon\Carbon::parse($this->end_date) : $this->pklPeriod?->end_date;
+        if ($this->end_date) {
+            return \Carbon\Carbon::parse($this->end_date);
+        }
+
+        if ($this->company?->default_end_date) {
+            return \Carbon\Carbon::parse($this->company->default_end_date);
+        }
+
+        return $this->pklPeriod?->end_date;
     }
 
     /**

@@ -91,13 +91,13 @@ class PlottingController extends BaseAdminSekolahController
             $plottedRecords = StudentPkl::where('school_id', $schoolId)
                 ->where('pkl_period_id', $selectedPeriodId)
                 ->whereNotIn('status', ['withdrawn', 'canceled'])
-                ->with('company')
+                ->with(['company', 'pklPeriod'])
                 ->orderBy('start_date')
                 ->get();
             foreach ($plottedRecords as $pr) {
                 $label = $pr->company->name ?? 'DU/DI';
-                if ($pr->start_date && $pr->end_date) {
-                    $label .= ' (' . $pr->start_date->format('d/m') . '-' . $pr->end_date->format('d/m') . ')';
+                if ($pr->effective_start_date && $pr->effective_end_date) {
+                    $label .= ' (' . $pr->effective_start_date->format('d/m') . '-' . $pr->effective_end_date->format('d/m') . ')';
                 }
                 $plottedMap[$pr->student_id][] = $label;
             }

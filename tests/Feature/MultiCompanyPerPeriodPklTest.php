@@ -336,4 +336,47 @@ class MultiCompanyPerPeriodPklTest extends TestCase
 
         Carbon::setTestNow();
     }
+
+    public function test_existing_placement_inherits_company_default_dates_for_second_company_plotting(): void
+    {
+        $this->actingAs($this->adminUser);
+
+        // Penempatan awal (seperti hasil seeder) tanpa start_date/end_date eksplisit
+        $spklA = StudentPkl::create([
+            'school_id' => $this->school->id,
+            'student_id' => $this->student->id,
+            'company_id' => $this->companyA->id,
+            'pkl_period_id' => $this->period->id,
+            'teacher_id' => $this->teacher->id,
+            'status' => 'active',
+        ]);
+
+        // Admin mengatur Tanggal Mulai/Selesai DU/DI pada PT Perusahaan A menjadi Des 2026
+        $this->put(route('adminsekolah.companies.update', $this->companyA), [
+            'name' => $this->companyA->name,
+            'address' => $this->companyA->address,
+            'contact_person' => $this->companyA->contact_person,
+            'phone' => $this->companyA->phone,
+            'work_days' => '5_days',
+            'default_start_date' => '2026-12-01',
+            'default_end_date' => '2026-12-31',
+        ])->assertSessionHasNoErrors();
+
+        $spklA->refresh();
+        $this->assertEquals('2026-12-01', $spklA->effective_start_date?->toDateString());
+        $this->assertEquals('2026-12-31', $spklA->effective_end_date?->toDateString());
+
+        // Sekarang siswa bisa langsung diplot ke PT Perusahaan B untuk Jan-Mar 2027 tanpa error tabrakan
+        $resB = $this->post(route('adminsekolah.plotting.store'), [
+            'student_id' => $this->student->id,
+            'company_id' => $this->companyB->id,
+            'pkl_period_id' => $this->period->id,
+            'teacher_id' => $this->teacher->id,
+            'start_date' => '2027-01-01',
+            'end_date' => '2027-03-31',
+        ]);
+        $resB->assertSessionHasNoErrors();
+
+        $this->assertEquals(2, StudentPkl::where('student_id', $this->student->id)->count());
+    }
 }

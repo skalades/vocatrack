@@ -119,6 +119,9 @@ class CompanyController extends BaseAdminSekolahController
         abort_if($company->school_id !== $schoolId, 403);
 
         DB::transaction(function () use ($request, $company) {
+            $oldDefaultStart = $company->default_start_date?->toDateString();
+            $oldDefaultEnd = $company->default_end_date?->toDateString();
+
             $schedule = Company::extractSchedulePayload($request);
 
             $company->update(array_merge([
@@ -135,6 +138,32 @@ class CompanyController extends BaseAdminSekolahController
                 'longitude' => $request->longitude,
                 'radius_meters' => $request->radius_meters ?? 100,
             ], $schedule));
+
+            $newDefaultStart = $company->default_start_date?->toDateString();
+            $newDefaultEnd = $company->default_end_date?->toDateString();
+
+            // Sinkronkan penempatan aktif yang masih memakai tanggal default perusahaan sebelumnya
+            if ($oldDefaultStart !== $newDefaultStart || $oldDefaultEnd !== $newDefaultEnd) {
+                $company->studentPkls()
+                    ->where('status', 'active')
+                    ->get()
+                    ->each(function (StudentPkl $spkl) use ($oldDefaultStart, $oldDefaultEnd, $newDefaultStart, $newDefaultEnd) {
+                        $updates = [];
+                        $curStart = $spkl->start_date?->toDateString();
+                        $curEnd = $spkl->end_date?->toDateString();
+
+                        if ($oldDefaultStart !== $newDefaultStart && ($curStart === null || $curStart === $oldDefaultStart)) {
+                            $updates['start_date'] = $newDefaultStart;
+                        }
+                        if ($oldDefaultEnd !== $newDefaultEnd && ($curEnd === null || $curEnd === $oldDefaultEnd)) {
+                            $updates['end_date'] = $newDefaultEnd;
+                        }
+
+                        if (!empty($updates)) {
+                            $spkl->update($updates);
+                        }
+                    });
+            }
 
             $company->majors()->sync($request->major_ids ?? []);
         });
