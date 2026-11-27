@@ -174,8 +174,13 @@
                             </td>
                             <td class="py-3.5 px-4">
                                 <span class="font-semibold text-slate-800 block">
-                                    {{ $cp->work_days === '7_days' ? '7 Hari (On-Project)' : ($cp->work_days === '6_days' ? '6 Hari (Sen-Sab)' : '5 Hari (Sen-Jum)') }}
+                                    {{ $cp->work_days_label }}
                                 </span>
+                                @if($cp->custom_work_hours_summary)
+                                    <span class="block text-[10.5px] text-indigo-700 font-semibold mt-0.5">
+                                        {{ $cp->custom_work_hours_summary }}
+                                    </span>
+                                @endif
                                 <div class="flex items-center gap-1.5 flex-wrap mt-1">
                                     <span class="inline-flex items-center text-[10px] {{ $cp->is_pkl_started ? 'text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200/60' : 'text-slate-600 font-bold bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200' }}" title="{{ $cp->is_pkl_started ? 'Pelaksanaan PKL Sudah Mulai: Seluruh kewajiban aktif' : 'Belum Mulai PKL: Siswa dianulir dari kewajiban presensi & tidak dicatat alfa' }}">
                                         <span class="w-1.5 h-1.5 rounded-full {{ $cp->is_pkl_started ? 'bg-emerald-500' : 'bg-slate-400' }} mr-1 shrink-0"></span>
@@ -211,6 +216,9 @@
                                         'contact_person' => $cp->contact_person,
                                         'phone' => $cp->phone,
                                         'work_days' => $cp->work_days,
+                                        'custom_work_days' => $cp->custom_work_days ?? [],
+                                        'override_hours' => (bool) $cp->override_hours,
+                                        'custom_work_hours' => $cp->custom_work_hours ?? [],
                                         'default_start_date' => $cp->default_start_date ? $cp->default_start_date->format('Y-m-d') : null,
                                         'default_end_date' => $cp->default_end_date ? $cp->default_end_date->format('Y-m-d') : null,
                                         'requires_industry_approval' => (bool) $cp->requires_industry_approval,
@@ -373,15 +381,7 @@
                 </div>
             </div>
 
-            <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1.5">Hari Kerja Mingguan</label>
-                <select name="work_days" 
-                        class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-semibold text-slate-900">
-                    <option value="5_days">5 Hari Kerja (Senin s.d. Jumat)</option>
-                    <option value="6_days">6 Hari Kerja (Senin s.d. Sabtu)</option>
-                    <option value="7_days">7 Hari Penuh (Senin s.d. Minggu / On Project)</option>
-                </select>
-            </div>
+            <x-company-schedule-fields prefix="add" accent="indigo" />
 
             <!-- Jadwal Default Magang DU/DI -->
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 rounded-2xl bg-indigo-50/50 border border-indigo-100">
@@ -607,15 +607,7 @@
                     </div>
                 </div>
 
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1.5">Hari Kerja Mingguan</label>
-                    <select name="work_days" id="edit-work-days" 
-                            class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-semibold text-slate-900">
-                        <option value="5_days">5 Hari Kerja (Senin s.d. Jumat)</option>
-                        <option value="6_days">6 Hari Kerja (Senin s.d. Sabtu)</option>
-                        <option value="7_days">7 Hari Penuh (Senin s.d. Minggu / On Project)</option>
-                    </select>
-                </div>
+                <x-company-schedule-fields prefix="edit" accent="indigo" />
 
                 <!-- Jadwal Default Magang DU/DI -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 rounded-2xl bg-indigo-50/50 border border-indigo-100">
@@ -1226,7 +1218,7 @@
         document.getElementById('edit-address').value = data.address || '';
         document.getElementById('edit-contact-person').value = data.contact_person || '';
         document.getElementById('edit-phone').value = data.phone || '';
-        document.getElementById('edit-work-days').value = data.work_days || '5_days';
+        window.populateCompanyScheduleFields('edit', data);
         document.getElementById('edit-start-date').value = data.default_start_date || '';
         document.getElementById('edit-end-date').value = data.default_end_date || '';
 

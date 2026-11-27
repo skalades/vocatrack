@@ -84,17 +84,19 @@ class ParentMonitoringService
     {
         $today = Carbon::today()->toDateString();
 
-        // Ambil penugasan PKL aktif atau penugasan terakhir
-        $spkl = $student->studentPkls()
-            ->with([
-                'company',
-                'pklPeriod',
-                'teacher.user',
-                'supervisor.user',
-            ])
-            ->whereIn('status', ['active', 'assigned', 'completed'])
-            ->latest()
-            ->first();
+        // Ambil penugasan PKL yang aktif hari ini, atau fallback ke penugasan terakhir
+        $relations = [
+            'company',
+            'pklPeriod',
+            'teacher.user',
+            'supervisor.user',
+        ];
+        $spkl = $student->resolveActivePkl(Carbon::today(), $relations)
+            ?? $student->studentPkls()
+                ->with($relations)
+                ->whereIn('status', ['active', 'assigned', 'completed'])
+                ->latest('id')
+                ->first();
 
         if (!$spkl) {
             return [

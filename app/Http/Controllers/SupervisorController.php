@@ -30,14 +30,16 @@ class SupervisorController extends Controller
         $supervisor = $this->getSupervisor();
         $company = $supervisor->company;
 
+        $today = Carbon::today();
         $studentPkls = StudentPkl::where('company_id', $company->id)
-            ->with(['student.user', 'student.class'])
-            ->get();
+            ->with(['student.user', 'student.class', 'pklPeriod'])
+            ->get()
+            ->filter(fn (StudentPkl $sp) => $sp->status === 'active' && $sp->coversDate($today))
+            ->values();
         $spklIds = $studentPkls->pluck('id');
 
-        $today = Carbon::today()->toDateString();
         $todayAttendances = Attendance::whereIn('student_pkl_id', $spklIds)
-            ->where('date', $today)
+            ->where('date', $today->toDateString())
             ->with('studentPkl.student.user')
             ->get();
 
@@ -266,8 +268,10 @@ class SupervisorController extends Controller
     {
         $supervisor = $this->getSupervisor();
         $studentPkls = StudentPkl::where('company_id', $supervisor->company_id)
-            ->with(['student.user', 'student.class.major', 'assessment'])
-            ->get();
+            ->with(['student.user', 'student.class.major', 'assessment', 'pklPeriod'])
+            ->get()
+            ->filter(fn (StudentPkl $sp) => $sp->isAssessmentTarget())
+            ->values();
 
         $schoolId = $studentPkls->first()?->school_id;
         $weightDudi = (float) ($schoolId ? \App\Models\SchoolSetting::where('school_id', $schoolId)->where('key', 'weight_dudi')->value('value') ?? 60 : 60);

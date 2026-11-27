@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class CertificateService
@@ -61,6 +62,15 @@ class CertificateService
      */
     public function generateForStudentPkl(StudentPkl $studentPkl, array $overrides = []): Certificate
     {
+        if (!$studentPkl->isAssessmentTarget()) {
+            $target = StudentPkl::resolveAssessmentTargetForPeriod($studentPkl->student_id, $studentPkl->pkl_period_id);
+            $targetCompany = $target?->company?->name ?? 'penempatan terakhir';
+
+            throw ValidationException::withMessages([
+                'student_pkl_id' => "E-Sertifikat periode ini hanya diterbitkan 1 kali pada penempatan terakhir/utama ({$targetCompany}).",
+            ]);
+        }
+
         return DB::transaction(function () use ($studentPkl, $overrides) {
             $studentPkl->loadMissing(['student.user', 'school', 'company', 'assessment']);
 

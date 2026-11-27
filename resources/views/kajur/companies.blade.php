@@ -59,8 +59,8 @@
                                 {{ substr($c->name, 0, 2) }}
                             </div>
                             <div class="flex items-center gap-1">
-                                <x-badge :variant="$c->work_days === '7_days' ? 'purple' : ($c->work_days === '6_days' ? 'indigo' : 'blue')" size="xs">
-                                    {{ $c->work_days === '7_days' ? '7 Hari (On-Project)' : ($c->work_days === '6_days' ? '6 Hari Kerja' : '5 Hari Kerja') }}
+                                <x-badge :variant="$c->work_days === '7_days' ? 'purple' : ($c->work_days === '6_days' ? 'indigo' : ($c->work_days === 'custom' ? 'amber' : 'blue'))" size="xs">
+                                    {{ $c->work_days_label }}
                                 </x-badge>
                                 @if($c->gps_enabled)
                                     <span class="inline-flex items-center p-1 rounded-md bg-emerald-50 text-emerald-700 text-[10px] font-bold" title="Geofencing GPS Aktif ({{ $c->radius_meters }}m)">
@@ -92,6 +92,12 @@
                                 <span class="text-slate-400">Siswa Aktif:</span>
                                 <span class="font-extrabold text-emerald-700">{{ $c->active_students_count }} Siswa</span>
                             </div>
+                            @if($c->custom_work_hours_summary)
+                                <div class="flex items-center justify-between gap-2">
+                                    <span class="text-slate-400">Jam Khusus:</span>
+                                    <span class="font-semibold text-emerald-700 text-[11px] text-right">{{ $c->custom_work_hours_summary }}</span>
+                                </div>
+                            @endif
                             <div class="flex items-center justify-between">
                                 <span class="text-slate-400">Status PKL:</span>
                                 <span class="inline-flex items-center text-[10.5px] {{ $c->is_pkl_started ? 'text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200/60' : 'text-slate-600 font-bold bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200' }}">
@@ -111,6 +117,9 @@
                                     'contact_person' => $c->contact_person,
                                     'phone' => $c->phone,
                                     'work_days' => $c->work_days,
+                                    'custom_work_days' => $c->custom_work_days ?? [],
+                                    'override_hours' => (bool) $c->override_hours,
+                                    'custom_work_hours' => $c->custom_work_hours ?? [],
                                     'requires_industry_approval' => (bool) $c->requires_industry_approval,
                                     'is_pkl_started' => (bool) $c->is_pkl_started,
                                     'gps_enabled' => $c->gps_enabled,
@@ -186,14 +195,7 @@
                 </div>
             </div>
 
-            <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1.5">Hari Kerja</label>
-                <select name="work_days" class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 font-medium text-slate-900">
-                    <option value="5_days">5 Hari Kerja (Senin - Jumat)</option>
-                    <option value="6_days">6 Hari Kerja (Senin - Sabtu)</option>
-                    <option value="7_days">7 Hari Penuh (Senin - Minggu / On Project)</option>
-                </select>
-            </div>
+            <x-company-schedule-fields prefix="kajur-add" accent="emerald" />
 
             <!-- Section 2: Geofencing GPS (Opsional) -->
             <div class="pt-3 border-t border-slate-100">
@@ -333,14 +335,7 @@
                 </div>
             </div>
 
-            <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1.5">Hari Kerja</label>
-                <select id="edit-work-days" name="work_days" class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 font-medium text-slate-900">
-                    <option value="5_days">5 Hari Kerja (Senin - Jumat)</option>
-                    <option value="6_days">6 Hari Kerja (Senin - Sabtu)</option>
-                    <option value="7_days">7 Hari Penuh (Senin - Minggu / On Project)</option>
-                </select>
-            </div>
+            <x-company-schedule-fields prefix="kajur-edit" accent="emerald" />
 
             <!-- Geofencing GPS Edit -->
             <div class="pt-3 border-t border-slate-100">
@@ -418,7 +413,7 @@
         document.getElementById('edit-address').value = data.address;
         document.getElementById('edit-contact-person').value = data.contact_person;
         document.getElementById('edit-phone').value = data.phone;
-        document.getElementById('edit-work-days').value = data.work_days;
+        window.populateCompanyScheduleFields('kajur-edit', data);
         
         const pklStartedToggle = document.getElementById('edit-is-pkl-started');
         if (pklStartedToggle) {

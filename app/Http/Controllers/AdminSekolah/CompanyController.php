@@ -65,13 +65,14 @@ class CompanyController extends BaseAdminSekolahController
         $schoolId = $this->getSchoolId();
 
         DB::transaction(function () use ($request, $schoolId) {
-            $company = Company::create([
+            $schedule = Company::extractSchedulePayload($request);
+
+            $company = Company::create(array_merge([
                 'school_id' => $schoolId,
                 'name' => $request->name,
                 'address' => $request->address,
                 'contact_person' => $request->contact_person,
                 'phone' => $request->phone,
-                'work_days' => $request->work_days,
                 'default_start_date' => $request->default_start_date,
                 'default_end_date' => $request->default_end_date,
                 'requires_industry_approval' => $request->boolean('requires_industry_approval'),
@@ -80,7 +81,7 @@ class CompanyController extends BaseAdminSekolahController
                 'latitude' => $request->latitude,
                 'longitude' => $request->longitude,
                 'radius_meters' => $request->radius_meters ?? 100,
-            ]);
+            ], $schedule));
 
             if ($request->has('major_ids')) {
                 $company->majors()->sync($request->major_ids);
@@ -118,12 +119,13 @@ class CompanyController extends BaseAdminSekolahController
         abort_if($company->school_id !== $schoolId, 403);
 
         DB::transaction(function () use ($request, $company) {
-            $company->update([
+            $schedule = Company::extractSchedulePayload($request);
+
+            $company->update(array_merge([
                 'name' => $request->name,
                 'address' => $request->address,
                 'contact_person' => $request->contact_person,
                 'phone' => $request->phone,
-                'work_days' => $request->work_days,
                 'default_start_date' => $request->default_start_date,
                 'default_end_date' => $request->default_end_date,
                 'requires_industry_approval' => $request->boolean('requires_industry_approval'),
@@ -132,7 +134,7 @@ class CompanyController extends BaseAdminSekolahController
                 'latitude' => $request->latitude,
                 'longitude' => $request->longitude,
                 'radius_meters' => $request->radius_meters ?? 100,
-            ]);
+            ], $schedule));
 
             $company->majors()->sync($request->major_ids ?? []);
         });

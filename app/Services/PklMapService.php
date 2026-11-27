@@ -21,15 +21,14 @@ class PklMapService
     public function getMapData(int $schoolId, array $filters = [], ?int $teacherId = null): array
     {
         $date = $filters['date'] ?? Carbon::today()->toDateString();
+        $dateObj = Carbon::parse($date);
         $isToday = ($date === Carbon::today()->toDateString());
         $isPast = ($date < Carbon::today()->toDateString());
 
-        // Ambil batas waktu alfa sekolah
-        $checkinAlfaTime = SchoolSetting::where('school_id', $schoolId)
-            ->where('key', 'checkin_alfa')
-            ->value('value') ?? '11:00:00';
+        $attendanceService = app(AttendanceService::class);
+        $holidayService = app(HolidayService::class);
+        $isSchoolHoliday = $holidayService->isHoliday($schoolId, $dateObj);
         $currentTime = Carbon::now()->format('H:i:s');
-        $isPastAlfaCutoff = $isToday ? ($currentTime >= $checkinAlfaTime) : $isPast;
 
         // Query Perusahaan milik sekolah
         $companyQuery = Company::where('school_id', $schoolId);
@@ -55,6 +54,7 @@ class PklMapService
             'studentPkls.student.user.profile',
             'studentPkls.student.class.major',
             'studentPkls.teacher.user',
+            'studentPkls.pklPeriod',
             'studentPkls.attendances' => function ($q) use ($date) {
                 $q->forDate($date);
             },
@@ -82,8 +82,8 @@ class PklMapService
             $hasCoords = !is_null($company->latitude) && !is_null($company->longitude)
                 && ($company->latitude != 0 || $company->longitude != 0);
 
-            // Filter siswa berdasarkan Jurusan dan Rombel jika diterapkan
-            $spkls = $company->studentPkls;
+            // Filter siswa berdasarkan rentang tanggal aktif penempatan, Jurusan, dan Rombel
+            $spkls = $company->studentPkls->filter(fn (StudentPkl $s) => $s->coversDate($dateObj));
 
             if (!empty($filters['major_id']) && $filters['major_id'] !== 'all') {
                 $spkls = $spkls->filter(fn($s) => $s->student?->class?->major_id == $filters['major_id']);
@@ -121,8 +121,15 @@ class PklMapService
             $izinSakitCount = 0;
             $alfaCount = 0;
             $belumAbsenCount = 0;
+            $liburCount = 0;
             $companyHasOpenIncident = false;
             $incidentSubjects = [];
+
+            $companyWorkHours = $attendanceService->resolveWorkHours($company, $schoolId);
+            $companyAlfaCutoff = $companyWorkHours['checkin_alfa'] ?? '11:00:00';
+            $isPastCompanyAlfaCutoff = $isToday ? ($currentTime >= $companyAlfaCutoff) : $isPast;
+            $isCompanyWorkDay = $company->isWorkDay($dateObj);
+            $isCompanyHoliday = $isSchoolHoliday && !$company->worksOnHolidays();
 
             $studentsList = [];
 
@@ -148,10 +155,12 @@ class PklMapService
                     $isWithinRadius = null;
                     if (!$company->is_pkl_started) {
                         $status = 'belum_mulai';
+                    } elseif ($isCompanyHoliday || !$isCompanyWorkDay) {
+                        $status = 'libur';
                     } elseif ($isPast) {
                         $status = 'alfa';
                     } elseif ($isToday) {
-                        $status = $isPastAlfaCutoff ? 'alfa' : 'belum_absen';
+                        $status = $isPastCompanyAlfaCutoff ? 'alfa' : 'belum_absen';
                     } else {
                         $status = 'belum_mulai';
                     }
@@ -163,6 +172,7 @@ class PklMapService
                     'terlambat' => $terlambatCount++,
                     'izin', 'sakit' => $izinSakitCount++,
                     'alfa' => $alfaCount++,
+                    'libur' => $liburCount++,
                     default => $belumAbsenCount++,
                 };
 
@@ -191,6 +201,12 @@ class PklMapService
                 $pinStatus = 'gray';
                 $pinLabel = 'PKL Belum Dimulai';
                 $pinDetail = "{$totalStudents} Siswa (Jadwal PKL Belum Dimulai).";
+                $pinColor = '#94a3b8'; // Slate-400
+                $grayCount++;
+            } elseif ($liburCount === $totalStudents && !$companyHasOpenIncident) {
+                $pinStatus = 'gray';
+                $pinLabel = 'Hari Libur / Off';
+                $pinDetail = "{$totalStudents} Siswa (Libur Sekolah / Jadwal Off DU/DI).";
                 $pinColor = '#94a3b8'; // Slate-400
                 $grayCount++;
             } elseif ($alfaCount > 0 || $companyHasOpenIncident) {

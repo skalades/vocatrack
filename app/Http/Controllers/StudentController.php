@@ -44,19 +44,21 @@ class StudentController extends Controller
             return null;
         }
 
-        $query = $student->studentPkls()
-            ->with(['student.class.major', 'company', 'teacher.user', 'supervisor.user', 'pklPeriod'])
-            ->latest();
+        $relations = ['student.class.major', 'company', 'teacher.user', 'supervisor.user', 'pklPeriod'];
+        $activeForToday = $student->resolveActivePkl(Carbon::today(), $relations);
 
         if ($mustBeActive) {
-            $spkl = $query->whereIn('status', ['assigned', 'active'])->first();
-            if ($spkl && !$spkl->isPklActiveToday()) {
-                return null;
-            }
-            return $spkl;
+            return $activeForToday;
         }
 
-        return $query->first();
+        if ($activeForToday) {
+            return $activeForToday;
+        }
+
+        return $student->studentPkls()
+            ->with($relations)
+            ->latest('id')
+            ->first();
     }
 
     /**
@@ -927,8 +929,13 @@ class StudentController extends Controller
             $student->refresh();
         }
 
-        $assessment = $spkl?->assessment;
-        $certificate = $spkl ? Certificate::where('student_pkl_id', $spkl->id)->first() : null;
+        $assessmentTarget = $spkl
+            ? StudentPkl::resolveAssessmentTargetForPeriod($spkl->student_id, $spkl->pkl_period_id)
+            : null;
+        $assessment = $assessmentTarget?->assessment ?? $spkl?->assessment;
+        $certificate = $assessmentTarget
+            ? Certificate::where('student_pkl_id', $assessmentTarget->id)->first()
+            : ($spkl ? Certificate::where('student_pkl_id', $spkl->id)->first() : null);
         $incidents = $spkl ? $incidentService->getIncidentsForStudent($spkl) : collect();
 
         return view('student.profile', compact('spkl', 'student', 'assessment', 'certificate', 'incidents'));

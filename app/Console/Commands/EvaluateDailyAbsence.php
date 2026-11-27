@@ -26,7 +26,7 @@ class EvaluateDailyAbsence extends Command
         $holidaySchoolCache = []; // Cache school holiday status: [school_id => bool]
 
         // Scalable chunking to avoid OOM and batch lookups to prevent N+1 queries
-        StudentPkl::with(['company', 'school'])
+        StudentPkl::with(['company', 'school', 'pklPeriod'])
             ->where('status', 'active')
             ->chunkById(100, function ($activeStudentPkls) use (&$alfaCount, &$holidaySchoolCache, $holidayService, $today, $todayString, $dayOfWeek) {
                 $spklIds = $activeStudentPkls->pluck('id');
@@ -45,6 +45,11 @@ class EvaluateDailyAbsence extends Command
                     ->keyBy('student_pkl_id');
 
                 foreach ($activeStudentPkls as $spkl) {
+                    // Lewati penempatan yang belum masuk tanggal mulai atau sudah melewati tanggal selesai
+                    if (!$spkl->isPklActiveToday()) {
+                        continue;
+                    }
+
                     $company = $spkl->company;
                     if (!$company) {
                         continue;

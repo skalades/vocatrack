@@ -153,12 +153,11 @@ class KajurController extends Controller
         $schoolId = $this->getSchoolId();
         $major = $this->getHeadedMajor();
 
-        $request->validate([
+        $request->validate(array_merge([
             'name' => ['required', 'string', 'max:150'],
             'address' => ['required', 'string'],
             'contact_person' => ['required', 'string', 'max:100'],
             'phone' => ['required', 'string', 'max:20'],
-            'work_days' => ['required', 'in:5_days,6_days,7_days'],
             'requires_industry_approval' => ['nullable', 'boolean'],
             'is_pkl_started' => ['nullable', 'boolean'],
             'gps_enabled' => ['nullable', 'boolean'],
@@ -170,24 +169,25 @@ class KajurController extends Controller
             'supervisor_email' => ['nullable', 'email', 'unique:users,email'],
             'supervisor_phone' => ['nullable', 'string', 'max:20'],
             'supervisor_position' => ['nullable', 'string', 'max:100'],
-        ]);
+        ], Company::scheduleValidationRules()));
 
         DB::transaction(function () use ($request, $schoolId, $major) {
-            $company = Company::create([
+            $schedule = Company::extractSchedulePayload($request);
+
+            $company = Company::create(array_merge([
                 'school_id' => $schoolId,
                 'created_by_user_id' => Auth::id(),
                 'name' => $request->name,
                 'address' => $request->address,
                 'contact_person' => $request->contact_person,
                 'phone' => $request->phone,
-                'work_days' => $request->work_days,
                 'requires_industry_approval' => $request->boolean('requires_industry_approval'),
                 'is_pkl_started' => $request->boolean('is_pkl_started'),
                 'gps_enabled' => (bool) $request->gps_enabled,
                 'latitude' => $request->latitude,
                 'longitude' => $request->longitude,
                 'radius_meters' => $request->radius_meters ?: 100,
-            ]);
+            ], $schedule));
 
             // Hubungkan perusahaan ke jurusan ini secara otomatis
             $company->majors()->syncWithoutDetaching([$major->id]);
@@ -231,33 +231,33 @@ class KajurController extends Controller
         abort_if($company->school_id !== $schoolId, 403);
         abort_if(!$company->majors()->where('majors.id', $major->id)->exists(), 403, 'Perusahaan ini tidak terhubung dengan jurusan Anda.');
 
-        $request->validate([
+        $request->validate(array_merge([
             'name' => ['required', 'string', 'max:150'],
             'address' => ['required', 'string'],
             'contact_person' => ['required', 'string', 'max:100'],
             'phone' => ['required', 'string', 'max:20'],
-            'work_days' => ['required', 'in:5_days,6_days,7_days'],
             'requires_industry_approval' => ['nullable', 'boolean'],
             'is_pkl_started' => ['nullable', 'boolean'],
             'gps_enabled' => ['nullable', 'boolean'],
             'latitude' => ['nullable', 'numeric'],
             'longitude' => ['nullable', 'numeric'],
             'radius_meters' => ['nullable', 'integer', 'min:10', 'max:5000'],
-        ]);
+        ], Company::scheduleValidationRules()));
 
-        $company->update([
+        $schedule = Company::extractSchedulePayload($request);
+
+        $company->update(array_merge([
             'name' => $request->name,
             'address' => $request->address,
             'contact_person' => $request->contact_person,
             'phone' => $request->phone,
-            'work_days' => $request->work_days,
             'requires_industry_approval' => $request->boolean('requires_industry_approval'),
             'is_pkl_started' => $request->boolean('is_pkl_started'),
             'gps_enabled' => (bool) $request->gps_enabled,
             'latitude' => $request->latitude,
             'longitude' => $request->longitude,
             'radius_meters' => $request->radius_meters ?: 100,
-        ]);
+        ], $schedule));
 
         return back()->with('success', "Data mitra perusahaan '{$company->name}' berhasil diperbarui.");
     }
@@ -379,22 +379,65 @@ class KajurController extends Controller
                 'required',
                 Rule::exists('teachers', 'id')->where(fn($q) => $q->whereIn('user_id', User::where('school_id', $schoolId)->pluck('id'))),
             ],
+            'start_date' => ['nullable', 'date'],
+            'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
         ]);
 
         $activePeriod = PklPeriod::where('school_id', $schoolId)->where('is_active', true)->first();
+        $company = Company::where('school_id', $schoolId)->find($request->company_id);
+        $student->loadMissing('class.major');
 
-        StudentPkl::updateOrCreate(
-            [
-                'school_id' => $schoolId,
-                'student_id' => $student->id,
-            ],
-            [
+        $dates = StudentPkl::resolveDefaultPlacementDates(
+            $student,
+            $company,
+            $activePeriod,
+            $request->filled('start_date') ? $request->start_date : null,
+            $request->filled('end_date') ? $request->end_date : null
+        );
+
+        $existingPlacements = StudentPkl::where('school_id', $schoolId)
+            ->where('student_id', $student->id)
+            ->when($activePeriod, fn ($q) => $q->where('pkl_period_id', $activePeriod->id))
+            ->whereNotIn('status', ['withdrawn', 'canceled'])
+            ->get();
+
+        // Backward-compatible update ketika Kajur mengganti DU/DI tunggal tanpa mengisi rentang tanggal rotasi baru
+        if (!$request->filled('start_date') && !$request->filled('end_date') && $existingPlacements->count() === 1) {
+            $existingPlacements->first()->update([
                 'company_id' => $request->company_id,
                 'teacher_id' => $request->teacher_id,
                 'pkl_period_id' => $activePeriod?->id,
+                'start_date' => $dates['start_date'],
+                'end_date' => $dates['end_date'],
                 'status' => 'active',
-            ]
-        );
+            ]);
+        } else {
+            if ($activePeriod) {
+                $overlap = StudentPkl::findOverlappingPlacement(
+                    $student->id,
+                    $activePeriod->id,
+                    $dates['start_date'],
+                    $dates['end_date']
+                );
+                if ($overlap) {
+                    $overlapCompany = $overlap->company?->name ?? 'DU/DI lain';
+                    return back()->withErrors([
+                        'company_id' => "Jadwal penempatan bertabrakan dengan penugasan di {$overlapCompany}. Atur tanggal mulai & selesai agar tidak tumpang tindih."
+                    ]);
+                }
+            }
+
+            StudentPkl::create([
+                'school_id' => $schoolId,
+                'student_id' => $student->id,
+                'company_id' => $request->company_id,
+                'teacher_id' => $request->teacher_id,
+                'pkl_period_id' => $activePeriod?->id,
+                'start_date' => $dates['start_date'],
+                'end_date' => $dates['end_date'],
+                'status' => 'active',
+            ]);
+        }
 
         return back()->with('success', "Penugasan PKL untuk siswa {$student->name} berhasil diperbarui.");
     }
@@ -624,6 +667,7 @@ class KajurController extends Controller
         $classIds = $classes->pluck('id');
 
         $query = StudentPkl::where('school_id', $schoolId)
+            ->onlyAssessmentTargets($schoolId)
             ->whereHas('student', fn($q) => $q->whereIn('class_id', $classIds))
             ->with(['student.user', 'student.schoolClass', 'company', 'teacher.user', 'assessment']);
 

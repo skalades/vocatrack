@@ -297,6 +297,7 @@ class HomeroomClassService
     public function getGradesQuery(int $schoolId, array $classIds): Builder
     {
         return StudentPkl::where('school_id', $schoolId)
+            ->onlyAssessmentTargets($schoolId)
             ->whereHas('student', fn ($q) => $q->whereIn('class_id', $classIds))
             ->with(['student.user', 'student.schoolClass', 'company', 'teacher.user', 'assessment', 'certificate']);
     }

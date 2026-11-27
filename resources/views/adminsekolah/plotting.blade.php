@@ -456,13 +456,12 @@
                                data-class="{{ $st->class_id }}"
                                data-plotted="{{ $st->is_plotted ? '1' : '0' }}"
                                data-search="{{ strtolower($st->user->name . ' ' . $st->nisn) }}"
-                               class="student-row flex items-center justify-between p-2.5 rounded-xl bg-white border border-slate-200 transition-all select-none {{ $st->is_plotted ? 'opacity-60 bg-slate-50 cursor-not-allowed' : 'hover:border-indigo-300 cursor-pointer' }}">
+                               class="student-row flex items-center justify-between p-2.5 rounded-xl bg-white border border-slate-200 transition-all select-none hover:border-indigo-300 cursor-pointer {{ $st->is_plotted ? 'bg-amber-50/30' : '' }}">
                             
                             <div class="flex items-center space-x-2.5 min-w-0">
                                 <input type="checkbox" name="student_ids[]" value="{{ $st->id }}" 
                                        onchange="updateSelectedCount()"
-                                       {{ $st->is_plotted ? 'disabled' : '' }}
-                                       class="student-checkbox w-4 h-4 rounded text-indigo-600 border-slate-300 focus:ring-indigo-500/20 {{ $st->is_plotted ? 'cursor-not-allowed' : 'cursor-pointer' }}">
+                                       class="student-checkbox w-4 h-4 rounded text-indigo-600 border-slate-300 focus:ring-indigo-500/20 cursor-pointer">
                                 
                                 <div class="min-w-0">
                                     <div class="flex items-center space-x-1.5">
@@ -477,8 +476,8 @@
 
                             <div class="shrink-0 text-right">
                                 @if($st->is_plotted)
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200" title="Sudah memiliki penugasan PKL">
-                                        Sudah di {{ Str::limit($st->plotted_company, 15) }}
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium bg-amber-50 text-amber-700 border border-amber-200" title="Sudah memiliki penugasan PKL (bisa ditambah untuk rotasi tanggal berbeda): {{ $st->plotted_company }}">
+                                        {{ Str::limit($st->plotted_company, 22) }}
                                     </span>
                                 @else
                                     <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">

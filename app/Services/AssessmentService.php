@@ -6,14 +6,32 @@ use App\Models\Assessment;
 use App\Models\SchoolSetting;
 use App\Models\StudentPkl;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class AssessmentService
 {
+    /**
+     * Pastikan penilaian hanya disimpan pada 1 penempatan target (terakhir) dalam satu periode PKL.
+     */
+    protected function ensureAssessmentTarget(StudentPkl $spkl): void
+    {
+        if (!$spkl->isAssessmentTarget()) {
+            $target = StudentPkl::resolveAssessmentTargetForPeriod($spkl->student_id, $spkl->pkl_period_id);
+            $targetCompany = $target?->company?->name ?? 'penempatan terakhir';
+
+            throw ValidationException::withMessages([
+                'student_pkl_id' => "Penilaian periode ini hanya dilakukan 1 kali pada penempatan terakhir/utama ({$targetCompany}).",
+            ]);
+        }
+    }
+
     /**
      * Atomically save supervisor assessment with concurrency protection
      */
     public function saveSupervisorAssessment(StudentPkl $spkl, array $data): Assessment
     {
+        $this->ensureAssessmentTarget($spkl);
+
         return DB::transaction(function () use ($spkl, $data) {
             $assessment = Assessment::where('student_pkl_id', $spkl->id)
                 ->lockForUpdate()
@@ -65,6 +83,8 @@ class AssessmentService
      */
     public function saveTeacherAssessment(StudentPkl $spkl, array $data): Assessment
     {
+        $this->ensureAssessmentTarget($spkl);
+
         return DB::transaction(function () use ($spkl, $data) {
             $assessment = Assessment::where('student_pkl_id', $spkl->id)
                 ->lockForUpdate()

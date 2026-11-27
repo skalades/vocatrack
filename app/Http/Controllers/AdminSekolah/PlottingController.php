@@ -90,16 +90,22 @@ class PlottingController extends BaseAdminSekolahController
         if ($selectedPeriodId) {
             $plottedRecords = StudentPkl::where('school_id', $schoolId)
                 ->where('pkl_period_id', $selectedPeriodId)
+                ->whereNotIn('status', ['withdrawn', 'canceled'])
                 ->with('company')
+                ->orderBy('start_date')
                 ->get();
             foreach ($plottedRecords as $pr) {
-                $plottedMap[$pr->student_id] = $pr->company->name ?? 'DU/DI';
+                $label = $pr->company->name ?? 'DU/DI';
+                if ($pr->start_date && $pr->end_date) {
+                    $label .= ' (' . $pr->start_date->format('d/m') . '-' . $pr->end_date->format('d/m') . ')';
+                }
+                $plottedMap[$pr->student_id][] = $label;
             }
         }
 
         $students = $allStudents->map(function ($st) use ($plottedMap) {
             $st->is_plotted = isset($plottedMap[$st->id]);
-            $st->plotted_company = $st->is_plotted ? $plottedMap[$st->id] : null;
+            $st->plotted_company = $st->is_plotted ? implode(', ', $plottedMap[$st->id]) : null;
             return $st;
         });
 
@@ -145,61 +151,63 @@ class PlottingController extends BaseAdminSekolahController
         }
 
         return DB::transaction(function () use ($schoolId, $request, $studentIds) {
-            $alreadyPlotted = StudentPkl::where('school_id', $schoolId)
-                ->where('pkl_period_id', $request->pkl_period_id)
-                ->whereIn('student_id', $studentIds)
-                ->lockForUpdate()
-                ->pluck('student_id')
-                ->toArray();
-
-            if (!empty($alreadyPlotted)) {
-                if (count($studentIds) === 1) {
-                    return back()->withErrors(['student_id' => 'Siswa sudah diplot ke DU/DI pada periode PKL yang sama.']);
-                }
-                return back()->withErrors(['student_id' => count($alreadyPlotted) . ' siswa yang dipilih sudah memiliki penugasan DU/DI di periode ini.']);
-            }
-
             $company = Company::where('school_id', $schoolId)->find($request->company_id);
             $period = PklPeriod::where('school_id', $schoolId)->find($request->pkl_period_id);
 
-            try {
-                foreach ($studentIds as $sId) {
-                    $student = Student::with('class.major')->find($sId);
-                    $major = $student?->class?->major;
+            $placementsToCreate = [];
 
-                    $resolvedStartDate = $request->filled('start_date')
-                        ? $request->start_date
-                        : ($company?->default_start_date?->toDateString() ?? $period?->start_date?->toDateString());
+            foreach ($studentIds as $sId) {
+                $student = Student::with(['user', 'class.major'])->find($sId);
 
-                    $resolvedEndDate = $request->filled('end_date')
-                        ? $request->end_date
-                        : ($company?->default_end_date?->toDateString() ?? null);
+                $dates = StudentPkl::resolveDefaultPlacementDates(
+                    $student,
+                    $company,
+                    $period,
+                    $request->filled('start_date') ? $request->start_date : null,
+                    $request->filled('end_date') ? $request->end_date : null
+                );
+                $resolvedStartDate = $dates['start_date'];
+                $resolvedEndDate = $dates['end_date'];
 
-                    if (!$resolvedEndDate && $resolvedStartDate && $major?->default_pkl_duration_months) {
-                        $resolvedEndDate = Carbon::parse($resolvedStartDate)
-                            ->addMonths($major->default_pkl_duration_months)
-                            ->toDateString();
-                    }
+                // Lock existing rows for this student in this period to prevent race conditions
+                StudentPkl::where('school_id', $schoolId)
+                    ->where('pkl_period_id', $request->pkl_period_id)
+                    ->where('student_id', $sId)
+                    ->lockForUpdate()
+                    ->get();
 
-                    $resolvedEndDate = $resolvedEndDate ?? $period?->end_date?->toDateString();
+                $overlap = StudentPkl::findOverlappingPlacement(
+                    (int) $sId,
+                    (int) $request->pkl_period_id,
+                    $resolvedStartDate,
+                    $resolvedEndDate
+                );
 
-                    StudentPkl::create([
-                        'school_id' => $schoolId,
-                        'student_id' => $sId,
-                        'company_id' => $request->company_id,
-                        'pkl_period_id' => $request->pkl_period_id,
-                        'teacher_id' => $request->teacher_id,
-                        'supervisor_id' => $request->supervisor_id,
-                        'start_date' => $resolvedStartDate,
-                        'end_date' => $resolvedEndDate,
-                        'status' => 'active',
-                    ]);
+                if ($overlap) {
+                    $studentName = $student?->user?->name ?? 'Siswa';
+                    $overlapCompany = $overlap->company?->name ?? 'DU/DI lain';
+                    $overlapRange = ($overlap->effective_start_date?->format('d M Y') ?? '?') . ' - ' . ($overlap->effective_end_date?->format('d M Y') ?? '?');
+
+                    return back()->withErrors([
+                        'student_id' => "{$studentName} sudah memiliki penempatan yang jadwalnya bertabrakan di {$overlapCompany} ({$overlapRange}). Atur tanggal mulai & selesai agar tidak tumpang tindih."
+                    ])->withInput();
                 }
-            } catch (QueryException $e) {
-                if (str_contains($e->getMessage(), 'UNIQUE') || str_contains($e->getMessage(), 'Integrity constraint violation')) {
-                    return back()->withErrors(['student_id' => 'Siswa sudah diplot ke DU/DI pada periode PKL yang sama.']);
-                }
-                throw $e;
+
+                $placementsToCreate[] = [
+                    'school_id' => $schoolId,
+                    'student_id' => $sId,
+                    'company_id' => $request->company_id,
+                    'pkl_period_id' => $request->pkl_period_id,
+                    'teacher_id' => $request->teacher_id,
+                    'supervisor_id' => $request->supervisor_id,
+                    'start_date' => $resolvedStartDate,
+                    'end_date' => $resolvedEndDate,
+                    'status' => 'active',
+                ];
+            }
+
+            foreach ($placementsToCreate as $payload) {
+                StudentPkl::create($payload);
             }
 
             $count = count($studentIds);
@@ -237,6 +245,28 @@ class PlottingController extends BaseAdminSekolahController
         }
         if ($request->has('end_date')) {
             $updateData['end_date'] = $request->end_date ?: null;
+        }
+
+        $effectiveStart = array_key_exists('start_date', $updateData)
+            ? ($updateData['start_date'] ?? $studentPkl->pklPeriod?->start_date?->toDateString())
+            : $studentPkl->effective_start_date?->toDateString();
+        $effectiveEnd = array_key_exists('end_date', $updateData)
+            ? ($updateData['end_date'] ?? $studentPkl->pklPeriod?->end_date?->toDateString())
+            : $studentPkl->effective_end_date?->toDateString();
+
+        $overlap = StudentPkl::findOverlappingPlacement(
+            $studentPkl->student_id,
+            $studentPkl->pkl_period_id,
+            $effectiveStart,
+            $effectiveEnd,
+            $studentPkl->id
+        );
+
+        if ($overlap) {
+            $overlapCompany = $overlap->company?->name ?? 'DU/DI lain';
+            return back()->withErrors([
+                'start_date' => "Rentang tanggal bertabrakan dengan penempatan lain di {$overlapCompany}."
+            ]);
         }
 
         $studentPkl->update($updateData);

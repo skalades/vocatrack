@@ -109,6 +109,27 @@ class Student extends Model
 
     public function activePkl(): HasOne
     {
-        return $this->hasOne(StudentPkl::class)->where('status', 'active');
+        return $this->hasOne(StudentPkl::class)
+            ->where('status', 'active')
+            ->orderByRaw('CASE WHEN (start_date IS NULL OR start_date <= CURRENT_DATE) AND (end_date IS NULL OR end_date >= CURRENT_DATE) THEN 0 ELSE 1 END ASC')
+            ->latest('id');
+    }
+
+    /**
+     * Mengambil penempatan PKL yang sedang aktif pada tanggal tertentu
+     * (mendukung skenario multi-perusahaan dalam satu periode PKL).
+     */
+    public function resolveActivePkl(?\Carbon\Carbon $date = null, array $relations = []): ?StudentPkl
+    {
+        $targetDate = $date ?? \Carbon\Carbon::today();
+        $query = $this->studentPkls()
+            ->whereIn('status', ['assigned', 'active'])
+            ->with(array_unique(array_merge(['pklPeriod'], $relations)))
+            ->orderByDesc('start_date')
+            ->orderByDesc('id');
+
+        $candidates = $query->get();
+
+        return $candidates->first(fn (StudentPkl $spkl) => $spkl->coversDate($targetDate));
     }
 }

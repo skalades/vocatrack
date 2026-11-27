@@ -115,7 +115,7 @@ class TeacherController extends Controller
             $state = 'belum';
             if ($att) {
                 $state = $att->status;
-            } elseif ($company && !$company->is_pkl_started) {
+            } elseif ($sp->status !== 'active' || !$sp->coversDate($today) || ($company && !$company->is_pkl_started)) {
                 $state = 'belum_mulai';
             } elseif ($isSchoolHoliday && !$company?->worksOnHolidays()) {
                 $state = 'libur';
@@ -713,8 +713,10 @@ class TeacherController extends Controller
     {
         $teacher = $this->getTeacher();
         $studentPkls = StudentPkl::where('teacher_id', $teacher->id)
-            ->with(['student.user', 'student.class.major', 'company', 'assessment'])
-            ->get();
+            ->with(['student.user', 'student.class.major', 'company', 'assessment', 'pklPeriod'])
+            ->get()
+            ->filter(fn (StudentPkl $sp) => $sp->isAssessmentTarget())
+            ->values();
 
         $weightDudi = (float) (\App\Models\SchoolSetting::where('school_id', $teacher->school_id)->where('key', 'weight_dudi')->value('value') ?? 60);
         $weightGuru = (float) (\App\Models\SchoolSetting::where('school_id', $teacher->school_id)->where('key', 'weight_guru')->value('value') ?? 40);
