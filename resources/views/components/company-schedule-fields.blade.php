@@ -69,7 +69,7 @@
             </label>
         </div>
 
-        <div id="{{ $prefix }}-custom-hours-box" class="hidden grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-2.5 border-t border-slate-200/60">
+        <div id="{{ $prefix }}-custom-hours-box" class="hidden grid grid-cols-2 gap-3 pt-2.5 border-t border-slate-200/60">
             <div>
                 <label class="block text-[10px] font-bold text-slate-600 mb-1">Mulai Masuk</label>
                 <x-time-24-input name="checkin_start" id="{{ $prefix }}-checkin-start" value="06:00" :required="true" />

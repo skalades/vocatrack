@@ -27,47 +27,45 @@
         : '';
 @endphp
 
-<div class="inline-flex w-full items-center justify-between gap-1 px-2.5 py-1.5 rounded-xl border font-mono text-xs font-bold {{ $wrapperClass }}"
+<div class="inline-flex w-full items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-xl border font-mono text-xs font-bold {{ $wrapperClass }}"
      data-time24-root="{{ $inputId }}"
      data-with-seconds="{{ $withSeconds ? '1' : '0' }}"
      data-required="{{ $required ? '1' : '0' }}">
     <input type="hidden" name="{{ $name }}" id="{{ $inputId }}" value="{{ $normalizedValue }}">
 
-    <div class="flex items-center gap-1 min-w-0">
-        <select id="{{ $inputId }}_hour"
-                aria-label="Jam (00-23)"
-                onchange="window.syncTime24FromSelects('{{ $inputId }}')"
-                class="bg-transparent border-0 p-0 pr-1 text-xs font-mono font-bold focus:ring-0 focus:outline-none cursor-pointer">
-            @unless($required)
-                <option value="" {{ $initHour === '' ? 'selected' : '' }}>--</option>
-            @endunless
-            @for($h = 0; $h <= 23; $h++)
-                @php $hh = str_pad((string) $h, 2, '0', STR_PAD_LEFT); @endphp
-                <option value="{{ $hh }}" {{ $initHour === $hh ? 'selected' : '' }}>{{ $hh }}</option>
-            @endfor
-        </select>
+    <select id="{{ $inputId }}_hour"
+            aria-label="Jam (00-23)"
+            onchange="window.syncTime24FromSelects('{{ $inputId }}')"
+            style="background-image: none;"
+            class="appearance-none bg-none bg-slate-100/80 hover:bg-slate-200/70 border border-slate-200/70 rounded-lg px-2.5 py-1 text-center text-xs font-mono font-bold focus:ring-2 focus:ring-indigo-500/20 focus:outline-none cursor-pointer">
+        @unless($required)
+            <option value="" {{ $initHour === '' ? 'selected' : '' }}>--</option>
+        @endunless
+        @for($h = 0; $h <= 23; $h++)
+            @php $hh = str_pad((string) $h, 2, '0', STR_PAD_LEFT); @endphp
+            <option value="{{ $hh }}" {{ $initHour === $hh ? 'selected' : '' }}>{{ $hh }}</option>
+        @endfor
+    </select>
 
-        <span class="opacity-60 select-none">:</span>
+    <span class="opacity-60 select-none font-extrabold">:</span>
 
-        <select id="{{ $inputId }}_minute"
-                aria-label="Menit (00-59)"
-                onchange="window.syncTime24FromSelects('{{ $inputId }}')"
-                class="bg-transparent border-0 p-0 pr-1 text-xs font-mono font-bold focus:ring-0 focus:outline-none cursor-pointer">
-            @unless($required)
-                <option value="" {{ $initMinute === '' ? 'selected' : '' }}>--</option>
-            @endunless
-            @for($m = 0; $m <= 59; $m++)
-                @php $mm = str_pad((string) $m, 2, '0', STR_PAD_LEFT); @endphp
-                <option value="{{ $mm }}" {{ $initMinute === $mm ? 'selected' : '' }}>{{ $mm }}</option>
-            @endfor
-        </select>
+    <select id="{{ $inputId }}_minute"
+            aria-label="Menit (00-59)"
+            onchange="window.syncTime24FromSelects('{{ $inputId }}')"
+            style="background-image: none;"
+            class="appearance-none bg-none bg-slate-100/80 hover:bg-slate-200/70 border border-slate-200/70 rounded-lg px-2.5 py-1 text-center text-xs font-mono font-bold focus:ring-2 focus:ring-indigo-500/20 focus:outline-none cursor-pointer">
+        @unless($required)
+            <option value="" {{ $initMinute === '' ? 'selected' : '' }}>--</option>
+        @endunless
+        @for($m = 0; $m <= 59; $m++)
+            @php $mm = str_pad((string) $m, 2, '0', STR_PAD_LEFT); @endphp
+            <option value="{{ $mm }}" {{ $initMinute === $mm ? 'selected' : '' }}>{{ $mm }}</option>
+        @endfor
+    </select>
 
-        @if($withSeconds)
-            <span class="opacity-50 select-none text-[11px]">:{{ $initSecond }}</span>
-        @endif
-    </div>
-
-    <span class="text-[9.5px] font-sans font-extrabold uppercase tracking-wider opacity-50 select-none shrink-0">WIB</span>
+    @if($withSeconds)
+        <span class="opacity-50 select-none text-[11px]">:{{ $initSecond }}</span>
+    @endif
 </div>
 
 @once
