@@ -84,19 +84,17 @@
             <!-- 3. Jam Masuk & Jam Pulang -->
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80">
                 <div>
-                    <label for="override_checkin_time" class="block text-[11px] font-bold text-slate-700 mb-1">
+                    <label for="override_checkin_time_hour" class="block text-[11px] font-bold text-slate-700 mb-1">
                         Jam Masuk (WIB)
                     </label>
-                    <input type="time" name="checkin_time" id="override_checkin_time" value="07:30" 
-                           class="w-full text-xs px-3 py-2 rounded-xl bg-white border border-slate-200 font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600">
+                    <x-time-24-input name="checkin_time" id="override_checkin_time" value="07:30" />
                     <p class="text-[9.5px] text-slate-400 mt-0.5">Default 07:30 WIB jika hadir.</p>
                 </div>
                 <div>
-                    <label for="override_checkout_time" class="block text-[11px] font-bold text-slate-700 mb-1">
+                    <label for="override_checkout_time_hour" class="block text-[11px] font-bold text-slate-700 mb-1">
                         Jam Pulang (Opsional)
                     </label>
-                    <input type="time" name="checkout_time" id="override_checkout_time" 
-                           class="w-full text-xs px-3 py-2 rounded-xl bg-white border border-slate-200 font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600">
+                    <x-time-24-input name="checkout_time" id="override_checkout_time" value="" />
                     <p class="text-[9.5px] text-slate-400 mt-0.5">Bisa dikosongkan jika belum pulang.</p>
                 </div>
             </div>
@@ -155,13 +153,14 @@
                 statusEl.value = status;
             }
         }
-        const inEl = document.getElementById('override_checkin_time');
-        if (inEl) {
-            inEl.value = checkinTime || '07:30';
-        }
-        const outEl = document.getElementById('override_checkout_time');
-        if (outEl) {
-            outEl.value = checkoutTime || '';
+        if (typeof window.setTime24Value === 'function') {
+            window.setTime24Value('override_checkin_time', checkinTime || '07:30');
+            window.setTime24Value('override_checkout_time', checkoutTime || '');
+        } else {
+            const inEl = document.getElementById('override_checkin_time');
+            if (inEl) inEl.value = checkinTime || '07:30';
+            const outEl = document.getElementById('override_checkout_time');
+            if (outEl) outEl.value = checkoutTime || '';
         }
         const reasonEl = document.getElementById('override_reason');
         if (reasonEl && !reasonEl.value) {

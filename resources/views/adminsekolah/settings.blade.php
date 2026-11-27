@@ -187,29 +187,25 @@
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                         <div class="p-3.5 rounded-2xl bg-slate-50/70 border border-slate-200/80">
                             <label class="block text-xs font-bold text-slate-700 mb-1">Check-In Buka</label>
-                            <input type="time" step="1" name="checkin_start" value="{{ $settings['checkin_start'] ?? '06:00:00' }}" required 
-                                   class="w-full text-xs font-mono font-bold p-2.5 rounded-xl bg-white border border-slate-200 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600">
+                            <x-time-24-input name="checkin_start" :value="$settings['checkin_start'] ?? '06:00:00'" :required="true" :withSeconds="true" wrapperClass="bg-white border-slate-200 text-slate-900 py-2" />
                             <span class="text-[10px] text-slate-500 font-medium block mt-1">Tombol check-in aktif</span>
                         </div>
 
                         <div class="p-3.5 rounded-2xl bg-amber-50/50 border border-amber-200/70">
                             <label class="block text-xs font-bold text-amber-900 mb-1">Batas Tepat Waktu</label>
-                            <input type="time" step="1" name="checkin_late" value="{{ $settings['checkin_late'] ?? '08:00:00' }}" required 
-                                   class="w-full text-xs font-mono font-bold p-2.5 rounded-xl bg-white border border-amber-200 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-600 text-amber-900">
+                            <x-time-24-input name="checkin_late" :value="$settings['checkin_late'] ?? '08:00:00'" :required="true" :withSeconds="true" wrapperClass="bg-white border-amber-200 text-amber-900 py-2" />
                             <span class="text-[10px] text-amber-700 font-medium block mt-1">Status jadi Terlambat</span>
                         </div>
 
                         <div class="p-3.5 rounded-2xl bg-rose-50/50 border border-rose-200/70">
                             <label class="block text-xs font-bold text-rose-900 mb-1">Batas Akhir Masuk</label>
-                            <input type="time" step="1" name="checkin_alfa" value="{{ $settings['checkin_alfa'] ?? '11:00:00' }}" required 
-                                   class="w-full text-xs font-mono font-bold p-2.5 rounded-xl bg-white border border-rose-200 focus:ring-2 focus:ring-rose-500/20 focus:border-rose-600 text-rose-900">
+                            <x-time-24-input name="checkin_alfa" :value="$settings['checkin_alfa'] ?? '11:00:00'" :required="true" :withSeconds="true" wrapperClass="bg-white border-rose-200 text-rose-900 py-2" />
                             <span class="text-[10px] text-rose-700 font-medium block mt-1">Otomatis Alfa</span>
                         </div>
 
                         <div class="p-3.5 rounded-2xl bg-emerald-50/50 border border-emerald-200/70">
                             <label class="block text-xs font-bold text-emerald-900 mb-1">Check-Out Buka</label>
-                            <input type="time" step="1" name="checkout_start" value="{{ $settings['checkout_start'] ?? '16:00:00' }}" required 
-                                   class="w-full text-xs font-mono font-bold p-2.5 rounded-xl bg-white border border-emerald-200 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 text-emerald-900">
+                            <x-time-24-input name="checkout_start" :value="$settings['checkout_start'] ?? '16:00:00'" :required="true" :withSeconds="true" wrapperClass="bg-white border-emerald-200 text-emerald-900 py-2" />
                             <span class="text-[10px] text-emerald-700 font-medium block mt-1">Waktu minimal pulang</span>
                         </div>
                     </div>

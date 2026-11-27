@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AdminSekolahController;
 use App\Http\Controllers\AdminSekolah\AcademicController;
+use App\Http\Controllers\AdminSekolah\AttendanceMonitoringController as AdminSekolahAttendanceMonitoringController;
 use App\Http\Controllers\AdminSekolah\BillingController as AdminSekolahBillingController;
 use App\Http\Controllers\AdminSekolah\CertificateController as AdminSekolahCertificateController;
 use App\Http\Controllers\AdminSekolah\CompanyController as AdminSekolahCompanyController;
@@ -248,6 +249,10 @@ Route::middleware(['auth', 'IdentifyTenant', 'role:admin-sekolah'])->prefix('adm
     Route::post('/plotting/{studentPkl}/send-parent-link', [AdminSekolahPlottingController::class, 'sendParentLink'])->name('adminsekolah.plotting.send-parent-link');
     Route::put('/plotting/{studentPkl}/reassign', [AdminSekolahPlottingController::class, 'reassignPlotting'])->name('adminsekolah.plotting.reassign');
     Route::delete('/plotting/{studentPkl}', [AdminSekolahPlottingController::class, 'destroyPlotting'])->name('adminsekolah.plotting.destroy');
+
+    // Monitoring Absensi & Jurnal Harian + Eskalasi Guru Pembimbing
+    Route::get('/attendance-monitoring', [AdminSekolahAttendanceMonitoringController::class, 'index'])->name('adminsekolah.attendance-monitoring');
+    Route::post('/attendance-monitoring/escalate', [AdminSekolahAttendanceMonitoringController::class, 'escalate'])->name('adminsekolah.attendance-monitoring.escalate');
 
     // Penugasan & Monitoring Supervisi Lapangan
     Route::get('/supervisions', [AdminSekolahSupervisionController::class, 'index'])->name('adminsekolah.supervisions');

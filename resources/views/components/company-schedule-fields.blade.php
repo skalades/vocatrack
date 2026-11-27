@@ -72,23 +72,19 @@
         <div id="{{ $prefix }}-custom-hours-box" class="hidden grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-2.5 border-t border-slate-200/60">
             <div>
                 <label class="block text-[10px] font-bold text-slate-600 mb-1">Mulai Masuk</label>
-                <input type="time" name="checkin_start" id="{{ $prefix }}-checkin-start" value="06:00"
-                       class="w-full text-xs p-2 rounded-xl bg-white border border-slate-200 font-mono text-slate-800">
+                <x-time-24-input name="checkin_start" id="{{ $prefix }}-checkin-start" value="06:00" :required="true" />
             </div>
             <div>
                 <label class="block text-[10px] font-bold text-slate-600 mb-1">Batas Telat</label>
-                <input type="time" name="checkin_late" id="{{ $prefix }}-checkin-late" value="08:00"
-                       class="w-full text-xs p-2 rounded-xl bg-white border border-slate-200 font-mono text-slate-800">
+                <x-time-24-input name="checkin_late" id="{{ $prefix }}-checkin-late" value="08:00" :required="true" />
             </div>
             <div>
                 <label class="block text-[10px] font-bold text-slate-600 mb-1">Batas Alfa</label>
-                <input type="time" name="checkin_alfa" id="{{ $prefix }}-checkin-alfa" value="11:00"
-                       class="w-full text-xs p-2 rounded-xl bg-white border border-slate-200 font-mono text-slate-800">
+                <x-time-24-input name="checkin_alfa" id="{{ $prefix }}-checkin-alfa" value="11:00" :required="true" />
             </div>
             <div>
                 <label class="block text-[10px] font-bold text-slate-600 mb-1">Jam Pulang</label>
-                <input type="time" name="checkout_start" id="{{ $prefix }}-checkout-start" value="16:00"
-                       class="w-full text-xs p-2 rounded-xl bg-white border border-slate-200 font-mono text-slate-800">
+                <x-time-24-input name="checkout_start" id="{{ $prefix }}-checkout-start" value="16:00" :required="true" />
             </div>
         </div>
     </div>
@@ -132,8 +128,12 @@
         const hours = data.custom_work_hours || {};
         const formatTime = (val, fallback) => val ? String(val).slice(0, 5) : fallback;
         const setVal = (id, val) => {
-            const el = document.getElementById(id);
-            if (el) el.value = val;
+            if (typeof window.setTime24Value === 'function') {
+                window.setTime24Value(id, val);
+            } else {
+                const el = document.getElementById(id);
+                if (el) el.value = val;
+            }
         };
 
         setVal(prefix + '-checkin-start', formatTime(hours.checkin_start, '06:00'));
