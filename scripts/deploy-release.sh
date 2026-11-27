@@ -119,11 +119,22 @@ cmd_deploy() {
     log "[3/7] Composer install (no-dev)"
     (cd "$dir" && "$COMPOSER_BIN" install --no-dev --no-interaction --prefer-dist --optimize-autoloader --no-progress)
 
-    if command -v npm >/dev/null 2>&1; then
-        log "[4/7] Build aset frontend"
+    local node_major node_minor can_build_vite=0
+    node_major=$(node -v 2>/dev/null | sed -E 's/^v([0-9]+).*/\1/' || echo 0)
+    node_minor=$(node -v 2>/dev/null | sed -E 's/^v[0-9]+\.([0-9]+).*/\1/' || echo 0)
+    if command -v npm >/dev/null 2>&1 && command -v node >/dev/null 2>&1; then
+        if [ "${node_major:-0}" -gt 20 ] || { [ "${node_major:-0}" -eq 20 ] && [ "${node_minor:-0}" -ge 19 ]; }; then
+            can_build_vite=1
+        fi
+    fi
+
+    if [ "$can_build_vite" -eq 1 ]; then
+        log "[4/7] Build aset frontend (Node $(node -v))"
         (cd "$dir" && npm ci --no-audit --no-fund && npm run build && rm -f public/hot && rm -rf node_modules)
+    elif [ -f "$dir/public/build/manifest.json" ]; then
+        warn "[4/7] Node.js ($(node -v 2>/dev/null || echo 'tidak ada')) < v20.19 — memakai public/build yang ter-commit."
     else
-        warn "[4/7] npm tidak ada — memakai public/build yang ter-commit."
+        fail "[4/7] Node.js >= v20.19 tidak tersedia dan public/build/manifest.json tidak ada."
     fi
 
     log "[5/7] Cadangan pra-deploy + migrasi database"

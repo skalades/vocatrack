@@ -22,12 +22,24 @@ git reset --hard origin/main
 echo "📦 [3/7] Menginstal Dependensi PHP (Production No-Dev)..."
 composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
 
-if command -v npm &> /dev/null; then
-    echo "🎨 [4/7] Terdeteksi NPM: Mengompilasi Asset Frontend (Vite)..."
+NODE_MAJOR=$(node -v 2>/dev/null | sed -E 's/^v([0-9]+).*/\1/' || echo 0)
+NODE_MINOR=$(node -v 2>/dev/null | sed -E 's/^v[0-9]+\.([0-9]+).*/\1/' || echo 0)
+CAN_BUILD_VITE=0
+if command -v npm &> /dev/null && command -v node &> /dev/null; then
+    if [ "${NODE_MAJOR:-0}" -gt 20 ] || { [ "${NODE_MAJOR:-0}" -eq 20 ] && [ "${NODE_MINOR:-0}" -ge 19 ]; }; then
+        CAN_BUILD_VITE=1
+    fi
+fi
+
+if [ "$CAN_BUILD_VITE" -eq 1 ]; then
+    echo "🎨 [4/7] Terdeteksi Node $(node -v) & NPM: Mengompilasi Asset Frontend (Vite)..."
     npm install --no-audit --no-fund
     npm run build
+elif [ -f "public/build/manifest.json" ]; then
+    echo "⚠️  [4/7] Node.js ($(node -v 2>/dev/null || echo 'tidak terpasang')) < v20.19 yang dibutuhkan Vite 7. Menggunakan public/build yang sudah ter-commit."
 else
-    echo "⚠️  [4/7] NPM tidak terpasang di server. Pastikan folder public/build sudah diunggah jika ada perubahan asset."
+    echo "❌ [4/7] Node.js >= v20.19 tidak tersedia dan public/build/manifest.json tidak ditemukan."
+    exit 1
 fi
 
 echo "🗄️  [5/7] Cadangan pra-deploy lalu Migrasi Database..."
