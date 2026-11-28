@@ -227,7 +227,17 @@
         @endif
     </x-card>
 
+    <!-- Pengumuman Terbaru -->
+    <x-recent-announcements-card
+        :announcements="$recentAnnouncements ?? collect()"
+        :view-all-url="route('dudi.announcements')"
+        subtitle="Informasi resmi dari sekolah untuk mitra DU/DI"
+        empty-message="Belum ada pengumuman aktif dari sekolah."
+    />
+
 </div>
+
+<x-announcement-detail-modal />
 
 @push('scripts')
 <script>

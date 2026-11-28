@@ -84,6 +84,31 @@ class Teacher extends Model
     }
 
     /**
+     * Kumpulkan seluruh ID jurusan yang terhubung dengan guru ini
+     * (penugasan jurusan, kepala jurusan, wali kelas, maupun siswa bimbingan PKL).
+     */
+    public function accessibleMajorIds(): array
+    {
+        $assignedMajorIds = $this->majors()->pluck('majors.id');
+        $headedMajorIds = $this->headedMajors()->pluck('id');
+        $homeroomMajorIds = $this->homeroomClasses()->pluck('major_id');
+        $supervisedMajorIds = $this->studentPkls()
+            ->with('student.class')
+            ->get()
+            ->pluck('student.class.major_id');
+
+        return $assignedMajorIds
+            ->merge($headedMajorIds)
+            ->merge($homeroomMajorIds)
+            ->merge($supervisedMajorIds)
+            ->filter()
+            ->unique()
+            ->values()
+            ->map(fn ($id) => (int) $id)
+            ->all();
+    }
+
+    /**
      * Terapkan filter pencarian (case-insensitive lintas PostgreSQL/MySQL/SQLite) dan jurusan untuk admin sekolah & ekspor.
      */
     public function scopeApplyAdminFilters(Builder $query, ?string $search = null, ?string $major = null): Builder

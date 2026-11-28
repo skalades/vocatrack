@@ -182,7 +182,56 @@
             </a>
         </section>
 
-        <!-- 7. PWA GURU & NOTIFIKASI WEB PUSH -->
+        <!-- 7. PENGUMUMAN TERBARU -->
+        <section class="bg-white rounded-2xl border border-slate-200/80 p-3.5 space-y-2.5 shadow-2xs">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-xs font-extrabold text-slate-900">Pengumuman Sekolah</h3>
+                    <p class="text-[10px] text-slate-400">Informasi resmi &amp; arahan PKL</p>
+                </div>
+                <a href="{{ route('guru.announcements') }}" class="text-[11px] font-extrabold text-[#0B2B25] hover:text-[#12382F] flex items-center gap-1">
+                    <span>Semua</span>
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+                </a>
+            </div>
+
+            <div class="space-y-2">
+                @forelse($recentAnnouncements ?? collect() as $ann)
+                    @php
+                        $annPayload = [
+                            'id' => $ann->id,
+                            'title' => $ann->title,
+                            'content' => $ann->content,
+                            'category' => $ann->category,
+                            'category_label' => $ann->category_label,
+                            'image_path' => $ann->image_path,
+                            'image_url' => $ann->image_url,
+                            'author' => ['name' => $ann->author->name ?? 'Pihak Sekolah'],
+                            'major' => $ann->major ? ['name' => $ann->major->name] : null,
+                            'published_at_human' => ($ann->published_at ?? $ann->created_at)->isoFormat('D MMM Y • HH:mm'),
+                        ];
+                    @endphp
+                    <button type="button" onclick='openAnnouncementDetailModal(@json($annPayload))' class="w-full text-left flex items-start gap-2.5 p-2.5 rounded-xl bg-slate-50 border border-slate-100 hover:bg-slate-100/70 transition-colors cursor-pointer">
+                        <span class="w-8 h-8 rounded-lg bg-[#EBF6F0] text-[#12382F] flex items-center justify-center shrink-0">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5.9v13.3a1.8 1.8 0 01-3.4.6l-2.2-6.1M18 13a3 3 0 100-6M5.4 13.7A4 4 0 017 6h1.8c4.1 0 7.6-1.2 9.2-3v14c-1.5-1.8-5.1-3-9.2-3H7a4 4 0 01-1.6-.3z"/></svg>
+                        </span>
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-[9px] font-extrabold uppercase text-[#12382F]">{{ $ann->category_label }}</span>
+                                @if($ann->is_pinned)<span class="text-[9px] font-bold text-amber-700">&bull; Disematkan</span>@endif
+                            </div>
+                            <p class="text-xs font-bold text-slate-900 line-clamp-1">{{ $ann->title }}</p>
+                            <p class="text-[10px] text-slate-400">{{ $ann->author->name ?? 'Sekolah' }} &bull; {{ ($ann->published_at ?? $ann->created_at)->diffForHumans() }}</p>
+                        </div>
+                    </button>
+                @empty
+                    <p class="text-[11px] text-slate-400 text-center py-2">Belum ada pengumuman aktif.</p>
+                @endforelse
+            </div>
+        </section>
+
+        <!-- 8. PWA GURU & NOTIFIKASI WEB PUSH -->
         <x-teacher.pwa-card />
 
 </div>
+<x-announcement-detail-modal />

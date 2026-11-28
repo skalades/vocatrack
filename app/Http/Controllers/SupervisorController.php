@@ -7,6 +7,7 @@ use App\Models\Attendance;
 use App\Models\AttendanceRequest;
 use App\Models\Journal;
 use App\Models\StudentPkl;
+use App\Services\AnnouncementService;
 use App\Services\AssessmentService;
 use App\Services\AttendanceService;
 use App\Services\JournalService;
@@ -25,14 +26,14 @@ class SupervisorController extends Controller
         return $supervisor;
     }
 
-    public function dashboard()
+    public function dashboard(AnnouncementService $announcementService)
     {
         $supervisor = $this->getSupervisor();
         $company = $supervisor->company;
 
         $today = Carbon::today();
         $studentPkls = StudentPkl::where('company_id', $company->id)
-            ->with(['student.user', 'student.class', 'pklPeriod'])
+            ->with(['company', 'student.user', 'student.class', 'pklPeriod'])
             ->get()
             ->filter(fn (StudentPkl $sp) => $sp->status === 'active' && $sp->coversDate($today))
             ->values();
@@ -52,12 +53,15 @@ class SupervisorController extends Controller
             ->where('status', 'submitted')
             ->count();
 
+        $recentAnnouncements = $announcementService->getLatestForUser(Auth::user(), 3);
+
         return view('dudi.dashboard', compact(
             'company',
             'studentPkls',
             'todayAttendances',
             'pendingRequests',
-            'pendingJournals'
+            'pendingJournals',
+            'recentAnnouncements'
         ));
     }
 

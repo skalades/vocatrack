@@ -9,6 +9,7 @@ use App\Models\Major;
 use App\Models\SchoolClass;
 use App\Models\StudentPkl;
 use App\Models\SupervisionVisit;
+use App\Services\AnnouncementService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -20,7 +21,7 @@ class KepsekController extends Controller
         return Auth::user()->school_id;
     }
 
-    public function dashboard()
+    public function dashboard(AnnouncementService $announcementService)
     {
         $schoolId = $this->getSchoolId();
 
@@ -86,6 +87,8 @@ class KepsekController extends Controller
             ->take(4)
             ->get();
 
+        $recentAnnouncements = $announcementService->getLatestForUser(Auth::user(), 3);
+
         return view('kepsek.dashboard', compact(
             'totalActivePkl',
             'totalCompanies',
@@ -96,7 +99,8 @@ class KepsekController extends Controller
             'studentsAtRisk',
             'supervisionCount',
             'supervisionThisMonth',
-            'topCompanies'
+            'topCompanies',
+            'recentAnnouncements'
         ));
     }
 

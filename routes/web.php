@@ -456,6 +456,7 @@ Route::middleware(['auth', 'IdentifyTenant', 'role:pembimbing-dudi'])->prefix('d
 
     Route::get('/assessments', [SupervisorController::class, 'assessments'])->name('dudi.assessments');
     Route::post('/assessments', [SupervisorController::class, 'storeAssessment'])->name('dudi.assessments.store');
+    Route::get('/pengumuman', [AnnouncementController::class, 'dudiIndex'])->name('dudi.announcements');
 });
 
 // 6. Kepala Sekolah Routes
@@ -464,4 +465,5 @@ Route::middleware(['auth', 'IdentifyTenant', 'role:kepala-sekolah'])->prefix('ke
     Route::get('/rekap', [KepsekController::class, 'rekap'])->name('kepsek.rekap');
     Route::get('/rekap/export', [KepsekController::class, 'exportRekap'])->name('kepsek.rekap.export');
     Route::get('/peta-sebaran', [PklMapController::class, 'kepsekMap'])->name('kepsek.map');
+    Route::get('/pengumuman', [AnnouncementController::class, 'kepsekIndex'])->name('kepsek.announcements');
 });

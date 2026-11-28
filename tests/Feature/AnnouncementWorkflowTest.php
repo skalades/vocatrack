@@ -5,9 +5,12 @@ namespace Tests\Feature;
 use App\Models\Announcement;
 use App\Models\Major;
 use App\Models\School;
+use App\Models\Teacher;
 use App\Models\User;
+use App\Notifications\AnnouncementPublishedNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -285,5 +288,127 @@ class AnnouncementWorkflowTest extends TestCase
             'id' => $ann->id,
             'title' => 'Pengumuman Modal Test',
         ]);
+    }
+
+    public function test_admin_announcement_for_guru_pembimbing_notifies_and_renders_across_majors_and_mobile(): void
+    {
+        Notification::fake();
+
+        $admin = User::where('role', 'admin-sekolah')->first();
+        $schoolId = $admin->school_id;
+        $major = Major::where('school_id', $schoolId)->first();
+        $otherMajor = Major::where('school_id', $schoolId)->where('id', '!=', $major->id)->first();
+
+        // Guru baru yang ditugaskan ke jurusan via pivot major_teacher tanpa punya StudentPkl aktif
+        $assignedTeacherUser = User::create([
+            'school_id' => $schoolId,
+            'name' => 'Guru Jurusan Tanpa Bimbingan PKL',
+            'email' => 'guru.jurusan.baru@test.sch.id',
+            'password' => bcrypt('password'),
+            'role' => 'guru-pembimbing',
+            'is_active' => true,
+        ]);
+        $assignedTeacher = Teacher::create(['user_id' => $assignedTeacherUser->id, 'nip' => '199001012020011001']);
+        $assignedTeacher->majors()->attach($major->id);
+
+        // Guru lain di jurusan berbeda
+        $otherTeacherUser = User::create([
+            'school_id' => $schoolId,
+            'name' => 'Guru Jurusan Lain',
+            'email' => 'guru.jurusan.lain@test.sch.id',
+            'password' => bcrypt('password'),
+            'role' => 'guru-pembimbing',
+            'is_active' => true,
+        ]);
+        $otherTeacher = Teacher::create(['user_id' => $otherTeacherUser->id, 'nip' => '199001012020011002']);
+        if ($otherMajor) {
+            $otherTeacher->majors()->attach($otherMajor->id);
+        }
+
+        $studentUser = User::where('role', 'siswa')->where('school_id', $schoolId)->first();
+
+        $response = $this->actingAs($admin)->post(route('adminsekolah.announcements.store'), [
+            'title' => 'Rapat Koordinasi Guru Pembimbing Jurusan',
+            'category' => 'penting',
+            'target_role' => 'guru-pembimbing',
+            'target_major_id' => $major->id,
+            'content' => 'Mohon seluruh guru pembimbing jurusan hadir di ruang rapat.',
+        ]);
+
+        $response->assertRedirect(route('adminsekolah.announcements'));
+
+        Notification::assertSentTo($assignedTeacherUser, AnnouncementPublishedNotification::class, function ($notification) use ($assignedTeacherUser) {
+            $payload = $notification->toArray($assignedTeacherUser);
+            return $payload['url'] === '/guru/announcements';
+        });
+        Notification::assertNotSentTo($studentUser, AnnouncementPublishedNotification::class);
+        if ($otherMajor) {
+            Notification::assertNotSentTo($otherTeacherUser, AnnouncementPublishedNotification::class);
+        }
+
+        // Guru yang ditargetkan dapat melihatnya di halaman pengumuman & dashboard (desktop + mobile)
+        $this->actingAs($assignedTeacherUser)
+            ->get(route('guru.announcements'))
+            ->assertOk()
+            ->assertSee('Rapat Koordinasi Guru Pembimbing Jurusan');
+
+        $this->actingAs($assignedTeacherUser)
+            ->get(route('guru.dashboard', ['view' => 'desktop']))
+            ->assertOk()
+            ->assertSee('Rapat Koordinasi Guru Pembimbing Jurusan');
+
+        $this->actingAs($assignedTeacherUser)
+            ->get(route('guru.dashboard', ['view' => 'mobile']))
+            ->assertOk()
+            ->assertSee('Rapat Koordinasi Guru Pembimbing Jurusan');
+
+        if ($otherMajor) {
+            $this->actingAs($otherTeacherUser)
+                ->get(route('guru.announcements'))
+                ->assertOk()
+                ->assertDontSee('Rapat Koordinasi Guru Pembimbing Jurusan');
+        }
+    }
+
+    public function test_admin_announcement_reaches_dudi_and_kepala_sekolah(): void
+    {
+        Notification::fake();
+
+        $admin = User::where('role', 'admin-sekolah')->first();
+        $schoolId = $admin->school_id;
+        $dudiUser = User::where('role', 'pembimbing-dudi')->where('school_id', $schoolId)->first();
+        $kepsekUser = User::where('role', 'kepala-sekolah')->where('school_id', $schoolId)->first();
+
+        $this->actingAs($admin)->post(route('adminsekolah.announcements.store'), [
+            'title' => 'Info Penilaian Akhir Mitra DUDI',
+            'category' => 'dudi',
+            'target_role' => 'pembimbing-dudi',
+            'content' => 'Mohon input nilai akhir sebelum tanggal 30.',
+        ])->assertRedirect(route('adminsekolah.announcements'));
+
+        if ($dudiUser) {
+            Notification::assertSentTo($dudiUser, AnnouncementPublishedNotification::class, function ($notification) use ($dudiUser) {
+                return $notification->toArray($dudiUser)['url'] === '/dudi/pengumuman';
+            });
+
+            $this->actingAs($dudiUser)->get(route('dudi.announcements'))->assertOk()->assertSee('Info Penilaian Akhir Mitra DUDI');
+            $this->actingAs($dudiUser)->get(route('dudi.dashboard'))->assertOk()->assertSee('Info Penilaian Akhir Mitra DUDI');
+        }
+
+        $this->actingAs($admin)->post(route('adminsekolah.announcements.store'), [
+            'title' => 'Laporan Eksekutif Tengah Periode',
+            'category' => 'akademik',
+            'target_role' => 'kepala-sekolah',
+            'content' => 'Ringkasan pelaksanaan PKL siap ditinjau.',
+        ])->assertRedirect(route('adminsekolah.announcements'));
+
+        if ($kepsekUser) {
+            Notification::assertSentTo($kepsekUser, AnnouncementPublishedNotification::class, function ($notification) use ($kepsekUser) {
+                return $notification->toArray($kepsekUser)['url'] === '/kepala-sekolah/pengumuman';
+            });
+
+            $this->actingAs($kepsekUser)->get(route('kepsek.announcements'))->assertOk()->assertSee('Laporan Eksekutif Tengah Periode');
+            $this->actingAs($kepsekUser)->get(route('kepsek.dashboard'))->assertOk()->assertSee('Laporan Eksekutif Tengah Periode');
+        }
     }
 }

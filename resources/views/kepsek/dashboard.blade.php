@@ -256,6 +256,14 @@
 
     </div>
 
+    <!-- Pengumuman Terbaru -->
+    <x-recent-announcements-card
+        :announcements="$recentAnnouncements ?? collect()"
+        :view-all-url="route('kepsek.announcements')"
+        subtitle="Informasi resmi yang ditujukan kepada pimpinan sekolah"
+        empty-message="Belum ada pengumuman aktif."
+    />
+
 </div>
 
 @push('scripts')
@@ -288,4 +296,5 @@
     });
 </script>
 @endpush
+<x-announcement-detail-modal />
 @endsection

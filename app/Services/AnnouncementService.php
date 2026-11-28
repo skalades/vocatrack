@@ -129,33 +129,74 @@ class AnnouncementService
             'published_at' => Carbon::now(),
         ]);
 
-        $this->notifyTargetedStudents($announcement);
+        $this->notifyTargetedUsers($announcement);
 
         return $announcement;
     }
 
     /**
-     * Kirim notifikasi in-app & Web Push ke siswa target ketika pengumuman aktif diterbitkan.
+     * Kirim notifikasi in-app & Web Push ke seluruh pengguna target sesuai peran dan jurusan ketika pengumuman aktif diterbitkan.
      */
-    protected function notifyTargetedStudents(Announcement $announcement): void
+    protected function notifyTargetedUsers(Announcement $announcement): void
     {
-        if (! $announcement->is_active || ! in_array($announcement->target_role, ['all', 'siswa'], true)) {
+        if (! $announcement->is_active) {
             return;
         }
 
-        $query = User::query()
-            ->where('school_id', $announcement->school_id)
-            ->where('role', 'siswa')
-            ->where('is_active', true);
+        $targetRoles = $announcement->target_role === 'all'
+            ? ['siswa', 'guru-pembimbing', 'pembimbing-dudi', 'kepala-sekolah']
+            : [$announcement->target_role];
 
-        if ($announcement->target_major_id) {
-            $majorId = $announcement->target_major_id;
-            $query->whereHas('student.class', fn (Builder $q) => $q->where('major_id', $majorId));
+        $majorId = $announcement->target_major_id;
+
+        foreach ($targetRoles as $role) {
+            $query = User::query()
+                ->where('school_id', $announcement->school_id)
+                ->where('role', $role)
+                ->where('is_active', true);
+
+            if ($announcement->author_id) {
+                $query->where('id', '!=', $announcement->author_id);
+            }
+
+            $this->applyMajorScopeToUserQuery($query, $role, $majorId);
+
+            $query->chunkById(200, function (Collection $users) use ($announcement): void {
+                Notification::send($users, new AnnouncementPublishedNotification($announcement));
+            });
+        }
+    }
+
+    /**
+     * Terapkan filter jurusan pada query penerima notifikasi sesuai struktur relasi peran masing-masing.
+     */
+    protected function applyMajorScopeToUserQuery(Builder $query, string $role, ?int $majorId): void
+    {
+        if (! $majorId) {
+            return;
         }
 
-        $query->chunkById(200, function (Collection $students) use ($announcement): void {
-            Notification::send($students, new AnnouncementPublishedNotification($announcement));
-        });
+        if ($role === 'siswa') {
+            $query->whereHas('student.class', fn (Builder $q) => $q->where('major_id', $majorId));
+            return;
+        }
+
+        if ($role === 'guru-pembimbing') {
+            $query->whereHas('teacher', function (Builder $tq) use ($majorId): void {
+                $tq->whereHas('majors', fn (Builder $q) => $q->where('majors.id', $majorId))
+                    ->orWhereHas('headedMajors', fn (Builder $q) => $q->where('id', $majorId))
+                    ->orWhereHas('homeroomClasses', fn (Builder $q) => $q->where('major_id', $majorId))
+                    ->orWhereHas('studentPkls.student.class', fn (Builder $q) => $q->where('major_id', $majorId));
+            });
+            return;
+        }
+
+        if ($role === 'pembimbing-dudi') {
+            $query->whereHas('supervisor.company', function (Builder $cq) use ($majorId): void {
+                $cq->whereHas('majors', fn (Builder $q) => $q->where('majors.id', $majorId))
+                    ->orWhereHas('studentPkls.student.class', fn (Builder $q) => $q->where('major_id', $majorId));
+            });
+        }
     }
 
     /**
@@ -163,6 +204,7 @@ class AnnouncementService
      */
     public function updateAnnouncement(Announcement $announcement, array $data, ?UploadedFile $imageFile = null, bool $removeImage = false): Announcement
     {
+        $wasActive = (bool) $announcement->is_active;
         $imagePath = $announcement->image_path;
 
         if ($removeImage && $imagePath) {
@@ -194,6 +236,10 @@ class AnnouncementService
             'is_pinned' => isset($data['is_pinned']) ? (bool)$data['is_pinned'] : $announcement->is_pinned,
             'is_active' => isset($data['is_active']) ? (bool)$data['is_active'] : $announcement->is_active,
         ]);
+
+        if (! $wasActive && $announcement->is_active) {
+            $this->notifyTargetedUsers($announcement);
+        }
 
         return $announcement;
     }

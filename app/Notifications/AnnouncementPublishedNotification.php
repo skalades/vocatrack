@@ -31,7 +31,7 @@ class AnnouncementPublishedNotification extends Notification implements ShouldQu
         return $this->buildWebPushMessage(
             title: $prefix . $this->announcement->title,
             body: Str::limit(strip_tags((string) $this->announcement->content), 140),
-            url: '/siswa/pengumuman',
+            url: $this->resolveUrlForUser($notifiable),
             tag: 'announcement-' . $this->announcement->id,
             actionTitle: 'Baca Pengumuman',
             requireInteraction: $isUrgent
@@ -45,9 +45,24 @@ class AnnouncementPublishedNotification extends Notification implements ShouldQu
             'title' => 'Pengumuman: ' . $this->announcement->title,
             'message' => Str::limit(strip_tags((string) $this->announcement->content), 120),
             'announcement_id' => $this->announcement->id,
-            'url' => '/siswa/pengumuman',
+            'url' => $this->resolveUrlForUser($notifiable),
             'color' => $this->announcement->category === 'penting' ? 'rose' : 'indigo',
             'created_at' => now()->toIso8601String(),
         ];
+    }
+
+    /**
+     * Tentukan URL halaman pengumuman sesuai peran penerima notifikasi.
+     */
+    protected function resolveUrlForUser(object $notifiable): string
+    {
+        return match ($notifiable->role ?? null) {
+            'siswa' => '/siswa/pengumuman',
+            'guru-pembimbing' => '/guru/announcements',
+            'pembimbing-dudi' => '/dudi/pengumuman',
+            'kepala-sekolah' => '/kepala-sekolah/pengumuman',
+            'admin-sekolah' => '/admin-sekolah/announcements',
+            default => '/notifications',
+        };
     }
 }

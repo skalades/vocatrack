@@ -31,4 +31,30 @@ class Supervisor extends Model
     {
         return $this->hasMany(StudentPkl::class);
     }
+
+    /**
+     * Kumpulkan seluruh ID jurusan yang terhubung dengan pembimbing DU/DI ini
+     * (jurusan mitra perusahaan maupun siswa magang yang ditempatkan).
+     */
+    public function accessibleMajorIds(): array
+    {
+        $company = $this->company;
+        if (! $company) {
+            return [];
+        }
+
+        $companyMajorIds = $company->majors()->pluck('majors.id');
+        $internMajorIds = $company->studentPkls()
+            ->with('student.class')
+            ->get()
+            ->pluck('student.class.major_id');
+
+        return $companyMajorIds
+            ->merge($internMajorIds)
+            ->filter()
+            ->unique()
+            ->values()
+            ->map(fn ($id) => (int) $id)
+            ->all();
+    }
 }

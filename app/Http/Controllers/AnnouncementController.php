@@ -251,6 +251,62 @@ class AnnouncementController extends Controller
     }
 
     /**
+     * Pembimbing DU/DI: List announcements targeted to DU/DI.
+     */
+    public function dudiIndex(Request $request)
+    {
+        return $this->renderRoleFeed(
+            $request,
+            'PEMBIMBING INDUSTRI',
+            'Pengumuman & Siaran Sekolah',
+            'Informasi resmi, jadwal monitoring, dan arahan PKL dari pihak sekolah untuk mitra DU/DI.',
+            'dudi.announcements'
+        );
+    }
+
+    /**
+     * Kepala Sekolah: List announcements targeted to Kepala Sekolah.
+     */
+    public function kepsekIndex(Request $request)
+    {
+        return $this->renderRoleFeed(
+            $request,
+            'KEPALA SEKOLAH',
+            'Pengumuman & Siaran Sekolah',
+            'Siaran informasi resmi dan pengumuman sekolah terkait pelaksanaan PKL.',
+            'kepsek.announcements'
+        );
+    }
+
+    /**
+     * Render feed pengumuman read-only yang konsisten untuk peran non-penulis (DU/DI & Kepala Sekolah).
+     */
+    protected function renderRoleFeed(Request $request, string $badge, string $title, string $subtitle, string $routeName)
+    {
+        $user = Auth::user();
+        $schoolId = $user->school_id;
+        $majors = Major::where('school_id', $schoolId)->orderBy('name')->get();
+
+        $filters = [
+            'category' => $request->get('category', 'all'),
+            'major_id' => $request->get('major_id', 'all'),
+            'search' => $request->get('search'),
+        ];
+
+        $announcements = $this->announcementService->getAnnouncementsForUser($user, $filters, 9);
+
+        return view('announcements.feed', compact(
+            'announcements',
+            'majors',
+            'filters',
+            'badge',
+            'title',
+            'subtitle',
+            'routeName'
+        ));
+    }
+
+    /**
      * Siswa: List all announcements targeted to this student.
      */
     public function studentIndex(Request $request)

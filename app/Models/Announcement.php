@@ -98,29 +98,31 @@ class Announcement extends Model
         }
 
         if ($role === 'guru-pembimbing') {
-            $majorIds = [];
-            if ($user->teacher) {
-                $majorIds = $user->teacher->studentPkls()
-                    ->with('student.class')
-                    ->get()
-                    ->pluck('student.class.major_id')
-                    ->filter()
-                    ->unique()
-                    ->toArray();
-            }
+            $majorIds = $user->teacher ? $user->teacher->accessibleMajorIds() : [];
 
-            return $query->whereIn('target_role', ['all', 'guru-pembimbing'])
+            return $query->where(function (Builder $roleQuery) use ($user, $majorIds) {
+                $roleQuery->where(function (Builder $targeted) use ($majorIds) {
+                    $targeted->whereIn('target_role', ['all', 'guru-pembimbing'])
+                        ->where(function (Builder $sub) use ($majorIds) {
+                            $sub->whereNull('target_major_id');
+                            if (!empty($majorIds)) {
+                                $sub->orWhereIn('target_major_id', $majorIds);
+                            }
+                        });
+                })->orWhere('author_id', $user->id);
+            });
+        }
+
+        if ($role === 'pembimbing-dudi') {
+            $majorIds = $user->supervisor ? $user->supervisor->accessibleMajorIds() : [];
+
+            return $query->whereIn('target_role', ['all', 'pembimbing-dudi'])
                 ->where(function (Builder $sub) use ($majorIds) {
                     $sub->whereNull('target_major_id');
                     if (!empty($majorIds)) {
                         $sub->orWhereIn('target_major_id', $majorIds);
                     }
                 });
-        }
-
-        if ($role === 'pembimbing-dudi') {
-            return $query->whereIn('target_role', ['all', 'pembimbing-dudi'])
-                ->whereNull('target_major_id');
         }
 
         if ($role === 'kepala-sekolah') {
