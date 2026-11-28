@@ -11,24 +11,6 @@
     ],
     "icons": [
         {
-            "src": "/images/logo.png",
-            "sizes": "192x192",
-            "type": "image/png",
-            "purpose": "any"
-        },
-        {
-            "src": "/images/logo.png",
-            "sizes": "512x512",
-            "type": "image/png",
-            "purpose": "any"
-        },
-        {
-            "src": "/images/logo.png",
-            "sizes": "512x512",
-            "type": "image/png",
-            "purpose": "maskable"
-        },
-        {
             "src": "/icons/icon-192.png",
             "sizes": "192x192",
             "type": "image/png",
@@ -39,12 +21,18 @@
             "sizes": "512x512",
             "type": "image/png",
             "purpose": "any"
+        },
+        {
+            "src": "/icons/icon-maskable-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
         }
     ],
     "id": "/siswa/beranda",
     "name": "VokaTrack Siswa \u2014 Presensi & Jurnal PKL",
     "short_name": "VokaTrack",
-    "description": "Presensi selfie, jurnal harian, dan laporan PKL untuk siswa SMK.",
+    "description": "Enterprise Cloud",
     "start_url": "/siswa/beranda?source=pwa",
     "shortcuts": [
         {
@@ -52,7 +40,7 @@
             "url": "/siswa/absensi",
             "icons": [
                 {
-                    "src": "/images/logo.png",
+                    "src": "/icons/icon-192.png",
                     "sizes": "192x192"
                 }
             ]
@@ -62,7 +50,7 @@
             "url": "/siswa/jurnal",
             "icons": [
                 {
-                    "src": "/images/logo.png",
+                    "src": "/icons/icon-192.png",
                     "sizes": "192x192"
                 }
             ]

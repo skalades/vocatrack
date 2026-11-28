@@ -185,8 +185,8 @@ class StudentPwaOfflineSyncTest extends TestCase
         $data = $response->json();
         $this->assertNotEmpty($data['icons']);
 
-        // 2. Custom logo upload by superadmin
-        $fakeFile = \Illuminate\Http\UploadedFile::fake()->image('custom_logo.png', 200, 200);
+        // 2. Custom logo upload by superadmin (simulasi logo kecil non-persegi seperti produksi 137x138)
+        $fakeFile = \Illuminate\Http\UploadedFile::fake()->image('custom_logo.png', 137, 138);
         $path = $fakeFile->storeAs('branding', 'custom_logo.png', 'public');
         \App\Models\PlatformSetting::set('system_logo', $path);
 
@@ -194,12 +194,24 @@ class StudentPwaOfflineSyncTest extends TestCase
 
         $responseCustom = $this->get('/manifest.webmanifest')->assertOk();
         $customData = $responseCustom->json();
+        $this->assertCount(3, $customData['icons']);
         $iconSources = array_column($customData['icons'], 'src');
         $this->assertStringContainsString('custom_logo.png', $iconSources[0]);
 
-        // 3. Reset logo
+        // Pastikan ukuran gambar aktual cocok persis dengan deklarasi sizes di manifest
+        foreach ($customData['icons'] as $icon) {
+            $storageRel = ltrim(str_replace('/storage/', '', $icon['src']), '/');
+            \Illuminate\Support\Facades\Storage::disk('public')->assertExists($storageRel);
+            $bytes = \Illuminate\Support\Facades\Storage::disk('public')->get($storageRel);
+            $info = getimagesizefromstring($bytes);
+            $this->assertIsArray($info);
+            $this->assertSame($icon['sizes'], "{$info[0]}x{$info[1]}");
+        }
+
+        // 3. Reset logo membersihkan ikon hasil generate dan kembali ke ikon bawaan
         \App\Models\PlatformSetting::forget('system_logo');
         $this->artisan('vokatrack:sync-pwa')->assertSuccessful();
+        \Illuminate\Support\Facades\Storage::disk('public')->assertMissing('branding/pwa/192/custom_logo.png');
     }
 
     public function test_csrf_token_endpoint_returns_no_store_json_token(): void
