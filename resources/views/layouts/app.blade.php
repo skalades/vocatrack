@@ -217,43 +217,24 @@
             @endif
             
             <!-- Top Navigation Bar (Responsive Sticky Header) -->
-            <header class="h-14 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-6 lg:px-8 flex items-center justify-between sticky top-0 z-30 shadow-2xs">
-                <div class="flex items-center space-x-3">
-                    <button type="button" onclick="toggleMobileSidebar()" class="lg:hidden p-2 -ml-2 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors">
+            <header class="h-14 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-3 sm:px-6 lg:px-8 flex items-center justify-between gap-2 sticky top-0 z-30 shadow-2xs">
+                <div class="flex items-center space-x-2.5 sm:space-x-3 min-w-0">
+                    <button type="button" onclick="toggleMobileSidebar()" class="lg:hidden p-2 -ml-1.5 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors shrink-0">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
                     </button>
-                    <div class="flex items-center space-x-2 lg:hidden">
-                        <img src="{{ $systemLogo ?? asset('images/logo.png') }}" alt="{{ $systemName ?? 'VokaTrack' }}" class="w-5 h-5 object-contain">
-                        <span class="text-xs font-extrabold text-slate-900">{{ $systemName ?? 'VokaTrack' }}</span>
+                    <div class="flex items-center space-x-2 lg:hidden min-w-0">
+                        <img src="{{ $systemLogo ?? asset('images/logo.png') }}" alt="{{ $systemName ?? 'VokaTrack' }}" class="w-5 h-5 object-contain shrink-0">
+                        <span class="text-xs font-extrabold text-slate-900 truncate">{{ $systemName ?? 'VokaTrack' }}</span>
                     </div>
-                    <div class="hidden lg:flex items-center space-x-2 text-xs font-semibold text-slate-500">
+                    <div class="hidden lg:flex items-center space-x-2 text-xs font-semibold text-slate-500 truncate">
                         <span>{{ auth()->user()->school->name ?? 'VokaTrack Cloud Platform' }}</span>
                     </div>
 
-                    @if(auth()->user()->isKajur() || auth()->user()->isWaliKelas())
-                        <div class="inline-flex flex-wrap items-center gap-0.5 p-0.5 rounded-xl bg-slate-100 border border-slate-200">
-                            @if(auth()->user()->isKajur())
-                                <a href="{{ route('kajur.dashboard') }}" class="flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-lg transition-all {{ request()->is('kajur*') ? 'bg-white text-emerald-800 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900 font-medium' }}">
-                                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                                    <span>Kajur {{ auth()->user()->headedMajor()?->code }}</span>
-                                </a>
-                            @endif
-                            @if(auth()->user()->isWaliKelas())
-                                <a href="{{ route('walikelas.dashboard') }}" class="flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-lg transition-all {{ request()->is('wali-kelas*') ? 'bg-white text-teal-800 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900 font-medium' }}">
-                                    <span class="w-2 h-2 rounded-full bg-teal-500"></span>
-                                    <span>Wali Kelas {{ auth()->user()->primaryHomeroomClass()?->name }}</span>
-                                </a>
-                            @endif
-                            <a href="{{ route('guru.dashboard') }}" class="flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-lg transition-all {{ request()->is('guru*') ? 'bg-white text-indigo-800 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900 font-medium' }}">
-                                <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
-                                <span>Bimbingan ({{ auth()->user()->teacher?->studentPkls()->where('status', 'active')->count() ?? 0 }})</span>
-                            </a>
-                        </div>
-                    @endif
+                    <x-portal-switcher variant="desktop" />
                 </div>
 
-                <div class="flex items-center space-x-2 sm:space-x-3">
-                    @if($role === 'guru-pembimbing')
+                <div class="flex items-center space-x-1.5 sm:space-x-3 shrink-0">
+                    @if($role === 'guru-pembimbing' && request()->is('guru*'))
                         <a href="{{ request()->fullUrlWithQuery(['view' => 'mobile']) }}" class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold text-[#0B2B25] bg-[#C6F26B]/80 hover:bg-[#C6F26B] border border-[#0B2B25]/20 shadow-2xs transition-all" title="Beralih ke Tampilan Mobile Guru">
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
                             <span class="hidden sm:inline">Mode Mobile</span>
@@ -261,7 +242,7 @@
                     @endif
                     <x-notification-center :isMobile="false" />
                     @if($role === 'guru-pembimbing')
-                        <button type="button" onclick="openTeacherProfileModal()" class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition-colors cursor-pointer" title="Ubah Profil, NIP & Nomor HP">
+                        <button type="button" onclick="openTeacherProfileModal()" class="inline-flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition-colors cursor-pointer" title="Ubah Profil, NIP & Nomor HP">
                             <svg class="w-3.5 h-3.5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <circle cx="12" cy="8" r="4" stroke-width="2"/>
                                 <path stroke-linecap="round" stroke-width="2" d="M20 21a8 8 0 1 0-16 0"/>
@@ -269,23 +250,29 @@
                             <span class="hidden sm:inline">Profil</span>
                         </button>
                     @endif
-                    <button type="button" onclick="openWhatsAppContactModal()" class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-colors cursor-pointer" title="Nomor WhatsApp Notifikasi Darurat SOS">
+                    <button type="button" onclick="openWhatsAppContactModal()" class="inline-flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-xl text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-colors cursor-pointer" title="Nomor WhatsApp Notifikasi Darurat SOS">
                         <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
                             <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2zm.01 1.67c4.54 0 8.24 3.7 8.24 8.24 0 2.2-.86 4.28-2.42 5.84a8.19 8.19 0 0 1-5.82 2.41c-1.46 0-2.9-.38-4.17-1.11l-.3-.17-3.1.81.83-3.02-.2-.31a8.16 8.16 0 0 1-1.25-4.45c0-4.54 3.7-8.24 8.24-8.24zm4.51 11.66c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.13-1.06-.39-2.02-1.24-.75-.67-1.26-1.49-1.41-1.74-.15-.25-.02-.39.11-.51.11-.11.25-.29.37-.43.13-.15.17-.25.25-.42.08-.17.04-.32-.02-.45-.06-.13-.56-1.35-.77-1.84-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.44.06-.67.31-.23.25-.88.86-.88 2.1 0 1.24.9 2.44 1.03 2.61.13.17 1.77 2.7 4.29 3.79.6.26 1.07.41 1.43.53.6.19 1.15.16 1.58.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.15-1.18-.06-.11-.22-.18-.47-.31z"/>
                         </svg>
                         <span class="hidden sm:inline">Kontak WA</span>
                     </button>
-                    <button type="button" onclick="openChangePasswordModal()" class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-indigo-600 hover:bg-slate-100 transition-colors cursor-pointer" title="Ubah Kata Sandi Saya">
+                    <button type="button" onclick="openChangePasswordModal()" class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-indigo-600 hover:bg-slate-100 transition-colors cursor-pointer" title="Ubah Kata Sandi Saya">
                         <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
                         </svg>
-                        <span class="hidden sm:inline">Ubah Sandi</span>
+                        <span>Ubah Sandi</span>
                     </button>
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-indigo-50 text-indigo-700 border border-indigo-200 uppercase tracking-wider">
+                    <span class="hidden md:inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-indigo-50 text-indigo-700 border border-indigo-200 uppercase tracking-wider">
                         {{ strtoupper(str_replace('-', ' ', auth()->user()->role)) }}
                     </span>
                 </div>
             </header>
+
+            @if(auth()->user()->isKajur() || auth()->user()->isWaliKelas())
+                <div class="sm:hidden bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-3 py-2">
+                    <x-portal-switcher variant="mobile" />
+                </div>
+            @endif
 
             <!-- Dismissible Flash Alerts -->
             <div class="px-4 sm:px-6 lg:px-8 pt-4">
