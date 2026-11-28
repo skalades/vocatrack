@@ -231,7 +231,7 @@
                     </div>
 
                     @if(auth()->user()->isKajur() || auth()->user()->isWaliKelas())
-                        <div class="hidden sm:inline-flex items-center p-0.5 rounded-xl bg-slate-100 border border-slate-200">
+                        <div class="inline-flex flex-wrap items-center gap-0.5 p-0.5 rounded-xl bg-slate-100 border border-slate-200">
                             @if(auth()->user()->isKajur())
                                 <a href="{{ route('kajur.dashboard') }}" class="flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-lg transition-all {{ request()->is('kajur*') ? 'bg-white text-emerald-800 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900 font-medium' }}">
                                     <span class="w-2 h-2 rounded-full bg-emerald-500"></span>

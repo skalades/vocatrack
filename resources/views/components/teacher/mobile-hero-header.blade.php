@@ -275,6 +275,31 @@
             </div>
         </div>
 
+        @if($teacherUser && ($teacherUser->isWaliKelas() || $teacherUser->isKajur()))
+            <!-- Portal Switcher (Bimbingan / Wali Kelas / Kajur) -->
+            <div class="flex flex-wrap items-center gap-1.5 p-1 rounded-2xl bg-white/[0.08] border border-white/10">
+                <a href="{{ route('guru.dashboard') }}"
+                   class="flex-1 min-w-[90px] inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11px] font-extrabold transition-colors bg-[#C6F26B] text-[#0B2B25] shadow-xs">
+                    <span class="w-1.5 h-1.5 rounded-full bg-[#0B2B25]"></span>
+                    <span class="truncate">Bimbingan</span>
+                </a>
+                @if($teacherUser->isWaliKelas())
+                    <a href="{{ route('walikelas.dashboard') }}"
+                       class="flex-1 min-w-[110px] inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11px] font-bold text-white/90 hover:bg-white/15 hover:text-[#C6F26B] transition-colors">
+                        <span class="w-1.5 h-1.5 rounded-full bg-teal-400"></span>
+                        <span class="truncate">Wali Kelas {{ $teacherUser->primaryHomeroomClass()?->name }}</span>
+                    </a>
+                @endif
+                @if($teacherUser->isKajur())
+                    <a href="{{ route('kajur.dashboard') }}"
+                       class="flex-1 min-w-[90px] inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11px] font-bold text-white/90 hover:bg-white/15 hover:text-[#C6F26B] transition-colors">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                        <span class="truncate">Kajur {{ $teacherUser->headedMajor()?->code }}</span>
+                    </a>
+                @endif
+            </div>
+        @endif
+
         {{-- ========================================================== --}}
         {{-- MIDDLE FOCUS CARD: Disesuaikan per Halaman                  --}}
         {{-- ========================================================== --}}
