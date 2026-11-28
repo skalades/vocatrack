@@ -126,11 +126,38 @@ class StudentCredentialsExportTest extends TestCase
             'parent_token' => Str::random(32),
         ]);
 
+        $secondClass = SchoolClass::create([
+            'school_id' => $school->id,
+            'major_id' => $major->id,
+            'name' => 'XII DKV 2',
+            'grade_level' => 'XII',
+            'academic_year' => '2026/2027',
+        ]);
+        $secondClassUser = User::create([
+            'school_id' => $school->id,
+            'name' => 'Siswa Kelas Dua',
+            'email' => 'siswa.dkv2@smkn2test.sch.id',
+            'password' => bcrypt('password'),
+            'role' => 'siswa',
+            'is_active' => true,
+        ]);
+        Student::create([
+            'user_id' => $secondClassUser->id,
+            'class_id' => $secondClass->id,
+            'nis' => '242510599',
+            'nisn' => '242510599',
+            'parent_token' => Str::random(32),
+        ]);
+
         $export = new StudentCredentialsExport($school->id);
         $sheets = $export->sheets();
         $this->assertInstanceOf(StudentAccountsDataSheet::class, $sheets[0]);
         $this->assertInstanceOf(StudentBroadcastWhatsappSheet::class, $sheets[1]);
-        $this->assertInstanceOf(CompanyStudentsSheet::class, $sheets[2]);
+        $this->assertInstanceOf(StudentAccountsDataSheet::class, $sheets[2]);
+        $this->assertSame('XII DKV 1', $sheets[2]->title());
+        $this->assertInstanceOf(StudentAccountsDataSheet::class, $sheets[3]);
+        $this->assertSame('XII DKV 2', $sheets[3]->title());
+        $this->assertInstanceOf(CompanyStudentsSheet::class, $sheets[4]);
 
         $binary = Excel::raw($export, \Maatwebsite\Excel\Excel::XLSX);
         $tmpPath = tempnam(sys_get_temp_dir(), 'student_export_') . '.xlsx';
@@ -158,7 +185,7 @@ class StudentCredentialsExportTest extends TestCase
                 'Tautan Monitoring Orang Tua',
             ], $headers);
 
-            $dataRows = collect($accountsSheet->rangeToArray('A5:M6'));
+            $dataRows = collect($accountsSheet->rangeToArray('A5:M7'));
             $placedRow = $dataRows->first(fn ($row) => $row[1] === 'Siswa Terplotting');
             $unplacedRow = $dataRows->first(fn ($row) => $row[1] === 'Siswa Belum Diplot');
 
@@ -175,12 +202,22 @@ class StudentCredentialsExportTest extends TestCase
 
             $waSheet = $spreadsheet->getSheetByName('Format Siap Kirim WA');
             $this->assertNotNull($waSheet);
-            $waRows = collect($waSheet->rangeToArray('B5:E6'));
+            $waRows = collect($waSheet->rangeToArray('B5:E7'));
             $placedWa = $waRows->first(fn ($row) => $row[0] === 'Siswa Terplotting');
             $unplacedWa = $waRows->first(fn ($row) => $row[0] === 'Siswa Belum Diplot');
 
             $this->assertStringContainsString('• Guru Pembimbing: Asep Nasrudin, S.T.', (string) $placedWa[3]);
             $this->assertStringNotContainsString('• Guru Pembimbing:', (string) $unplacedWa[3]);
+
+            $classOneSheet = $spreadsheet->getSheetByName('XII DKV 1');
+            $classTwoSheet = $spreadsheet->getSheetByName('XII DKV 2');
+            $this->assertNotNull($classOneSheet);
+            $this->assertNotNull($classTwoSheet);
+            $this->assertSame('Siswa Belum Diplot', $classOneSheet->getCell('B5')->getValue());
+            $this->assertSame('Siswa Terplotting', $classOneSheet->getCell('B6')->getValue());
+            $this->assertNull($classOneSheet->getCell('B7')->getValue());
+            $this->assertSame('Siswa Kelas Dua', $classTwoSheet->getCell('B5')->getValue());
+            $this->assertNull($classTwoSheet->getCell('B6')->getValue());
         } finally {
             @unlink($tmpPath);
         }

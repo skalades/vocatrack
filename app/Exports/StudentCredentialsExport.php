@@ -121,6 +121,33 @@ class StudentCredentialsExport implements WithMultipleSheets
             mb_strtolower('Format Siap Kirim WA'),
         ];
 
+        // Sheet terpisah per kelas (diurutkan berdasarkan nama kelas, lalu nama siswa)
+        $groupedByClass = $students->groupBy(fn($s) => $s->class_id ?? 'unassigned');
+        $sortedClassGroups = $groupedByClass->sortBy(function ($classStudents, $classKey) {
+            if ($classKey === 'unassigned') {
+                return 'zzzz_tanpa_kelas';
+            }
+
+            return mb_strtolower($classStudents->first()?->class?->name ?? '');
+        });
+
+        foreach ($sortedClassGroups as $classKey => $classStudents) {
+            $firstStudent = $classStudents->first();
+            $rawClassTitle = $classKey === 'unassigned'
+                ? 'Tanpa Kelas'
+                : ($firstStudent?->class?->name ?? 'Kelas');
+
+            $classSheetTitle = self::sanitizeSheetTitle($rawClassTitle, $usedTitles);
+            $sortedStudents = $classStudents->sortBy(fn($s) => mb_strtolower($s->user?->name ?? ''))->values();
+
+            $classMeta = array_merge($meta, [
+                'class_name' => $rawClassTitle,
+                'major_name' => $firstStudent?->class?->major?->name ?? $meta['major_name'],
+            ]);
+
+            $sheets[] = new StudentAccountsDataSheet($sortedStudents, $classMeta, $classSheetTitle);
+        }
+
         // Filter and partition per perusahaan
         $assignedStudents = $students->filter(fn($s) => $s->activePkl && $s->activePkl->company);
         $unassignedStudents = $students->reject(fn($s) => $s->activePkl && $s->activePkl->company);

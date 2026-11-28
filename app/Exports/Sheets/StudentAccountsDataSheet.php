@@ -17,12 +17,13 @@ class StudentAccountsDataSheet implements FromCollection, WithTitle, WithEvents,
 {
     public function __construct(
         protected Collection $students,
-        protected array $meta = []
+        protected array $meta = [],
+        protected ?string $title = null
     ) {}
 
     public function title(): string
     {
-        return 'Data Akun Siswa';
+        return $this->title ?? 'Data Akun Siswa';
     }
 
     public function collection(): Collection
