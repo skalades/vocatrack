@@ -211,17 +211,23 @@
                     <div class="grid grid-cols-2 gap-2">
                         <div>
                             <label class="block font-bold text-slate-600 mb-1">Latitude</label>
-                            <input type="text" name="latitude" placeholder="-6.2088" class="w-full p-2 bg-white rounded-lg border border-slate-200 font-mono text-xs">
+                            <input type="text" id="add-latitude" name="latitude" placeholder="-6.2088" class="w-full p-2 bg-white rounded-lg border border-slate-200 font-mono text-xs">
                         </div>
                         <div>
                             <label class="block font-bold text-slate-600 mb-1">Longitude</label>
-                            <input type="text" name="longitude" placeholder="106.8456" class="w-full p-2 bg-white rounded-lg border border-slate-200 font-mono text-xs">
+                            <input type="text" id="add-longitude" name="longitude" placeholder="106.8456" class="w-full p-2 bg-white rounded-lg border border-slate-200 font-mono text-xs">
                         </div>
                     </div>
                     <div>
                         <label class="block font-bold text-slate-600 mb-1">Radius Toleransi (Meter)</label>
-                        <input type="number" name="radius_meters" value="100" min="10" max="5000" class="w-full p-2 bg-white rounded-lg border border-slate-200 font-mono text-xs">
+                        <input type="number" id="add-radius" name="radius_meters" value="100" min="10" max="5000" class="w-full p-2 bg-white rounded-lg border border-slate-200 font-mono text-xs">
                     </div>
+                    <x-geofence-minimap-toggle
+                        uid="kajur-create-company"
+                        lat-input-id="add-latitude"
+                        lng-input-id="add-longitude"
+                        radius-input-id="add-radius"
+                    />
                 </div>
             </div>
 
@@ -362,6 +368,12 @@
                         <label class="block font-bold text-slate-600 mb-1">Radius Toleransi (Meter)</label>
                         <input type="number" id="edit-radius" name="radius_meters" min="10" max="5000" class="w-full p-2 bg-white rounded-lg border border-slate-200 font-mono text-xs">
                     </div>
+                    <x-geofence-minimap-toggle
+                        uid="kajur-edit-company"
+                        lat-input-id="edit-latitude"
+                        lng-input-id="edit-longitude"
+                        radius-input-id="edit-radius"
+                    />
                 </div>
             </div>
 
@@ -431,6 +443,10 @@
         document.getElementById('edit-latitude').value = data.latitude || '';
         document.getElementById('edit-longitude').value = data.longitude || '';
         document.getElementById('edit-radius').value = data.radius_meters || 100;
+        if (window.VokaGeofenceMinimap) {
+            window.VokaGeofenceMinimap.hide('kajur-edit-company');
+            window.VokaGeofenceMinimap.sync('kajur-edit-company');
+        }
 
         document.getElementById('modal-edit-company').classList.remove('hidden');
     }

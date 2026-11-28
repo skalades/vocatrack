@@ -426,9 +426,16 @@
                     </div>
                     <div>
                         <label class="block text-[10px] font-bold text-slate-600 mb-1">Radius (Meter)</label>
-                        <input type="number" name="radius_meters" value="100" min="10" max="5000" 
+                        <input type="number" name="radius_meters" id="radius-in" value="100" min="10" max="5000" 
                                class="w-full text-xs p-2 rounded-xl bg-white border border-slate-200 font-bold text-slate-800">
                     </div>
+
+                    <x-geofence-minimap-toggle
+                        uid="admin-create-company"
+                        lat-input-id="lat-in"
+                        lng-input-id="lng-in"
+                        radius-input-id="radius-in"
+                    />
                 </div>
             </div>
 
@@ -655,6 +662,13 @@
                             <input type="number" name="radius_meters" id="edit-radius-in" value="100" min="10" max="5000" 
                                    class="w-full text-xs p-2 rounded-xl bg-white border border-slate-200 font-bold text-slate-800">
                         </div>
+
+                        <x-geofence-minimap-toggle
+                            uid="admin-edit-company"
+                            lat-input-id="edit-lat-in"
+                            lng-input-id="edit-lng-in"
+                            radius-input-id="edit-radius-in"
+                        />
                     </div>
                 </div>
 
@@ -1238,6 +1252,10 @@
         document.getElementById('edit-lng-in').value = data.longitude !== null ? data.longitude : '';
         document.getElementById('edit-radius-in').value = data.radius_meters || 100;
         toggleEditGpsFields();
+        if (window.VokaGeofenceMinimap) {
+            window.VokaGeofenceMinimap.hide('admin-edit-company');
+            window.VokaGeofenceMinimap.sync('admin-edit-company');
+        }
 
         document.querySelectorAll('.edit-major-check').forEach(el => {
             el.checked = false;
