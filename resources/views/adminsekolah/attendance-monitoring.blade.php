@@ -303,7 +303,7 @@
 
 <!-- Modal Detail Siswa + Eskalasi ke Guru Pembimbing -->
 <div id="modal-detail-escalation" onclick="if(event.target === this) this.classList.add('hidden')" class="hidden fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-    <div class="bg-white w-full max-w-2xl rounded-3xl p-6 shadow-2xl border border-slate-100 my-8 space-y-5">
+    <div class="bg-white w-full max-w-3xl rounded-3xl p-6 shadow-2xl border border-slate-100 my-8 space-y-5 max-h-[92vh] overflow-y-auto">
         <div class="flex items-start justify-between gap-3 pb-3 border-b border-slate-100">
             <div>
                 <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-indigo-50 text-indigo-700 border border-indigo-200 uppercase tracking-wider">Detail &amp; Eskalasi Harian</span>
@@ -365,6 +365,52 @@
             <p id="detail-journal-summary" class="hidden text-[11px] text-slate-600 bg-slate-50 p-2.5 rounded-xl border border-slate-200/60 italic"></p>
         </div>
 
+        <!-- Bukti Swafoto & Peta Lokasi Absen -->
+        <div id="detail-attendance-evidence-box" class="hidden p-4 rounded-2xl bg-slate-50/70 border border-slate-200 space-y-3 text-xs">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+                <span class="text-[11px] font-extrabold text-slate-700 uppercase tracking-wider">Bukti Swafoto &amp; Lokasi Absen</span>
+                <span id="detail-geofence-badge" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600">-</span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
+                <!-- Swafoto Masuk & Pulang -->
+                <div class="md:col-span-5 space-y-2.5">
+                    <div>
+                        <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Swafoto Masuk</span>
+                        <div class="relative aspect-4/3 w-full rounded-2xl bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center group">
+                            <img id="detail-checkin-photo" src="" alt="Swafoto Masuk" class="hidden w-full h-full object-cover cursor-pointer" onclick="openImageLightbox(this.src)">
+                            <div id="detail-checkin-no-photo" class="text-center p-3 text-[11px] text-slate-400 font-medium">Tidak ada swafoto masuk</div>
+                        </div>
+                    </div>
+                    <div id="detail-checkout-photo-wrap" class="hidden">
+                        <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Swafoto Pulang</span>
+                        <div class="relative aspect-4/3 w-full rounded-2xl bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center group">
+                            <img id="detail-checkout-photo" src="" alt="Swafoto Pulang" class="w-full h-full object-cover cursor-pointer" onclick="openImageLightbox(this.src)">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Peta Lokasi & Geofencing -->
+                <div class="md:col-span-7 space-y-2">
+                    <div class="flex items-center justify-between gap-2">
+                        <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Peta Lokasi Presensi (GPS)</span>
+                        <span id="detail-coords-text" class="text-[10px] font-mono text-slate-500">-</span>
+                    </div>
+                    <div id="detail-minimap" class="w-full h-48 rounded-2xl border border-slate-200 bg-slate-100 z-0"></div>
+                    <div id="detail-minimap-empty" class="hidden w-full h-48 rounded-2xl border border-dashed border-slate-300 bg-white flex items-center justify-center text-[11px] text-slate-400 font-medium p-4 text-center">
+                        Koordinat GPS presensi tidak tersedia.
+                    </div>
+                    <div class="flex flex-wrap items-center justify-between gap-2 pt-0.5">
+                        <span id="detail-accuracy-text" class="text-[10px] text-slate-500">-</span>
+                        <a id="detail-gmaps-link" href="#" target="_blank" rel="noopener noreferrer"
+                           class="hidden inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white hover:bg-slate-50 text-indigo-700 font-bold border border-indigo-200 text-[11px] transition-colors">
+                            <span>Buka di Google Maps</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Riwayat Eskalasi Hari Ini -->
         <div id="detail-escalation-history-box" class="hidden p-3.5 rounded-2xl bg-indigo-50/60 border border-indigo-200/70 space-y-2 text-xs">
             <span class="text-[11px] font-extrabold text-indigo-800 block">Riwayat Eskalasi Hari Ini</span>
@@ -424,7 +470,163 @@
 </div>
 
 @push('scripts')
+<link rel="stylesheet" href="{{ asset('vendor/leaflet/leaflet.css') }}" onerror="this.onerror=null;this.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'">
+<script src="{{ asset('vendor/leaflet/leaflet.js') }}" onerror="this.onerror=null;this.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'"></script>
 <script>
+    let detailAttendanceMap = null;
+    let detailAttendanceLayerGroup = null;
+
+    function updateDetailGeofenceBadge(row) {
+        const badge = document.getElementById('detail-geofence-badge');
+        if (row.is_mock_detected) {
+            badge.className = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-700 border border-rose-200';
+            badge.textContent = 'Fake GPS Terdeteksi';
+            return;
+        }
+        if (!row.company_gps_enabled) {
+            badge.className = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200';
+            badge.textContent = 'Geofencing Nonaktif';
+            return;
+        }
+        if (row.is_within_radius === true) {
+            badge.className = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 border border-emerald-200';
+            badge.textContent = 'Dalam Radius (' + (row.company_radius_meters || 100) + ' m)';
+            return;
+        }
+        if (row.is_within_radius === false) {
+            badge.className = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-700 border border-rose-200';
+            badge.textContent = 'Luar Radius (' + (row.company_radius_meters || 100) + ' m)';
+            return;
+        }
+        badge.className = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200';
+        badge.textContent = 'Tanpa Validasi Radius';
+    }
+
+    function renderDetailAttendanceEvidence(row) {
+        const box = document.getElementById('detail-attendance-evidence-box');
+        const hasAnyEvidence = Boolean(
+            row.checkin_photo_url ||
+            row.checkout_photo_url ||
+            (row.checkin_lat !== null && row.checkin_lat !== undefined && row.checkin_lng !== null && row.checkin_lng !== undefined)
+        );
+
+        if (!hasAnyEvidence) {
+            box.classList.add('hidden');
+            return;
+        }
+        box.classList.remove('hidden');
+
+        updateDetailGeofenceBadge(row);
+
+        const checkinImg = document.getElementById('detail-checkin-photo');
+        const checkinEmpty = document.getElementById('detail-checkin-no-photo');
+        if (row.checkin_photo_url) {
+            checkinImg.src = row.checkin_photo_url;
+            checkinImg.classList.remove('hidden');
+            checkinEmpty.classList.add('hidden');
+        } else {
+            checkinImg.src = '';
+            checkinImg.classList.add('hidden');
+            checkinEmpty.classList.remove('hidden');
+        }
+
+        const checkoutWrap = document.getElementById('detail-checkout-photo-wrap');
+        const checkoutImg = document.getElementById('detail-checkout-photo');
+        if (row.checkout_photo_url) {
+            checkoutImg.src = row.checkout_photo_url;
+            checkoutWrap.classList.remove('hidden');
+        } else {
+            checkoutImg.src = '';
+            checkoutWrap.classList.add('hidden');
+        }
+
+        const mapEl = document.getElementById('detail-minimap');
+        const emptyMapEl = document.getElementById('detail-minimap-empty');
+        const coordsEl = document.getElementById('detail-coords-text');
+        const accuracyEl = document.getElementById('detail-accuracy-text');
+        const gmapsLink = document.getElementById('detail-gmaps-link');
+
+        const sLat = (row.checkin_lat !== null && row.checkin_lat !== undefined) ? parseFloat(row.checkin_lat) : null;
+        const sLng = (row.checkin_lng !== null && row.checkin_lng !== undefined) ? parseFloat(row.checkin_lng) : null;
+
+        if (sLat === null || sLng === null || Number.isNaN(sLat) || Number.isNaN(sLng)) {
+            mapEl.classList.add('hidden');
+            emptyMapEl.classList.remove('hidden');
+            coordsEl.textContent = '-';
+            accuracyEl.textContent = '';
+            gmapsLink.classList.add('hidden');
+            return;
+        }
+
+        mapEl.classList.remove('hidden');
+        emptyMapEl.classList.add('hidden');
+        coordsEl.textContent = sLat.toFixed(6) + ', ' + sLng.toFixed(6);
+        accuracyEl.textContent = row.accuracy_meters ? ('Akurasi GPS: ±' + row.accuracy_meters + ' m') : '';
+        gmapsLink.href = 'https://www.google.com/maps?q=' + sLat + ',' + sLng;
+        gmapsLink.classList.remove('hidden');
+
+        if (typeof L === 'undefined') {
+            setTimeout(() => renderDetailAttendanceEvidence(row), 120);
+            return;
+        }
+
+        if (!detailAttendanceMap) {
+            detailAttendanceMap = L.map('detail-minimap', {
+                zoomControl: true,
+                attributionControl: false,
+                scrollWheelZoom: false
+            }).setView([sLat, sLng], 15);
+            L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(detailAttendanceMap);
+            detailAttendanceLayerGroup = L.layerGroup().addTo(detailAttendanceMap);
+        } else {
+            detailAttendanceMap.setView([sLat, sLng], 15);
+            detailAttendanceLayerGroup.clearLayers();
+        }
+
+        const bounds = [[sLat, sLng]];
+        const studentMarker = L.circleMarker([sLat, sLng], {
+            radius: 8,
+            color: '#ffffff',
+            weight: 2,
+            fillColor: '#4f46e5',
+            fillOpacity: 1
+        }).bindPopup('<b>' + (row.student_name || 'Siswa') + '</b><br>Masuk: ' + (row.checkin_time || '-') + ' WIB');
+        detailAttendanceLayerGroup.addLayer(studentMarker);
+
+        const cLat = (row.company_lat !== null && row.company_lat !== undefined) ? parseFloat(row.company_lat) : null;
+        const cLng = (row.company_lng !== null && row.company_lng !== undefined) ? parseFloat(row.company_lng) : null;
+        if (cLat !== null && cLng !== null && !Number.isNaN(cLat) && !Number.isNaN(cLng)) {
+            bounds.push([cLat, cLng]);
+            const radius = parseInt(row.company_radius_meters, 10) || 100;
+            const within = row.is_within_radius !== false;
+            const circleColor = within ? '#10b981' : '#ef4444';
+
+            L.circleMarker([cLat, cLng], {
+                radius: 7,
+                color: '#ffffff',
+                weight: 2,
+                fillColor: '#059669',
+                fillOpacity: 1
+            }).bindPopup('<b>' + (row.company_name || 'DU/DI') + '</b><br>Radius: ' + radius + ' m').addTo(detailAttendanceLayerGroup);
+
+            L.circle([cLat, cLng], {
+                radius: radius,
+                color: circleColor,
+                weight: 2,
+                fillColor: circleColor,
+                fillOpacity: 0.15
+            }).addTo(detailAttendanceLayerGroup);
+        }
+
+        setTimeout(() => {
+            if (!detailAttendanceMap) return;
+            detailAttendanceMap.invalidateSize();
+            if (bounds.length > 1) {
+                detailAttendanceMap.fitBounds(bounds, { padding: [28, 28], maxZoom: 17 });
+            }
+        }, 120);
+    }
+
     window.openDetailEscalationModal = function (row, focusEscalation) {
         document.getElementById('detail-student-name').textContent = row.student_name || '-';
         document.getElementById('detail-date-subtitle').textContent = 'Tanggal Pemantauan: ' + (row.date || '-');
@@ -490,6 +692,7 @@
         }
 
         document.getElementById('modal-detail-escalation').classList.remove('hidden');
+        renderDetailAttendanceEvidence(row);
         if (focusEscalation) {
             document.getElementById('escalate-note').focus();
         }
